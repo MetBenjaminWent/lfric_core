@@ -1,0 +1,48 @@
+CMAKE ?= cmake
+
+PFUNIT_SOURCE = $(abspath ../pfunit)
+PFUNIT_BUILD = $(BUILD_DIR)/pfunit
+export PFUNIT_INSTALL = $(BUILD_DIR)/pfunit-install
+
+ifeq '$(COMPILER)' 'ifort'
+  PFUNIT_COMPILER_ID = Intel
+else ifeq '$(COMPILER)' 'gfortran'
+  PFUNIT_COMPILER_ID = GNU
+else ifeq '$(COMPILER)' 'nag'
+  PFUNIT_COMPILER_ID = NAG
+else ifeq '$(COMPILER)' 'xlf'
+  PFUNIT_COMPILER_ID = XL
+endif
+
+.PHONY: pfunit
+pfunit: compilertest $(PFUNIT_BUILD)
+	$(MAKE) -C $(PFUNIT_BUILD) install
+
+$(PFUNIT_BUILD):
+	mkdir $@
+	cd $@; $(CMAKE) -DCMAKE_Fortran_COMPILER=$(FC95) \
+	                -DCMAKE_INSTALL_PREFIX=$(PFUNIT_INSTALL) \
+	                $(PFUNIT_SOURCE)
+
+.PHONY: compilertest
+ifdef IFORT_VERSION
+compilertest:
+	@if [ $(IFORT_VERSION) -lt 0130000 ]; then \
+	  echo >&2 "*** [ERROR] pFUnit will only compile with ifort v13 or later."; \
+	  false; \
+	fi
+else ifdef GFORTRAN_VERSION
+compilertest:
+	echo $(GFORTRAN_VERSION)
+	@if [ $(GFORTRAN_VERSION) -lt 040500 ]; then \
+	  echo >&2 "*** [ERROR] pFUnit will only compile with gfortran v4.5 or later."; \
+	  false; \
+	fi
+else
+compilertest:
+endif
+
+.PHONY: cleanpfunit
+cleanpfunit:
+	-rm -rf $(PFUNIT_BUILD)
+	-rm -rf $(PFUNIT_INSTALL)

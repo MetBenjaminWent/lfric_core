@@ -1,0 +1,248 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+##############################################################################
+# Generate a collection of make file snippets holding build information about
+# a source tree.
+#
+# This collection consists of two types. A dependency list built up from which
+# modules files "use" other modules. Also a file for each "program" unit found
+# listing all the modules which go to make that program.
+#
+# These snippets may then be "include"ed into other make files.
+#
+# Arguments:
+#
+#   Output directory - The directory output will end up in
+#   Module directory - The directory modules will be compiled to
+#   Object directory - The directory objects will be compiled to
+#   Source tree root - The top directory of the source tree to scan
+#
+
+from __future__ import print_function;
+
+import os;
+import os.path;
+import re;
+import sys;
+
+##############################################################################
+# Scan the source tree and produce required output files.
+#
+# Arguments:
+#   outputDirectoryName - The directory into which output will be put
+#   moduleDirectoryName - The directory which is to contain Fortran module files
+#   objectDirectoryName - The directory which is to contain object files
+#   sourceRootName      - The directory in which the source tree is found
+#
+def analyseSource(outputDirectoryName, \
+                  moduleDirectoryName, objectDirectoryName, \
+                  sourceRootName):
+    meta = SourceTree()
+
+    # Visit each directory in the tree and process it
+    for path, directories, files in os.walk(sourceRootName):
+        for directory in directories:
+            # Remove hidden directories
+            if directory[0] == '.':
+                directories.remove(directory)
+
+        for leafname in files:
+            # Ignore hidden and backup files
+            if (leafname[0] != '.') and (leafname[-1] != '~'):
+                print('Considering ' + leafname)
+                if (leafname[-4:] == '.F90') or (leafname[-4:] == '.f90'):
+                    _scanSource(path, leafname, meta)
+
+    # Output the dependencies file
+    filename = os.path.join(outputDirectoryName, 'dependencies.mk')
+    with open(filename, 'w') as dependencyFile:
+        meta.makeDependencyTree(dependencyFile, moduleDirectoryName)
+
+    # Output the program object list files
+    for program in meta.getPrograms():
+        filename = os.path.join(outputDirectoryName, program + '.mk')
+        with open(filename, 'w') as objectFile:
+            meta.makeObjectList(objectFile, program, objectDirectoryName)
+
+###############################################################################
+# Examine the contents of a Fortran source file and extract dependency
+# information.
+#
+# Arguments:
+#   path     - The directory in which the source file is found
+#   leafname - The name of the source file
+#   meta     - A SourceTree object to receive information from the file
+#
+def _scanSource(path, leafname, meta):
+    filename = os.path.join(path, leafname)
+    print('  Scanning ' + filename)
+
+    with open(filename) as sourceFile:
+        for line in sourceFile:
+            match = re.match(r'^\s*PROGRAM\s+(\S+)', line, flags=re.IGNORECASE)
+            if match is not None:
+                meta.addProgram(match.group(1), filename)
+
+            match = re.match(r'^\s*MODULE\s+(\S+)', line, flags=re.IGNORECASE)
+            if match is not None:
+                meta.addModule(match.group(1), filename)
+
+            match = re.match(r'^\s*USE\s+([^,\s]+)', line, flags=re.IGNORECASE)
+            if match is not None:
+                meta.addDependency(filename, match.group(1))
+
+###############################################################################
+# Class for collecting dependency information about the source tree.
+#
+class SourceTree:
+
+    ###########################################################################
+    # Initialiser taking no arguments.
+    #
+    def __init__(self):
+        self._programToFilename = {}
+        self._moduleToFilename = {}
+        self._filenameToDependencies = {}
+
+    ###########################################################################
+    # Note a file which contains a PROGRAM block.
+    #
+    # Arguments:
+    #   programName - The name given to the PROGRAM block. i.e. PROGRAM <name>
+    #   leafname    - The name of the file in which the block was found. This
+    #                 is not a full path, just the local part. e.g. ./stuff.f90
+    #
+    def addProgram(self, programName, leafname):
+        leafname = os.path.normpath(leafname)
+        print('    File ' + leafname + ' contains program ' + programName)
+        self._programToFilename[programName] = leafname
+
+    ###########################################################################
+    # Note a file which contains a MODULE block.
+    #
+    # Arguments:
+    #   moduleName - The name given to the MODULE block. i.e. MODULE <name>
+    #   leafname   - The name of the file in which the block was found. This
+    #                is not a full path, just the local part. e.g. ./stuff.f90
+    #
+    def addModule(self, moduleName, leafname):
+        leafname = os.path.normpath(leafname)
+        print('    File ' + leafname + ' contains module ' + moduleName)
+        self._moduleToFilename[moduleName] = leafname
+
+    ###########################################################################
+    # Note a module which a file is dependant on.
+    #
+    # Arguments:
+    #   leafname    - The name of the file in which the block was found. This
+    #                 is not a full path, just the local part. e.g. ./stuff.f90
+    #   moduleName  - The name of the module this file depends on.
+    #                 i.e. USE <name>
+    #
+    def addDependency(self, leafname, moduleName):
+        leafname = os.path.normpath(leafname)
+        print('    File ' + leafname + ' depends on module ' + moduleName)
+        if leafname not in self._filenameToDependencies:
+            self._filenameToDependencies[leafname] = []
+        if moduleName not in self._filenameToDependencies[leafname]:
+            self._filenameToDependencies[leafname].append(moduleName)
+
+    ###########################################################################
+    # Write the dependancy information to file handle.
+    #
+    # Arguments:
+    #   fileHandle          - The handle of the file to write to. Writing will
+    #                         start at the current file pointer.
+    #   moduleDirectoryName - The full path name of the directory in which
+    #                         modules will be found.
+    #
+    def makeDependencyTree(self, fileHandle, moduleDirectoryName):
+        print('# Module dependencies', file = fileHandle)
+
+        # Sort keys so the resultant file is nicely organised in alphabetical
+        # order.
+        keys = self._filenameToDependencies.keys()
+        keys.sort()
+        for key in keys:
+            moduleList = []
+
+            # Build a list of the module files the current source file
+            # depends on.
+            for module in self._filenameToDependencies[key]:
+                sourceFilename = self._moduleToFilename[module]
+                moduleFilename = self._substituteExtension(sourceFilename, \
+                                                          'mod')
+                moduleFilename = os.path.join(moduleDirectoryName, \
+                                              moduleFilename)
+                moduleList.append(os.path.normpath(moduleFilename))
+
+            # Output make rule.
+            print(key + ': ' + ' '.join(moduleList), file = fileHandle)
+
+    ###########################################################################
+    # Get a list of known programs.
+    #
+    # Returns:
+    #   A list of all the program blocks seen during the source scan.
+    #
+    def getPrograms(self):
+        return self._programToFilename.keys()
+
+    ###########################################################################
+    # Write the object information for a given program to the given file
+    # handle.
+    #
+    # Arguments:
+    #   fileHandle          - The handle of the file to receive the object
+    #                         list. Output will start at the current file
+    #                         pointer.
+    #   programName         - The name of the program to output object data
+    #                         for.
+    #   objectDirectoryName - The directory which will receive object files.
+    #
+    def makeObjectList(self, fileHandle, programName, objectDirectoryName):
+        sourceFiles = []
+        self._descendDependencyTree(self._programToFilename[programName], \
+                                    sourceFiles)
+        objectFiles = []
+        for sourceFile in sourceFiles:
+            objectLeafname = self._substituteExtension(sourceFile, 'o')
+            objectFiles.append(os.path.join(objectDirectoryName, \
+                                            objectLeafname))
+        print('# Program object list', file = fileHandle)
+        print('#', file = fileHandle)
+        print(programName.upper() + '_OBJS = ' + ' '.join(objectFiles), \
+              file = fileHandle)
+
+    ###########################################################################
+    # Recursively descend the dependency tree building up a list of all the
+    # source files the specified source file depends on.
+    #
+    # Arguments:
+    #   filename    - The file to find dependencies for.
+    #   sourceFiles - A list to receive the files depended upon.
+    #
+    def _descendDependencyTree(self, filename, sourceFiles):
+        sourceFiles.append(filename)
+        if filename in self._filenameToDependencies:
+            for module in self._filenameToDependencies[filename]:
+                if self._moduleToFilename[module] not in sourceFiles:
+                    self._descendDependencyTree(self._moduleToFilename[module], \
+                                               sourceFiles)
+
+    ###########################################################################
+    # Strip the final extension off a filename and replace it with the new one.
+    # 
+    # Arguments:
+    #   filename  - The filename to modify.
+    #   extension - The new extension, excluding leading '.'.
+    #
+    def _substituteExtension(self, filename, extension):
+        (root, oldExtension) = os.path.splitext(filename)
+        return root + '.' + extension
+
+###############################################################################
+# Entry point
+
+if __name__ == '__main__':
+    analyseSource(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])

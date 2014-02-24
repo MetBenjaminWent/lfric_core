@@ -1,94 +1,20 @@
-#-----------------------------------------------------------------------------
-# (c) The copyright relating to this information/data is jointly owned by
-# the Crown, Met Office and NERC 2013.
-# The contribution of STFC in creating this information/data is acknowledged.
-#-----------------------------------------------------------------------------
+.PHONY: test
+test: all
+	$(MAKE) -C src/test
 
-#-------------------------------------------------------------------------------
-# Makefile for LFRIC test code. May be that we want to replace with FCM make or
-# somesuch.
-#
-# To compile:
-#   make ARCH=[platform]
-#
-# Platforms are:
-#   * linux_gfortran
-#   * linux_ifort
-#   * ibm_power7
-#
-# For GNU make.
-#-------------------------------------------------------------------------------
+.PHONY: all
+all:
+	$(MAKE) -C src/main
 
-#-------------------------------------------------------------------------------
-# Defaults
-#-------------------------------------------------------------------------------
+.PHONY: run
+run: test
+	$(MAKE) -C run
 
-# Default to linux_gfortran
-ARCH=linux_ifort
+.PHONY: doc docs
+doc docs:
+	$(MAKE) -C Docs docs
 
-#-------------------------------------------------------------------------------
-# Conditionals
-#-------------------------------------------------------------------------------
-
-# Set the compiler options
-ifeq ($(ARCH), linux_gfortran)
-  FC=gfortran
-  LD=$(FC)
-  FFLAGS  = -g -O0 -std=f2003 -Wuninitialized -Wall -Wextra -fbounds-check
-  LDFLAGS = -g
-endif
-ifeq ($(ARCH), linux_ifort)
-  FC=ifort-13.1
-  LD=$(FC)
-  FFLAGS  = -g -O0 -std03
-  LDFLAGS = -g
-endif
-ifeq ($(ARCH), ibm_power7)
-  FC=xlf2003_r
-  LD=$(FC)
-  FFLAGS  = -g -O0 -qlanglvl=2003std
-  LDFLAGS = -g
-endif
-
-#-------------------------------------------------------------------------------
-# Object list
-#-------------------------------------------------------------------------------
-
-source = \
-	lfric_mod.F90 \
-	gaussian_quadrature_mod.F90 \
-	kernel_mod.F90 \
-	psy.F90 \
-	num_dof_mod.F90 \
-	dynamo.F90
-
-
-
-LIBS=
-FFLAGS +=
-EXE=dynamo
-
-OBJ=$(source:.F90=.o)
-#-------------------------------------------------------------------------------
-# Targets
-#-------------------------------------------------------------------------------
-
-all: $(EXE)
-
-$(EXE): $(OBJ)
-	$(FC) $(LDFLAGS) $(OBJ) -o $@
-
+.PHONY: clean
 clean:
-	rm -f *.o *.mod *.out $(EXE) *_alg.F90 *_psy.F90 fparser.log *_generated
-
-.PHONY:
-	clean
-
-#-------------------------------------------------------------------------------
-# Patterns
-#-------------------------------------------------------------------------------
-
-%.o:%.F90
-	$(FC) -c $(FFLAGS) $<
-%.o:%.f90
-	$(FC) -c $(FFLAGS) $<
+	$(MAKE) -C src/main clean
+	$(MAKE) -C src/test clean

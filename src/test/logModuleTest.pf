@@ -1,0 +1,27 @@
+MODULE logModuleTest
+
+  IMPLICIT NONE
+
+CONTAINS
+
+  @test
+  SUBROUTINE testLogInfo()
+
+    USE pFUnit_Mod
+    USE logModule
+
+    IMPLICIT NONE
+
+    CHARACTER (LEN=15) :: found
+
+    OPEN(13, STATUS = 'SCRATCH')
+    CALL logInit(13)
+    CALL logInfo('cheese')
+    REWIND(13)
+    READ (13, '(A)') found
+    @assertEqual('info: cheese', found)
+    CLOSE(13)
+
+  END SUBROUTINE testLogInfo
+
+END MODULE logModuleTest
