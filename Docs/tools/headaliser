@@ -1,0 +1,57 @@
+#!/usr/bin/env python2.7
+# -*- coding: utf-8 -*-
+##############################################################################
+# (c) The copyright relating to this work is owned jointly by the Crown,
+# Met Office and NERC 2014. However, it has been created with the help of the
+# GungHo Consortium, whose members are identified at
+# https://puma.nerc.ac.uk/trac/GungHo/wiki
+##############################################################################
+'''!
+Timestamp a file with the last update time of a Subversion repository.
+
+The file will contain the associated revision number.
+'''
+
+from __future__ import print_function
+
+import argparse
+import os
+import doctools.subversive
+
+def version():
+    '''!
+    This application's version number.
+
+    @return (str) The version number.
+    '''
+    return '1.0'
+
+def headaliser(repoURL, outputName):
+    '''!
+    Force a file to have the same modification timestamp as a repository.
+
+    @param repoURL (str) The URL of the repository.
+    @param outputName (str) The file to received the revision number of "head"
+                      and be time stamped.
+    '''
+    info = doctools.subversive.subversionInfo(repoURL)
+    with open(outputName, 'w') as output:
+        print( str( info[ 'latest-revision' ]), file=output )
+    current = os.stat(outputName)
+    os.utime( outputName, ( current.st_atime, info[ 'latest-revision-time' ] ) )
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(add_help = False, \
+             description='Stamp a file with the timestamp of the last repository update.')
+    parser.add_argument('-help', '-h', '--help', action='help', \
+                        help='Display this help message.')
+    parser.add_argument('-version', action='version', \
+                        version='%(prog)s {}'.format(version()), \
+                        help='Display version information.')
+    parser.add_argument('repositoryURL', metavar='URL', \
+                        help='The repository URL.')
+    parser.add_argument('outputFilename', metavar='filename', \
+                        help='The repository timestamp file to write.')
+    args = parser.parse_args()
+
+    headaliser(args.repositoryURL, args.outputFilename)

@@ -1,3 +1,9 @@
+##############################################################################
+# (c) The copyright relating to this work is owned jointly by the Crown,
+# Met Office and NERC 2014. However, it has been created with the help of the
+# GungHo Consortium, whose members are identified at
+# https://puma.nerc.ac.uk/trac/GungHo/wiki
+##############################################################################
 # Variables defined here will will be included in all Makefiles for this
 # project.
 # Expects ROOT to point to the root of the project tree.
