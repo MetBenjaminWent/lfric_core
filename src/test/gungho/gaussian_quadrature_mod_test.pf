@@ -19,7 +19,7 @@ contains
     implicit none
 
     real(kind=dp) :: polynomial(ngp,ngp,ngp)
-    real(kind=dp) :: result,answer, diff, epsilon
+    real(kind=dp) :: result,answer, epsilon
 
     type(gaussian_quadrature_type) :: gaussian_quadrature
 

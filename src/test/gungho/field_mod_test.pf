@@ -1,43 +1,60 @@
-!-------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------
 ! (c) The copyright relating to this work is owned jointly by the Crown, 
 ! Met Office and NERC 2014. 
 ! However, it has been created with the help of the GungHo Consortium, 
 ! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
-!-------------------------------------------------------------------------------
-!
-!-------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------
+
+!> Test the field representation
+!>
 module field_mod_test
+
   implicit none 
 
 contains
 
+  !> Ensure constructor and getters work.
+  !>
   @test
-  subroutine test_field()
+  subroutine test_field_data( )
+
+    ! use basis_function_mod,      only : 
+    use field_mod,               only : field_data_type,      &
+                                        field_type,           &
+                                        field_data_from_proxy
+    use function_space_mod,      only : function_space_type
+    use gaussian_quadrature_mod, only : gaussian_quadrature_type
     use pFUnit_Mod
-    use function_space_mod
-    use basis_function_mod
-    use gaussian_quadrature_mod
-    use field_mod
+
     implicit none
 
-    type(function_space_type) :: func_space
-    type(field_type) :: f_field
-    type(gaussian_quadrature_type) :: gq
-    integer :: num_cells, num_dofs, num_unique_dofs, num_layers
-    integer :: testncell, testnlayers
+    type( function_space_type )      :: func_space
+    type( field_data_type )          :: f_field
+    type( gaussian_quadrature_type ) :: gq
+    integer                          :: num_cells,       &
+                                        num_dofs,        &
+                                        num_unique_dofs, &
+                                        num_layers,      &
+                                        testncell,       &
+                                        testnlayers
 
     num_cells = 35
     num_dofs=4
     num_unique_dofs = 100
     num_layers=50
 
-    func_space = function_space_type( &
-         num_cells=num_cells, num_dofs=num_dofs, num_unique_dofs=num_unique_dofs, &
-         dim_space = 1, dim_space_p1 = 3, ngp  = 3)
+    func_space = function_space_type( num_cells       = num_cells,       &
+                                      num_dofs        = num_dofs,        &
+                                      num_unique_dofs = num_unique_dofs, &
+                                      dim_space       = 1,               &
+                                      dim_space_p1    = 3,               &
+                                      ngp             = 3)
 
-    gq = gaussian_quadrature_type()
+    gq = gaussian_quadrature_type( )
 
-    f_field = field_type(vector_space=func_space,gq=gq,num_layers=num_layers)
+    f_field = field_data_type( vector_space = func_space, &
+                               gq = gq,                   &
+                               num_layers = num_layers)
 
     ! test the procedures of the type
     testncell = f_field%get_ncell()
@@ -46,6 +63,6 @@ contains
     testnlayers = f_field%get_nlayers()
     @assertEqual( num_layers, testnlayers )
 
-  end subroutine test_field
+  end subroutine test_field_data
 
 end module field_mod_test

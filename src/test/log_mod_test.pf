@@ -106,6 +106,7 @@ contains
     open( INFO_UNIT, status='scratch', action='readwrite', &
           iostat=condition )
     @assertEqual( condition, 0 )
+
     open( ALERT_UNIT, status='scratch', action='readwrite', &
           iostat=condition )
     @assertEqual( condition, 0 )

@@ -34,7 +34,13 @@ $(OBJ_DIR)/%.mod: $(OBJ_DIR)/%.o
 
 $(OBJ_DIR)/%.o: %.F90 | $(OBJ_DIR)
 	@echo "Compile $<"
-	$(FC) $(FFLAGS) $(F_MOD_DESTINATION_ARG) -I $(OBJ_DIR) -c -o $@ $<
+	$(FC) $(FFLAGS) $(FWARNINGFLAGS) $(F_MOD_DESTINATION_ARG) \
+	      -I $(OBJ_DIR) -c -o $@ $<
+
+$(OBJ_DIR)/%.o: %.f90 | $(OBJ_DIR)
+	@echo "Compile $<"
+	$(FC) $(FFLAGS) $(FWARNINGFLAGS) $(F_MOD_DESTINATION_ARG) \
+	      -I $(OBJ_DIR) -c -o $@ $<
 
 $(OBJ_DIR)/$(EXE): $($(shell echo $(EXE) | tr a-z A-Z)_OBJS)
 	@echo "Linking $@"
@@ -43,6 +49,5 @@ $(OBJ_DIR)/$(EXE): $($(shell echo $(EXE) | tr a-z A-Z)_OBJS)
 .PHONY: clean
 clean:
 	-rm -rf $(OBJ_DIR)
-	-rm -f $(BIN_DIR)/dynamo
 
 -include $(OBJ_DIR)/$(DEP_FILE)

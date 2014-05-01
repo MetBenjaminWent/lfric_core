@@ -75,7 +75,7 @@ end subroutine mesh_generator_init
 subroutine mesh_generator_biperiodic( ncells, nx, ny, nlayers, dx, dy, dz )
 
   use log_mod, only : log_event, log_scratch_space, &
-                      LOG_LEVEL_INFO, LOG_LEVEL_ERROR
+                      LOG_LEVEL_DEBUG, LOG_LEVEL_ERROR
 
   integer,           intent( in ) :: ncells
   integer,           intent( in ) :: nx, ny
@@ -89,6 +89,7 @@ subroutine mesh_generator_biperiodic( ncells, nx, ny, nlayers, dx, dy, dz )
     write( log_scratch_space, '( A, I0, A, I0)' ) &
          'Incorrect number of elements in mesh_generator_biperiodic', &
          nx * ny, ' cf. ', ncells
+    call log_event( log_scratch_space, LOG_LEVEL_ERROR )
     stop
   end if
 
@@ -211,28 +212,28 @@ subroutine mesh_generator_biperiodic( ncells, nx, ny, nlayers, dx, dy, dz )
   end do
   
 ! Diagnostic information  
-  call log_event( 'grid connectivity', LOG_LEVEL_INFO )
+  call log_event( 'grid connectivity', LOG_LEVEL_DEBUG )
   do i = 1, nx * ny * nlayers
     write( log_scratch_space,'(7i6)' ) i, &
                             cell_next(i,1), cell_next(i,2), cell_next(i,3), &
                             cell_next(i,4), cell_next(i,5), cell_next(i,6)
-    call log_event( log_scratch_space, LOG_LEVEL_INFO )
+    call log_event( log_scratch_space, LOG_LEVEL_DEBUG )
   end do
-  call log_event( 'verts on cells', LOG_LEVEL_INFO )
+  call log_event( 'verts on cells', LOG_LEVEL_DEBUG )
   do i = 1, nx * ny * nlayers
     write( log_scratch_space, '(9i6)' ) i, &
                              vert_on_cell(i,1), vert_on_cell(i,2), &
                              vert_on_cell(i,3), vert_on_cell(i,4), &
                              vert_on_cell(i,5), vert_on_cell(i,6), &
                              vert_on_cell(i,7), vert_on_cell(i,8)
-    call log_event( log_scratch_space, LOG_LEVEL_INFO )
+    call log_event( log_scratch_space, LOG_LEVEL_DEBUG )
   end do
 
-  call log_event( 'vert coords', LOG_LEVEL_INFO )
+  call log_event( 'vert coords', LOG_LEVEL_DEBUG )
   do i = 1, nvert_g
     write( log_scratch_space, '(i6,4f8.4)' ) &
          i, mesh_vertex(i,1), mesh_vertex(i,2), mesh_vertex(i,3)
-    call log_event( log_scratch_space, LOG_LEVEL_INFO )
+    call log_event( log_scratch_space, LOG_LEVEL_DEBUG )
   end do
 
 end subroutine mesh_generator_biperiodic

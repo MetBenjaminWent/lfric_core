@@ -32,7 +32,7 @@ ifeq '$(COMPILER)' 'ifort'
   # Intel compiler
   $(info ** Chosen Intel Fortran compiler)
   FC     = ifort
-  FFLAGS = -g -O3 -xhost
+  FFLAGS = -g -O0 -xhost
   IFORT_VERSION = $(shell ifort -v 2>&1 | awk '{ print $$NF }' \
                    | awk -F . '{ printf "%03i%02i%02i", $$1, $$2, $$3 }')
   $(info ** Version $(IFORT_VERSION))
@@ -48,7 +48,8 @@ else ifeq '$(COMPILER)' 'gfortran'
   # GNU compiler
   $(info ** Chosen GNU Fortran compiler)
   FC     = gfortran
-  FFLAGS = -g -O3
+  FFLAGS = -g -O0
+  FWARNINGFLAGS = -Wall -Werror
   F_MOD_DESTINATION_ARG = -J $(OBJ_DIR)
   GFORTRAN_VERSION = $(shell $(FC95) --version 2>&1 \
                        | sed -n 's/.*[[:space:]]\{1,\}\([[:digit:]]\{1,\}\.[[:digit:]]\{1,\}\.[[:digit:]]\{1,\}\)[[:space:]]\{,\}.*/\1/p' \

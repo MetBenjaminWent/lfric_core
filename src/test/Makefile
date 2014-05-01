@@ -42,6 +42,4 @@ $(OBJ_DIR)/%.F90: %.pf
 
 .PHONY: clean
 clean: cleanpfunit
-	-rm $(OBJS)
-	-rm $(TEST_OBJS)
-	-rm $(OBJ_DIR)/test
+	-rm -rf $(OBJ_DIR)

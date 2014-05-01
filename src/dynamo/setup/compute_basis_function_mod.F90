@@ -29,8 +29,6 @@ contains
     ! Subroutine to compute test/trial functions on quadrature points
     !-----------------------------------------------------------------------------
 
-      use log_mod, only : log_event, log_scratch_space, LOG_LEVEL_DEBUG
-
     ! order of elements
     integer, intent(in) :: k
     type(function_space_type), intent(inout) :: v0, v1, v2, v3
@@ -447,60 +445,6 @@ contains
     deallocate ( lz )
 
     deallocate ( unit_vec_v2, unit_vec_v1)
-
-    ! diagnostic
-!     call log_event( 'diagnostics of basis function calculations:', &
-!                     LOG_LEVEL_DEBUG )
-!     call log_event( 'integral of v0 basis functions', LOG_LEVEL_DEBUG )
-!     do i=1,nv0
-!       write( log_scratch_space, '(i4,f8.4)' ) &
-!           i, gaussian_quadrature%integrate( v0_basis( i, :, :, :, 1 ) )
-!       call log_event( log_scratch_space, LOG_LEVEL_DEBUG )
-!     end do
-!     call log_event( 'integral of grad(v0) basis functions', LOG_LEVEL_DEBUG )
-!     do i=1,nv0
-!       write( log_scratch_space, '(i4,3f8.4)' ) i, &
-!           gaussian_quadrature%integrate( grad_v0_basis( i, :, :, :, 1 ) ), &
-!           gaussian_quadrature%integrate( grad_v0_basis(i, :, :, :, 2 ) ), &
-!           gaussian_quadrature%integrate( grad_v0_basis(i, :, :, :, 3 ) )
-!       call log_event( log_scratch_space, LOG_LEVEL_DEBUG )
-!     end do
-!     call log_event( 'integral of v1 basis functions', LOG_LEVEL_DEBUG )
-!     do i=1,nv1
-!       write( log_scratch_space, '(i4,3f8.4)' ) i, &
-!           gaussian_quadrature%integrate( v1_basis( i, :, :, :, 1 ) ), &
-!           gaussian_quadrature%integrate( v1_basis( i, :, :, :, 2 ) ), &
-!           gaussian_quadrature%integrate( v1_basis( i, :, :, :, 3 ) )
-!       call log_event( log_scratch_space, LOG_LEVEL_DEBUG )
-!     end do
-!     call log_event( 'integral of curl(v1) basis functions', LOG_LEVEL_DEBUG )
-!     do i=1,nv1
-!       write( log_scratch_space, '(i4,3f8.4)' ) i, &
-!           gaussian_quadrature%integrate( curl_v1_basis( i, :, :, :, 1 ) ), &
-!           gaussian_quadrature%integrate( curl_v1_basis( i, :, :, :, 2 ) ), &
-!           gaussian_quadrature%integrate( curl_v1_basis( i, :, :, :, 3 ) )
-!       call log_event( log_scratch_space, LOG_LEVEL_DEBUG )
-!     end do
-!     call log_event( 'integral of v2 basis functions', LOG_LEVEL_DEBUG )
-!     do i=1,nv2
-!       write( log_scratch_space,'(i4,3f8.4)' ) i, &
-!           gaussian_quadrature%integrate( v2_basis( i, :, :, :, 1 ) ), &
-!           gaussian_quadrature%integrate( v2_basis( i, :, :, :, 2 ) ), &
-!           gaussian_quadrature%integrate( v2_basis( i, :, :, :, 3 ) )
-!       call log_event( log_scratch_space, LOG_LEVEL_DEBUG )
-!     end do
-!     call log_event( 'integral of div(v2) basis functions', LOG_LEVEL_DEBUG )
-!     do i=1,nv2
-!       write( log_scratch_space, '(i4,f8.4)' ) i, &
-!           gaussian_quadrature%integrate( div_v2_basis( i, :, :, :, 1 ) )
-!       call log_event( log_scratch_space, LOG_LEVEL_DEBUG )
-!     end do
-!     call log_event( 'integral of v3 basis functions', LOG_LEVEL_DEBUG )
-!     do i=1,nv3
-!     write( log_scratch_space, '(i4,f8.4)' ) i, &
-!           gaussian_quadrature%integrate( v3_basis( i, :, :, :, 1 ) )
-!       call log_event( log_scratch_space, LOG_LEVEL_DEBUG )
-!     end do
 
   end subroutine compute_basis
 
