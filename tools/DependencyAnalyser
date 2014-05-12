@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 ##############################################################################
 # (c) The copyright relating to this work is owned jointly by the Crown,
@@ -25,10 +25,17 @@
 
 from __future__ import print_function;
 
+import argparse
 import os;
 import os.path;
 import re;
 import sys;
+
+'''
+Examine Fortran source and build dependency information for use by "make".
+'''
+
+__version__ = '1.1'
 
 ##############################################################################
 # Scan the source tree and produce required output files.
@@ -38,11 +45,14 @@ import sys;
 #   moduleDirectoryName - The directory which is to contain Fortran module files
 #   objectDirectoryName - The directory which is to contain object files
 #   sourceRootName      - The directory in which the source tree is found
+#   ignoreModules        - A list of module names to ignore
 #
 def analyseSource(outputDirectoryName, \
-                  moduleDirectoryName, objectDirectoryName, \
-                  sourceRootName):
-    meta = SourceTree()
+                  moduleDirectoryName, \
+                  objectDirectoryName, \
+                  sourceRootName,      \
+                  ignoreModules ) :
+    meta = SourceTree( ignoreModules )
 
     # Visit each directory in the tree and process it
     for path, directories, files in os.walk(sourceRootName):
@@ -60,14 +70,19 @@ def analyseSource(outputDirectoryName, \
 
     # Output the dependencies file
     filename = os.path.join(outputDirectoryName, 'dependencies.mk')
-    with open(filename, 'w') as dependencyFile:
-        meta.makeDependencyTree(dependencyFile, moduleDirectoryName)
+    try:
+        with open(filename, 'w') as dependencyFile:
+            meta.makeDependencyTree(dependencyFile, moduleDirectoryName)
 
-    # Output the program object list files
-    for program in meta.getPrograms():
-        filename = os.path.join(outputDirectoryName, program + '.mk')
-        with open(filename, 'w') as objectFile:
-            meta.makeObjectList(objectFile, program, objectDirectoryName)
+        # Output the program object list files
+        for program in meta.getPrograms():
+            filename = os.path.join(outputDirectoryName, program + '.mk')
+            with open(filename, 'w') as objectFile:
+                meta.makeObjectList(objectFile, program, objectDirectoryName)
+    except KeyError as ex:
+        os.unlink( filename )
+        message = '*FAIL* Unresolved dependency: {}'
+        print( message.format( ex ) )
 
 ###############################################################################
 # Examine the contents of a Fortran source file and extract dependency
@@ -104,7 +119,9 @@ class SourceTree:
     ###########################################################################
     # Initialiser taking no arguments.
     #
-    def __init__(self):
+    def __init__( self, ignoreModules ) :
+        self._ignoreModules = ignoreModules
+
         self._programToFilename = {}
         self._moduleToFilename = {}
         self._filenameToDependencies = {}
@@ -146,11 +163,16 @@ class SourceTree:
     #
     def addDependency(self, leafname, moduleName):
         leafname = os.path.normpath(leafname)
-        print('    File ' + leafname + ' depends on module ' + moduleName)
-        if leafname not in self._filenameToDependencies:
-            self._filenameToDependencies[leafname] = []
-        if moduleName not in self._filenameToDependencies[leafname]:
-            self._filenameToDependencies[leafname].append(moduleName)
+        print('    File ' + leafname + ' depends on module ' + moduleName, \
+              end='')
+        if moduleName in self._ignoreModules :
+            print( ' - Ignored 3rd party module' )
+        else :
+            print()
+            if leafname not in self._filenameToDependencies:
+                self._filenameToDependencies[leafname] = []
+            if moduleName not in self._filenameToDependencies[leafname]:
+                self._filenameToDependencies[leafname].append(moduleName)
 
     ###########################################################################
     # Write the dependancy information to file handle.
@@ -176,9 +198,9 @@ class SourceTree:
             for module in self._filenameToDependencies[key]:
                 sourceFilename = self._moduleToFilename[module]
                 moduleFilename = self._substituteExtension(sourceFilename, \
-                                                          'mod')
+                                                        'mod')
                 moduleFilename = os.path.join(moduleDirectoryName, \
-                                              moduleFilename)
+                                            moduleFilename)
                 moduleList.append(os.path.normpath(moduleFilename))
 
             # Output make rule.
@@ -250,4 +272,28 @@ class SourceTree:
 # Entry point
 
 if __name__ == '__main__':
-    analyseSource(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+    parser = argparse.ArgumentParser( add_help=False, \
+                                      description=__doc__ )
+    parser.add_argument( '-help', '-h', '--help', action='help', \
+                         help='Show this help message and exit' )
+    parser.add_argument( '-version', action='version', \
+                         version='%(prog)s {}'.format( __version__ ) )
+    parser.add_argument( 'outputdir', metavar='output directory', \
+                         help='Generated output will go here' )
+    parser.add_argument( 'moduledir', metavar='module directory', \
+                         help='Fortran module files will go here' )
+    parser.add_argument( 'objectdir', metavar='object directory', \
+                         help='Object files will go here' )
+    parser.add_argument( 'sourcedir', metavar='source directory', \
+                         help='The root directory of the source tree' )
+    parser.add_argument( '-ignore', metavar='MODULE', action='append', \
+help='A 3rd party module name to be ignored. This may appear multiple times' )
+    args = parser.parse_args()
+
+    if args.ignore is None: args.ignore = []
+
+    analyseSource( args.outputdir, \
+                   args.moduledir, \
+                   args.objectdir, \
+                   args.sourcedir,
+                   args.ignore )

@@ -5,10 +5,13 @@
 # https://puma.nerc.ac.uk/trac/GungHo/wiki
 ##############################################################################
 
+IGNORE_DEPENDENCIES = netcdf
+
 ROOT = ../..
 include $(ROOT)/Makefile.inc
 
 SUBDIRS = $(shell find * -maxdepth 1 -type d)
+IGNORE_DEPENDENCIES := $(patsubst %,-ignore %,$(IGNORE_DEPENDENCIES))
 
 export SRC        = $(wildcard *.F90)
 export OBJ_DIR    = $(BUILD_DIR)/dynamo
@@ -21,7 +24,8 @@ all: $(OBJ_DIR)/$(DEP_FILE)
 	$(MAKE) -f dynamo.mk all
 
 $(OBJ_DIR)/$(DEP_FILE): $(SRC) $(OBJ_DIR) $(OBJ_SUBDIRS)
-	@$(TOOL_DIR)/DependencyAnalyser $(OBJ_DIR) $(OBJ_DIR) $(OBJ_DIR) .
+	@$(TOOL_DIR)/DependencyAnalyser $(IGNORE_DEPENDENCIES) \
+	                                $(OBJ_DIR) $(OBJ_DIR) $(OBJ_DIR) .
 
 $(OBJ_DIR) $(OBJ_SUBDIRS):
 	@echo "Creating $@"
