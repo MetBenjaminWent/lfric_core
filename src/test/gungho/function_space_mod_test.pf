@@ -14,83 +14,213 @@ contains
   @test
   subroutine test_func_space()
     use pFUnit_Mod
-    use function_space_mod
+    use function_space_mod, only : function_space_type, V0, V1, V2, V3
     use constants_mod, only : dp
+    use mesh_mod, only : num_cells, v_unique_dofs
+    use gaussian_quadrature_mod, only : ngp_h, ngp_v
+    use basis_function_mod,         only : &
+              v0_basis, v1_basis, v2_basis, v3_basis, &
+              v0_diff_basis, v1_diff_basis, v2_diff_basis, v3_diff_basis, &
+              v0_nodal_coords, v1_nodal_coords, v2_nodal_coords, v3_nodal_coords
+    use dofmap_mod,                 only : &
+              v0_dofmap, v1_dofmap, v2_dofmap, v3_dofmap
     implicit none
 
-    type(function_space_type) :: func_space
-    integer :: num_cells, num_dofs, num_unique_dofs
-    integer :: ngp_v,ngp_h,dim_space,dim_space_diff
+    type(function_space_type) :: v0_func_space, v1_func_space, &
+                                 v2_func_space, v3_func_space
+
+    integer :: num_dofs, num_unique_dofs
     integer :: testncell, testundf
-    real(kind=dp), pointer, dimension(:,:,:,:) :: basis
-    real(kind=dp) test_basis
-    integer :: map(4),i
+    real(kind=dp), pointer, dimension(:,:,:,:) :: test_basis
+    integer :: i,j
     integer, pointer :: testmap(:)
     real(kind=dp) :: epsilon
-    real(kind=dp) :: x,y,z
     real(kind=dp), pointer, dimension(:,:) :: test_nodes
+
     
     ! set some sizes ...
     num_cells = 35
     num_dofs=4
     num_unique_dofs = 100
-    ngp_v=4
-    ngp_h=7
-    dim_space=1
-    dim_space_diff=3
+    do i=1,4
+      v_unique_dofs(i,1)=num_unique_dofs
+      v_unique_dofs(i,2)=num_dofs
+    enddo
+    allocate(v0_basis(1,v_unique_dofs(1,2),ngp_h,ngp_v))
+    allocate(v1_basis(3,v_unique_dofs(2,2),ngp_h,ngp_v))
+    allocate(v2_basis(3,v_unique_dofs(3,2),ngp_h,ngp_v))
+    allocate(v3_basis(1,v_unique_dofs(4,2),ngp_h,ngp_v))
+    allocate(v0_diff_basis(3,v_unique_dofs(1,2),ngp_h,ngp_v))
+    allocate(v1_diff_basis(3,v_unique_dofs(2,2),ngp_h,ngp_v))
+    allocate(v2_diff_basis(1,v_unique_dofs(3,2),ngp_h,ngp_v))
+    allocate(v3_diff_basis(1,v_unique_dofs(4,2),ngp_h,ngp_v))
+    allocate(v0_nodal_coords(3,v_unique_dofs(1,2)))
+    allocate(v1_nodal_coords(3,v_unique_dofs(2,2)))
+    allocate(v2_nodal_coords(3,v_unique_dofs(3,2)))
+    allocate(v3_nodal_coords(3,v_unique_dofs(4,2)))
+    v0_basis=sqrt(2.0)
+    v1_basis=sqrt(2.0)
+    v2_basis=sqrt(2.0)
+    v3_basis=sqrt(2.0)
+    v0_diff_basis=atan(4.0)
+    v1_diff_basis=atan(4.0)
+    v2_diff_basis=atan(4.0)
+    v3_diff_basis=atan(4.0)
+    v0_nodal_coords(1,:)=0.152689632_dp
+    v0_nodal_coords(2,:)=0.562554751_dp
+    v0_nodal_coords(3,:)=-0.8234_dp
+    v1_nodal_coords(1,:)=0.152689632_dp
+    v1_nodal_coords(2,:)=0.562554751_dp
+    v1_nodal_coords(3,:)=-0.8234_dp
+    v2_nodal_coords(1,:)=0.152689632_dp
+    v2_nodal_coords(2,:)=0.562554751_dp
+    v2_nodal_coords(3,:)=-0.8234_dp
+    v3_nodal_coords(1,:)=0.152689632_dp
+    v3_nodal_coords(2,:)=0.562554751_dp
+    v3_nodal_coords(3,:)=-0.8234_dp
+    allocate( v0_dofmap(0:num_cells,v_unique_dofs(1,2)) )
+    allocate( v1_dofmap(0:num_cells,v_unique_dofs(2,2)) )
+    allocate( v2_dofmap(0:num_cells,v_unique_dofs(3,2)) )
+    allocate( v3_dofmap(0:num_cells,v_unique_dofs(4,2)) )
+    do i=0,num_cells
+       v0_dofmap(i,:) = i+64
+       v1_dofmap(i,:) = i+64
+       v2_dofmap(i,:) = i+64
+       v3_dofmap(i,:) = i+64
+    end do
 
-    func_space = function_space_type( &
-         num_cells=num_cells, num_dofs=num_dofs, num_unique_dofs=num_unique_dofs, &
-         dim_space=dim_space, dim_space_diff=dim_space_diff,                      &
-         ngp_h = ngp_h, ngp_v = ngp_v)
+!v0
+    v0_func_space = v0_func_space%get_instance(V0)
 
     ! test the procedures of the type
-    testncell = func_space%get_ncell()
+    testncell = v0_func_space%get_ncell()
     @assertEqual( num_cells, testncell )
 
-    testundf = func_space%get_undf()
+    testundf = v0_func_space%get_undf()
     @assertEqual( num_unique_dofs, testundf )
 
-    do i=1,num_dofs
-       map(i) = i
-    end do
+    testmap => v0_func_space%get_cell_dofmap(0)
+    @assertEqual( v0_dofmap(0,1), testmap(1) )
 
-    call func_space%populate_cell_dofmap(1,map)
-    testmap => func_space%get_cell_dofmap(1)
-    @assertEqual( map, testmap )
-
-    do i=1,num_dofs
-       map(i) = i+64
-    end do
-    call func_space%populate_cell_dofmap(num_cells-2,map)
-    testmap => func_space%get_cell_dofmap(num_cells-2)
-    
-    @assertEqual( map, testmap )
-
+    testmap => v0_func_space%get_cell_dofmap(num_cells-2)    
+    @assertEqual( v0_dofmap(num_cells-2,1), testmap(1) )
 
     epsilon = 1.0e-14
-    test_basis=sqrt(2.0)
-    call func_space%set_basis(test_basis,1,2,3,3)
-    basis => func_space%get_basis( )
-    @assertEqual( basis(1,2,3,3), test_basis,epsilon )
 
-    test_basis=atan(4.0)
-    call func_space%set_diff_basis(test_basis,1,3,4,2)
-    basis => func_space%get_diff_basis()
-    @assertEqual( basis(1,3,4,2), test_basis,epsilon )
+    test_basis => v0_func_space%get_basis( )
+    @assertEqual( v0_basis(1,1,1,1), test_basis(1,1,1,1), epsilon )
 
+    test_basis => v0_func_space%get_diff_basis()
+    @assertEqual( v0_diff_basis(1,1,1,1), test_basis(1,1,1,1), epsilon )
 
-    x = 0.152689632_dp
-    y = 0.562554751_dp
-    z = -0.8234_dp
-    do i=1,num_dofs
-       call func_space%set_nodes(x,y,z,i)
-    end do
-    test_nodes => func_space%get_nodes( )
-    @assertEqual( x, test_nodes(1,4), epsilon )
-    @assertEqual( y, test_nodes(2,3), epsilon )
-    @assertEqual( z, test_nodes(3,2), epsilon )
-    
+    test_nodes => v0_func_space%get_nodes( )
+    @assertEqual( v0_nodal_coords(1,1), test_nodes(1,1), epsilon )
+    @assertEqual( v0_nodal_coords(2,1), test_nodes(2,1), epsilon )
+    @assertEqual( v0_nodal_coords(3,1), test_nodes(3,1), epsilon )
+
+!v1
+    v1_func_space = v1_func_space%get_instance(V1)
+
+    ! test the procedures of the type
+    testncell = v1_func_space%get_ncell()
+    @assertEqual( num_cells, testncell )
+
+    testundf = v1_func_space%get_undf()
+    @assertEqual( num_unique_dofs, testundf )
+
+    testmap => v1_func_space%get_cell_dofmap(1)
+    @assertEqual( v1_dofmap(1,1), testmap(1) )
+
+    testmap => v1_func_space%get_cell_dofmap(num_cells-2)    
+    @assertEqual( v1_dofmap(num_cells-2,1), testmap(1) )
+
+    epsilon = 1.0e-14
+
+    test_basis => v1_func_space%get_basis( )
+    @assertEqual( v1_basis(1,1,1,1), test_basis(1,1,1,1), epsilon )
+
+    test_basis => v1_func_space%get_diff_basis()
+    @assertEqual( v1_diff_basis(1,1,1,1), test_basis(1,1,1,1), epsilon )
+
+    test_nodes => v1_func_space%get_nodes( )
+    @assertEqual( v1_nodal_coords(1,1), test_nodes(1,1), epsilon )
+    @assertEqual( v1_nodal_coords(2,1), test_nodes(2,1), epsilon )
+    @assertEqual( v1_nodal_coords(3,1), test_nodes(3,1), epsilon )
+
+!v2
+    v2_func_space = v2_func_space%get_instance(V2)
+
+    ! test the procedures of the type
+    testncell = v2_func_space%get_ncell()
+    @assertEqual( num_cells, testncell )
+
+    testundf = v2_func_space%get_undf()
+    @assertEqual( num_unique_dofs, testundf )
+
+    testmap => v2_func_space%get_cell_dofmap(1)
+    @assertEqual( v2_dofmap(1,1), testmap(1) )
+
+    testmap => v2_func_space%get_cell_dofmap(num_cells-2)    
+    @assertEqual( v2_dofmap(num_cells-2,1), testmap(1) )
+
+    epsilon = 1.0e-14
+
+    test_basis => v2_func_space%get_basis( )
+    @assertEqual( v2_basis(1,1,1,1), test_basis(1,1,1,1), epsilon )
+
+    test_basis => v2_func_space%get_diff_basis()
+    @assertEqual( v2_diff_basis(1,1,1,1), test_basis(1,1,1,1), epsilon )
+
+    test_nodes => v2_func_space%get_nodes( )
+    @assertEqual( v2_nodal_coords(1,1), test_nodes(1,1), epsilon )
+    @assertEqual( v2_nodal_coords(2,1), test_nodes(2,1), epsilon )
+    @assertEqual( v2_nodal_coords(3,1), test_nodes(3,1), epsilon )
+
+!v3
+    v3_func_space = v3_func_space%get_instance(V3)
+
+    ! test the procedures of the type
+    testncell = v3_func_space%get_ncell()
+    @assertEqual( num_cells, testncell )
+
+    testundf = v3_func_space%get_undf()
+    @assertEqual( num_unique_dofs, testundf )
+
+    testmap => v3_func_space%get_cell_dofmap(1)
+    @assertEqual( v3_dofmap(1,1), testmap(1) )
+
+    testmap => v3_func_space%get_cell_dofmap(num_cells-2)    
+    @assertEqual( v3_dofmap(num_cells-2,1), testmap(1) )
+
+    epsilon = 1.0e-14
+
+    test_basis => v3_func_space%get_basis( )
+    @assertEqual( v3_basis(1,1,1,1), test_basis(1,1,1,1), epsilon )
+
+    test_basis => v3_func_space%get_diff_basis()
+    @assertEqual( v3_diff_basis(1,1,1,1), test_basis(1,1,1,1), epsilon )
+
+    test_nodes => v3_func_space%get_nodes( )
+    @assertEqual( v3_nodal_coords(1,1), test_nodes(1,1), epsilon )
+    @assertEqual( v3_nodal_coords(2,1), test_nodes(2,1), epsilon )
+    @assertEqual( v3_nodal_coords(3,1), test_nodes(3,1), epsilon )    
+
+    deallocate(v0_basis)
+    deallocate(v1_basis)
+    deallocate(v2_basis)
+    deallocate(v3_basis)
+    deallocate(v0_diff_basis)
+    deallocate(v1_diff_basis)
+    deallocate(v2_diff_basis)
+    deallocate(v3_diff_basis)
+    deallocate(v0_nodal_coords)
+    deallocate(v1_nodal_coords)
+    deallocate(v2_nodal_coords)
+    deallocate(v3_nodal_coords)
+    deallocate(v0_dofmap)
+    deallocate(v1_dofmap)
+    deallocate(v2_dofmap)
+    deallocate(v3_dofmap)
 
   end subroutine test_func_space
 

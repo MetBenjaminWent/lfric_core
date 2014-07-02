@@ -20,8 +20,15 @@ contains
 
     use field_mod,               only : field_type,      &
                                         field_proxy_type 
-    use function_space_mod,      only : function_space_type
-    use gaussian_quadrature_mod, only : gaussian_quadrature_type
+    use function_space_mod,      only : function_space_type, V0
+    use constants_mod, only : dp
+    use mesh_mod, only : num_cells, v_unique_dofs
+    use gaussian_quadrature_mod, only : gaussian_quadrature_type, &
+                                        ngp_h, ngp_v
+    use basis_function_mod,         only : v0_basis, &
+                                           v0_diff_basis, &
+                                           v0_nodal_coords
+    use dofmap_mod,                 only : v0_dofmap
     use pFUnit_Mod
 
     implicit none
@@ -30,31 +37,35 @@ contains
     type( field_type )               :: f_field
     type( field_proxy_type )         :: f_field_proxy
     type( gaussian_quadrature_type ) :: gq
-    integer                          :: num_cells,       &
-                                        num_dofs,        &
-                                        num_unique_dofs, &
-                                        num_layers,      &
-                                        testncell,       &
+    integer                          :: num_layers,num_dofs,num_unique_dofs
+    integer                          :: testncell,       &
                                         testnlayers
+    integer :: i,j
 
+    num_layers=50
     num_cells = 35
     num_dofs=4
     num_unique_dofs = 100
-    num_layers=50
+    do i=1,4
+      v_unique_dofs(i,1)=num_unique_dofs
+      v_unique_dofs(i,2)=num_dofs
+    enddo
+    allocate(v0_basis(1,v_unique_dofs(1,2),ngp_h,ngp_v))
+    allocate(v0_diff_basis(3,v_unique_dofs(1,2),ngp_h,ngp_v))
+    allocate(v0_nodal_coords(3,v_unique_dofs(1,2)))
+    v0_basis=sqrt(2.0)
+    v0_diff_basis=atan(4.0)
+    v0_nodal_coords(1,:)=0.152689632_dp
+    v0_nodal_coords(2,:)=0.562554751_dp
+    v0_nodal_coords(3,:)=-0.8234_dp
+    allocate( v0_dofmap(0:num_cells,v_unique_dofs(1,2)) )
+    do i=0,num_cells
+       v0_dofmap(i,:) = i+64
+    end do
 
-    func_space = function_space_type( num_cells       = num_cells,       &
-                                      num_dofs        = num_dofs,        &
-                                      num_unique_dofs = num_unique_dofs, &
-                                      dim_space       = 1,               &
-                                      dim_space_diff  = 3,               &
-                                      ngp_h           = 9,               &
-                                      ngp_v           = 3)
-
-    gq = gaussian_quadrature_type( )
-
-    f_field = field_type( vector_space = func_space, &
-                               gq = gq,                   &
-                               num_layers = num_layers)
+    f_field = field_type( vector_space = func_space%get_instance(V0), &
+                          gq = gq%get_instance(),    &
+                          num_layers = num_layers)
 
     f_field_proxy = f_field % get_proxy( )
 
@@ -64,6 +75,11 @@ contains
 
     testnlayers = f_field_proxy%nlayers
     @assertEqual( num_layers, testnlayers )
+
+    deallocate(v0_basis)
+    deallocate(v0_diff_basis)
+    deallocate(v0_nodal_coords)
+    deallocate(v0_dofmap)
 
   end subroutine test_field_data
 

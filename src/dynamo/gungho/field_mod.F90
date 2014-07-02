@@ -8,8 +8,10 @@
 !
 !> @brief A module providing field related classes.
 !>
-!> @detail Both the full fat field representation and a proxy with access to the
-!! field elements are defined here.
+!> @detail Both a representation of a field which provides no access to the 
+!> underlying data (to be used in the algorithm layer) and an accessor class
+!> (to be used in the Psy layer) are provided.
+
 
 module field_mod
 
@@ -51,7 +53,7 @@ module field_mod
   contains
 
     !> Function to get a proxy with public pointers to the data in a
-    !! field_type. 
+    !! field_type.
     procedure, public :: get_proxy
 
     !> Sends the field contents to the log
@@ -74,8 +76,8 @@ module field_mod
 
   !> Psy layer representation of a field.
   !>
-  !> This is a proxy to the actual field description with each element accessed
-  !> via a public pointer.
+  !> This is an accessor class that allows access to the actual field information
+  !> with each element accessed via a public pointer.
   !>
   type, public :: field_proxy_type 
 
@@ -168,7 +170,7 @@ contains
   !>
   subroutine print_field( self, title )
 
-    use log_mod, only : log_event, log_scratch_space, LOG_LEVEL_DEBUG
+    use log_mod, only : log_event, log_scratch_space, LOG_LEVEL_INFO
 
     implicit none
 
@@ -181,7 +183,7 @@ contains
     integer                   :: df
     integer,          pointer :: map( : )
 
-    call log_event( title, LOG_LEVEL_DEBUG )
+    call log_event( title, LOG_LEVEL_INFO )
 
     do cell=1,self%ncell
      map => self%vspace%get_cell_dofmap( cell )
@@ -189,7 +191,7 @@ contains
         do layer=0,self%nlayers-1
           write( log_scratch_space, '( I4, I4, I4, F8.2 )' ) &
               cell, df, layer+1, self%data( map( df ) + layer )
-          call log_event( log_scratch_space, LOG_LEVEL_DEBUG )
+          call log_event( log_scratch_space, LOG_LEVEL_INFO )
         end do
       end do
     end do

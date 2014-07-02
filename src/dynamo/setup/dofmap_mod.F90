@@ -7,6 +7,12 @@
 !
 !-------------------------------------------------------------------------------
 
+!> @brief A module that holds dofmaps for the four element spaces 
+!>
+!> @detail The dofmaps for the four element spaces are stored in this module. The 
+!>         module also contains the code to calculate the dofmaps. This will eventually
+!>         be replaced with code that reads them in from a file.
+
 !-------------------------------------------------------------------------------
 ! Computes the dofmaps for the 4 element spaces given grid connectivity information
 ! requires: list of cell next to current cell
@@ -20,44 +26,55 @@ use mesh_generator_mod, only: nedge_h_g, nvert_h_g, face_on_cell, edge_on_cell, 
 
 implicit none
 
+!> A two dim integer arrays which hold the indirection maps (or dofmaps)
+!! for the whole V0 function space over the bottom level of the domain.
+integer, allocatable :: v0_dofmap(:,:)
+!> A two dim integer arrays which hold the indirection maps (or dofmaps)
+!! for the whole V1 function space over the bottom level of the domain.
+integer, allocatable :: v1_dofmap(:,:)
+!> A two dim integer arrays which hold the indirection maps (or dofmaps)
+!! for the whole V2 function space over the bottom level of the domain.
+integer, allocatable :: v2_dofmap(:,:)
+!> A two dim integer arrays which hold the indirection maps (or dofmaps)
+!! for the whole V3 function space over the bottom level of the domain.
+integer, allocatable :: v3_dofmap(:,:)
+
 !-------------------------------------------------------------------------------
 ! Contained functions/subroutines
 !-------------------------------------------------------------------------------
 contains 
 
-subroutine get_dofmap(nlayers, function_space, ndf_entity)
-!-----------------------------------------------------------------------------
-! Subroutine to read dofmaps (in fact compute them using dofmap_populate)
-!-----------------------------------------------------------------------------
-  use function_space_mod, only: function_space_type
+!> Subroutine to read dofmaps (in fact currently calls dofmap_populate to
+!> compute them)
+subroutine get_dofmap(nlayers, v_dof_entity, &
+                      ncell, v_unique_dofs )
   
   implicit none
   
   integer, intent(in)       :: nlayers
-  integer, intent(in)       :: ndf_entity(0:3)
-  type(function_space_type) :: function_space  
-  integer, allocatable      :: dofmap(:,:)
-  integer :: cell
-  
-  integer :: ncell, ndf
-  
-  ncell = function_space%get_ncell()
-  ndf   = function_space%get_ndf()
- 
-  allocate( dofmap(0:ncell,ndf) )
-  
-  call dofmap_populate(ncell, nlayers,ndf, ndf_entity, dofmap)
+  integer, intent(in)       :: v_dof_entity(4,0:3)
+  integer, intent(in)       :: ncell
+  integer, intent(in)       :: v_unique_dofs(4,2) 
 
-  do cell = 0, ncell
-     call function_space%populate_cell_dofmap(cell,dofmap(cell,:))
-  end do
+  allocate( v0_dofmap(0:ncell,v_unique_dofs(1,2)) )
+  allocate( v1_dofmap(0:ncell,v_unique_dofs(2,2)) )
+  allocate( v2_dofmap(0:ncell,v_unique_dofs(3,2)) )
+  allocate( v3_dofmap(0:ncell,v_unique_dofs(4,2)) )
+  
+  call dofmap_populate(ncell, nlayers, &
+                       v_unique_dofs(1,2), v_dof_entity(1,:), v0_dofmap)
+  call dofmap_populate(ncell, nlayers, &
+                       v_unique_dofs(2,2), v_dof_entity(2,:), v1_dofmap)
+  call dofmap_populate(ncell, nlayers, &
+                       v_unique_dofs(3,2), v_dof_entity(3,:), v2_dofmap)
+  call dofmap_populate(ncell, nlayers, &
+                       v_unique_dofs(4,2), v_dof_entity(4,:), v3_dofmap)
 
 end subroutine get_dofmap
 
+!> Subroutine to populate dofmaps (at the moment it calculates them on the fly
+!> but they will eventually be read in from a file)
 subroutine dofmap_populate(ncells,nlayers,ndof_sum,ndof_entity,dofmap)
-!-----------------------------------------------------------------------------
-! Subroutine to populate dofmaps
-!-----------------------------------------------------------------------------
 
   integer, intent(in) :: ncells, nlayers
 

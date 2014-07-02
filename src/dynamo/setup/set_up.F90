@@ -5,14 +5,13 @@
 ! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
 !-------------------------------------------------------------------------------
 
-!> @brief Sets up the function spaces
+!> @brief Sets up data required for the the function spaces
 
-!> @details Thie code generates a mesh and determines the dofmaps. This will
-!> be replaced with code that reads this in a mesh generation and paritioning
-!> will be a pre-processor stage. The constructurs for the functions spaces
-!> are called here once the information needed to populate them has been
-!> created. 
-!> There are no tests for this code as this will be replaced.
+!> @details This code generates a mesh and determines the basis functions and
+!> dofmaps. This will be replaced with code that reads this in from a mesh
+!> generation and paritioning pre-processor stage.  
+
+! There are no tests for this code as this will be replaced.
 
 module set_up_mod
 
@@ -25,29 +24,28 @@ module set_up_mod
                                    mesh_generator_biperiodic,  &
                                    mesh_connectivity
   use num_dof_mod,                only : num_dof_init
-  use compute_basis_function_mod, only : compute_basis
-  use dofmap_mod,                 only : get_dofmap
-  use gaussian_quadrature_mod,    only : gaussian_quadrature_type,ngp_h, ngp_v
+  use basis_function_mod,         only : get_basis, &
+              v0_basis, v1_basis, v2_basis, v3_basis, &
+              v0_diff_basis, v1_diff_basis, v2_diff_basis, v3_diff_basis, &
+              v0_nodal_coords, v1_nodal_coords, v2_nodal_coords, v3_nodal_coords
+
+  use dofmap_mod,                 only : get_dofmap, &
+              v0_dofmap, v1_dofmap, v2_dofmap, v3_dofmap
+  use gaussian_quadrature_mod,    only : ngp_h, ngp_v
   implicit none
 contains 
 
-  subroutine set_up(v0, v1, v2, v3, num_layers,gq)
+!> Generates a mesh and determines the basis functions and dofmaps (this will 
+!> be replaced with code that reads the information in)
+  subroutine set_up( )
 
     use log_mod, only : log_event, LOG_LEVEL_INFO
+    use mesh_mod, only : num_cells, num_layers, element_order, l_spherical, &
+                         v_unique_dofs,v_dof_entity
 
     implicit none
 
-    type(function_space_type), intent(inout)   :: v0, v1, v2, v3
-    integer, intent(out)                       :: num_layers
-    type(gaussian_quadrature_type), intent(in) :: gq
-
-    integer                                  :: num_cells, element_order
-    logical                                  :: l_spherical
     real(kind=dp), parameter                 :: delta=1.0_dp
-
-    integer                                  :: v_unique_dofs(4,2)
-    integer                                  :: v_dof_entity(4,0:3)    
-
     character(len = 100)                     :: filename
 
     ! hard-coded these numbers are
@@ -80,45 +78,20 @@ contains
 ! Initialise FE elements on the mesh constructed above
 ! really another pre-processor step
 ! ----------------------------------------------------------
-    call log_event( "set_up: building function spaces", LOG_LEVEL_INFO )
+
     ! initialise numbers of dofs    
     call num_dof_init(num_cells,num_layers,element_order,v_unique_dofs,v_dof_entity)
-    ! call the constructors for the vspaces
-    v0 = function_space_type( &
-         num_cells = num_cells ,num_dofs = v_unique_dofs(1,2), &
-         num_unique_dofs = v_unique_dofs(1,1) ,  &
-         dim_space = 1, dim_space_diff = 3,  &
-         ngp_h = ngp_h, ngp_v = ngp_v )
-
-    v1 = function_space_type( &
-         num_cells = num_cells ,num_dofs = v_unique_dofs(2,2), &
-         num_unique_dofs = v_unique_dofs(2,1) ,  &
-         dim_space = 3, dim_space_diff = 3,  &
-         ngp_h = ngp_h, ngp_v = ngp_v )
-
-    v2 = function_space_type( &
-         num_cells = num_cells ,num_dofs = v_unique_dofs(3,2), &
-         num_unique_dofs = v_unique_dofs(3,1) ,  &
-         dim_space = 3, dim_space_diff = 1,  &
-         ngp_h = ngp_h, ngp_v = ngp_v )
-
-    v3 = function_space_type( &
-         num_cells = num_cells ,num_dofs = v_unique_dofs(4,2), &
-         num_unique_dofs = v_unique_dofs(4,1) ,  &
-         dim_space = 1, dim_space_diff = 1,  &
-         ngp_h = ngp_h, ngp_v = ngp_v )
 
     call log_event( "set_up: computing basis functions", LOG_LEVEL_INFO )
 
-    ! compute the value of the basis functions and populate the
-    ! basis_function_type
-    call compute_basis(element_order,v0,v1,v2,v3,v_unique_dofs,v_dof_entity,gq)  
+    ! read the values of the basis functions. 
+    call get_basis( k=element_order, &
+                    v_unique_dofs=v_unique_dofs,v_dof_entity=v_dof_entity )  
+
     call log_event( "set_up: computing the dof_map", LOG_LEVEL_INFO )
     ! compute the dof maps for each function space
-    call get_dofmap(num_layers,v0,v_dof_entity(1,:))
-    call get_dofmap(num_layers,v1,v_dof_entity(2,:))
-    call get_dofmap(num_layers,v2,v_dof_entity(3,:))
-    call get_dofmap(num_layers,v3,v_dof_entity(4,:))
+    call get_dofmap(nlayers=num_layers,v_dof_entity=v_dof_entity, &
+                    ncell=num_cells,v_unique_dofs=v_unique_dofs)
 
     return
 

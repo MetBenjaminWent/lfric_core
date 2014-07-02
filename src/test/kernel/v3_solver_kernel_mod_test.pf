@@ -27,12 +27,12 @@ contains
     real(kind=dp) :: basis(3,3,3,3,1)
 
     basis=1.0D0
-    gq=gaussian_quadrature_type()
     map(1)=1
     num_layers=1
     ndf=1
     rhsdata(1)=1.0D0
-    call solver_v3_code(num_layers,ndf,map,basis,xdata,rhsdata,gq)
+    call solver_v3_code(num_layers,ndf,map,basis,xdata,rhsdata, &
+                        gq%get_instance())
 
     answer = 1.0D0
     tol=1.0e-14

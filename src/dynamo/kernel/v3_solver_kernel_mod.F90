@@ -72,7 +72,7 @@ subroutine solver_v3_code(nlayers,ndf,map,v3_basis,x,rhs,gq)
   real(kind=dp), intent(in), dimension(1,ndf,ngp_h,ngp_v) :: v3_basis  
   real(kind=dp), intent(inout) :: x(*)
   real(kind=dp), intent(in) :: rhs(*)
-  type(gaussian_quadrature_type), intent(inout) :: gq
+  type(gaussian_quadrature_type), intent(in) :: gq
 
   !Internal variables
   integer               :: df1, df2, k

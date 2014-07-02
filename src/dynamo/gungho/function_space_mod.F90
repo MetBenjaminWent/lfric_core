@@ -9,24 +9,17 @@
 
 !> @brief A type which holds information about the function space.
 
-!> @details A container which holds data about the function space and has a
-!> a basis function and accessor functions.
-!> Private functions popoulate the values of the basis and differential basis 
-!> functions and get an individual value for the index specified.
-!> @param dofmap is a two-dim array, which is of size number_of_dofs_per_cell 
-!> and number_of_cells
-!> @param ndf private how many degrees of freedom per cell
-!> @param ncell private  how many cells (in a layer)
-!> @param undf private how many unique degrees of freedom
-!> @param npg_h private number of gaussian quadrature points in the horizontal
-!> @param npg_v private number of gaussian quadrature points in the vertical
-
+!> @details A container which holds type definition of the function space and 
+!> has holds a number of static copies of the function spaces require by the
+!> model. It provides accessor functions (getters) to various information weld
+!> in the type
 
 module function_space_mod
 
 use constants_mod, only:dp
 
 implicit none
+
 private
 
 !-------------------------------------------------------------------------------
@@ -39,20 +32,24 @@ type, public :: function_space_type
   integer              :: dim_space, dim_space_diff
   !> A two dimensional, allocatable array which holds the indirection map 
   !! or dofmap for the whole function space over the bottom level of the domain.
-  integer, allocatable :: dofmap(:,:)
+  integer, pointer :: dofmap(:,:)
   !> 4-dim allocatable array of reals which hold the values of the basis function
-  real(kind=dp), allocatable :: basis(:,:,:,:)
+  real(kind=dp), pointer :: basis(:,:,:,:)
   !> 4-dim allocatable array of reals which hold the values of the basis function
   !! for the differential  functions space
-  real(kind=dp), allocatable :: diff_basis(:,:,:,:)
+  real(kind=dp), pointer :: diff_basis(:,:,:,:)
 
   !> A two dimensional, allocatable array of reals which holds the coordinates
   !! of the function_space degrees of freedom
-  real(kind=dp), allocatable :: nodal_coords(:,:)
+  real(kind=dp), pointer :: nodal_coords(:,:)
 
 contains
   !final :: destructor
 
+  !> Function returns a pointer to a function space. If the required function
+  !> space had not yet been created, it creates one before returning the pointer
+  !> to it
+  procedure, nopass :: get_instance
 !> Function to get the total unique degrees of freedom for this space
 !! returns an integer
 !! @param[in] self the calling function space
@@ -69,12 +66,6 @@ contains
 !! @return The pointer which points to a slice of the dofmap
   procedure :: get_cell_dofmap
 
-!> Subroutine which populates the dofmap with data
-!! @param[in] self The calling function space
-!! @param[in] cell which cell
-!! @param[in] map a 1-d array of integers which is the dofmap for this cell
-  procedure :: populate_cell_dofmap
-
 !> Function which obtains the number of dofs per cell
 !! @param[in] self The calling functions space
 !! return an integer, the number of dofs per cell
@@ -85,39 +76,12 @@ contains
 !! @return A pointer to the array to hold the values of the basis function 
   procedure :: get_basis
 
-!> Accessor procedure for the basis function
-!! to set an invididual value
-!! @param[inout] self the calling basis function
-!! @param[in] p1 integer specifing element of first array dimension
-!! @param[in] p2 integer specifing element of second array dimension
-!! @param[in] p3 integer specifing element of third array dimension
-!! @param[in] p4 integer specifing element of fourth array dimension
-!! @param[in] basis a real value to set the basis function
-  procedure :: set_basis
-
 !> Accessor procedure for the basis function for the
 !! differential function space
 !! @param[in] self the calling function space
 !! @return A pointer to the real array to hold the values of the
 !!  basis function 
   procedure :: get_diff_basis
-
-!> Accessor procedure for the differential basis function
-!! to set an invididual value 
-!! @param[inout] self the calling function space
-!! @param[in] p1 integer specifing element of first array dimension
-!! @param[in] p2 integer specifing element of second array dimension
-!! @param[in] p3 integer specifing element of third array dimension
-!! @param[in] p4 integer specifing element of fourth array dimension
-!! @param[in] basis a real value to set the basis function
-  procedure :: set_diff_basis
-  
-!> Accessor procedure to set the coordinates of the function space
-!! @param[in] x The x coordinate
-!! @param[in] y The y coordinate
-!! @param[in] x The z coordinate
-!! @param[in] i Degree of freedom label 
-  procedure :: set_nodes
 
 !> Accessor function to get the coordinates of the function space
 !! @return A pointer to the two dimensional array, (xyz,ndf)
@@ -127,22 +91,19 @@ contains
 end type function_space_type
 
 !-------------------------------------------------------------------------------
-! Constructors
+! Module parameters
 !-------------------------------------------------------------------------------
+!> integer that defines the type of function space required
+integer, public, parameter      :: V0 = 100
+integer, public, parameter      :: V1 = 101
+integer, public, parameter      :: V2 = 102
+integer, public, parameter      :: V3 = 103
 
-! overload the default structure constructor for function space
-!> Constructor for the function space. Allocates the memory for the dofmap
-!! and calls the constructor on for the basis function.
-!! @param[in] num_cells
-!! @param[in] num_dofs
-!! @param[in] num_unique_dofs
-!! @param[in] dim_space The dimension of this function space
-!! @param[in] dim_space_diff The dimension of the differentiated function space
-!! @param[in] ngp_h The number of guassian quadrature points in the horizonal
-!! @param[in] ngp_v The number of guassian quadrature points in the vertical
-interface function_space_type
-   module procedure constructor
-end interface
+!> These are static copies of all the function spaces that will be required 
+type(function_space_type), target, allocatable, save :: v0_function_space
+type(function_space_type), target, allocatable, save :: v1_function_space
+type(function_space_type), target, allocatable, save :: v2_function_space
+type(function_space_type), target, allocatable, save :: v3_function_space
 
 !-------------------------------------------------------------------------------
 ! Contained functions/subroutines
@@ -150,55 +111,124 @@ end interface
 public get_ncell, get_cell_dofmap
 contains
 
-type(function_space_type) function constructor(num_cells,num_dofs, &
-                                               num_unique_dofs,  &
-                                               dim_space, dim_space_diff,  &
-                                               ngp_h,ngp_v ) &
-     result(self)
-  !-----------------------------------------------------------------------------
-  ! Constructor
-  !-----------------------------------------------------------------------------
+function get_instance(function_space) result(instance)
+  use basis_function_mod,         only : get_basis, &
+              v0_basis, v1_basis, v2_basis, v3_basis, &
+              v0_diff_basis, v1_diff_basis, v2_diff_basis, v3_diff_basis, &
+              v0_nodal_coords, v1_nodal_coords, v2_nodal_coords, v3_nodal_coords
 
-  !Arguments
+  use dofmap_mod,                 only : get_dofmap, &
+              v0_dofmap, v1_dofmap, v2_dofmap, v3_dofmap
+  use gaussian_quadrature_mod,    only : ngp_h, ngp_v
+  use mesh_mod, only : num_cells, v_unique_dofs
+
+  implicit none
+
+  integer :: function_space
+  type(function_space_type), pointer :: instance
+
+  select case (function_space)
+  case (V0)
+    if(.not.allocated(v0_function_space)) then
+      allocate(v0_function_space)   
+      call init_function_space(self=v0_function_space, &
+         num_cells = num_cells ,num_dofs = v_unique_dofs(1,2), &
+         num_unique_dofs = v_unique_dofs(1,1) ,  &
+         dim_space = 1, dim_space_diff = 3,  &
+         ngp_h = ngp_h, ngp_v = ngp_v, &
+         dofmap=v0_dofmap, &
+         basis=v0_basis, diff_basis=v0_diff_basis, &
+         nodal_coords=v0_nodal_coords ) 
+    end if
+    instance => v0_function_space
+  case (V1)
+    if(.not.allocated(v1_function_space)) then
+      allocate(v1_function_space)  
+      call init_function_space(self=v1_function_space, &
+         num_cells = num_cells ,num_dofs = v_unique_dofs(2,2), &
+         num_unique_dofs = v_unique_dofs(2,1) ,  &
+         dim_space = 3, dim_space_diff = 3,  &
+         ngp_h = ngp_h, ngp_v = ngp_v, &
+         dofmap=v1_dofmap, &
+         basis=v1_basis, diff_basis=v1_diff_basis, &
+         nodal_coords=v1_nodal_coords )
+    end if
+    instance => v1_function_space
+  case (V2)
+    if(.not.allocated(v2_function_space)) then 
+      allocate(v2_function_space)
+      call init_function_space(self=v2_function_space, &
+         num_cells = num_cells ,num_dofs = v_unique_dofs(3,2), &
+         num_unique_dofs = v_unique_dofs(3,1) ,  &
+         dim_space = 3, dim_space_diff = 1,  &
+         ngp_h = ngp_h, ngp_v = ngp_v, &
+         dofmap=v2_dofmap, &
+         basis=v2_basis, diff_basis=v2_diff_basis, &
+         nodal_coords=v2_nodal_coords )
+    end if
+    instance => v2_function_space
+  case (V3)
+    if(.not.allocated(v3_function_space)) then
+      allocate(v3_function_space)
+      call init_function_space(self=v3_function_space, &
+         num_cells = num_cells ,num_dofs = v_unique_dofs(4,2), &
+         num_unique_dofs = v_unique_dofs(4,1) ,  &
+         dim_space = 1, dim_space_diff = 1,  &
+         ngp_h = ngp_h, ngp_v = ngp_v, &
+         dofmap=v3_dofmap, &
+         basis=v3_basis, diff_basis=v3_diff_basis, &
+         nodal_coords=v3_nodal_coords )
+    end if
+    instance => v3_function_space
+  case default
+    !not a recognised function space - return a null pointer
+    instance => null()
+  end select
+
+  return
+end function get_instance
+
+
+!> Subroutine initialises a function space.
+!! @param[in] num_cells
+!! @param[in] num_dofs
+!! @param[in] num_unique_dofs
+!! @param[in] dim_space The dimension of this function space
+!! @param[in] dim_space_diff The dimension of the differentiated function space
+!! @param[in] ngp_h The number of guassian quadrature points in the horizonal
+!! @param[in] ngp_v The number of guassian quadrature points in the vertical
+subroutine init_function_space(self, &
+                               num_cells,num_dofs, &
+                               num_unique_dofs,  &
+                               dim_space, dim_space_diff,  &
+                               ngp_h,ngp_v, &
+                               dofmap, &
+                               basis, diff_basis, &
+                               nodal_coords )
+  implicit none
+
+  class(function_space_type) :: self
   integer, intent(in) :: num_cells, num_dofs, num_unique_dofs
   integer, intent(in) :: dim_space, dim_space_diff
   integer, intent(in) :: ngp_h,ngp_v
+  integer, intent(in), target :: dofmap(0:,:)
+  real(kind=dp), intent(in), target :: basis(:,:,:,:), diff_basis(:,:,:,:)
+  real(kind=dp), intent(in), target :: nodal_coords(:,:)
 
-  self%ncell           = num_cells
-  self%ndf             = num_dofs
-  self%undf            = num_unique_dofs
-  self%dim_space       = dim_space
-  self%dim_space_diff  = dim_space_diff
-  self%ngp_h           = ngp_h
-  self%ngp_v           = ngp_v  
+  self%ncell           =  num_cells
+  self%ndf             =  num_dofs
+  self%undf            =  num_unique_dofs
+  self%dim_space       =  dim_space
+  self%dim_space_diff  =  dim_space_diff
+  self%ngp_h           =  ngp_h
+  self%ngp_v           =  ngp_v  
+  self%dofmap          => dofmap
+  self%basis           => basis
+  self%diff_basis      => diff_basis
+  self%nodal_coords    => nodal_coords
   
-  ! allocate some space
-  allocate(self%dofmap(0:num_cells,num_dofs))
-  ! this will need populating 
-
-  ! 3 here is xyz, not dim_space or dim_space_diff
-  allocate(self%nodal_coords(3,num_dofs))
-
-  allocate(self%basis(dim_space,num_dofs,ngp_h,ngp_v))
-  allocate(self%diff_basis(dim_space_diff,num_dofs,ngp_h,ngp_v))
-
   return
-end function constructor
-
-!subroutine destructor()
-!  !-----------------------------------------------------------------------------
-!  ! Destructor. Allocatables are handled by any F2003-compliant compiler
-!  ! anyway.
-!  !-----------------------------------------------------------------------------
-!  implicit none
-!
-!  type(function_space_type) :: self
-!
-!  !deallocate( self%v3dofmap)
-!  !deallocate( self%Rv3)
-!
-!  return
-!end subroutine final_lfric
+end subroutine init_function_space
 
 !-----------------------------------------------------------------------------
 ! Get total unique dofs for this space
@@ -262,23 +292,6 @@ function get_cell_dofmap(self,cell) result(map)
 end function get_cell_dofmap
 
 !-----------------------------------------------------------------------------
-! Copy data in the dofmap
-!-----------------------------------------------------------------------------
-subroutine populate_cell_dofmap(self,cell,map)
-  implicit none
-  class(function_space_type), intent(inout) :: self
-  integer,                    intent(in)    :: cell
-  integer,                    intent(in)    :: map(self%ndf)
-  integer                                   :: dof
-
-  do dof = 1,self%ndf
-     self%dofmap(cell,dof) = map(dof)
-  end do
-
-  return 
-end subroutine populate_cell_dofmap
-
-!-----------------------------------------------------------------------------
 ! Get the basis function
 !-----------------------------------------------------------------------------
 function get_basis(self)  result(basis)
@@ -292,20 +305,6 @@ function get_basis(self)  result(basis)
 end function get_basis
 
 !-----------------------------------------------------------------------------
-! Set the basis function
-!-----------------------------------------------------------------------------
-subroutine set_basis(self,basis,p1,p2,p3,p4)
-  implicit none
-  class(function_space_type), intent(inout) :: self  
-  real(kind=dp),              intent(in)    :: basis
-  integer,                    intent(in)    :: p1,p2,p3,p4
-
-  self%basis(p1,p2,p3,p4) = basis
-
-  return
-end subroutine set_basis
-
-!-----------------------------------------------------------------------------
 ! Get the differential of the basis function
 !-----------------------------------------------------------------------------
 function get_diff_basis(self) result(diff_basis)
@@ -317,36 +316,6 @@ function get_diff_basis(self) result(diff_basis)
 
   return
 end function get_diff_basis
-
-!-----------------------------------------------------------------------------
-! Set the differential of the basis function
-!-----------------------------------------------------------------------------
-subroutine set_diff_basis(self,basis,p1,p2,p3,p4)
-  implicit none
-  class(function_space_type), intent(inout) :: self  
-  real(kind=dp),              intent(in)    :: basis
-  integer,                    intent(in)    :: p1,p2,p3,p4
-
-  self%diff_basis(p1,p2,p3,p4) = basis
-
-  return
-end subroutine set_diff_basis
-
-! ------------------------------------------------------------------
-! Set the nodal coordinates for the function_space
-! ------------------------------------------------------------------
-subroutine set_nodes(self,x,y,z,i)
-  implicit none
-  class(function_space_type), intent(inout) :: self
-  real(kind=dp),              intent(in)    :: x,y,z
-  integer,                    intent(in)    :: i
-
-  self%nodal_coords(1,i) = x
-  self%nodal_coords(2,i) = y
-  self%nodal_coords(3,i) = z
-
-  return
-end subroutine set_nodes
 
 ! ----------------------------------------------------------------
 ! Get the nodal coordinates of the function_space

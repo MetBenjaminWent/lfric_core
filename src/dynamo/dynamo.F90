@@ -15,60 +15,54 @@
 
 !> @brief Main program used to illustrate dynamo functionality.
 
-!> @details Creates the function spaces and calls <code>set_up</code> to
-!> populate them (either read in or compute) then individual calls to the
-!> psy-layer with kernels as if the code has been pre-processed by Psyclone.
+!> @details Calls Creates function spaces, then fields on those 
+!> function spaces, before passing the fields to the algorithm layer
 
 program dynamo
 
-  use field_mod,            only : field_type
-  use lfric
-  use log_mod,              only : log_event, LOG_LEVEL_INFO, & 
-                                   log_set_level, LOG_LEVEL_DEBUG
-
-  use set_up_mod,           only : set_up
-
-  use dynamo_algorithm_mod, only : dynamo_algorithm
+  use dynamo_algorithm_mod,    only : dynamo_algorithm
+  use field_mod,               only : field_type
+  use function_space_mod,      only : function_space_type, V1, V2, V3
+  use log_mod,                 only : log_event, LOG_LEVEL_INFO
+  use set_up_mod,              only : set_up
+  use gaussian_quadrature_mod, only : gaussian_quadrature_type
+  use mesh_mod,                only : num_layers
 
   implicit none
 
-  type( function_space_type )      :: v3_function_space, v2_function_space, &
-                                      v1_function_space, v0_function_space
+  type( function_space_type )      :: function_space
   type( field_type )               :: pressure_density, rhs
   type( field_type )               :: flux_velocity, rhs_v2
   type( field_type )               :: rhs_v1, circulation
   type( gaussian_quadrature_type ) :: gq
-  integer                          :: num_layers
 
   call log_event( 'Dynamo running...', LOG_LEVEL_INFO )
 
-  gq = gaussian_quadrature_type( )
+  call set_up( )
 
-  call set_up( v0_function_space, v1_function_space, v2_function_space,    &
-               v3_function_space, num_layers, gq )
 
-  pressure_density = field_type( vector_space = v3_function_space,         &
-                                 gq = gq,                                  &
+  pressure_density = field_type( function_space%get_instance(V3),          &
+                                 gq%get_instance(),                        &
                                  num_layers = num_layers )
 
-  rhs = field_type( vector_space = v3_function_space,                      &
-                    gq = gq,                                               &
+  rhs = field_type( function_space%get_instance(V3),                       &
+                    gq%get_instance(),                                     &
                     num_layers = num_layers )
 
-  flux_velocity = field_type( vector_space = v2_function_space,            &
-                         gq = gq,                                          &
+  flux_velocity = field_type( function_space%get_instance(V2),             &
+                         gq%get_instance(),                                &
                          num_layers = num_layers )
   
-  rhs_v2 = field_type( vector_space = v2_function_space,                   &
-                       gq = gq,                                            &
+  rhs_v2 = field_type( function_space%get_instance(V2),                    &
+                       gq%get_instance(),                                  &
                        num_layers = num_layers )
 
-  circulation = field_type( vector_space = v1_function_space,              &
-                            gq = gq,                                       &
+  circulation = field_type( function_space%get_instance(V1),               &
+                            gq%get_instance(),                             &
                             num_layers = num_layers )
 
-  rhs_v1 = field_type( vector_space = v1_function_space,                   &
-                       gq = gq,                                            &
+  rhs_v1 = field_type( function_space%get_instance(V1),                    &
+                       gq%get_instance(),                                  &
                        num_layers = num_layers )
 
   call dynamo_algorithm( pressure_density, rhs,                            &

@@ -7,24 +7,18 @@
 !
 !-------------------------------------------------------------------------------
 
-!> @brief Contains the routines used for gaussian quadrature.
+!> @brief Contains the routines used for Gaussian quadrature.
 
-!> @details This module has a type for the gaussian quadrature
+!> @details This module has a type for the Gaussian quadrature and a static
+!> copy of the Gaussian quadrature that is used throughout the model. The first
+!> time the Gaussian quadrature is required, it is created and a pointer to it
+!> returned. Subsequent times, the pointer to the already created Guassian
+!> quadrature is returned.
 
 module gaussian_quadrature_mod
 use constants_mod, only: dp, pi, eps
 implicit none
 private
-
-!-------------------------------------------------------------------------------
-! Module parameters
-!-------------------------------------------------------------------------------
-!> integer The number of gaussian quadrature points in the vertical
-integer, public, parameter      :: ngp_v = 3
-!> integer The number of gaussian quadrature points in the horizontal
-!! nqp_h=ngp_v*ngp_v for quads. They can be different (triangles or hexes)
-!! but there is no setup code for this
-integer, public, parameter      :: ngp_h = 9
 
 !-------------------------------------------------------------------------------
 ! Public types
@@ -34,6 +28,10 @@ type, public :: gaussian_quadrature_type
   !> allocatable arrays which holds the values of the gaussian quadrature
   real(kind=dp), allocatable :: xgp(:), xgp_h(:,:), wgp(:), wgp_h(:)
 contains
+  !> Function returns a pointer to the Gaussian quadrature. If a Gaussian quadrature
+  !> quadrature had not yet been created, it creates one before returning the pointer
+  !> to it
+  procedure, nopass :: get_instance
   !final     :: final_gauss
   !> Subroutine writes out an answer for a test
   !! @param self the calling gaussian quadrature
@@ -65,24 +63,45 @@ contains
 end type
 
 !-------------------------------------------------------------------------------
-! Constructors
+! Module parameters
 !-------------------------------------------------------------------------------
-!> The interface for the constructor for the gaussian_quadrature type
-!! takes no arguments buts computes the values of the arrays xgp and qgp
-interface gaussian_quadrature_type
-  module procedure init_gauss
-end interface
+!> integer The number of gaussian quadrature points in the vertical
+integer, public, parameter      :: ngp_v = 3
+!> integer The number of gaussian quadrature points in the horizontal
+!! nqp_h=ngp_v*ngp_v for quads. They can be different (triangles or hexes)
+!! but there is no setup code for this
+integer, public, parameter      :: ngp_h = 9
+!> All fields are integrated onto a fixed Guassian quadrature.
+!> This is a static copy of that Gaussian quadrature object 
+type(gaussian_quadrature_type), target, allocatable, save :: gq
 
 !-------------------------------------------------------------------------------
 ! Contained functions/subroutines
 !-------------------------------------------------------------------------------
 contains
-  
-type(gaussian_quadrature_type) function init_gauss() result(self)
+
+function get_instance() result(instance)
+  implicit none
+
+  type(gaussian_quadrature_type), pointer :: instance
+
+  if(.not.allocated(gq)) then
+    allocate(gq)
+    call init_gauss(gq) 
+  end if
+
+  instance => gq
+
+  return
+end function get_instance
+ 
+subroutine init_gauss(self)
   !-----------------------------------------------------------------------------
   ! Subroutine to compute the Gaussian points (xgp) and (wgp) wgphts 
   !-----------------------------------------------------------------------------
   implicit none
+
+  class(gaussian_quadrature_type) :: self
 
   integer             :: i, j, m
   real(kind=dp)       :: p1, p2, p3, pp, z, z1
@@ -148,22 +167,7 @@ type(gaussian_quadrature_type) function init_gauss() result(self)
   end do
 
   return
-end function init_gauss
-  
-!subroutine final_gauss(self)
-!  !-----------------------------------------------------------------------------
-!  ! Finalizer. Allocatables are handled anyway by any properly
-!  ! F2003-compliant compiler.
-!  !-----------------------------------------------------------------------------
-!  implicit none
-!
-!  type(gaussian_quadrature_type) :: self
-!
-!  !deallocate( self%xgp )
-!  !deallocate( self%wgp ) 
-!
-!  return
-!end subroutine final_gauss
+end subroutine init_gauss
 
 subroutine test_integrate(self)
   !-----------------------------------------------------------------------------

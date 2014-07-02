@@ -10,7 +10,7 @@
 
 module dynamo_algorithm_mod
 
-  use lfric
+  use field_mod,  only: field_type
   use log_mod,    only: log_event, log_scratch_space, LOG_LEVEL_INFO
   use psy,        only: invoke_rhs_v3, invoke_v3_solver_kernel,            &
                         invoke_rhs_v2, invoke_rhs_v1
@@ -28,7 +28,6 @@ contains
   !! then calls a the GP kernel. Which is a trivial solver for W3
   !! and a generic solver_algorithm for W2 and W1. The solver is a special
   !! pattern so its not a kernel itself but a sub algorithm
-  !! @param field six fields
   subroutine dynamo_algorithm( pressure_density, rhs, &
                                flux_velocity, rhs_v2, &
                                circulation,   rhs_v1)
@@ -46,7 +45,7 @@ contains
     call log_event( "Dynamo: Galerkin Projection for W3 ", LOG_LEVEL_INFO )
     !Construct PSy layer given a list of kernels. This is the line the code
     !generator may parse and do its stuff.
-    
+
     !PSY call invoke ( v3_rhs_kernel_type(rhs),                            &
     !PSY               v3_solver_kernel_type(pressure_density,rhs) )
     call invoke_rhs_v3( rhs )

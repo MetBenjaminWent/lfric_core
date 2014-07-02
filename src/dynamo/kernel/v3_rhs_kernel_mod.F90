@@ -69,7 +69,7 @@ subroutine rhs_v3_code(nlayers,ndf,map,v3_basis,x,gq)
   integer, intent(in) :: map(ndf)
   real(kind=dp), intent(in), dimension(1,ndf,ngp_h,ngp_v) :: v3_basis 
   real(kind=dp), intent(inout) :: x(*)
-  type(gaussian_quadrature_type), intent(inout) :: gq
+  type(gaussian_quadrature_type), intent(in) :: gq
 
   !Internal variables
   integer               :: df, k

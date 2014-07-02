@@ -5,10 +5,17 @@
 ! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
 !-------------------------------------------------------------------------------
 
-!-------------------------------------------------------------------------------
-! Computes the basis functions on quadrature points for 4 element spaces 
-!-------------------------------------------------------------------------------
-module compute_basis_function_mod
+!> @brief A module that holds basis functions and nodal co-ordinates for the
+!>        various function spaces 
+!>
+!> @detail The basis functions on quadrature points and nodal co-ordinates for
+!>         the four element spaces (as well as basis functions for the four
+!>         differential function spaces) are stored in this module. The module
+!>         also contains the code to calculate the basis functions and nodal
+!>         co-ordinates. This will eventually be replaced with code that reads
+!>         them in from a file.
+
+module basis_function_mod
 
   use num_dof_mod
   use reference_element_mod
@@ -16,21 +23,59 @@ module compute_basis_function_mod
   use constants_mod, only: dp
   use gaussian_quadrature_mod, only: gaussian_quadrature_type, &
                                      ngp_v, ngp_h !parameter for how many GQ points
-  use function_space_mod, only : function_space_type
 
   implicit none
 
+  !> 4-dim allocatable arrays of reals which hold the values of the basis
+  !> functions for the V0 function space
+  real(kind=dp), allocatable :: v0_basis(:,:,:,:)
+  !> 4-dim allocatable arrays of reals which hold the values of the basis
+  !> functions for the V1 function space
+  real(kind=dp), allocatable :: v1_basis(:,:,:,:)
+  !> 4-dim allocatable arrays of reals which hold the values of the basis
+  !> functions for the V2 function space
+  real(kind=dp), allocatable :: v2_basis(:,:,:,:)
+  !> 4-dim allocatable arrays of reals which hold the values of the basis
+  !> functions for the V3 function space
+  real(kind=dp), allocatable :: v3_basis(:,:,:,:)
+
+  !> 4-dim allocatable arrays of reals which hold the values of the basis
+  !> functions for the V0 differential function space
+  real(kind=dp), allocatable :: v0_diff_basis(:,:,:,:)
+  !> 4-dim allocatable arrays of reals which hold the values of the basis
+  !> functions for the V1 differential function space
+  real(kind=dp), allocatable :: v1_diff_basis(:,:,:,:)
+  !> 4-dim allocatable arrays of reals which hold the values of the basis
+  !> functions for the V2 differential function space
+  real(kind=dp), allocatable :: v2_diff_basis(:,:,:,:)
+  !> 4-dim allocatable arrays of reals which hold the values of the basis
+  !> functions for the V3 differential function space
+  real(kind=dp), allocatable :: v3_diff_basis(:,:,:,:)
+
+  !> 2-dim allocatable arrays of reals which hold the values of the nodal
+  !> co-ordinates for the V0 function space
+  real(kind=dp), allocatable :: v0_nodal_coords(:,:)
+  !> 2-dim allocatable arrays of reals which hold the values of the nodal
+  !> co-ordinates for the V1 function space
+  real(kind=dp), allocatable :: v1_nodal_coords(:,:)
+  !> 2-dim allocatable arrays of reals which hold the values of the nodal
+  !> co-ordinates for the V2 function space
+  real(kind=dp), allocatable :: v2_nodal_coords(:,:)
+  !> 2-dim allocatable arrays of reals which hold the values of the nodal
+  !> co-ordinates for the V3 function space
+  real(kind=dp), allocatable :: v3_nodal_coords(:,:)
+
 contains 
 
-  subroutine compute_basis(k,v0,v1,v2,v3, v_unique_dofs,v_dof_entity,gq)
-    !-----------------------------------------------------------------------------
-    ! Subroutine to compute test/trial functions on quadrature points
-    !-----------------------------------------------------------------------------
+    !> Subroutine to read test/trial functions on quadrature points. (at
+    !> the moment to reduce our dependencies on external files,
+    !> and because we're only testing with a simpel system, just 
+    !> compute the basis functions and nodal co-ordinates)
+  subroutine get_basis(k, &
+                       v_unique_dofs, v_dof_entity)
 
     ! order of elements
     integer, intent(in) :: k
-    type(function_space_type), intent(inout) :: v0, v1, v2, v3
-    type(gaussian_quadrature_type), intent(in) :: gq
     integer, intent(in) :: v_unique_dofs(4,2), v_dof_entity(4,0:3)
 
     integer :: i, jx, jy, jz, order, idx, j1, j2, h_ctr
@@ -40,6 +85,20 @@ contains
     real(kind=dp)    :: x1(k+2), x2(k+1)
     !real(kind=dp)    :: unit_vec_v2(nv2,3), unit_vec_v1(nv1,3)
     real(kind=dp),allocatable    :: unit_vec_v2(:,:), unit_vec_v1(:,:)
+    type( gaussian_quadrature_type ), pointer :: gq
+
+    allocate(v0_basis(1,v_unique_dofs(1,2),ngp_h,ngp_v))
+    allocate(v1_basis(3,v_unique_dofs(2,2),ngp_h,ngp_v))
+    allocate(v2_basis(3,v_unique_dofs(3,2),ngp_h,ngp_v))
+    allocate(v3_basis(1,v_unique_dofs(4,2),ngp_h,ngp_v))
+    allocate(v0_diff_basis(3,v_unique_dofs(1,2),ngp_h,ngp_v))
+    allocate(v1_diff_basis(3,v_unique_dofs(2,2),ngp_h,ngp_v))
+    allocate(v2_diff_basis(1,v_unique_dofs(3,2),ngp_h,ngp_v))
+    allocate(v3_diff_basis(1,v_unique_dofs(4,2),ngp_h,ngp_v))
+    allocate(v0_nodal_coords(3,v_unique_dofs(1,2)))
+    allocate(v1_nodal_coords(3,v_unique_dofs(2,2)))
+    allocate(v2_nodal_coords(3,v_unique_dofs(3,2)))
+    allocate(v3_nodal_coords(3,v_unique_dofs(4,2)))
 
 
     ! Allocate to be larger than should be needed
@@ -49,6 +108,10 @@ contains
 
     allocate(unit_vec_v2(v_unique_dofs(3,2),3))
     allocate(unit_vec_v1(v_unique_dofs(2,2),3))
+
+    ! Create a gq object for now - Todo: we probably don't need to instantiate
+    ! gq as all we ever do is call a method from it. Sort out later
+    gq=>gq%get_instance()
 
     ! positional arrays - need two, i.e quadratic and linear for RT1
     do i=1,k+2
@@ -156,15 +219,18 @@ contains
              do jz=1,ngp_v
                 fz = gq%poly1d(order,jz,x1(lz(i)),x1,lz(i))
                 dfz = gq%poly1d_deriv(order,jz,x1(lz(i)),x1,lz(i))
-                call v0%set_basis(fx*fy*fz,1,i,h_ctr,jz)
-                call v0%set_diff_basis(dfx*fy*fz,1,i,h_ctr,jz)
-                call v0%set_diff_basis(fx*dfy*fz,2,i,h_ctr,jz)
-                call v0%set_diff_basis(fx*fy*dfz,3,i,h_ctr,jz)                
+                v0_basis(1,i,h_ctr,jz)=fx*fy*fz
+                v0_diff_basis(1,i,h_ctr,jz)=dfx*fy*fz
+                v0_diff_basis(2,i,h_ctr,jz)=fx*dfy*fz
+                v0_diff_basis(3,i,h_ctr,jz)=fx*fy*dfz 
              end do
              h_ctr = h_ctr + 1 
           end do
        end do
-       call v0%set_nodes(x1(lx(i)),x1(ly(i)),x1(lz(i)),i)
+
+       v0_nodal_coords(1,i)=x1(lx(i))
+       v0_nodal_coords(2,i)=x1(ly(i))
+       v0_nodal_coords(3,i)=x1(lz(i))
     end do
 
     !-----------------------------------------------------------------------------
@@ -292,26 +358,27 @@ contains
                    gz = 0.0
                 end if
                 
-                call v1%set_basis(gx*fy*fz*unit_vec_v1(i,1),1,i,h_ctr,jz)
-                call v1%set_basis(fx*gy*fz*unit_vec_v1(i,2),2,i,h_ctr,jz)
-                call v1%set_basis(fx*fy*gz*unit_vec_v1(i,3),3,i,h_ctr,jz)
+                v1_basis(1,i,h_ctr,jz)=gx*fy*fz*unit_vec_v1(i,1)
+                v1_basis(2,i,h_ctr,jz)=fx*gy*fz*unit_vec_v1(i,2)
+                v1_basis(3,i,h_ctr,jz)=fx*fy*gz*unit_vec_v1(i,3)
 
-                call v1%set_diff_basis(                                          &
-                     (fx*dfy*gz*unit_vec_v1(i,3) - fx*gy*dfz*unit_vec_v1(i,2) ), &
-                     1,i,h_ctr,jz)
-                call v1%set_diff_basis(                                          &
-                     (gx*fy*dfz*unit_vec_v1(i,1) - dfx*fy*gz*unit_vec_v1(i,3) ), &
-                     2,i,h_ctr,jz)
-                call v1%set_diff_basis(                                          &
-                     (dfx*gy*fz*unit_vec_v1(i,2) - gx*dfy*fz*unit_vec_v1(i,1) ), &
-                     3,i,h_ctr,jz)                                          
+                v1_diff_basis(1,i,h_ctr,jz)= &
+                     (fx*dfy*gz*unit_vec_v1(i,3) - fx*gy*dfz*unit_vec_v1(i,2) )
+                v1_diff_basis(2,i,h_ctr,jz)= &
+                     (gx*fy*dfz*unit_vec_v1(i,1) - dfx*fy*gz*unit_vec_v1(i,3) )
+                v1_diff_basis(3,i,h_ctr,jz)= &
+                     (dfx*gy*fz*unit_vec_v1(i,2) - gx*dfy*fz*unit_vec_v1(i,1) )
+
              end do
              h_ctr = h_ctr + 1
           end do
        end do
-       call v1%set_nodes(unit_vec_v2(i,1)*x2(lx(i)) + (1.0 - unit_vec_v1(i,1))*x1(lx(i)), &
-            unit_vec_v1(i,2)*x2(ly(i)) + (1.0 - unit_vec_v1(i,2))*x1(ly(i)), &
-            unit_vec_v1(i,3)*x2(lz(i)) + (1.0 - unit_vec_v1(i,3))*x1(lz(i)), i)
+       v1_nodal_coords(1,i)= &
+             unit_vec_v2(i,1)*x2(lx(i)) + (1.0 - unit_vec_v1(i,1))*x1(lx(i))
+       v1_nodal_coords(2,i)= &
+             unit_vec_v1(i,2)*x2(ly(i)) + (1.0 - unit_vec_v1(i,2))*x1(ly(i))
+       v1_nodal_coords(3,i)= &
+             unit_vec_v1(i,3)*x2(lz(i)) + (1.0 - unit_vec_v1(i,3))*x1(lz(i))
     end do
 
 
@@ -411,21 +478,23 @@ contains
                    gz = 0.0
                 end if
             
-                call v2%set_basis(fx*gy*gz*unit_vec_v2(i,1),1,i,h_ctr,jz)
-                call v2%set_basis(gx*fy*gz*unit_vec_v2(i,2),2,i,h_ctr,jz)
-                call v2%set_basis(gx*gy*fz*unit_vec_v2(i,3),3,i,h_ctr,jz)
-                
-                call v2%set_diff_basis( (dfx*gy*gz*unit_vec_v2(i,1) & 
-                     + gx*dfy*gz*unit_vec_v2(i,2)                   &
-                     + gx*gy*dfz*unit_vec_v2(i,3) ),                &
-                     1,i,h_ctr,jz) 
-             end do
+                v2_basis(1,i,h_ctr,jz)=fx*gy*gz*unit_vec_v2(i,1)
+                v2_basis(2,i,h_ctr,jz)=gx*fy*gz*unit_vec_v2(i,2)
+                v2_basis(3,i,h_ctr,jz)=gx*gy*fz*unit_vec_v2(i,3)
+
+                v2_diff_basis(1,i,h_ctr,jz)= &
+                    ( dfx*gy*gz*unit_vec_v2(i,1) + gx*dfy*gz*unit_vec_v2(i,2) &
+                    + gx*gy*dfz*unit_vec_v2(i,3) )                
+            end do
              h_ctr = h_ctr + 1
           end do
        end do
-       call v2%set_nodes(unit_vec_v2(i,1)*x1(lx(i)) + (1.0 - unit_vec_v2(i,1))*x2(lx(i)), &
-            unit_vec_v2(i,2)*x1(ly(i)) + (1.0 - unit_vec_v2(i,2))*x2(ly(i)), &
-            unit_vec_v2(i,3)*x1(lz(i)) + (1.0 - unit_vec_v2(i,3))*x2(lz(i)), i)
+       v2_nodal_coords(1,i)= &
+             unit_vec_v2(i,1)*x1(lx(i)) + (1.0 - unit_vec_v2(i,1))*x2(lx(i))
+       v2_nodal_coords(2,i)= &
+             unit_vec_v2(i,2)*x1(ly(i)) + (1.0 - unit_vec_v2(i,2))*x2(ly(i))
+       v2_nodal_coords(3,i)= &
+             unit_vec_v2(i,3)*x1(lz(i)) + (1.0 - unit_vec_v2(i,3))*x2(lz(i))
     end do
 
     !-----------------------------------------------------------------------------
@@ -456,12 +525,14 @@ contains
              gy = gq%poly1d(order,jy,x2(ly(i)),x2,ly(i))
              do jz=1,ngp_v
                 gz = gq%poly1d(order,jz,x2(lz(i)),x2,lz(i))
-                call v3%set_basis(gx*gy*gz,1,i,h_ctr,jz)                
+                v3_basis(1,i,h_ctr,jz)=gx*gy*gz              
              end do
              h_ctr = h_ctr + 1
           end do
        end do
-       call v3%set_nodes(x2(lx(i)),x2(ly(i)),x2(lz(i)),i)
+       v3_nodal_coords(1,i)=x2(lx(i))
+       v3_nodal_coords(2,i)=x2(ly(i))
+       v3_nodal_coords(3,i)=x2(lz(i))
     end do
 
     ! tidy up
@@ -471,10 +542,10 @@ contains
 
     deallocate ( unit_vec_v2, unit_vec_v1)
 
-  end subroutine compute_basis
+  end subroutine get_basis
 
 
  
 
-end module compute_basis_function_mod
+end module basis_function_mod
 

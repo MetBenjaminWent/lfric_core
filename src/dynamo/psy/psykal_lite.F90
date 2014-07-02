@@ -7,31 +7,30 @@
 !
 !-------------------------------------------------------------------------------
 
-!> @brief Provides access to the members of the psy class.
+!> @brief Provides an implementation of the Psy layer
 
-!> @details Accessor functions for the psy class are defined in this module.
-
-!> @param invoke_RHS_V3              Invoke the RHS for a v3 field
-!> @param invoke_v3_solver_kernel    Invoke the solver for a v3 field kernel
+!> @details Contains hand-rolled versions of the Psy layer that can be used for
+!> simple testing and development of the scientific code
 
 module psy
 
-  use field_mod, only : field_type, field_proxy_type
-  use lfric
+  use field_mod, only : field_type, field_proxy_type 
+  use constants_mod, only : dp
 
   implicit none
 
 contains
 
+!> Invoke the RHS kernel for a v3 field
   subroutine invoke_rhs_v3( right_hand_side )
 
     use v3_rhs_kernel_mod, only : rhs_v3_code
 
     implicit none
 
-    type( field_type ),  intent( in ) :: right_hand_side
+    type( field_type ), intent( in ) :: right_hand_side
 
-    type( field_proxy_type)           :: right_hand_side_proxy
+    type( field_proxy_type ) :: right_hand_side_proxy
     integer :: cell
     integer, pointer :: map(:)
     integer :: ndf
@@ -51,8 +50,10 @@ contains
                          right_hand_side_proxy%data, &
                          right_hand_side_proxy%gaussian_quadrature )
     end do
+
   end subroutine invoke_rhs_v3
 
+!> Invoke the solver kernel for a v3 field kernel
   subroutine invoke_v3_solver_kernel( pdfield, rhs )
 
     use v3_solver_kernel_mod, only : solver_v3_code

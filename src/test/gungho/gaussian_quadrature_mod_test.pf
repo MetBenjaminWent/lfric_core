@@ -24,7 +24,7 @@ contains
 
     type(gaussian_quadrature_type) :: gaussian_quadrature
 
-    gaussian_quadrature  = gaussian_quadrature_type()
+    gaussian_quadrature  = gaussian_quadrature%get_instance()
 
     polynomial = 0.33333333333333333333333D0
 
