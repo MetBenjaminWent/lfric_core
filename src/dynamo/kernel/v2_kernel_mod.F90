@@ -59,7 +59,7 @@ type(v2_kernel_type) function v2_kernel_constructor() result(self)
   return
 end function v2_kernel_constructor
   
-subroutine rhs_v2_code(nlayers,ndf,map,basis,x,gq)
+subroutine rhs_v2_code(nlayers,ndf,undf,map,basis,x,gq)
 
 !> @brief This subroutine calculates the RHS of Galerkin projection on W2 space.
 !! @param[in] nlayers Integer: The number of layers.
@@ -73,10 +73,10 @@ subroutine rhs_v2_code(nlayers,ndf,map,basis,x,gq)
   !  P_analytic over a single column
 
   !Arguments
-  integer,                                     intent(in)    :: nlayers, ndf
+  integer,                                     intent(in)    :: nlayers, ndf,undf
   integer,                                     intent(in)    :: map(ndf)
   real(kind=dp), dimension(3,ndf,ngp_h,ngp_v), intent(in)    :: basis 
-  real(kind=dp),                               intent(inout) :: x(*)
+  real(kind=dp),                               intent(inout) :: x(undf)
   type(gaussian_quadrature_type),              intent(inout) :: gq
 
   !Internal variables

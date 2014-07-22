@@ -28,7 +28,7 @@ private
   
 type, public :: function_space_type
   private
-  integer              :: ndf, ncell, undf, ngp_h, ngp_v, fs
+  integer              :: ndf, ncell, undf, ngp_h, ngp_v, fs, nlayers
   integer              :: dim_space, dim_space_diff
   !> A two dimensional, allocatable array which holds the indirection map 
   !! or dofmap for the whole function space over the bottom level of the domain.
@@ -59,6 +59,11 @@ contains
 !> @param[in] self the calling function space.
 !> @return Integer the number of cells
   procedure :: get_ncell
+
+!> Function Returns the number of cells in the function space
+!> @param[in] self the calling function space.
+!> @return Integer the number of layers
+  procedure :: get_nlayers
 
 !> Subroutine Returns a pointer to the dofmap for the cell 
 !! @param[in] self The calling functions_space
@@ -111,7 +116,6 @@ type(function_space_type), target, allocatable, save :: v3_function_space
 !-------------------------------------------------------------------------------
 ! Contained functions/subroutines
 !-------------------------------------------------------------------------------
-public get_ncell, get_cell_dofmap, which
 contains
 
 function get_instance(function_space) result(instance)
@@ -123,7 +127,7 @@ function get_instance(function_space) result(instance)
   use dofmap_mod,                 only : &
               v0_dofmap, v1_dofmap, v2_dofmap, v3_dofmap
   use gaussian_quadrature_mod,    only : ngp_h, ngp_v
-  use mesh_mod, only : num_cells, v_unique_dofs
+  use mesh_mod, only : num_cells, v_unique_dofs, num_layers
 
   implicit none
 
@@ -135,7 +139,8 @@ function get_instance(function_space) result(instance)
     if(.not.allocated(v0_function_space)) then
       allocate(v0_function_space)   
       call init_function_space(self=v0_function_space, &
-         num_cells = num_cells ,num_dofs = v_unique_dofs(1,2), &
+         num_cells = num_cells , num_layers = num_layers, &
+         num_dofs = v_unique_dofs(1,2), &
          num_unique_dofs = v_unique_dofs(1,1) ,  &
          dim_space = 1, dim_space_diff = 3,  &
          ngp_h = ngp_h, ngp_v = ngp_v, &
@@ -146,9 +151,10 @@ function get_instance(function_space) result(instance)
     instance => v0_function_space
   case (V1)
     if(.not.allocated(v1_function_space)) then
-      allocate(v1_function_space)  
+      allocate(v1_function_space) 
       call init_function_space(self=v1_function_space, &
-         num_cells = num_cells ,num_dofs = v_unique_dofs(2,2), &
+         num_cells = num_cells ,num_layers = num_layers, &
+         num_dofs = v_unique_dofs(2,2), &
          num_unique_dofs = v_unique_dofs(2,1) ,  &
          dim_space = 3, dim_space_diff = 3,  &
          ngp_h = ngp_h, ngp_v = ngp_v, &
@@ -161,7 +167,8 @@ function get_instance(function_space) result(instance)
     if(.not.allocated(v2_function_space)) then 
       allocate(v2_function_space)
       call init_function_space(self=v2_function_space, &
-         num_cells = num_cells ,num_dofs = v_unique_dofs(3,2), &
+         num_cells = num_cells ,num_layers = num_layers, &
+         num_dofs = v_unique_dofs(3,2), &
          num_unique_dofs = v_unique_dofs(3,1) ,  &
          dim_space = 3, dim_space_diff = 1,  &
          ngp_h = ngp_h, ngp_v = ngp_v, &
@@ -174,7 +181,8 @@ function get_instance(function_space) result(instance)
     if(.not.allocated(v3_function_space)) then
       allocate(v3_function_space)
       call init_function_space(self=v3_function_space, &
-         num_cells = num_cells ,num_dofs = v_unique_dofs(4,2), &
+         num_cells = num_cells ,num_layers = num_layers, &
+         num_dofs = v_unique_dofs(4,2), &
          num_unique_dofs = v_unique_dofs(4,1) ,  &
          dim_space = 1, dim_space_diff = 1,  &
          ngp_h = ngp_h, ngp_v = ngp_v, &
@@ -201,7 +209,8 @@ end function get_instance
 !! @param[in] ngp_h The number of guassian quadrature points in the horizonal
 !! @param[in] ngp_v The number of guassian quadrature points in the vertical
 subroutine init_function_space(self, &
-                               num_cells,num_dofs, &
+                               num_cells,num_layers, &
+                               num_dofs, &
                                num_unique_dofs,  &
                                dim_space, dim_space_diff,  &
                                ngp_h,ngp_v, &
@@ -211,7 +220,7 @@ subroutine init_function_space(self, &
   implicit none
 
   class(function_space_type) :: self
-  integer, intent(in) :: num_cells, num_dofs, num_unique_dofs
+  integer, intent(in) :: num_cells, num_layers, num_dofs, num_unique_dofs
   integer, intent(in) :: dim_space, dim_space_diff
   integer, intent(in) :: ngp_h,ngp_v
 ! The following four arrays have intent inout because the move_allocs in the
@@ -223,6 +232,7 @@ subroutine init_function_space(self, &
   integer, intent(in) :: fs
 
   self%ncell           =  num_cells
+  self%nlayers         =  num_layers
   self%ndf             =  num_dofs
   self%undf            =  num_unique_dofs
   self%dim_space       =  dim_space
@@ -268,6 +278,17 @@ integer function get_ncell(self)
   return
 end function get_ncell
 
+!-----------------------------------------------------------------------------
+! Get the number of layers for this functions space 
+!-----------------------------------------------------------------------------
+integer function get_nlayers(self)
+  implicit none
+  class(function_space_type), intent(in) :: self
+
+  get_nlayers=self%nlayers
+
+  return
+end function get_nlayers
 
 !-----------------------------------------------------------------------------
 ! Get the number of dofs for a single cell 

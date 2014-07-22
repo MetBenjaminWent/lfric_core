@@ -26,7 +26,6 @@ program dynamo
   use log_mod,                 only : log_event, LOG_LEVEL_INFO
   use set_up_mod,              only : set_up
   use gaussian_quadrature_mod, only : gaussian_quadrature_type
-  use mesh_mod,                only : num_layers
 
   implicit none
 
@@ -42,28 +41,22 @@ program dynamo
 
 
   pressure_density = field_type( function_space%get_instance(V3),          &
-                                 gq%get_instance(),                        &
-                                 num_layers = num_layers )
+                                 gq%get_instance() )
 
   rhs = field_type( function_space%get_instance(V3),                       &
-                    gq%get_instance(),                                     &
-                    num_layers = num_layers )
+                    gq%get_instance() )
 
   flux_velocity = field_type( function_space%get_instance(V2),             &
-                         gq%get_instance(),                                &
-                         num_layers = num_layers )
+                         gq%get_instance() )
   
   rhs_v2 = field_type( function_space%get_instance(V2),                    &
-                       gq%get_instance(),                                  &
-                       num_layers = num_layers )
+                       gq%get_instance() )
 
   circulation = field_type( function_space%get_instance(V1),               &
-                            gq%get_instance(),                             &
-                            num_layers = num_layers )
+                            gq%get_instance() ) 
 
   rhs_v1 = field_type( function_space%get_instance(V1),                    &
-                       gq%get_instance(),                                  &
-                       num_layers = num_layers )
+                       gq%get_instance() )
 
   call dynamo_algorithm( pressure_density, rhs,                            &
                          flux_velocity, rhs_v2,                            &

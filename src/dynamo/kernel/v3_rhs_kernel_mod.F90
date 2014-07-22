@@ -60,15 +60,15 @@ end function v3_rhs_kernel_constructor
 !! @param[in] v3_basis Real 5-dim array holding basis functions evaluated at gaussian quadrature points
 !! @param[inout] X Real array, the actual data
 !! @param[inout] gq Type, gaussian quadrature rule
-subroutine rhs_v3_code(nlayers,ndf,map,v3_basis,x,gq)
+subroutine rhs_v3_code(nlayers,ndf,undf,map,v3_basis,x,gq)
   ! needs to compute the integral of rho_df * P 
   ! P_analytic over a single column
   
   !Arguments
-  integer, intent(in) :: nlayers, ndf
+  integer, intent(in) :: nlayers, ndf, undf
   integer, intent(in) :: map(ndf)
   real(kind=dp), intent(in), dimension(1,ndf,ngp_h,ngp_v) :: v3_basis 
-  real(kind=dp), intent(inout) :: x(*)
+  real(kind=dp), intent(inout) :: x(undf)
   type(gaussian_quadrature_type), intent(in) :: gq
 
   !Internal variables

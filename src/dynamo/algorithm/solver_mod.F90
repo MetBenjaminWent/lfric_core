@@ -18,7 +18,6 @@ module solver_mod
                               LOG_LEVEL_DEBUG
   use field_mod,       only : field_type
   use function_space_mod, only : function_space_type
-  use mesh_mod, only : num_layers
   use gaussian_quadrature_mod, only : gaussian_quadrature_type
                                    
   use psy,             only : inner_prod, invoke_matrix_vector
@@ -65,15 +64,14 @@ contains
     
     rhs_fs = rhs%which_function_space()
     v = field_type(fs%get_instance(rhs_fs),                                &
-         gq%get_instance(), num_layers = num_layers)
+         gq%get_instance() )
     call v%set_field_scalar(0.0_dp)
 
     call invoke_matrix_vector(v,lhs)
     err = inner_prod(v,v)
     
     res = field_type(fs%get_instance(rhs_fs),                              &
-         null_gq, num_layers=num_layers)   ! don't need a gq here
-    
+         null_gq )    
     call res%minus_field_data(rhs,v)
     
     err = inner_prod(res,res)
@@ -85,17 +83,17 @@ contains
     norm   = 1.0
     
     cr = field_type(fs%get_instance(rhs_fs),                               &
-         null_gq, num_layers = num_layers)
+         null_gq )
     call cr%copy_field_data(res)
     
     p = field_type(fs%get_instance(rhs_fs),                                &
-         null_gq, num_layers = num_layers)
+         null_gq )
     call p%set_field_scalar(0.0_dp)
     
     t = field_type(fs%get_instance(rhs_fs),                                &
-         gq%get_instance(), num_layers = num_layers)
+         gq%get_instance() )
     s = field_type(fs%get_instance(rhs_fs),                                &
-         null_gq, num_layers = num_layers)
+         null_gq )
     call v%set_field_scalar(0.0_dp)
     
     do iter = 1, max_iter

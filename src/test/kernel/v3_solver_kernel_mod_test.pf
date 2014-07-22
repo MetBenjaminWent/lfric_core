@@ -19,7 +19,7 @@ contains
     use gaussian_quadrature_mod,  only : gaussian_quadrature_type
     implicit none
 
-    integer :: num_layers, ndf, map(1)
+    integer :: num_layers, ndf, map(1),undf
     type(gaussian_quadrature_type) :: gq
     real(kind=dp) :: xdata(1)
     real(kind=dp) :: rhsdata(1)
@@ -30,8 +30,9 @@ contains
     map(1)=1
     num_layers=1
     ndf=1
+    undf=1
     rhsdata(1)=1.0D0
-    call solver_v3_code(num_layers,ndf,map,basis,xdata,rhsdata, &
+    call solver_v3_code(num_layers,ndf,undf,map,basis,xdata,rhsdata, &
                         gq%get_instance())
 
     answer = 1.0D0

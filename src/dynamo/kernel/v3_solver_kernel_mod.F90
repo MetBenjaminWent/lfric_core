@@ -61,17 +61,17 @@ end function v3_solver_kernel_constructor
 !! @param[inout] X Real array the data 
 !! @param[in] rhs Real array. the data
 !! @param[inout] gq The gaussian quadrature rule 
-subroutine solver_v3_code(nlayers,ndf,map,v3_basis,x,rhs,gq)
+subroutine solver_v3_code(nlayers,ndf,undf,map,v3_basis,x,rhs,gq)
   ! needs to compute the integral of rho_df * P 
   ! P_analytic over a single column
   
   !Arguments
-  integer, intent(in) :: nlayers, ndf
+  integer, intent(in) :: nlayers, ndf,undf
   integer, intent(in) :: map(ndf)
 !  real(kind=dp), intent(in), dimension(ndf,ngp,ngp,ngp,1) :: v3_basis  
   real(kind=dp), intent(in), dimension(1,ndf,ngp_h,ngp_v) :: v3_basis  
-  real(kind=dp), intent(inout) :: x(*)
-  real(kind=dp), intent(in) :: rhs(*)
+  real(kind=dp), intent(inout) :: x(undf)
+  real(kind=dp), intent(in) :: rhs(undf)
   type(gaussian_quadrature_type), intent(in) :: gq
 
   !Internal variables

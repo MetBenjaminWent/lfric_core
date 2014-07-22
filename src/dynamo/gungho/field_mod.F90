@@ -35,12 +35,7 @@ module field_mod
   !>
   type, public :: field_type
     private
-    !> The number of layers 
-    integer :: nlayers
-    !> The number of unique degrees of freedom
-    integer :: undf
-    !> The number of cells from the underlying function space
-    integer :: ncell
+
     !> Each field has a pointer to the function space on which it lives
     type( function_space_type ), pointer         :: vspace => null( )
     !> Each field has a pointer to the gaussian quadrature rule which will be
@@ -92,12 +87,6 @@ module field_mod
 
     private
 
-    !> The number of layers 
-    integer, public  :: nlayers
-    !> The number of unique degrees of freedom
-    integer, public  :: undf
-    !> The number of cells from the underlying function space
-    integer, public  :: ncell
     !> Each field has a pointer to the function space on which it lives
     type( function_space_type ), pointer, public :: vspace
     !> Each field has a pointer to the gaussian quadrature rule which will be
@@ -105,7 +94,7 @@ module field_mod
     type( gaussian_quadrature_type ), pointer, public &
                                       :: gaussian_quadrature
     !> Allocatable array of type real which holds the values of the field
-    real(kind=dp), public, pointer                      :: data( : )
+    real(kind=dp), public, pointer         :: data( : )
 
   contains
   end type field_proxy_type 
@@ -120,9 +109,6 @@ contains
     implicit none
     class(field_type), target, intent(in)  :: self
 
-    get_proxy % nlayers                =  self % nlayers
-    get_proxy % undf                   =  self % undf
-    get_proxy % ncell                  =  self % ncell
     get_proxy % vspace                 => self % vspace
     get_proxy % gaussian_quadrature    => self % gaussian_quadrature
     get_proxy %  data                  => self % data
@@ -136,24 +122,18 @@ contains
   !> @param [in] num_layers integer number of layers for the field
   !> @return self the field
   !>
-  function field_constructor( vector_space, &
-                                   gq,           &
-                                   num_layers) result(self)
+  function field_constructor( vector_space, gq ) result(self)
 
     type(function_space_type), target, intent(in) :: vector_space
     type(gaussian_quadrature_type), target, intent(in) :: gq
-    integer, intent(in) :: num_layers
 
     type(field_type), target :: self
 
     self%vspace => vector_space
     self%gaussian_quadrature => gq
-    self%nlayers = num_layers
-    self%ncell = self%vspace%get_ncell()
-    self%undf = self%vspace%get_undf()
 
     ! allocate the array in memory
-    allocate(self%data(self%undf))
+    allocate(self%data(self%vspace%get_undf()))
 
   end function field_constructor
 
@@ -181,10 +161,10 @@ contains
 
     call log_event( title, LOG_LEVEL_INFO )
 
-    do cell=1,self%ncell
+    do cell=1,self%vspace%get_ncell()
      map => self%vspace%get_cell_dofmap( cell )
       do df=1,self%vspace%get_ndf()
-        do layer=0,self%nlayers-1
+        do layer=0,self%vspace%get_nlayers()-1
           write( log_scratch_space, '( I4, I4, I4, F8.2 )' ) &
               cell, df, layer+1, self%data( map( df ) + layer )
           call log_event( log_scratch_space, LOG_LEVEL_INFO )

@@ -22,7 +22,7 @@ contains
                                         field_proxy_type 
     use function_space_mod,      only : function_space_type, V0
     use constants_mod, only : dp
-    use mesh_mod, only : num_cells, v_unique_dofs
+    use mesh_mod, only : num_cells, v_unique_dofs, num_layers
     use gaussian_quadrature_mod, only : gaussian_quadrature_type, &
                                         ngp_h, ngp_v
     use basis_function_mod,         only : v0_basis, &
@@ -37,7 +37,7 @@ contains
     type( field_type )               :: f_field
     type( field_proxy_type )         :: f_field_proxy
     type( gaussian_quadrature_type ) :: gq
-    integer                          :: num_layers,num_dofs,num_unique_dofs
+    integer                          :: num_dofs,num_unique_dofs
     integer                          :: testncell,       &
                                         testnlayers
     integer :: i,j, fs
@@ -64,16 +64,15 @@ contains
     end do
 
     f_field = field_type( vector_space = func_space%get_instance(V0), &
-                          gq = gq%get_instance(),    &
-                          num_layers = num_layers)
+                          gq = gq%get_instance() )
 
     f_field_proxy = f_field % get_proxy( )
 
     ! test the procedures of the type
-    testncell = f_field_proxy%ncell
+    testncell = f_field_proxy%vspace%get_ncell()
     @assertEqual( num_cells, testncell )
 
-    testnlayers = f_field_proxy%nlayers
+    testnlayers = f_field_proxy%vspace%get_nlayers()
     @assertEqual( num_layers, testnlayers )
 
     fs = f_field%which_function_space()

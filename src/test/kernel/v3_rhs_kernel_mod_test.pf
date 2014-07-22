@@ -19,7 +19,7 @@ contains
     use constants_mod,            only : dp
     implicit none
 
-    integer :: num_layers, ndf, map(1)
+    integer :: num_layers, ndf, map(1), undf
     type(gaussian_quadrature_type) :: gq
     real(kind=dp) :: xdata(1)
     real(kind=dp) :: answer, tol
@@ -28,8 +28,9 @@ contains
     map(1)=1
     num_layers=1
     ndf = 1
+    undf = 1
     basis=1.0D0
-    call RHS_v3_code(num_layers,ndf,map,basis,xdata, &
+    call RHS_v3_code(num_layers,ndf,undf,map,basis,xdata, &
                      gq%get_instance())
 
     answer = 1.0D0

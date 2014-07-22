@@ -16,7 +16,7 @@ contains
     use pFUnit_Mod
     use function_space_mod, only : function_space_type, V0, V1, V2, V3
     use constants_mod, only : dp
-    use mesh_mod, only : num_cells, v_unique_dofs
+    use mesh_mod, only : num_cells, v_unique_dofs, num_layers
     use gaussian_quadrature_mod, only : ngp_h, ngp_v
     use basis_function_mod,         only : &
               v0_basis, v1_basis, v2_basis, v3_basis, &
@@ -79,6 +79,7 @@ contains
     
     ! set some sizes ...
     num_cells = 35
+    num_layers = 50
     num_dofs=4
     num_unique_dofs = 100
     do i=1,4

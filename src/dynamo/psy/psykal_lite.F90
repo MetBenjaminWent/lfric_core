@@ -29,22 +29,20 @@ contains
     implicit none
 
     type( field_type ), intent( in ) :: right_hand_side
-
     type( field_proxy_type ) :: right_hand_side_proxy
     integer :: cell
     integer, pointer :: map(:)
-    integer :: ndf
     real(kind=dp), pointer  :: basis(:,:,:,:)
 
     right_hand_side_proxy = right_hand_side%get_proxy()
     ! Unpack data
 
-    ndf = right_hand_side_proxy%vspace%get_ndf()
     basis => right_hand_side_proxy%vspace%get_basis()
-    do cell = 1, right_hand_side_proxy%ncell
+    do cell = 1, right_hand_side_proxy%vspace%get_ncell()
        map => right_hand_side_proxy%vspace%get_cell_dofmap( cell )
-       call rhs_v3_code( right_hand_side_proxy%nlayers, &
-                         ndf, &
+       call rhs_v3_code( right_hand_side_proxy%vspace%get_nlayers(), &
+                         right_hand_side_proxy%vspace%get_ndf(), &
+                         right_hand_side_proxy%vspace%get_undf(), &
                          map, &
                          basis, &
                          right_hand_side_proxy%data, &
@@ -63,7 +61,6 @@ contains
 
     integer                 :: cell
     integer, pointer        :: map(:)
-    integer                 :: ndf
     real(kind=dp), pointer  :: basis(:,:,:,:)
 
     type( field_proxy_type )        :: pd_proxy
@@ -72,13 +69,14 @@ contains
     pd_proxy  = pdfield%get_proxy()
     rhs_proxy = rhs%get_proxy()
 
-    ndf    = pd_proxy%vspace%get_ndf( )
+    
     basis => pd_proxy%vspace%get_basis()
 
-    do cell = 1, pd_proxy%ncell
+    do cell = 1, pd_proxy%vspace%get_ncell()
        map=>pd_proxy%vspace%get_cell_dofmap(cell)
-       call solver_v3_code( pd_proxy%nlayers, &
-                            ndf, &
+       call solver_v3_code( pd_proxy%vspace%get_nlayers(), &
+                            pd_proxy%vspace%get_ndf( ),  &
+                            pd_proxy%vspace%get_undf( ),  &
                             map, &
                             basis, &
                             pd_proxy%data, &
@@ -99,17 +97,17 @@ contains
     type( field_proxy_type)             :: rhs_proxy
     integer :: cell
     integer, pointer :: map(:)
-    integer :: ndf
     real(kind=dp), pointer  :: basis(:,:,:,:)
 
     rhs_proxy = right_hand_side%get_proxy()
     ! Unpack data
-    ndf = rhs_proxy%vspace%get_ndf()
+    
     basis => rhs_proxy%vspace%get_basis()
-    do cell = 1, rhs_proxy%ncell
+    do cell = 1, rhs_proxy%vspace%get_ncell()
        map=> rhs_proxy%vspace%get_cell_dofmap(cell)
-       call rhs_v2_code( rhs_proxy%nlayers, &
-                         ndf, &
+       call rhs_v2_code( rhs_proxy%vspace%get_nlayers(), &
+                         rhs_proxy%vspace%get_ndf(), &
+                         rhs_proxy%vspace%get_undf(), &
                          map, &
                          basis, &
                          rhs_proxy%data, &
@@ -128,17 +126,17 @@ contains
     type( field_proxy_type) :: rhs_p
     integer :: cell
     integer, pointer :: map(:)
-    integer :: ndf
     real(kind=dp), pointer  :: basis(:,:,:,:)
 
     rhs_p = rhs%get_proxy()
     ! Unpack data
-    ndf = rhs_p%vspace%get_ndf()
+     
     basis=>rhs_p%vspace%get_basis()
-    do cell = 1, rhs_p%ncell
+    do cell = 1, rhs_p%vspace%get_ncell()
        map=> rhs_p%vspace%get_cell_dofmap(cell)
-       call rhs_v1_code( rhs_p%nlayers, &
-                         ndf, &
+       call rhs_v1_code( rhs_p%vspace%get_nlayers(), &
+                         rhs_p%vspace%get_ndf(), &
+                         rhs_p%vspace%get_undf(), &
                          map, &
                          basis, &
                          rhs_p%data, &
@@ -153,7 +151,6 @@ contains
 
     integer                 :: cell
     integer, pointer        :: map(:)
-    integer                 :: ndf
     real(kind=dp), pointer  :: basis(:,:,:,:)
 
     type( field_proxy_type )        :: x_p
@@ -162,13 +159,13 @@ contains
     x_p = x%get_proxy()
     Ax_p = Ax%get_proxy()
 
-    ndf     = x_p%vspace%get_ndf( )
     basis  => x_p%vspace%get_basis()
     
-    do cell = 1, x_p%ncell
+    do cell = 1, x_p%vspace%get_ncell()
        map=>x_p%vspace%get_cell_dofmap(cell)
-       call matrix_vector_code( x_p%nlayers, &
-                                ndf, &
+       call matrix_vector_code( x_p%vspace%get_nlayers(), &
+                                x_p%vspace%get_ndf(), &
+                                x_p%vspace%get_undf(), &
                                 map, &
                                 basis, &
                                 x_p%data, &
@@ -184,14 +181,14 @@ contains
     type( field_type ), intent( in ) :: x,y
     type( field_proxy_type)             ::  x_p,y_p
 
-    integer                          :: i
+    integer                          :: i,undf
 
     x_p = x%get_proxy()
     y_p = y%get_proxy()
 
-
+    undf = x_p%vspace%get_undf()
     !sanity check
-    if(x_p%undf .ne. y_p%undf ) then
+    if(undf .ne. y_p%vspace%get_undf() ) then
        ! they are not on the same function space
        call log_event("Psy:inner_prod:x and y live on different w-spaces",LOG_LEVEL_ERROR)
        !abort
@@ -199,7 +196,7 @@ contains
     endif
 
     inner_prod = 0.0_dp
-    do i = 1,x_p%undf
+    do i = 1,undf
        inner_prod = inner_prod + ( x_p%data(i) * y_p%data(i) )
     end do
 

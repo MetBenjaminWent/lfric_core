@@ -59,14 +59,14 @@ type(matrix_vector_kernel_type) function matrix_vector_kernel_constructor() resu
   return
 end function matrix_vector_kernel_constructor
   
-subroutine matrix_vector_code(nlayers,ndf,map,basis,lhs,x,gq)
+subroutine matrix_vector_code(nlayers,ndf,undf,map,basis,lhs,x,gq)
   ! compute the integral of v*x
   !Arguments
-  integer,                                     intent(in)    :: nlayers, ndf
+  integer,                                     intent(in)    :: nlayers, ndf,undf
   integer,                                     intent(in)    :: map(ndf)
   real(kind=dp), dimension(3,ndf,ngp_h,ngp_v), intent(in)    :: basis  
-  real(kind=dp),                               intent(in)    :: x(*)
-  real(kind=dp),                               intent(inout) :: lhs(*)
+  real(kind=dp),                               intent(in)    :: x(undf)
+  real(kind=dp),                               intent(inout) :: lhs(undf)
   type(gaussian_quadrature_type),              intent(inout) :: gq
 
   !Internal variables
