@@ -63,7 +63,6 @@ contains
     integer :: stage, num_rk_stage, st
     real(kind=r_def), allocatable :: ak(:,:)
     real(kind=r_def) :: dt = 1.0_r_def
-    character(22) :: msg
     type(function_space_type) :: fs
     type( gaussian_quadrature_type ) :: gq
     
@@ -130,7 +129,7 @@ contains
     call invoke_assign_coordinate_kernel( chi_v3 )
             
     ! Construct initial conditions
-    call log_event( "Dynamo: computing initial fields", LOG_LEVEL_INFO )    
+    call log_event( "Dynamo: computing initial fields", LOG_LEVEL_INFO )
     call invoke_initial_theta_kernel( theta, chi )    
     call invoke_initial_u_kernel    ( u )
     call invoke_initial_rho_kernel  ( rho )
@@ -141,10 +140,11 @@ contains
     ! Timestep
     nt = 30 ! number of timesteps
     do n = 1,nt
-      call log_event( "/**********************************************************************************\", LOG_LEVEL_INFO )    
-      write(msg,'(A18,I4)') 'start of timestep ',n
-      call log_event( msg, LOG_LEVEL_INFO )
-      
+      call log_event( '/****************************************************************************/ ', &
+                      LOG_LEVEL_INFO )
+      write( log_scratch_space, '(A,I0)' ) 'Start of timestep ', n
+      call log_event( log_scratch_space, LOG_LEVEL_INFO )
+
       !PSY call invoke ( copy_field_data(theta,theta_n))
       call invoke_copy_field_data(theta,theta_n)
       !PSY call invoke ( copy_field_data(u,u_n))
@@ -195,19 +195,20 @@ contains
         call invoke_axpy(dt, rho_inc, rho_n, rho)
 ! recompute latest exner value        
         call invoke_calc_exner_kernel( exner, rho, theta, chi, chi_v3(3) )   
-        
-! diagnostics
+
+        ! diagnostics
         call theta_inc%print_minmax('min/max theta_inc = ');
         call u_inc%print_minmax('min/max u_inc = ');
-        call rho_inc%print_minmax('min/max rho_inc = '); 
-        
+        call rho_inc%print_minmax('min/max rho_inc = ');
+
       end do
-      write(msg,'(A16,I4)') 'End of timestep   ',n
-      call log_event( msg, LOG_LEVEL_INFO )
-      call log_event( "\**********************************************************************************/", LOG_LEVEL_INFO )    
+      write( log_scratch_space, '(A,I0)' ) 'End of timestep ', n
+      call log_event( log_scratch_space, LOG_LEVEL_INFO )
+      call log_event( '\****************************************************************************/ ', &
+                      LOG_LEVEL_INFO )
     end do
-    call log_event( "Dynamo: finished timestep", LOG_LEVEL_INFO )    
-!================================================================================
+    call log_event( "Dynamo: finished timestep", LOG_LEVEL_INFO )
+    !==========================================================================
 
   end subroutine dynamo_algorithm_rk_timestep
 
