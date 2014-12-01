@@ -76,12 +76,14 @@ class Processor():
                                           ' '.join( objectPaths ) ), \
                    file=output )
 
-        programSource = []
+        programObject = []
         for name, filename in self._database.getProgramSources().iteritems():
-            programSource.append( os.path.join( self._objectDirectory, \
-                                                filename ) )
+            objectFilename = os.path.join( self._objectDirectory, \
+                                           self._replaceExtension( filename, \
+                                                                   'o' ) )
+            programObject.append( objectFilename )
 
-        print( 'PROG_SRCS = {}'.format( ' '.join( programSource ) ), \
+        print( 'PROG_OBJS = {}'.format( ' '.join( programObject ) ), \
                file=output )
 
     ###########################################################################

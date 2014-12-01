@@ -16,9 +16,10 @@ include $(OBJ_DIR)/programs.mk $(OBJ_DIR)/dependencies.mk
 
 ALL_SRC     = $(shell find . -name "*.[Ff]90")
 TOUCH_FILES = $(patsubst ./%.f90,$(OBJ_DIR)/%.t,$(patsubst ./%.F90,$(OBJ_DIR)/%.t,$(ALL_SRC)))
-PROG_OBJS   = $(patsubst %.f90,%.o,$(patsubst %.F90,%.o,$(PROG_SRCS)))
 PROGRAMS    = $(patsubst %.o,%,$(notdir $(PROG_OBJS)))
 ALL_MODULES = $(filter-out $(PROG_OBJS),$(patsubst %.t,%.o,$(TOUCH_FILES)))
+
+.SECONDEXPANSION:
 
 .PHONY: applications
 applications: $(patsubst %,$(BIN_DIR)/%,$(PROGRAMS))
@@ -26,9 +27,7 @@ applications: $(patsubst %,$(BIN_DIR)/%,$(PROGRAMS))
 .PHONY: modules
 modules: $(OBJ_DIR)/modules.a
 
-$(BIN_DIR)/%: | $(BIN_DIR)
-	$(MAKE) -f dynamo.mk $(patsubst $(BIN_DIR)/%,$(OBJ_DIR)/%.x,$@) \
-	        UNIT=$(patsubst $(BIN_DIR)/%,%,$@)
+$(BIN_DIR)/%: $(OBJ_DIR)/%.x | $(BIN_DIR)
 	@echo "Installing $@"
 	$(Q)cp $(OBJ_DIR)/$(notdir $@).x $@
 
@@ -64,7 +63,7 @@ $(OBJ_DIR)/%.o $(OBJ_DIR)/%.mod: %.f90 | $(OBJ_DIR)
 $(OBJ_DIR)/modules.a: $(ALL_MODULES)
 	$(Q)$(AR) -r $@ $^
 
-$(OBJ_DIR)/%.x: $($(shell echo $(UNIT) | tr a-z A-Z)_OBJS)
+$(OBJ_DIR)/%.x: $$($$(shell echo $$* | tr a-z A-Z)_OBJS)
 	@echo "Linking $@"
 	$(Q)$(FCOM) $(FFLAGS) $(LDFLAGS) -o $@ $^
 
