@@ -31,10 +31,6 @@ ifdef PE_ENV
     endif
 endif
 
-ifndef CPP
-	CPP = cpp
-endif
-
 ifndef FC
   $(info No compiler specified in $$FC)
   OS = $(shell uname -s)
@@ -73,15 +69,13 @@ ifeq '$(COMPILER_NAME)' 'ifort'
   $(info ** Chosen Intel Fortran compiler)
 
   FFLAGS_COMPILER       = -xhost $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS)
-  FFLAGS_NO_OPTIMISATION    = -O0
-  FFLAGS_SAFE_OPTIMISATION  = -O2 -fp-model precise
-  FFLAGS_RISKY_OPTIMISATION = -O3
-  FFLAGS_DEBUG              = -g -traceback
-  FFLAGS_WARNINGS           = -warn all -warn errors
-  FFLAGS_INIT               = -ftrapuv
-  FFLAGS_RUNTIME            = -check all -fpe0
-  FFLAGS_TESTS              = -assume realloc_lhs
-  F_MOD_DESTINATION_ARG     = -module$(SPACE)
+  FFLAGS_OPTIMISATION   = -O0
+  FFLAGS_DEBUG          = -g -traceback
+  FFLAGS_WARNINGS       = -warn all -warn errors
+  FFLAGS_INIT           = -ftrapuv
+  FFLAGS_RUNTIME        = -check all -fpe0
+  FFLAGS_TESTS          = -assume realloc_lhs
+  F_MOD_DESTINATION_ARG = -module$(SPACE)
 
   FLINK = mpif90
   FLDFLAGS += $(FFLAGS_COMPILER) $(FFLAGS_DEBUG)
@@ -93,28 +87,24 @@ ifeq '$(COMPILER_NAME)' 'ifort'
 else ifeq ($(findstring xlf,$(COMPILER_NAME) ), xlf)
   $(info ** Chosen IBM XL Fortran compiler)
 
-  FFLAGS_NO_OPTIMISATION    = -O0
-  FFLAGS_SAFE_OPTIMISATION  = -O2
-  FFLAGS_RISKY_OPTIMISATION = -O4
-  FFLAGS_DEBUG              = -g
-  FFLAGS_WARNINGS           = -qinfo=all -qhalt=w
-  FFLAGS_INIT               = -qinitalloc=ffffffff -qinitauto=ffffffff
-  FFLAGS_RUNTIME            = -qddim -qstackprotect=all -qfloat=nans -qflttrap=enable:invalid:nanq:overflow:underflow:zerodivide
-  F_MOD_DESTINATION_ARG     = -qmoddir=
+  FFLAGS_OPTIMISATION   = -O0
+  FFLAGS_DEBUG          = -g
+  FFLAGS_WARNINGS       = -qinfo=all -qhalt=w
+  FFLAGS_INIT           = -qinitalloc=ffffffff -qinitauto=ffffffff
+  FFLAGS_RUNTIME        = -qddim -qstackprotect=all -qfloat=nans -qflttrap=enable:invalid:nanq:overflow:underflow:zerodivide
+  F_MOD_DESTINATION_ARG = -qmoddir=
 
 else ifeq '$(COMPILER_NAME)' 'gfortran'
   $(info ** Chosen GNU Fortran compiler)
 
-  FFLAGS_COMPILER           = $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS)
-  FFLAGS_NO_OPTIMISATION    = -O0
-  FFLAGS_SAFE_OPTIMISATION  = -Og
-  FFLAGS_RISKY_OPTIMISATION = -Ofast
-  FFLAGS_DEBUG              = -g
-  FFLAGS_WARNINGS           = -Wall  -Werror
-  FFLAGS_INIT               = -finit-integer=31173 -finit-real=snan \
-                              -finit-logical=true -finit-character=85
-  FFLAGS_RUNTIME            = -fcheck=all -ffpe-trap=invalid,zero,overflow,underflow
-  F_MOD_DESTINATION_ARG     = -J
+  FFLAGS_COMPILER       = $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS)
+  FFLAGS_OPTIMISATION   = -O0 
+  FFLAGS_DEBUG          = -g
+  FFLAGS_WARNINGS       = -Wall -Werror
+  FFLAGS_INIT           = -finit-integer=31173 -finit-real=snan \
+                          -finit-logical=true -finit-character=85
+  FFLAGS_RUNTIME        = -fcheck=all -ffpe-trap=invalid,zero,overflow,underflow
+  F_MOD_DESTINATION_ARG = -J
 
   FLINK = mpif90
   FLDFLAGS += $(FFLAGS_DEBUG)
@@ -126,34 +116,28 @@ else ifeq '$(COMPILER_NAME)' 'gfortran'
 else ifeq '$(COMPILER_NAME)' 'nagfor'
   $(info ** Chosen NAG Fortran compiler)
 
-  FFLAGS_NO_OPTIMISATION    = -O0
-  FFLAGS_SAFE_OPTIMISATION  = -O2
-  FFLAGS_RISKY_OPTIMISATION = -O4
-  FFLAGS_DEBUG              = -g -gline -colour
-  FFLAGS_INIT               = -nan
-  FFLAGS_RUNTIME            = -C=all -C=undefined -mtrace=all -nan
-  F_MOD_DESTINATION_ARG     = -mdir$(SPACE)
+  FFLAGS_OPTIMISATION   = -O0
+  FFLAGS_DEBUG          = -g -gline -colour
+  FFLAGS_INIT           = -nan
+  FFLAGS_RUNTIME        = -C=all -C=undefined -mtrace=all -nan
+  F_MOD_DESTINATION_ARG = -mdir$(SPACE)
 
 else ifeq '$(COMPILER_NAME)' 'pgfortran'
   $(info ** Chosen Portland Fortran compiler)
 
-  FFLAGS_NO_OPTIMISATION    = -O0
-  FFLAGS_SAFE_OPTIMISATION  = -O2
-  FFLAGS_RISKY_OPTIMISATION = -O4
-  FFLAGS_DEBUG              = -g -traceback
-  FFLAGS_RUNTIME            = -Mbounds -Mchkptr -Mchkstk
-  F_MOD_DESTINATION_ARG     = -module$(SPACE)
+  FFLAGS_OPTIMISATION   = -O0
+  FFLAGS_DEBUG          = -g -traceback
+  FFLAGS_RUNTIME        = -Mbounds -Mchkptr -Mchkstk
+  F_MOD_DESTINATION_ARG = -module$(SPACE)
 
 else ifeq '$(COMPILER_NAME)' 'crayftn'
   $(info ** Chosen Cray Fortran compiler)
 
-  FFLAGS_COMPILER           = -em $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS)
-  FFLAGS_NO_OPTIMISATION    = -O0
-  FFLAGS_SAFE_OPTIMISATION  = -O2
-  FFLAGS_RISKY_OPTIMISATION = -O3
-  FFLAGS_DEBUG              = -g
-  FFLAGS_WARNINGS           = -m 0
-  F_MOD_DESTINATION_ARG     = -J$(SPACE)
+  FFLAGS_COMPILER       = -em $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS)
+  FFLAGS_OPTIMISATION   = -O0
+  FFLAGS_DEBUG          = -g
+  FFLAGS_WARNINGS       = -m 0
+  F_MOD_DESTINATION_ARG = -J$(SPACE)
 
   FLINK = CC
   FLDFLAGS += $(FFLAGS_DEBUG)

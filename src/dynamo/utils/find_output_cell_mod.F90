@@ -6,7 +6,7 @@
 !-------------------------------------------------------------------------------
 module find_output_cell_mod
 
-use constants_mod,        only: i_def,r_def, LARGE_REAL, earth_radius
+use constants_mod,        only: r_def, LARGE_REAL, earth_radius
 use field_mod,            only: field_type, field_proxy_type 
 use mesh_mod,             only: l_spherical
 use coord_algorithms_mod, only: cartesian_distance, llr2xyz
@@ -22,7 +22,7 @@ contains
 !>needed elsewhere in the model
 !>@param[in]  chi      The 3D coordinate field
 !>@param[in]  x_in     The point to find which cell it lies in
-!>@param[out] out_cell The cell x_in lies in or zero if there were no cells.
+!>@param[out] out_cell The cell x_in lies in
   function find_output_cell( chi, x_in ) result( out_cell )
 
   type(field_type), intent(in)    :: chi(3)
@@ -48,7 +48,6 @@ contains
                  chi_in(1), chi_in(2), chi_in(3))
   end if
   min_distance = LARGE_REAL
-  out_cell = 0_i_def
   do cell = 1,chi_proxy(1)%vspace%get_ncell()
     map => chi_proxy(1)%vspace%get_cell_dofmap(cell)
     chi_cell(:) = 0.0_r_def
