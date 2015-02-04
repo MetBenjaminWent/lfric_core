@@ -21,16 +21,36 @@ endif
 
 OBJ_DIR = $(BUILD_DIR)/dynamo
 
+ifeq ($(OPTIMISATION),NONE)
+  export FFLAGS += $(FFLAGS_NO_OPTIMISATION)
+else ifeq ($(OPTIMISATION),SAFE)
+  export FFLAGS += $(FFLAGS_SAFE_OPTIMISATION)
+else ifeq ($(OPTIMISATION),RISKY)
+  export FFLAGS += $(FFLAGS_RISKY_OPTIMISATION)
+endif
+
+ifeq ($(SYMBOLS),YES)
+  export FFLAGS += $(FFLAGS_DEBUG)
+endif
+
+ifeq ($(CHECKS),YES)
+  export FFLAGS += $(FFLAGS_INIT) $(FFLAGS_RUNTIME)
+endif
+
+-include $(ESMFMKFILE)
+export FFLAGS += $(ESMF_F90COMPILEPATHS)
+
 .PHONY: all
 all: modules
 
 .PHONY: modules
 modules: applications
-	$(MAKE) -f dynamo.mk modules OBJ_DIR=$(OBJ_DIR)
+	$(MAKE) -f dynamo.mk modules OBJ_DIR=$(OBJ_DIR) TOOL_DIR=$(TOOL_DIR)
 
 .PHONY: applications
 applications:
-	$(MAKE) -f dynamo.mk applications OBJ_DIR=$(OBJ_DIR)
+	$(MAKE) -f dynamo.mk applications OBJ_DIR=$(OBJ_DIR) \
+	                                  TOOL_DIR=$(TOOL_DIR)
 
 .PHONY: clean
 clean:

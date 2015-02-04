@@ -5,8 +5,6 @@
 # https://puma.nerc.ac.uk/trac/GungHo/wiki
 ##############################################################################
 
-include ../../include.mk
-
 AR ?= ar
 
 BIN_DIR  = $(ROOT)/bin

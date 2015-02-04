@@ -97,9 +97,9 @@ function get_instance(quadrature,nqp_h,nqp_v) result(instance)
   implicit none
 
   integer :: quadrature
-  type(quadrature_type), pointer :: instance 
+  type(quadrature_type), pointer :: instance
   integer, intent(in) :: nqp_h, nqp_v
-!  write(*,*) "HW"
+
   select case (quadrature)
   case (QR3)
     if(.not.allocated(qr_3)) then
@@ -108,6 +108,7 @@ function get_instance(quadrature,nqp_h,nqp_v) result(instance)
     end if
     instance => qr_3
   case default
+    instance => null() ! To keep GCC's uninitialised use checker happy.
     ! Not a recognised  quadrature. Logging an event with severity:
     ! LOG_LEVEL_ERROR will cause execution to abort
     call log_event( 'Quadrature type not recognised in '// &
@@ -116,7 +117,7 @@ function get_instance(quadrature,nqp_h,nqp_v) result(instance)
 
   return
 end function get_instance
- 
+
 subroutine init_quadrature(self, qr, nqp_h, nqp_v)
   !-----------------------------------------------------------------------------
   ! Subroutine to compute the quadrature points (xqp) and (wqp) wgphts 
@@ -142,7 +143,7 @@ subroutine init_quadrature(self, qr, nqp_h, nqp_v)
   z1 = 0.0_r_def
   m = (nqp_v + 1) / 2
 
-  !Roots are symmetric in the interval - so only need to find half of them  
+  !Roots are symmetric in the interval - so only need to find half of them
 
   do i = 1, m ! Loop over the desired roots
 
@@ -150,7 +151,8 @@ subroutine init_quadrature(self, qr, nqp_h, nqp_v)
 
     !Starting with the above approximation to the ith root, we enter the main
     !loop of refinement by NEWTON'S method
-    do while ( abs(z-z1) > EPS )
+    pp = 1.0_r_def
+    do while ( abs(z-z1) > eps )
       p1 = 1.0_r_def
       p2 = 0.0_r_def
 
@@ -163,8 +165,8 @@ subroutine init_quadrature(self, qr, nqp_h, nqp_v)
       end do
 
       !p1 is now the desired Legendre polynomial. We next compute pp, its
-      !derivative, by a standard relation involving also p2, the polynomial of one
-      !lower order.
+      !derivative, by a standard relation involving also p2, the polynomial of
+      ! one lower order.
       pp = nqp_v * (z * p1 - p2)/(z*z - 1.0_r_def)
       z1 = z
       z = z1 - p1/pp             ! Newton's Method  
@@ -175,7 +177,7 @@ subroutine init_quadrature(self, qr, nqp_h, nqp_v)
     self%wqp(i) = 2.0_r_def/((1.0_r_def - z*z) * pp*pp) ! Compute the wgpht and its
     self%wqp(nqp_v+1-i) = self%wqp(i)                   ! symmetric counterpart
 
-  end do     ! i loop
+  end do ! i loop
 
   !Shift quad points from [-1,1] to [0,1]
   do i=1,nqp_v
@@ -183,7 +185,7 @@ subroutine init_quadrature(self, qr, nqp_h, nqp_v)
     self%wqp(i) = DOMAIN_CHANGE_FACTOR*self%wqp(i)
   end do
 
-! This is correct for quads (will need modification for hexes/triangles)
+  ! This is correct for quads (will need modification for hexes/triangles)
   m = 1
   do i=1,nqp_v
     do j=1,nqp_v 

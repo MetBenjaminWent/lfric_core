@@ -57,11 +57,11 @@ $(OBJ_DIR)/test: $(DRIVER_OBJ) $(SUPPORT_OBJECTS) $(TEST_OBJECTS)
 
 # Replace OBJ_SUBDIR with mangling of % ?
 $(OBJ_DIR)/%.o: %.F90 | $(OBJ_SUBDIRS)
-	$(FC) $(FPPFLAGS) $(F_MOD_DESTINATION_ARG)$(OBJ_DIR)/$(dir $@) \
+	$(Q)$(FC) $(FPPFLAGS) $(F_MOD_DESTINATION_ARG)$(OBJ_DIR)/$(dir $@) \
 	      $(SUBJECT_MODINC) -c -o $@ $<
 
 $(OBJ_DIR)/%.o: %.f90 | $(OBJ_SUBDIRS)
-	$(FC) $(FPPFLAGS) $(F_MOD_DESTINATION_ARG)$(OBJ_DIR)/$(dir $@) \
+	$(Q)$(FC) $(FPPFLAGS) $(F_MOD_DESTINATION_ARG)$(OBJ_DIR)/$(dir $@) \
 	      $(SUBJECT_MODINC) -c -o $@ $<
 
 $(DRIVER_OBJ): | $(dir $(DRIVER_OBJ))

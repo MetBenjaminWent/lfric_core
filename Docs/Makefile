@@ -5,8 +5,8 @@
 # https://puma.nerc.ac.uk/trac/GungHo/wiki
 ##############################################################################
 
-LYX_DOCUMENTS = formulation/dynamo_formulation.lyx glossary/Glossary.lyx
-LYX_OUTPUTS = $(patsubst %.lyx,%.pdf,$(LYX_DOCUMENTS))
+DESIGN_DOCUMENTS = formulation/dynamo_formulation.lyx glossary/Glossary.lyx
+DESIGN_OUTPUTS = $(patsubst %.lyx,%.pdf,$(LYX_DOCUMENTS))
 
 DOXYGEN ?= doxygen
 
@@ -14,14 +14,14 @@ TOP := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 $(info $(TOP))
 
 .PHONY: most
-most: api lyx
+most: api design
 
 .PHONY: api
 api:
 	$(DOXYGEN) Doxyfile
 
-.PHONY: lyx
-lyx: $(LYX_OUTPUTS)
+.PHONY: design
+design: $(DESIGN_OUTPUTS)
 
 %.pdf: %.lyx
 	env TEXINPUTS=$(TOP)/tex//: lyx -e pdf $<
@@ -33,5 +33,5 @@ gource:
 .PHONY: clean
 clean:
 	-rm -rf docs/api/*
-	-rm $(LYX_OUTPUTS)
+	-rm $(DESIGN_OUTPUTS)
 
