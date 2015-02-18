@@ -180,7 +180,7 @@ Ey(:,4) = Y(2:N, N+1)
 Ez(:,4) = Z(2:N, N+1)
 
 allocate(Fx(N-1, N-1), Fy(N-1, N-1), Fz(N-1, N-1))
-Fx = 0.0-r_def; Fy = 0.0_r_def; Fz = 0.0_r_def
+Fx = 0.0_r_def; Fy = 0.0_r_def; Fz = 0.0_r_def
 
 ! Store the internal vertices for face 1
 Fx = X(2:N, 2:N)
