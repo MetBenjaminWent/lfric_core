@@ -191,25 +191,28 @@ contains
    
 !-------------------------------------------------------------------------------  
 !> Invoke_rtheta_kernel: Invoke the RHS of the theta equation
-  subroutine invoke_rtheta_kernel( r_theta, theta, u, qr )
+  subroutine invoke_rtheta_kernel( r_theta, theta, f, rho, qr )
 
     use rtheta_kernel_mod, only : rtheta_code
 
     implicit none
 
-    type( field_type ), intent( in ) :: r_theta, theta, u
+    type( field_type ), intent( in ) :: r_theta, theta, f, rho
     type( quadrature_type), intent( in ) :: qr
 
     integer                 :: cell, nlayers, nqp_h, nqp_v
     integer                 :: ndf_w0, undf_w0, dim_w0, dim_diff_w0
     integer                 :: ndf_w2, undf_w2, dim_w2
-    integer, pointer        :: map_w2(:), map_w0(:), orientation_w2(:) => null()
+    integer                 :: ndf_w3, undf_w3, dim_w3
+    integer, pointer        :: map_w2(:), map_w0(:), orientation_w2(:), map_w3(:) => null()
 
-    type( field_proxy_type )        :: r_theta_proxy, theta_proxy, u_proxy 
+    type( field_proxy_type )        :: r_theta_proxy, theta_proxy, &
+                                       f_proxy, rho_proxy
     
     real(kind=r_def), allocatable  :: basis_w2(:,:,:,:), &
                                       basis_w0(:,:,:,:), &
-                                      diff_basis_w0(:,:,:,:)
+                                      diff_basis_w0(:,:,:,:), &
+                                      basis_w3(:,:,:,:)
 
     real(kind=r_def), pointer :: xp(:,:) => null()
     real(kind=r_def), pointer :: zp(:)   => null()
@@ -218,7 +221,8 @@ contains
 
     r_theta_proxy   = r_theta%get_proxy()
     theta_proxy     = theta%get_proxy()
-    u_proxy         = u%get_proxy()
+    f_proxy         = f%get_proxy()
+    rho_proxy       = rho%get_proxy()
 
     nlayers = r_theta_proxy%vspace%get_nlayers()
 
@@ -229,9 +233,9 @@ contains
     wh=>qr%get_wqp_h()
     wv=>qr%get_wqp_v()
 
-    ndf_w2      = u_proxy%vspace%get_ndf( )
-    dim_w2      = u_proxy%vspace%get_dim_space( )
-    undf_w2     = u_proxy%vspace%get_undf()
+    ndf_w2      = f_proxy%vspace%get_ndf( )
+    dim_w2      = f_proxy%vspace%get_dim_space( )
+    undf_w2     = f_proxy%vspace%get_undf()
     allocate(basis_w2(dim_w2,ndf_w2,nqp_h,nqp_v))
 
     ndf_w0      = r_theta_proxy%vspace%get_ndf( )
@@ -241,7 +245,12 @@ contains
     allocate(basis_w0(dim_w0,ndf_w0,nqp_h,nqp_v))
     allocate(diff_basis_w0(dim_diff_w0,ndf_w0,nqp_h,nqp_v))
 
-    call u_proxy%vspace%compute_basis_function(                     &
+    ndf_w3      = rho_proxy%vspace%get_ndf( )
+    dim_w3      = rho_proxy%vspace%get_dim_space( )
+    undf_w3     = rho_proxy%vspace%get_undf()
+    allocate(basis_w3(dim_w3,ndf_w3,nqp_h,nqp_v))
+
+    call f_proxy%vspace%compute_basis_function(                     &
         basis_w2, ndf_w2, nqp_h, nqp_v, xp, zp)    
 
     call r_theta_proxy%vspace%compute_basis_function(basis_w0, ndf_w0,      & 
@@ -250,11 +259,15 @@ contains
     call r_theta_proxy%vspace%compute_diff_basis_function(                  &
          diff_basis_w0, ndf_w0, nqp_h, nqp_v, xp, zp)
 
+    call rho_proxy%vspace%compute_basis_function(                     &
+         basis_w3, ndf_w3, nqp_h, nqp_v, xp, zp)    
+
     do cell = 1, r_theta_proxy%vspace%get_ncell()
        map_w0 => r_theta_proxy%vspace%get_cell_dofmap( cell )
-       map_w2 => u_proxy%vspace%get_cell_dofmap( cell )
+       map_w2 => f_proxy%vspace%get_cell_dofmap( cell )
+       map_w3 => rho_proxy%vspace%get_cell_dofmap( cell )
 
-       orientation_w2 => u_proxy%vspace%get_cell_orientation ( cell )
+       orientation_w2 => f_proxy%vspace%get_cell_orientation ( cell )
 
        call rtheta_code( nlayers, &
                          ndf_w0, undf_w0, &
@@ -267,12 +280,16 @@ contains
                          map_w2, &
                          basis_w2, &
                          orientation_w2, &
-                         u_proxy%data, &                        
+                         f_proxy%data, &                        
+                         ndf_w3, undf_w3, &
+                         map_w3, &
+                         basis_w3, &
+                         rho_proxy%data, &  
                          nqp_h, nqp_v, wh, wv &
                          )
     end do 
 
-    deallocate(basis_w2, basis_w0, diff_basis_w0)
+    deallocate(basis_w2, basis_w0, diff_basis_w0, basis_w3)
   end subroutine invoke_rtheta_kernel 
   
 !-------------------------------------------------------------------------------  

@@ -190,7 +190,7 @@ contains
 ! Compute new rhs      
         !PSY call invoke ( set_field_scalar(0.0_r_def, rt_prediction(stage)))
         call invoke_set_field_scalar(0.0_r_def, rt_prediction(stage))
-        call invoke_rtheta_kernel( rt_prediction(stage), theta, u, qr)
+        call invoke_rtheta_kernel( rt_prediction(stage), theta, mass_flux, rho, qr)
         !PSY call invoke ( set_field_scalar(0.0_r_def, ru_prediction(stage)))
         call invoke_set_field_scalar(0.0_r_def, ru_prediction(stage))
         call invoke_ru_kernel    ( ru_prediction(stage), u, mass_flux, rho, theta, geopotential, xi, chi, qr )
