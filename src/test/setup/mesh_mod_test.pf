@@ -224,42 +224,42 @@ contains
     allocate( test_real_array1(3), test_real_array2(3) )
 
     lid=3
-    test_real_array2(:) = [ 8757.7975, -13639.4614, -25244.1295 ]
+    test_real_array2(:) = [  14879.4488, -23173.3685, -42889.6347 ]
     call mesh_1%get_vert_coords(lid, test_real_array1)
     @assertEqual ( test_real_array2, test_real_array1, 1.0e-2_r_def )
 
     lid=4
-    test_real_array2(:) = [ -6745.3529, -14738.8649, -25244.1295 ]
+    test_real_array2(:) = [ -11460.3167, -25041.2489, -42889.6347 ]
     call mesh_1%get_vert_coords(lid, test_real_array1)
     @assertEqual ( test_real_array2, test_real_array1, 1.0e-2_r_def )
 
     lid=7
-    test_real_array2(:) = [  5195.3457, -11352.0374, -27278.9228 ]
+    test_real_array2(:) = [   8826.8632, -19287.0480, -46346.7371 ]
     call mesh_1%get_vert_coords(lid, test_real_array1)
     @assertEqual ( test_real_array2, test_real_array1, 1.0e-2_r_def )
 
     lid=10
-    test_real_array2(:) = [ -6745.3529, -14738.8649, 25244.1295 ]
+    test_real_array2(:) = [ -11460.3167, -25041.2489,  42889.6347 ]
     call mesh_1%get_vert_coords(lid, test_real_array1)
     @assertEqual ( test_real_array2, test_real_array1, 1.0e-2_r_def )
 
     lid=16
-    test_real_array2(:) = [ 5195.3457, -11352.0374, 27278.9228 ]
+    test_real_array2(:) = [   8826.8632, -19287.0480,  46346.7371 ]
     call mesh_1%get_vert_coords(lid, test_real_array1)
     @assertEqual ( test_real_array2, test_real_array1, 1.0e-2_r_def )
 
     lid=17
-    test_real_array2(:) = [ 5541.7021, 12108.8399, -29097.5177 ]    
+    test_real_array2(:) = [   9173.2196,  20043.8505, -48165.3319 ]    
     call mesh_1%get_vert_coords(lid, test_real_array1)
     @assertEqual ( test_real_array2, test_real_array1, 1.0e-2_r_def )
 
     lid=22
-    test_real_array2(:) = [ 9341.6506, 14548.7588, -26927.0715 ]    
+    test_real_array2(:) = [  15463.3020,  24082.6660, -44572.5767 ]    
     call mesh_1%get_vert_coords(lid, test_real_array1)
     @assertEqual ( test_real_array2, test_real_array1, 1.0e-2_r_def )
 
     lid=24
-    test_real_array2(:) = [  -7195.0431, 15721.4559, -26927.0715 ]
+    test_real_array2(:) = [ -11910.0069,  26023.8399, -44572.5767 ]
     call mesh_1%get_vert_coords(lid, test_real_array1)
     @assertEqual ( test_real_array2, test_real_array1, 1.0e-2_r_def )
 
@@ -272,27 +272,27 @@ contains
     ! Test a couple of cell ids
     allocate( test_real_array1_2d(3,8), test_real_array2_2d(3,8) )
 
-    test_real_array2_2d(:,1) = [  6234.4148,  13622.4449, -32734.7074 ]
-    test_real_array2_2d(:,2) = [ -8094.4234,  12606.3176, -32734.7074 ] 
-    test_real_array2_2d(:,3) = [ 10509.3569, -16367.3537, -30292.9555 ]  
-    test_real_array2_2d(:,4) = [ -8094.4234, -17686.6379, -30292.9555 ]   
-    test_real_array2_2d(:,5) = [  6580.7712,  14379.2474, -34553.3022 ]    
-    test_real_array2_2d(:,6) = [ -8544.1136,  13306.6686, -34553.3022 ]
-    test_real_array2_2d(:,7) = [ 11093.2101, -17276.6511, -31975.8974 ]   
-    test_real_array2_2d(:,8) = [ -8544.1136, -18669.2289, -31975.8974 ]
+    test_real_array2_2d(:,1) = [   9865.9324,  21557.4555, -51802.5216 ]
+    test_real_array2_2d(:,2) = [ -12809.3873,  19949.4387, -51802.5216 ] 
+    test_real_array2_2d(:,3) = [  16631.0083, -25901.2608, -47938.4606 ]  
+    test_real_array2_2d(:,4) = [ -12809.3873, -27989.0219, -47938.4606 ]   
+    test_real_array2_2d(:,5) = [  10212.2887,  22314.2580, -53621.1165 ]    
+    test_real_array2_2d(:,6) = [ -13259.0775,  20649.7897, -53621.1165 ]
+    test_real_array2_2d(:,7) = [  17214.8615, -26810.5582, -49621.4026 ]   
+    test_real_array2_2d(:,8) = [ -13259.0775, -28971.6129 ,-49621.4026 ]
     lid=28
     call mesh_1%get_cell_coords(lid, test_real_array1_2d)
     @assertEqual ( test_real_array2_2d, test_real_array1_2d, 1.0e-2_r_def )
 
 
-    test_real_array2_2d(:,1)   = [  9925.5038, -15458.0563, -28610.0135 ]
-    test_real_array2_2d(:,2)   = [  9925.5038,  15458.0563, -28610.0135 ]
-    test_real_array2_2d(:,3)   = [  9925.5038,  15458.0563,  28610.0135 ]
-    test_real_array2_2d(:,4)   = [  9925.5038, -15458.0563,  28610.0135 ]
-    test_real_array2_2d(:,5)   = [ 10509.3569, -16367.3537, -30292.9555 ]
-    test_real_array2_2d(:,6)   = [ 10509.3569,  16367.3537, -30292.9555 ]
-    test_real_array2_2d(:,7)   = [ 10509.3569,  16367.3537,  30292.9555 ]
-    test_real_array2_2d(:,8)   = [ 10509.3569, -16367.3537,  30292.9555 ]
+    test_real_array2_2d(:,1) = [  16047.1552, -24991.9634, -46255.5187 ]
+    test_real_array2_2d(:,2) = [  16047.1552,  24991.9634, -46255.5187 ]
+    test_real_array2_2d(:,3) = [  16047.1552,  24991.9634,  46255.5187 ]
+    test_real_array2_2d(:,4) = [  16047.1552, -24991.9634,  46255.5187 ]
+    test_real_array2_2d(:,5) = [  16631.0083, -25901.2608, -47938.4606 ]
+    test_real_array2_2d(:,6) = [  16631.0083,  25901.2608, -47938.4606 ]
+    test_real_array2_2d(:,7) = [  16631.0083,  25901.2608,  47938.4606 ]
+    test_real_array2_2d(:,8) = [  16631.0083, -25901.2608 , 47938.4606 ]
 
     lid=23
     call mesh_1%get_cell_coords(lid, test_real_array1_2d)
@@ -309,53 +309,52 @@ contains
     ! column of coords
     allocate( test_real_array1_3d(3,8,5), test_real_array2_3d(3,8,5) )
 
-    test_real_array2_3d(:,1,1) = [ -6745.3529, -14738.8649,  25244.1295 ]
-    test_real_array2_3d(:,2,1) = [  8757.7975, -13639.4614,  25244.1295 ]
-    test_real_array2_3d(:,3,1) = [ -6745.3529,  10505.2647,  27278.9228 ]
-    test_real_array2_3d(:,4,1) = [  5195.3457,  11352.0374,  27278.9228 ]
-    test_real_array2_3d(:,5,1) = [ -7195.0436, -15721.4559,  26927.0715 ]
-    test_real_array2_3d(:,6,1) = [  9341.6506, -14548.7588,  26927.0715 ]
-    test_real_array2_3d(:,7,1) = [ -7195.0431,  11205.6156,  29097.5177 ]
-    test_real_array2_3d(:,8,1) = [  5541.7021,  12108.8399,  29097.5177 ]
-    
-    test_real_array2_3d(:,1,2) = [ -7195.0431, -15721.4559,  26927.0715 ]  
-    test_real_array2_3d(:,2,2) = [  9341.6506, -14548.7588,  26927.0715 ]
-    test_real_array2_3d(:,3,2) = [ -7195.0431,  11205.6156,  29097.5177 ]  
-    test_real_array2_3d(:,4,2) = [  5541.7021,  12108.8399,  29097.5177 ] 
-    test_real_array2_3d(:,5,2) = [ -7644.7332, -16704.0469,  28610.0135 ]    
-    test_real_array2_3d(:,6,2) = [  9925.5038, -15458.0563,  28610.0135 ]
-    test_real_array2_3d(:,7,2) = [ -7644.7332,  11905.9666,  30916.1125 ]
-    test_real_array2_3d(:,8,2) = [  5888.0584,  12865.6424,  30916.1125 ]
-    
-    test_real_array2_3d(:,1,3) = [ -7644.7332, -16704.0469,  28610.0135 ]  
-    test_real_array2_3d(:,2,3) = [  9925.5038, -15458.0563,  28610.0135 ]
-    test_real_array2_3d(:,3,3) = [ -7644.7332,  11905.9666,  30916.1125 ]
-    test_real_array2_3d(:,4,3) = [  5888.0584,  12865.6424,  30916.1125 ]
-    test_real_array2_3d(:,5,3) = [ -8094.4234, -17686.6379,  30292.9555 ]
-    test_real_array2_3d(:,6,3) = [ 10509.3569, -16367.3537,  30292.9555 ]
-    test_real_array2_3d(:,7,3) = [ -8094.4234,  12606.3176,  32734.7074 ]
-    test_real_array2_3d(:,8,3) = [  6234.4148,  13622.4449,  32734.7074 ]
- 
-    test_real_array2_3d(:,1,4) = [ -8094.4234, -17686.6379,  30292.9555 ]
-    test_real_array2_3d(:,2,4) = [ 10509.3569, -16367.3537,  30292.9555 ]
-    test_real_array2_3d(:,3,4) = [ -8094.4234,  12606.3176,  32734.7074 ]
-    test_real_array2_3d(:,4,4) = [  6234.4148,  13622.4449,  32734.7074 ]
-    test_real_array2_3d(:,5,4) = [ -8544.1136, -18669.2289,  31975.8974 ]
-    test_real_array2_3d(:,6,4) = [ 11093.2101, -17276.6511,  31975.8974 ]
-    test_real_array2_3d(:,7,4) = [ -8544.1136,  13306.6686,  34553.3022 ]
-    test_real_array2_3d(:,8,4) = [  6580.7712,  14379.2474,  34553.3022 ]
-    
-    test_real_array2_3d(:,1,5) = [ -8544.1136, -18669.2289,  31975.8974 ]
-    test_real_array2_3d(:,2,5) = [ 11093.2101, -17276.6511,  31975.8974 ]
-    test_real_array2_3d(:,3,5) = [ -8544.1136,  13306.6686,  34553.3022 ]
-    test_real_array2_3d(:,4,5) = [  6580.7712,  14379.2474,  34553.3022 ]
-    test_real_array2_3d(:,5,5) = [ -8993.8038, -19651.8199,  33658.8394 ]
-    test_real_array2_3d(:,6,5) = [ 11677.0633, -18185.9485,  33658.8394 ]
-    test_real_array2_3d(:,7,5) = [ -8993.8038,  14007.0195,  36371.8971 ]
-    test_real_array2_3d(:,8,5) = [  6927.1276,  15136.0499,  36371.8971 ]
+    test_real_array2_3d(:,1,1) = [ -11460.3167, -25041.2489,  42889.6347 ]
+    test_real_array2_3d(:,2,1) = [  14879.4488, -23173.3685,  42889.6347 ]
+    test_real_array2_3d(:,3,1) = [ -11460.3167,  17848.3858,  46346.7371 ]
+    test_real_array2_3d(:,4,1) = [   8826.8632,  19287.0480,  46346.7371 ]
+    test_real_array2_3d(:,5,1) = [ -11910.0069, -26023.8399,  44572.5767 ]
+    test_real_array2_3d(:,6,1) = [  15463.3020, -24082.6660,  44572.5767 ]
+    test_real_array2_3d(:,7,1) = [ -11910.0069,  18548.7368,  48165.3319 ]
+    test_real_array2_3d(:,8,1) = [   9173.2196,  20043.8505,  48165.3319 ]
 
+    test_real_array2_3d(:,1,2) = [ -11910.0069, -26023.8399,  44572.5767 ]  
+    test_real_array2_3d(:,2,2) = [  15463.3020, -24082.6660,  44572.5767 ]
+    test_real_array2_3d(:,3,2) = [ -11910.0069,  18548.7368,  48165.3319 ]  
+    test_real_array2_3d(:,4,2) = [   9173.2196,  20043.8505,  48165.3319 ] 
+    test_real_array2_3d(:,5,2) = [ -12359.6971, -27006.4309,  46255.5187 ]    
+    test_real_array2_3d(:,6,2) = [  16047.1552, -24991.9634,  46255.5187 ]
+    test_real_array2_3d(:,7,2) = [ -12359.6971,  19249.0878,  49983.9268 ]
+    test_real_array2_3d(:,8,2) = [   9519.5760,  20800.6530,  49983.9268 ]
 
-    lid=34
+    test_real_array2_3d(:,1,3) = [ -12359.6971, -27006.4309,  46255.5187 ]  
+    test_real_array2_3d(:,2,3) = [  16047.1552, -24991.9634,  46255.5187 ]
+    test_real_array2_3d(:,3,3) = [ -12359.6971,  19249.0878,  49983.9268 ]
+    test_real_array2_3d(:,4,3) = [   9519.5760,  20800.6530,  49983.9268 ]
+    test_real_array2_3d(:,5,3) = [ -12809.3873, -27989.0219,  47938.4606 ]
+    test_real_array2_3d(:,6,3) = [  16631.0083, -25901.2608,  47938.4606 ]
+    test_real_array2_3d(:,7,3) = [ -12809.3873,  19949.4387,  51802.5216 ]
+    test_real_array2_3d(:,8,3) = [   9865.9324,  21557.4555,  51802.5216 ]
+
+    test_real_array2_3d(:,1,4) = [ -12809.3873, -27989.0219,  47938.4606 ]
+    test_real_array2_3d(:,2,4) = [  16631.0083, -25901.2608,  47938.4606 ]
+    test_real_array2_3d(:,3,4) = [ -12809.3873,  19949.4387,  51802.5216 ]
+    test_real_array2_3d(:,4,4) = [   9865.9324,  21557.4555,  51802.5216 ]
+    test_real_array2_3d(:,5,4) = [ -13259.0775, -28971.6129,  49621.4026 ]
+    test_real_array2_3d(:,6,4) = [  17214.8615, -26810.5582,  49621.4026 ]
+    test_real_array2_3d(:,7,4) = [ -13259.0775,  20649.7897,  53621.1165 ]
+    test_real_array2_3d(:,8,4) = [  10212.2887,  22314.2580,  53621.1165 ]
+
+    test_real_array2_3d(:,1,5) = [ -13259.0775, -28971.6129,  49621.4026 ]
+    test_real_array2_3d(:,2,5) = [  17214.8615, -26810.5582,  49621.4026 ]
+    test_real_array2_3d(:,3,5) = [ -13259.0775,  20649.7897,  53621.1165 ]
+    test_real_array2_3d(:,4,5) = [  10212.2887,  22314.2580,  53621.1165 ]
+    test_real_array2_3d(:,5,5) = [ -13708.7677, -29954.2039,  51304.3446 ]
+    test_real_array2_3d(:,6,5) = [  17798.7146, -27719.8557,  51304.3446 ]
+    test_real_array2_3d(:,7,5) = [ -13708.7677,  21350.1407,  55439.7114 ]
+    test_real_array2_3d(:,8,5) = [  10558.6451,  23071.0605,  55439.7114 ]
+
+    lid=7
     call mesh_1%get_column_coords(lid, test_real_array1_3d)
     @assertEqual ( test_real_array2_3d, test_real_array1_3d, 1.0e-2_r_def )
 

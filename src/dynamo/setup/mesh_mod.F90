@@ -1676,6 +1676,8 @@ contains
                                      nverts_h, nedges_h, nfaces_h,            &
                                      nverts,   nedges,   nfaces,              &
                                      SWB, SEB, NEB, NWB, SWT, SET, NET, NWT
+    use slush_mod,             only: l_spherical
+    use constants_mod,         only: earth_radius
     implicit none
 
     class(mesh_type) :: self
@@ -1700,6 +1702,9 @@ contains
 
     ! lat/long coordinates
     real(r_def) :: long, lat, r
+
+    ! The height of the lowest z-level
+    real(r_def) :: base_z
 
     ! Reference element stats
     nverts_per_2d_cell = nverts_h
@@ -1762,28 +1767,37 @@ contains
     ! [longitude, latitude, radius] (long/lat in rads)
 
     ! perform vertical extrusion for vertices
+    if( l_spherical )then
+      !> @todo We shouldn't be using earth_radius here - it should be
+      !!       some form of scaled planet radius - but that is a much
+      !!       bigger change for a different ticket.
+      base_z = earth_radius
+    else
+      base_z = 0.0_r_def
+    end if
     do j=1, nverts_2d
       do k=0, nlayers
         self%vertex_coords(1,j+k*nverts_2d) = vertex_coords_2d(1,j)
         self%vertex_coords(2,j+k*nverts_2d) = vertex_coords_2d(2,j)
-        self%vertex_coords(3,j+k*nverts_2d) = vertex_coords_2d(3,j)           &
-                                            + real(k)*self%dz
+        self%vertex_coords(3,j+k*nverts_2d) = base_z + real(k)*self%dz
       end do
     end do
 
     deallocate(vertex_coords_2d)
 
-    ! Convert (long,lat,r) -> (x,y,z)
-    do j=1, nverts_2d
-      do k=0, nlayers
-        long = self % vertex_coords(1,j+k*nverts_2d)
-        lat  = self % vertex_coords(2,j+k*nverts_2d)
-        r    = self % vertex_coords(3,j+k*nverts_2d)
-        call llr2xyz(long,lat,r,self % vertex_coords(1,j+k*nverts_2d),        &
-                                self % vertex_coords(2,j+k*nverts_2d),        &
-                                self % vertex_coords(3,j+k*nverts_2d))
+    if( l_spherical )then
+      ! Convert (long,lat,r) -> (x,y,z)
+      do j=1, nverts_2d
+        do k=0, nlayers
+          long = self % vertex_coords(1,j+k*nverts_2d)
+          lat  = self % vertex_coords(2,j+k*nverts_2d)
+          r    = self % vertex_coords(3,j+k*nverts_2d)
+          call llr2xyz(long,lat,r,self % vertex_coords(1,j+k*nverts_2d), &
+                                  self % vertex_coords(2,j+k*nverts_2d), &
+                                  self % vertex_coords(3,j+k*nverts_2d))
+        end do
       end do
-    end do
+    end if
 
     ! assign vertices to cells
     ! Loop over lowest layer of cells first, to set the cell ids above

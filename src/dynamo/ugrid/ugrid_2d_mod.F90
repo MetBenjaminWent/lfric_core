@@ -60,8 +60,6 @@ contains
   procedure :: write_to_file
   procedure :: get_node_coords
   procedure :: get_node_coords_transpose
-  procedure :: get_node_coords_xyz
-  procedure :: get_node_coords_xyz_transpose
   procedure :: get_face_node_connectivity
   procedure :: get_face_node_connectivity_transpose
   procedure :: get_face_edge_connectivity
@@ -325,7 +323,6 @@ end subroutine write_to_file
 !-------------------------------------------------------------------------------
 
 subroutine get_node_coords(self, node_coords)
-  use constants_mod, only: earth_radius
   implicit none
 
   class(ugrid_2d_type), intent(in)  :: self
@@ -335,7 +332,6 @@ subroutine get_node_coords(self, node_coords)
 
   do i = 1, self%num_nodes
     node_coords(1:2,i) = self%node_coordinates(1:2,i)
-    node_coords(3,i)   = earth_radius
   end do
 
   return
@@ -354,7 +350,6 @@ end subroutine get_node_coords
 !-------------------------------------------------------------------------------
 
 subroutine get_node_coords_transpose(self, node_coords)
-  use constants_mod, only: earth_radius
   implicit none
 
   class(ugrid_2d_type), intent(in)  :: self
@@ -364,83 +359,10 @@ subroutine get_node_coords_transpose(self, node_coords)
 
   do i = 1, self%num_nodes
     node_coords(i,1:2) = self%node_coordinates(1:2,i)
-    node_coords(i,3)   = earth_radius
   end do
 
   return
 end subroutine get_node_coords_transpose
-
-!-------------------------------------------------------------------------------
-!> @brief Gets node XYZ coordinates with ugrid array index ordering.
-!!
-!! @details  Returns a rank-two array of node coordinates, with the
-!!           coordinate dimension index innermost, and the node number
-!!           outermost. Coordinates are space-fixed XYZ.
-!!
-!! @param[in]   self         The calling ugrid object.
-!! @param[out]  node_coords  Node coordinate array.
-!-------------------------------------------------------------------------------
-
-subroutine get_node_coords_xyz(self, node_coords)
-
-  use constants_mod, only: earth_radius
-  use coord_transform_mod, only: llr2xyz
-
-  implicit none
-
-  class(ugrid_2d_type), intent(in)  :: self
-  real(kind=r_def),     intent(out) :: node_coords(:,:)
-
-  integer :: i
-
-  do i = 1, self%num_nodes
-    call llr2xyz(                              &
-       long     = self%node_coordinates(1,i),  &
-       lat      = self%node_coordinates(2,i),  &
-       radius   = earth_radius,                &
-       x        = node_coords(1,i),            &
-       y        = node_coords(2,i),            &
-       z        = node_coords(3,i))
-  end do
-
-  return
-end subroutine get_node_coords_xyz
-
-!-------------------------------------------------------------------------------
-!> @brief Gets XYZ node coordinates with transposed ugrid array index ordering.
-!!
-!! @details Returns a rank-two array of node coordinates, with the 
-!!          coordinate dimension index outermost, and the node number
-!!          innermost. This is the transpose of the ugrid index ordering.
-!!          Coordinates are space-fixed XYZ. This transpose routine is needed
-!!          to interface with the current Dynamo index ordering.
-!!
-!! @param[in]   self        Calling ugrid object.
-!! @param[out]  node_coords Node coordinate array.
-!-------------------------------------------------------------------------------
-
-subroutine get_node_coords_xyz_transpose(self, node_coords)
-  use constants_mod, only: earth_radius
-  use coord_transform_mod, only: llr2xyz
-  implicit none
-
-  class(ugrid_2d_type), intent(in)  :: self
-  real(kind=r_def),     intent(out) :: node_coords(:,:)
-
-  integer :: i
-
-  do i = 1, self%num_nodes
-    call llr2xyz(                                 &
-       long        = self%node_coordinates(1,i),  &
-       lat         = self%node_coordinates(2,i),  &
-       radius      = earth_radius,                &
-       x           = node_coords(i,1),            &
-       y           = node_coords(i,2),            &
-       z           = node_coords(i,3))
-  end do
-
-  return
-end subroutine get_node_coords_xyz_transpose
 
 !-------------------------------------------------------------------------------
 !> @brief        Gets an array of node indices surrounding each face.
@@ -616,9 +538,10 @@ subroutine get_face_face_connectivity_transpose(self, face_face_connectivity)
 end subroutine get_face_face_connectivity_transpose
 
 !-------------------------------------------------------------------------------
-!> @brief   Writes coordinates to .dat files in both lat-long and XYZ format.
+!> @brief   Writes coordinates to a .dat file in the units they are held in
+!!          within the UGRID file.
 !!               
-!! @details  Produces two files with rough output of coordinates. Intended to be
+!! @details  Produces a file with rough output of coordinates. Intended to be
 !!           a temporary routine only: would be better implemented for the
 !!           long-term as a plain-text ugrid file strategy. Hence the
 !!           good-enough-for-now hardwired unit numbers and file names.
@@ -634,24 +557,11 @@ subroutine write_coordinates(self)
 
   integer :: inode
 
-  real(kind=r_def), allocatable :: tmp_xyz(:,:)
-
-  allocate(tmp_xyz(1:3,1:self%num_nodes))
-  call self%get_node_coords_xyz(tmp_xyz)
-
   open(56, file='nodes.dat')
   do inode = 1, self%num_nodes
     write(56,*) self%node_coordinates(:,inode)
   end do
   close(56)
-
-  open(57, file='nodes_xyz.dat')
-  do inode = 1, self%num_nodes
-    write(57,*) tmp_xyz(:,inode)
-  end do
-  close(57)
-
-  deallocate(tmp_xyz)
 
   return
 end subroutine write_coordinates

@@ -19,7 +19,7 @@ private
 
 type, public :: global_mesh_type
   private
-!> Coords of vertices in full domain
+!> Horizontal coords of vertices in full domain
   real(kind=r_def), allocatable :: vert_coords(:,:)
 !> Full domain cell to cell connectivities
   integer, allocatable :: cell_next_2d(:,:)
@@ -164,7 +164,7 @@ self%nverts_per_cell      = num_nodes_per_face
 self%nedges_per_cell      = num_edges_per_face
 self%max_cells_per_vertex = max_num_faces_per_node
 
-allocate( self%vert_coords(3, nvert_in) )
+allocate( self%vert_coords(2, nvert_in) )
 call ugrid_2d%get_node_coords(self%vert_coords)
 
 allocate( self%cell_next_2d( num_edges_per_face, nface_in ) )
@@ -428,7 +428,7 @@ subroutine get_vert_coords (self, vert_gid, vert_coords)
   integer,                  intent(in)  :: vert_gid
   real(r_def),              intent(out) :: vert_coords(:)
 
-  vert_coords(:) = self%vert_coords(:,vert_gid)
+  vert_coords(1:2) = self%vert_coords(1:2,vert_gid)
 
 end subroutine get_vert_coords
 
@@ -459,8 +459,6 @@ function global_mesh_constructor_unit_test_data() result (self)
 
   integer(i_def) :: nverts = 16
   integer(i_def) :: nedges = 24
-
-  real(r_def)    :: planet_radius = 30000.0
 
   ! Returns global_mesh_object of size 3x3 quad reference cell.
   ! As per reference cell, direction of numbering is anti-clockwise
@@ -499,8 +497,6 @@ function global_mesh_constructor_unit_test_data() result (self)
   self%vert_coords(1:2,14) = [-1.0,  2.0]
   self%vert_coords(1:2,15) = [ 1.0,  2.0]
   self%vert_coords(1:2,16) = [ 2.0,  2.0]
-
-  self%vert_coords(3,:)    = planet_radius
 
   self%cell_next_2d(:,1)     = [0, 0, 2, 4]
   self%cell_next_2d(:,2)     = [1, 0, 3, 5]
