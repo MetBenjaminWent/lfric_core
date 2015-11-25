@@ -5,27 +5,85 @@
 ! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
 !-------------------------------------------------------------------------------
 !
-!-------------------------------------------------------------------------------
-
 module restart_control_mod_test
+
+  use pFUnit_mod
+
   implicit none
 
+  private
+  public :: test_basic
+
+  @TestCase
+  type, public, extends(TestCase) :: restart_control_test_type
+
+    private
+
+  contains
+
+    procedure setUp
+    procedure tearDown
+    procedure test_basic
+
+  end type restart_control_test_type
+
 contains
-  @test
-  subroutine restart_control_test()
-    use pFunit_Mod
-    use constants_mod,       only : str_max_filename
-    use restart_control_mod, only : restart_type
-    use log_mod,             only : log_set_level, LOG_LEVEL_WARNING
+
+  ! The code under test will log events. These end up on standard-out. This
+  ! causes problems with pFunit. To prevent this we redirect the logged output
+  ! to a scratch file.
+  !
+  subroutine setUp( this )
+
+    use log_mod, only : log_set_info_stream
 
     implicit none
+
+    class(restart_control_test_type), intent(inout) :: this
+
+    integer :: condition
+
+    open( 8, status='scratch', action='readwrite', iostat=condition )
+    @assertEqual(0, condition )
+    call log_set_info_stream( 8 )
+
+  end subroutine setUp
+
+  ! Restore logging to standard-out once the test is complete.
+  !
+  subroutine tearDown( this )
+
+    use iso_fortran_env, only : output_unit
+    use log_mod,         only : log_set_info_stream
+
+    implicit none
+
+    class(restart_control_test_type), intent(inout) :: this
+
+    integer :: condition
+
+    call log_set_info_stream( output_unit )
+
+    close( 8, iostat=condition )
+    @assertEqual( 0, condition )
+
+  end subroutine tearDown
+
+  @test
+  subroutine test_basic( this )
+
+    use constants_mod,       only : str_max_filename
+    use restart_control_mod, only : restart_type
+
+    implicit none
+
+    class(restart_control_test_type), intent(inout) :: this
+
     character(len=str_max_filename) :: rs_fname
-    character(len=str_max_filename) :: fname,tname    
+    character(len=str_max_filename) :: fname,tname
     type(restart_type) :: restart
     integer :: ts_start, ts_end, df
     logical :: ck_r, ck_w
-
-    call log_set_level(LOG_LEVEL_WARNING) ! resart logs at INFO
 
     write(rs_fname,'(A)') "data/rs_test.nml"
     restart = restart_type(rs_fname)
@@ -42,7 +100,7 @@ contains
     @assertEqual(restart%diag_freq(),df)
     @assertTrue(restart%read_file().eqv.ck_r)
     @assertTrue(restart%write_file().eqv.ck_w)
-    
+
     write(tname,'(A,A,A,A,I6.6)') "hswarez_100day","_", &
          "rho",".T",ts_start-1
     fname=restart%startfname("rho")
@@ -57,10 +115,7 @@ contains
          "rho",".T",7
     fname=restart%ts_fname("rho",7)
     @assertEqual(tname,fname)
-    
 
-  end subroutine restart_control_test
-
+  end subroutine test_basic
 
 end module restart_control_mod_test
-

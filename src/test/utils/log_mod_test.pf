@@ -184,6 +184,11 @@ contains
     character( 80 )           :: found_message
     integer                   :: status
 
+    ! Check logging level is set to INFO. If it isn't, maybe another test
+    ! altered it. Either way, something has gone wrong so we bail out.
+    !
+    @assertEqual( LOG_LEVEL_INFO, log_level() )
+
     call date_and_time( date=current_date_string(1:8), &
                         time=current_date_string(9:18), &
                         zone=current_date_string(19:) )

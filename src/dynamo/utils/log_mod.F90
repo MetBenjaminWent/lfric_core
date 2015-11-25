@@ -25,7 +25,7 @@ module log_mod
   implicit none
 
   private
-  public log_set_info_stream, log_set_alert_stream, log_set_level, log_event
+  public log_set_info_stream, log_set_alert_stream, log_set_level, log_level, log_event
 
   !> Named logging level.
   !>
@@ -51,9 +51,9 @@ module log_mod
 
   integer, private, parameter :: EXIT_CODE_ON_ERROR = 1
 
-  integer, private :: log_level  = LOG_LEVEL_INFO
-  integer, private :: info_unit  = output_unit
-  integer, private :: alert_unit = error_unit
+  integer, private :: logging_level = LOG_LEVEL_INFO
+  integer, private :: info_unit     = output_unit
+  integer, private :: alert_unit    = error_unit
 
 contains
 
@@ -104,9 +104,25 @@ contains
 
     integer, intent( in ) :: level
 
-    log_level = level
+    logging_level = level
 
   end subroutine log_set_level
+
+  !> Gets the current logging level.
+  !>
+  !> Primarily used for testing purposes.
+  !>
+  !> @returns The logging level.
+  !>
+  function log_level()
+
+    implicit none
+
+    integer :: log_level
+
+    log_level = logging_level
+
+  end function
 
   !> Log an event
   !>
@@ -139,7 +155,7 @@ contains
     character (10) :: time_string
     character (5)  :: zone_string
 
-    if (level >= log_level) then
+    if (level >= logging_level) then
 
       select case (level)
         case ( : LOG_LEVEL_DEBUG - 1)
