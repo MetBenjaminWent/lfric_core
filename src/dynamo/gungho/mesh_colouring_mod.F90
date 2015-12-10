@@ -4,7 +4,7 @@
 ! However, it has been created with the help of the GungHo Consortium, 
 ! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
 !------------------------------------------------------------------------------
-!> @brief Computes mesh colouring for vector spaces w0, w1, and w2.
+!> @brief Computes mesh colouring for vector spaces
 !>
 !> @details Contains algorithms for colouring of meshes according to different
 !>          traversal orders and different colouring policies.
@@ -22,11 +22,11 @@ module mesh_colouring_mod
 !------------------------------------------------------------------------------
   integer, parameter               :: MAXCOLS = 50 ! Temporary hardcode until
                                                    ! dynamic palette
-  integer(kind=i_def)              :: cells_per_colour(MAXCOLS)
+  integer(kind=i_def), target      :: cells_per_colour(MAXCOLS)
 !------------------------------------------------------------------------------
   contains
 !-----------------------------------------------------------------------------
-!>  @brief  Set colouring pattern for vector spaces w0, w1, and w3.
+!>  @brief  Set colouring pattern for vector spaces
 !>
 !>  @detail Acquires details of cells in partition and applies colouring
 !>          to this space according to the specified colouring policy.
@@ -34,33 +34,20 @@ module mesh_colouring_mod
 !>  @param[in]  num_cells   Number of cells defined on the mesh.
 !>  @param[in]  cell_next   Adjacency array for the mesh.
 !>  @param[out] num_colours   Number of colours used.
-!>  @param[out] num_cell_per_colour_w0   Count of cells in each colour, w0
-!>  @param[out] num_cell_per_colour_w1   Count of cells in each colour, w1
-!>  @param[out] num_cell_per_colour_w2   Count of cells in each colour, w2
-!>  @param[out] cells_in_colour_w0   List of cell indices in each colour, w0
-!>  @param[out] cells_in_colour_w1   List of cell indices in each colour, w1
-!>  @param[out] cells_in_colour_w2   List of cell indices in each colour, w2
+!>  @param[out] num_cell_per_colour   Count of cells in each colour
+!>  @param[out] cells_in_colour   List of cell indices in each colour
 !------------------------------------------------------------------------------
 subroutine set_colours(num_cells,              &
                        cell_next,              &
                        num_colours,            &
-                       num_cell_per_colour_w0, &
-                       num_cell_per_colour_w1, &
-                       num_cell_per_colour_w2, &
-                       cells_in_colour_w0,     &
-                       cells_in_colour_w1,     &
-                       cells_in_colour_w2)
+                       num_cell_per_colour,    &
+                       cells_in_colour)
   implicit none
   integer(i_def), intent(in)                    :: num_cells
   integer(i_def), allocatable, intent(in)       :: cell_next(:,:)
   integer, intent(out)                          :: num_colours
-  integer(kind=i_def), allocatable, intent(out) :: num_cell_per_colour_w0(:)
-  integer(kind=i_def), allocatable, intent(out) :: num_cell_per_colour_w1(:)
-  integer(kind=i_def), allocatable, intent(out) :: num_cell_per_colour_w2(:)
-
-  integer(kind=i_def), allocatable, intent(out) :: cells_in_colour_w0(:,:)
-  integer(kind=i_def), allocatable, intent(out) :: cells_in_colour_w1(:,:)
-  integer(kind=i_def), allocatable, intent(out) :: cells_in_colour_w2(:,:)
+  integer(kind=i_def), allocatable, intent(out) :: num_cell_per_colour(:)
+  integer(kind=i_def), allocatable, intent(out) :: cells_in_colour(:,:)
 
 
   ! Array holding the colour of each cell. Index 0 cell holds 0 value for
@@ -147,54 +134,28 @@ subroutine set_colours(num_cells,              &
     end if
   end do
 
-  allocate(num_cell_per_colour_w0(num_colours), stat=astat)
+  allocate(num_cell_per_colour(num_colours), stat=astat)
 
-  if(astat/=0) call log_event(prefix//"num_cell_per_colour_w0.", &
-                                LOG_LEVEL_ERROR)
-
-  allocate(num_cell_per_colour_w1(num_colours), stat=astat)
-
-  if(astat/=0) call log_event(prefix//"num_cell_per_colour_w1.", &
-                                LOG_LEVEL_ERROR)
-
-  allocate(num_cell_per_colour_w2(num_colours), stat=astat)
-
-  if(astat/=0) call log_event(prefix//"num_cell_per_colour_w2.", &
+  if(astat/=0) call log_event(prefix//"num_cell_per_colour.", &
                                 LOG_LEVEL_ERROR)
 
   do colour = 1, num_colours
-    num_cell_per_colour_w0(colour) = cells_per_colour(colour)
-    num_cell_per_colour_w1(colour) = cells_per_colour(colour)
-    num_cell_per_colour_w2(colour) = cells_per_colour(colour)
+    num_cell_per_colour(colour) = cells_per_colour(colour)
   end do
 
-  allocate(cells_in_colour_w0(num_colours, maxval(num_cell_per_colour_w0)), &
+  allocate(cells_in_colour(num_colours, maxval(num_cell_per_colour)), &
            stat=astat)
-  if(astat/=0) call log_event(prefix//"cells_in_colour_w0.", &
+  if(astat/=0) call log_event(prefix//"cells_in_colour.", &
                                 LOG_LEVEL_ERROR)
 
-  allocate(cells_in_colour_w1(num_colours, maxval(num_cell_per_colour_w1)), &
-           stat=astat)
-  if(astat/=0) call log_event(prefix//"cells_in_colour_w1.", &
-                                LOG_LEVEL_ERROR)
-
-  allocate(cells_in_colour_w2(num_colours, maxval(num_cell_per_colour_w2)), &
-           stat=astat)
-  if(astat/=0) call log_event(prefix//"cells_in_colour_w2.", &
-                                LOG_LEVEL_ERROR)
-
-  cells_in_colour_w0 = 0
-  cells_in_colour_w1 = 0
-  cells_in_colour_w2 = 0
+  cells_in_colour = 0
 
   do colour = 1, num_colours
     i = 0
     do cell = 1, num_cells
       if (colour_map(cell) == colour) then 
         i = i+1
-        cells_in_colour_w0(colour, i) = cell
-        cells_in_colour_w1(colour, i) = cell
-        cells_in_colour_w2(colour, i) = cell
+        cells_in_colour(colour, i) = cell
       end if
     end do
   end do

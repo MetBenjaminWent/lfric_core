@@ -178,13 +178,9 @@ module mesh_mod
     !==========================================================================
     ! Colouring storage: these form the arguments to set_colours().
     !==========================================================================
-    integer(i_def), private                   :: ncolours
-    integer(i_def), allocatable, private      :: ncells_per_colour_w0(:)
-    integer(i_def), allocatable, private      :: ncells_per_colour_w1(:)
-    integer(i_def), allocatable, private      :: ncells_per_colour_w2(:)
-    integer(i_def), allocatable, private      :: cells_in_colour_w0(:,:)
-    integer(i_def), allocatable, private      :: cells_in_colour_w1(:,:)
-    integer(i_def), allocatable, private      :: cells_in_colour_w2(:,:)
+    integer(i_def), private                 :: ncolours
+    integer(i_def), allocatable, private     :: ncells_per_colour(:)
+    integer(i_def), allocatable, private     :: cells_in_colour(:,:)
 
   contains
 
@@ -248,12 +244,13 @@ module mesh_mod
     !> @param[in] lid The id of a cell in local index space
     !> @return gid The id of a cell in global index space
     procedure, public :: get_gid_from_lid
+    ! Colouring now accessed through function_space_type
     procedure, public :: set_colours
     procedure, public :: get_ncolours
-    procedure, public :: get_colours_w0
-    procedure, public :: get_colours_w1
-    procedure, public :: get_colours_w2
+    procedure, public :: get_colours
     procedure, public :: is_coloured
+    ! Destructor frees colouring storage
+    final :: mesh_type_dtor
 
   end type mesh_type
 
@@ -894,100 +891,25 @@ contains
   end function get_ncolours
 
   !============================================================================
-  !> @brief Populates args with colouring info for w0 space.
+  !> @brief Populates args with colouring info.
   !> @param[in] self  The mesh_type instance.
   !> @param[out] ncolours  Number of colours used to colour this mesh. 
   !> @param[out] ncells_per_colour  Count of cells in each colour.
   !> @param[out] colour_map  Indices of cells in each colour.
   !============================================================================
-  subroutine get_colours_w0(self, ncolours, ncells_per_colour, colour_map)
+  subroutine get_colours(self, ncolours, ncells_per_colour, colour_map)
     implicit none
-    class(mesh_type), intent(in)              :: self
+    class(mesh_type), intent(in), target      :: self
     integer(i_def), intent(out)               :: ncolours
-    integer(i_def), allocatable, intent(out)  :: ncells_per_colour(:)
-    integer(i_def), allocatable, intent(out)  :: colour_map(:,:)
+    integer(i_def), pointer, intent(out)  :: ncells_per_colour(:)
+    integer(i_def), pointer, intent(out)  :: colour_map(:,:)
   
-    integer                      :: astat
-
-
-    allocate(ncells_per_colour(size(self%ncells_per_colour_w0)), stat=astat)
-    if(astat /= 0) call log_event("[Mesh Mod] Unable to allocate "//&
-                                  "ncells_per_colour_w0.", LOG_LEVEL_ERROR)
-
-    allocate(colour_map(self%ncolours, size(self%cells_in_colour_w0, 2)), &
-             stat=astat)
-    if(astat /= 0) call log_event("[Mesh Mod] Unable to allocate "//&
-                                  "w0 colour_map.", LOG_LEVEL_ERROR)
 
     ncolours = self%ncolours
-    ncells_per_colour = self%ncells_per_colour_w0
-    colour_map = self%cells_in_colour_w0
+    ncells_per_colour => self%ncells_per_colour
+    colour_map => self%cells_in_colour
 
-  end subroutine get_colours_w0
-
-  !============================================================================
-  !> @brief Populates args with colouring info for w1 space.
-  !> @param[in] self  The mesh_type instance.
-  !> @param[out] ncolours  Number of colours used to colour this mesh. 
-  !> @param[out] ncells_per_colour  Count of cells in each colour.
-  !> @param[out] colour_map  Indices of cells in each colour.
-  !============================================================================
-  subroutine get_colours_w1(self, ncolours, ncells_per_colour, colour_map)
-    implicit none
-    class(mesh_type), intent(in)             :: self
-    integer(i_def), intent(out)              :: ncolours
-    integer(i_def), allocatable, intent(out) :: ncells_per_colour(:)
-    integer(i_def), allocatable, intent(out) :: colour_map(:,:)
-
-    integer                      :: astat
-
-
-    allocate(ncells_per_colour(size(self%ncells_per_colour_w1)), stat=astat)
-    if(astat /= 0) call log_event("[Mesh Mod] Unable to allocate "//&
-                                  "ncells_per_colour_w1.", LOG_LEVEL_ERROR)
-
-    allocate(colour_map(self%ncolours, size(self%cells_in_colour_w1, 2)), &
-             stat=astat)
-    if(astat /= 0) call log_event("[Mesh Mod] Unable to allocate "//&
-                                  "w1 colour_map.", LOG_LEVEL_ERROR)
-
-    ncolours = self%ncolours
-    ncells_per_colour = self%ncells_per_colour_w1
-    colour_map = self%cells_in_colour_w1
-
-  end subroutine get_colours_w1
-
-  !============================================================================
-  !> @brief Populates args with colouring info for w2 space.
-  !> @param[in] self  The mesh_type instance.
-  !> @param[out] ncolours  Number of colours used to colour this mesh. 
-  !> @param[out] ncells_per_colour  Count of cells in each colour.
-  !> @param[out] colour_map  Indices of cells in each colour.
-  !============================================================================
-  subroutine get_colours_w2(self, ncolours, ncells_per_colour, colour_map)
-    implicit none
-    class(mesh_type), intent(in)             :: self
-    integer(i_def), intent(out)              :: ncolours
-    integer(i_def), allocatable, intent(out) :: ncells_per_colour(:)
-    integer(i_def), allocatable, intent(out) :: colour_map(:,:)
-
-    integer                      :: astat
-
-
-    allocate(ncells_per_colour(size(self%ncells_per_colour_w2)), stat=astat)
-    if(astat /= 0) call log_event("[Mesh Mod] Unable to allocate "//&
-                                  "ncells_per_colour_w2.", LOG_LEVEL_ERROR)
-
-    allocate(colour_map(self%ncolours, size(self%cells_in_colour_w2, 2)), &
-             stat=astat)
-    if(astat /= 0) call log_event("[Mesh Mod] Unable to allocate "//&
-                                  "w2 colour_map.", LOG_LEVEL_ERROR)
-
-    ncolours = self%ncolours
-    ncells_per_colour = self%ncells_per_colour_w2
-    colour_map = self%cells_in_colour_w2
-
-  end subroutine get_colours_w2
+  end subroutine get_colours
 
   !============================================================================
   !> @brief  Returns state of colouring: has colouring yet been applied to
@@ -1022,14 +944,31 @@ contains
     call colour_mod_set_colours(self%get_ncells_2d(), &
                                 self%cell_next, &
                                 self%ncolours, &
-                                self%ncells_per_colour_w0, &
-                                self%ncells_per_colour_w1, &
-                                self%ncells_per_colour_w2, &
-                                self%cells_in_colour_w0, &
-                                self%cells_in_colour_w1, &
-                                self%cells_in_colour_w2)
+                                self%ncells_per_colour, &
+                                self%cells_in_colour)
 
   end subroutine set_colours
+
+  !============================================================================
+  !> @brief  
+  !============================================================================
+  subroutine mesh_type_dtor(self)
+    implicit none
+    type(mesh_type)             :: self
+
+    ! NB Allocation tests necessary as dtor can be called on
+    ! temporary unconstructed object; e.g. during assignment
+
+    if(allocated(self%ncells_per_colour)) then
+      deallocate(self%ncells_per_colour)
+    end if
+
+    if(allocated(self%cells_in_colour)) then
+      deallocate(self%cells_in_colour)
+    end if
+
+
+  end subroutine mesh_type_dtor
 
   !============================================================================
   !> @brief Stucture-Constructor

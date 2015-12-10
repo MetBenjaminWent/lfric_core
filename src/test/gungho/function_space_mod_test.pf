@@ -15,7 +15,7 @@ contains
   subroutine test_func_space()
     use pFUnit_Mod
     use function_space_mod, only : function_space_type, W0, W1, W2, W3, Wtheta, W2V, W2H
-    use constants_mod, only : r_def
+    use constants_mod, only : r_def, i_def
     use quadrature_mod, only : quadrature_type, QR3 
     use function_space_build_mod, only : & 
                                   w0_func_space, w1_func_space,              &
@@ -60,6 +60,16 @@ contains
     integer :: i
     type(stencil_dofmap_type), pointer :: stencil_dofmap => null()
     integer, pointer :: stencil_map(:,:) => null()
+
+!-------------------------------------------------------------------------------
+! Colouring vars
+    integer                          :: total_colours, colour_idx
+    integer                          :: nc_colour, cic_colour
+  
+    integer(i_def)                   :: num_colours
+    integer(kind=i_def), pointer :: num_cell_per_colour(:)
+    integer(kind=i_def), pointer :: cells_in_colour(:,:)
+!-------------------------------------------------------------------------------
 
     scalar=1
     vector=3
@@ -414,7 +424,32 @@ contains
     test_integer = mesh_out%get_edge_on_cell(iedge, lid)
     @assertEqual ( 32, test_integer )
 
+    !-------------------------------------------------------------------
+    ! Test colouring via function space
 
+    ! Must set colours before use...
+    call w0_func_space%set_colours()
+
+    call w0_func_space%get_colours(num_colours, num_cell_per_colour, cells_in_colour)
+
+    ! Is there storage for colour map...
+    @assertTrue(associated(cells_in_colour), "Colours not set for function space.")
+
+    ! Is total number of colours used meaningful...
+    @assertTrue(num_colours > 0, "Non-positive used colour count.")
+
+    ! Did we use all claimed colours...
+    total_colours = size(cells_in_colour, 1)
+    @assertEqual(total_colours, num_colours, "Reported used colours unequal to actual used total.")
+
+    ! Does the total in each colour match the cells in the colour map...
+    do colour_idx=1, num_colours
+      nc_colour = num_cell_per_colour(colour_idx)
+      cic_colour = count(cells_in_colour(colour_idx,:) /= 0)
+      @assertEqual(nc_colour, cic_colour, "Mismatch between num-per-colour total and cell count.")
+    end do
+
+    !-------------------------------------------------------------------
     ! Tear down that which we have build, 'cos there are some module scope
     ! allocated arrays. Yuk, but it works
     call fs_destroy()
@@ -422,5 +457,3 @@ contains
   end subroutine test_func_space 
 
 end module function_space_mod_test
- 
- 

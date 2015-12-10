@@ -99,13 +99,8 @@ subroutine test_compute_colours_cubedsphere(this)
 
   integer(i_def)                   :: num_cells
   integer(i_def)                   :: num_colours
-  integer(kind=i_def), allocatable :: num_cell_per_colour_w0(:)
-  integer(kind=i_def), allocatable :: num_cell_per_colour_w1(:)
-  integer(kind=i_def), allocatable :: num_cell_per_colour_w2(:)
-
-  integer(kind=i_def), allocatable :: cells_in_colour_w0(:,:)
-  integer(kind=i_def), allocatable :: cells_in_colour_w1(:,:)
-  integer(kind=i_def), allocatable :: cells_in_colour_w2(:,:)
+  integer(kind=i_def), pointer :: num_cell_per_colour(:)
+  integer(kind=i_def), pointer :: cells_in_colour(:,:)
 
   type(mesh_type)                  :: mesh
 
@@ -134,30 +129,26 @@ subroutine test_compute_colours_cubedsphere(this)
   num_cells = partition%get_num_cells_in_layer()
   num_colours = mesh%get_ncolours()
 
-  call mesh%get_colours_w0(num_colours, num_cell_per_colour_w0, cells_in_colour_w0)
-  call mesh%get_colours_w1(num_colours, num_cell_per_colour_w1, cells_in_colour_w1)
-  call mesh%get_colours_w2(num_colours, num_cell_per_colour_w2, cells_in_colour_w2)
+  call mesh%get_colours(num_colours, num_cell_per_colour, cells_in_colour)
 
   ! Is there storage for colour maps...
-  @assertTrue(allocated(cells_in_colour_w0), "Colours not set for w0 space.")
-  @assertTrue(allocated(cells_in_colour_w1), "Colours not set for w1 space.")
-  @assertTrue(allocated(cells_in_colour_w2), "Colours not set for w2 space.")
+  @assertTrue(associated(cells_in_colour), "Colours not set for function space.")
 
   ! Is total number of colours used meaningful...
   @assertTrue(num_colours > 0, "Non-positive used colour count.")
 
   ! Did we colour everything...
-  total_cells = sum(num_cell_per_colour_w0)
+  total_cells = sum(num_cell_per_colour)
   @assertEqual(total_cells, num_cells, "Not all cells coloured.")
 
   ! Did we use all claimed colours...
-  total_colours = size(cells_in_colour_w0, 1)
+  total_colours = size(cells_in_colour, 1)
   @assertEqual(total_colours, num_colours, "Reported used colours unequal to actual used total.")
 
   ! Does the total in each colour match the cells in the colour map...
   do colour_idx=1, num_colours
-    nc_colour = num_cell_per_colour_w0(colour_idx)
-    cic_colour = count(cells_in_colour_w0(colour_idx,:) /= 0)
+    nc_colour = num_cell_per_colour(colour_idx)
+    cic_colour = count(cells_in_colour(colour_idx,:) /= 0)
     @assertEqual(nc_colour, cic_colour, "Mismatch between num-per-colour total and cell count.")
   end do
 
@@ -167,4 +158,3 @@ end subroutine test_compute_colours_cubedsphere
 !-------------------------------------------------------------------------------
 end module mesh_colouring_mod_test
 !-------------------------------------------------------------------------------
-! vim: set ft=fortran :

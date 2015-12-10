@@ -120,4 +120,3 @@ subroutine mesh_structure_test()
 end subroutine mesh_structure_test
 !-------------------------------------------------------------------------------
 end module genbiperiodic_mod_test
-! vim: set ft=fortran :

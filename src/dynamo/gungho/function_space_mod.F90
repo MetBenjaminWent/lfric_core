@@ -238,6 +238,21 @@ contains
  !> @return map the stencil_dofmap object to return
  procedure ll_get_instance
 
+  ! Mesh colouring wrapper methods
+!> @brief Populates args with colouring info from member mesh.
+!>
+!> @param[out] ncolours  Number of colours used to colour member mesh. 
+!> @param[out] ncells_per_colour  Count of cells in each colour.
+!> @param[out] colour_map  Indices of cells in each colour.
+  procedure, public  :: get_colours
+
+!> @brief   Returns count of colours used in colouring member mesh.
+!> @return  Number of colours used to colour this mesh. 
+  procedure, public  :: get_ncolours
+!> @brief  Invoke calculation of colouring for the member mesh.
+  procedure, public  :: set_colours
+
+
 end type function_space_type
 !-------------------------------------------------------------------------------
 ! Module parameters
@@ -895,7 +910,6 @@ integer function get_order(self)
   return
 end function get_order
 
-
 !-----------------------------------------------------------------------------
 ! Gets mesh object for this space
 !-----------------------------------------------------------------------------
@@ -1082,5 +1096,52 @@ function ll_get_instance(self, stencil_shape, stencil_extent) result(map)
     loop => loop%next
   end do
 end function ll_get_instance
+
+
+
+!============================================================================
+!> @brief  Invoke calculation of colouring for the member mesh.
+!============================================================================
+subroutine set_colours(self)
+  use mesh_colouring_mod, only : colour_mod_set_colours => set_colours
+  implicit none
+  class(function_space_type), intent(inout) :: self
+
+  call self%mesh%set_colours()
+
+end subroutine set_colours
+
+!----------------------------------------------------------------------------
+!> @brief   Returns count of colours used in colouring member mesh.
+!> 
+!> @return  Number of colours used to colour this mesh. 
+!----------------------------------------------------------------------------
+function get_ncolours(self) result(ncolours)
+  implicit none
+  class(function_space_type), intent(in) :: self
+  integer(i_def)                         :: ncolours
+
+  ncolours = self%mesh%get_ncolours()
+
+end function get_ncolours
+
+!============================================================================
+!> @brief Populates args with colouring info from member mesh.
+!>
+!> @param[out] ncolours  Number of colours used to colour member mesh. 
+!> @param[out] ncells_per_colour  Count of cells in each colour.
+!> @param[out] colour_map  Indices of cells in each colour.
+!============================================================================
+subroutine get_colours(self, ncolours, ncells_per_colour, colour_map)
+  implicit none
+  class(function_space_type), intent(in)    :: self
+  integer(i_def), intent(out)               :: ncolours
+  integer(i_def), pointer, intent(out)  :: ncells_per_colour(:)
+  integer(i_def), pointer, intent(out)  :: colour_map(:,:)
+
+
+  call self%mesh%get_colours(ncolours, ncells_per_colour, colour_map)
+
+end subroutine get_colours
 
 end module function_space_mod
