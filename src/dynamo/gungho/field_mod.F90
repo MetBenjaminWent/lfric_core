@@ -192,6 +192,7 @@ contains
 
     integer(i_def), allocatable :: global_dof_id(:)
     integer(i_def) :: rc
+    integer(i_def) :: halo_start, halo_finish
 
     type (mesh_type)   :: mesh
 
@@ -200,6 +201,13 @@ contains
     allocate(global_dof_id(self%vspace%get_last_dof_halo()))
     call self%vspace%get_global_dof_id(global_dof_id)
 
+    halo_start  = self%vspace%get_last_dof_owned()+1
+    halo_finish = self%vspace%get_last_dof_halo()
+    !If this is a serial run (no halos), halo_start is out of bounds - so fix it
+    if(halo_start > self%vspace%get_last_dof_halo())then
+      halo_start  = self%vspace%get_last_dof_halo()
+      halo_finish = self%vspace%get_last_dof_halo() - 1
+    end if
     ! Create an ESMF array - this allows us to perform halo exchanges
     ! This call allocates the memory for the field data - we can extract a
     ! pointer to that allocated memory next
@@ -207,8 +215,7 @@ contains
       ESMF_ArrayCreate( distgrid=self%vspace%get_distgrid(), &
                         typekind=ESMF_TYPEKIND_R8, &
                         haloSeqIndexList= &
-                             global_dof_id( self%vspace%get_last_dof_owned()+1 &
-                                           :self%vspace%get_last_dof_halo() ), &
+                                      global_dof_id( halo_start:halo_finish ), &
                         rc=rc )
 
     ! Extract and store the pointer to the fortran array
@@ -318,6 +325,7 @@ contains
 
     integer(i_def), allocatable :: global_dof_id(:)
     integer(i_def) :: rc
+    integer(i_def) :: halo_start, halo_finish
 
     type (mesh_type)   :: mesh
 
@@ -326,6 +334,13 @@ contains
     allocate(global_dof_id(source%vspace%get_last_dof_halo()))
     call source%vspace%get_global_dof_id(global_dof_id)
 
+    halo_start  = source%vspace%get_last_dof_owned()+1
+    halo_finish = source%vspace%get_last_dof_halo()
+    !If this is a serial run (no halos), halo_start is out of bounds - so fix it
+    if(halo_start > source%vspace%get_last_dof_halo())then
+      halo_start  = source%vspace%get_last_dof_halo()
+      halo_finish = source%vspace%get_last_dof_halo() - 1
+    end if
     ! Create an ESMF array - this allows us to perform halo exchanges
     ! This call allocates the memory for the field data - we can extract a
     ! pointer to that allocated memory next
@@ -333,8 +348,7 @@ contains
       ESMF_ArrayCreate( distgrid=source%vspace%get_distgrid(), &
                         typekind=ESMF_TYPEKIND_R8, &
                         haloSeqIndexList= &
-                           global_dof_id( source%vspace%get_last_dof_owned()+1 &
-                                         :source%vspace%get_last_dof_halo() ), &
+                                      global_dof_id( halo_start:halo_finish ), &
                         rc=rc )
 
     ! Extract and store the pointer to the fortran array

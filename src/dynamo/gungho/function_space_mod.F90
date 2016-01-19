@@ -545,6 +545,7 @@ subroutine init_function_space(self, &
   integer :: rc
   type(ESMF_Array) :: temporary_esmf_array
   integer :: idepth
+  integer(i_def) :: halo_start, halo_finish
 
   self%mesh            =  mesh
   self%order           =  order
@@ -581,6 +582,13 @@ subroutine init_function_space(self, &
 
   do idepth = 1, size(self%last_dof_halo)
 
+    halo_start  = self%last_dof_owned+1
+    halo_finish = self%last_dof_halo(idepth)
+    !If this is a serial run (no halos), halo_start is out of bounds - so fix it
+    if(halo_start > self%last_dof_halo(idepth))then
+      halo_start  = self%last_dof_halo(idepth)
+      halo_finish = self%last_dof_halo(idepth) - 1
+    end if
     ! Can only halo-swap an ESMF array so set up a temporary one that's big
     ! enough to hold all the owned cells and all the halos
     if (rc == ESMF_SUCCESS) &
@@ -588,8 +596,7 @@ subroutine init_function_space(self, &
         ESMF_ArrayCreate( distgrid=self%distgrid, &
                           typekind=ESMF_TYPEKIND_R8, &
                           haloSeqIndexList= &
-                                   self%global_dof_id( self%last_dof_owned+1 &
-                                                :self%last_dof_halo(idepth) ), &
+                                 self%global_dof_id( halo_start:halo_finish ), &
                           rc=rc )
 
     ! Calculate the routing table required to perform the halo-swap, so the

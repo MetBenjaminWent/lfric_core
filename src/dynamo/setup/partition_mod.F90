@@ -206,6 +206,7 @@ integer :: rc
 type(ESMF_Array) :: temporary_esmf_array
 type(ESMF_RouteHandle) :: haloHandle
 integer :: cell
+integer(i_def) :: halo_start, halo_finish
 
 self%local_rank = local_rank
 self%total_ranks = total_ranks
@@ -238,6 +239,13 @@ distgrid = ESMF_DistGridCreate( arbSeqIndexList= &
                           self%global_cell_id(1:self%num_core+self%num_owned), &
                                 rc=rc )
 
+halo_start  = self%num_core+self%num_owned+1
+halo_finish = self%get_num_cells_in_layer()+self%get_num_cells_ghost()
+!If this is a serial run (no halos), halo_start is out of bounds - so fix it
+if(halo_start > self%get_num_cells_in_layer())then
+  halo_start  = self%get_num_cells_in_layer()
+  halo_finish = self%get_num_cells_in_layer() - 1
+end if
 ! Can only halo-swap an ESMF array so set one up that's big enough to hold all
 ! the owned cells and all the halos
 if (rc == ESMF_SUCCESS) &
@@ -245,9 +253,7 @@ if (rc == ESMF_SUCCESS) &
     ESMF_ArrayCreate( distgrid=distgrid, &
                       typekind=ESMF_TYPEKIND_I4, &
                       haloSeqIndexList= &
-                        self%global_cell_id( self%num_core+self%num_owned+1 &
-                          :self%get_num_cells_in_layer()+ &
-                            self%get_num_cells_ghost() ), &
+                                self%global_cell_id( halo_start:halo_finish ), &
                       rc=rc )
 
 ! Point our Fortran array at the space we've set up in the ESMF array
