@@ -11,13 +11,17 @@ module output_alg_mod
   use mesh_mod,                          only: mesh_type
   use field_mod,                         only: field_type
   use function_space_mod,                only: function_space_type, W0, W3
-  use galerkin_projection_algorithm_mod, only: galerkin_projection_algorithm
-  use driver_layer,                      only: interpolated_output
-  use quadrature_mod,                    only: quadrature_type, GAUSSIAN
   use operator_mod,                      only: operator_type
   use restart_control_mod,               only: restart_type
-  use configuration_mod,                 only: element_order
- 
+
+  use galerkin_projection_algorithm_mod, only: galerkin_projection_algorithm
+  use driver_layer,                      only: interpolated_output
+  use configuration_mod,                 only: write_nodal_output,        &
+                                               write_interpolated_output, &
+                                               element_order
+  use nodal_output_alg_mod,              only: nodal_output_alg
+
+  use quadrature_mod,                    only: quadrature_type, GAUSSIAN
   use psykal_lite_mod,                   only: invoke_set_field_scalar
   implicit none
 
@@ -61,29 +65,40 @@ contains
 
     qr = quadrature_type(element_order+3, GAUSSIAN)
 
-    ! Create fields needed for output (these can be in CG or DG space)
-    do dir = 1,3
-      W0_projected_field(dir) = field_type( vector_space = fs%get_instance(mesh, W0) )
-    end do
-    W3_projected_field(1) = field_type( vector_space = fs%get_instance(mesh, W3) )
+    if ( write_interpolated_output ) then
 
-    call galerkin_projection_algorithm(W0_projected_field(1), theta, mesh, chi, &
-                                       SCALAR_FIELD, qr, mm=mm_w0)
-    fname=trim(rs%ts_fname("diag_theta",n))//".m"
-    call interpolated_output(SCALAR_FIELD, W0_projected_field(1), mesh, chi, &
-                             fname)
-    call invoke_set_field_scalar(0.0_r_def, W3_projected_field(1)) 
-    call galerkin_projection_algorithm(W3_projected_field(1), rho, mesh, chi, &
-                                       SCALAR_FIELD, qr)
-    fname=trim(rs%ts_fname("diag_rho",n))//".m"
-    call interpolated_output(SCALAR_FIELD, W3_projected_field(1), mesh, chi, &
-                             fname)
-    call galerkin_projection_algorithm(W0_projected_field(:), u, mesh, chi, &
-                                       VECTOR_FIELD, qr, mm=mm_w0)
-    fname=trim(rs%ts_fname("diag_u",n))//".m"
-    call interpolated_output(VECTOR_FIELD, W0_projected_field(:), mesh, chi, &
-                             fname)
+      ! Create fields needed for output (these can be in CG or DG space)
+      do dir = 1,3
+        W0_projected_field(dir) = field_type( vector_space = fs%get_instance(mesh, W0) )
+      end do
+      W3_projected_field(1) = field_type( vector_space = fs%get_instance(mesh, W3) )
 
+      call galerkin_projection_algorithm(W0_projected_field(1), theta, mesh, chi, &
+                                         SCALAR_FIELD, qr, mm=mm_w0)
+      fname=trim(rs%ts_fname("interp_theta",n))//".m"
+      call interpolated_output(SCALAR_FIELD, W0_projected_field(1), mesh, chi, &
+                               fname)
+      call invoke_set_field_scalar(0.0_r_def, W3_projected_field(1)) 
+      call galerkin_projection_algorithm(W3_projected_field(1), rho, mesh, chi, &
+                                         SCALAR_FIELD, qr)
+      fname=trim(rs%ts_fname("interp_rho",n))//".m"
+      call interpolated_output(SCALAR_FIELD, W3_projected_field(1), mesh, chi, &
+                               fname)
+      call galerkin_projection_algorithm(W0_projected_field(:), u, mesh, chi, &
+                                         VECTOR_FIELD, qr, mm=mm_w0)
+      fname=trim(rs%ts_fname("interp_u",n))//".m"
+      call interpolated_output(VECTOR_FIELD, W0_projected_field(:), mesh, chi, &
+                               fname)
+    end if
+
+    if ( write_nodal_output ) then  
+      fname=trim(rs%ts_fname("nodal_theta",n))//".m"
+      call nodal_output_alg(theta, chi, fname, mesh)
+      fname=trim(rs%ts_fname("nodal_u",n))//".m"
+      call nodal_output_alg(u, chi, fname, mesh)
+      fname=trim(rs%ts_fname("nodal_rho",n))//".m"
+      call nodal_output_alg(rho, chi, fname, mesh)
+    end if
   end subroutine output_alg
 
 end module output_alg_mod

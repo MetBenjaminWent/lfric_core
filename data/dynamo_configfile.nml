@@ -55,3 +55,21 @@ itimestep_option = 0,
 dt = 10.0,
 restart_filename = "dynamo_restart.nml"
 /
+
+! Output namelist:
+!   write_interpolated_output: compute output files on a regular mesh
+!   write_nodal_output:        compute output files on nodal points
+&OUTPUT_NML
+write_interpolated_output = .true.,
+write_nodal_output = .true.
+/
+
+
+
+
+
+
+
+
+
+

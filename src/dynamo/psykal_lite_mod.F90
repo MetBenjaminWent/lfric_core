@@ -716,4 +716,306 @@ contains
   end subroutine invoke_linear_ru_kernel
  
 
+  subroutine invoke_nodal_coordinates_kernel(nodal_coords, chi)
+    use nodal_coordinates_kernel_mod, only: nodal_coordinates_code
+    implicit none
+    
+    type(field_type), intent(inout) :: nodal_coords(3)
+    type(field_type), intent(in)    :: chi(3)
+ 
+    type(field_proxy_type) :: x_p(3), chi_p(3)
+   
+    integer                 :: cell, nlayers
+    integer                 :: ndf_chi, ndf_x
+    integer                 :: undf_chi, undf_x
+    integer                 :: dim_chi
+    integer, pointer        :: map_chi(:), map_x(:) => null()
+
+    real(kind=r_def), allocatable  :: basis_chi(:,:,:)
+    real(kind=r_def), pointer :: nodes(:,:) => null()
+    integer :: i
+
+    do i = 1,3
+      x_p(i)   = nodal_coords(i)%get_proxy()
+      chi_p(i) = chi(i)%get_proxy()
+    end do
+
+    nlayers = x_p(1)%vspace%get_nlayers()
+
+    ndf_x  = x_p(1)%vspace%get_ndf( )
+    undf_x = x_p(1)%vspace%get_undf()
+
+    ndf_chi  = chi_p(1)%vspace%get_ndf( )
+    undf_chi = chi_p(1)%vspace%get_undf()
+
+    dim_chi = chi_p(1)%vspace%get_dim_space( )
+    allocate(basis_chi(dim_chi, ndf_chi, ndf_x))
+
+    nodes => x_p(1)%vspace%get_nodes( )
+    call chi_p(1)%vspace%compute_nodal_basis_function(basis_chi, ndf_chi, ndf_x, nodes)    
+
+    do cell = 1, x_p(1)%vspace%get_ncell()
+       map_x   => x_p(1)%vspace%get_cell_dofmap( cell )
+       map_chi => chi_p(1)%vspace%get_cell_dofmap( cell )
+       call nodal_coordinates_code(nlayers, &
+                                   x_p(1)%data, &
+                                   x_p(2)%data, &
+                                   x_p(3)%data, &
+                                   chi_p(1)%data, &
+                                   chi_p(2)%data, &
+                                   chi_p(3)%data, &
+                                   ndf_x, undf_x, map_x, &
+                                   ndf_chi, undf_chi, map_chi, &
+                                   basis_chi &
+                                  )
+    end do
+    deallocate(basis_chi)
+  end subroutine invoke_nodal_coordinates_kernel
+
+!-------------------------------------------------------------------------------   
+
+  subroutine invoke_convert_hcurl_field(phys_field, comp_field, chi)
+    use convert_hcurl_field_kernel_mod, only: convert_hcurl_field_code
+    implicit none
+    
+    type(field_type), intent(inout) :: phys_field(3)
+    type(field_type), intent(in)    :: chi(3), comp_field
+ 
+    type(field_proxy_type) :: phys_p(3), chi_p(3), comp_p
+   
+    integer                 :: cell, nlayers
+    integer                 :: ndf_chi, ndf
+    integer                 :: undf_chi, undf
+    integer                 :: diff_dim_chi, dim
+    integer, pointer        :: map_chi(:), map(:) => null()
+
+    real(kind=r_def), allocatable  :: diff_basis_chi(:,:,:), basis(:,:,:)
+    real(kind=r_def), pointer :: nodes(:,:) => null()
+    integer :: i
+
+    do i = 1,3
+      phys_p(i) = phys_field(i)%get_proxy()
+      chi_p(i)  = chi(i)%get_proxy()
+    end do
+    comp_p = comp_field%get_proxy()
+
+    nlayers = comp_p%vspace%get_nlayers()
+
+    ndf  = comp_p%vspace%get_ndf( )
+    undf = comp_p%vspace%get_undf()
+    dim  = comp_p%vspace%get_dim_space( )
+    allocate(basis(dim, ndf, ndf) )
+
+    ndf_chi  = chi_p(1)%vspace%get_ndf( )
+    undf_chi = chi_p(1)%vspace%get_undf()
+    diff_dim_chi = chi_p(1)%vspace%get_dim_space_diff( )
+    allocate(diff_basis_chi(diff_dim_chi, ndf_chi, ndf))
+
+    nodes => comp_p%vspace%get_nodes( )
+    call chi_p(1)%vspace%compute_nodal_diff_basis_function(diff_basis_chi, ndf_chi, ndf, nodes)    
+    call comp_p%vspace%compute_nodal_basis_function(basis, ndf, ndf, nodes) 
+    do cell = 1, comp_p%vspace%get_ncell()
+       map     => comp_p%vspace%get_cell_dofmap( cell )
+       map_chi => chi_p(1)%vspace%get_cell_dofmap( cell )
+       call convert_hcurl_field_code(nlayers, &
+                                     phys_p(1)%data, &
+                                     phys_p(2)%data, &
+                                     phys_p(3)%data, &
+                                     comp_p%data, &
+                                     chi_p(1)%data, &
+                                     chi_p(2)%data, &
+                                     chi_p(3)%data, &
+                                     ndf, undf, map, &
+                                     ndf_chi, undf_chi, map_chi, &
+                                     basis, &
+                                     diff_basis_chi &
+                                    )
+    end do
+    deallocate(diff_basis_chi, basis)
+  end subroutine invoke_convert_hcurl_field
+
+!-------------------------------------------------------------------------------   
+
+  subroutine invoke_convert_hdiv_field(phys_field, comp_field, chi)
+    use convert_hdiv_field_kernel_mod, only: convert_hdiv_field_code
+    implicit none
+    
+    type(field_type), intent(inout) :: phys_field(3)
+    type(field_type), intent(in)    :: chi(3), comp_field
+ 
+    type(field_proxy_type) :: phys_p(3), chi_p(3), comp_p
+   
+    integer                 :: cell, nlayers
+    integer                 :: ndf_chi, ndf
+    integer                 :: undf_chi, undf
+    integer                 :: diff_dim_chi, dim
+    integer, pointer        :: map_chi(:), map(:) => null()
+
+    real(kind=r_def), allocatable  :: diff_basis_chi(:,:,:), basis(:,:,:)
+    real(kind=r_def), pointer :: nodes(:,:) => null()
+    integer :: i
+
+    do i = 1,3
+      phys_p(i) = phys_field(i)%get_proxy()
+      chi_p(i)  = chi(i)%get_proxy()
+    end do
+    comp_p = comp_field%get_proxy()
+
+    nlayers = comp_p%vspace%get_nlayers()
+
+    ndf  = comp_p%vspace%get_ndf( )
+    undf = comp_p%vspace%get_undf()
+    dim  = comp_p%vspace%get_dim_space( )
+    allocate(basis(dim, ndf, ndf) )
+
+    ndf_chi  = chi_p(1)%vspace%get_ndf( )
+    undf_chi = chi_p(1)%vspace%get_undf()
+    diff_dim_chi = chi_p(1)%vspace%get_dim_space_diff( )
+    allocate(diff_basis_chi(diff_dim_chi, ndf_chi, ndf))
+
+    nodes => comp_p%vspace%get_nodes( )
+    call chi_p(1)%vspace%compute_nodal_diff_basis_function(diff_basis_chi, ndf_chi, ndf, nodes)    
+    call comp_p%vspace%compute_nodal_basis_function(basis, ndf, ndf, nodes) 
+    do cell = 1, comp_p%vspace%get_ncell()
+       map     => comp_p%vspace%get_cell_dofmap( cell )
+       map_chi => chi_p(1)%vspace%get_cell_dofmap( cell )
+       call convert_hdiv_field_code(nlayers, &
+                                    phys_p(1)%data, &
+                                    phys_p(2)%data, &
+                                    phys_p(3)%data, &
+                                    comp_p%data, &
+                                    chi_p(1)%data, &
+                                    chi_p(2)%data, &
+                                    chi_p(3)%data, &
+                                    ndf, undf, map, &
+                                    ndf_chi, undf_chi, map_chi, &
+                                    basis, &
+                                    diff_basis_chi &
+                                   )
+    end do
+    deallocate(diff_basis_chi, basis)
+  end subroutine invoke_convert_hdiv_field
+!-------------------------------------------------------------------------------   
+  subroutine invoke_convert_cart2sphere_vector( field, coords)
+    use coord_transform_mod, only: cart2sphere_vector
+    implicit none
+    type(field_type), intent(inout) :: field(3)
+    type(field_type), intent(in)    :: coords(3)
+
+    type(field_proxy_type) :: f_p(3), x_p(3)
+
+    integer :: i, df, undf
+    real(kind=r_def) :: vector_in(3), vector_out(3), xyz(3)
+
+    do i = 1,3
+      f_p(i) = field(i)%get_proxy()
+      x_p(i) = coords(i)%get_proxy()
+    end do
+    undf = f_p(1)%vspace%get_undf()
+    do df = 1, undf
+      vector_in(:)  = (/ f_p(1)%data(df), f_p(2)%data(df), f_p(3)%data(df) /)              
+      xyz(:)        = (/ x_p(1)%data(df), x_p(2)%data(df), x_p(3)%data(df) /)
+      vector_out(:) = cart2sphere_vector(xyz, vector_in)
+      f_p(1)%data(df) = vector_out(1)
+      f_p(2)%data(df) = vector_out(2)
+      f_p(3)%data(df) = vector_out(3)
+    end do
+
+  end subroutine invoke_convert_cart2sphere_vector
+!-------------------------------------------------------------------------------   
+  subroutine invoke_pointwise_convert_xyz2llr( coords)
+    use coord_transform_mod, only: xyz2llr
+    implicit none
+    type(field_type), intent(inout) :: coords(3)
+
+    type(field_proxy_type) :: x_p(3)
+
+    integer :: i, df, undf
+    real(kind=r_def) :: llr(3)
+
+    do i = 1,3
+      x_p(i) = coords(i)%get_proxy()
+    end do
+    undf = x_p(1)%vspace%get_undf()
+    do df = 1, undf
+      call xyz2llr(x_p(1)%data(df), x_p(2)%data(df), x_p(3)%data(df), &
+                   llr(1), llr(2), llr(3))
+      x_p(1)%data(df) = llr(1)
+      x_p(2)%data(df) = llr(2)
+      x_p(3)%data(df) = llr(3)
+    end do
+
+  end subroutine invoke_pointwise_convert_xyz2llr
+
+!------------------------------------------------------------------------------- 
+  subroutine invoke_compute_dof_level_kernel(level)
+
+  use compute_dof_level_kernel_mod, only: compute_dof_level_code
+
+  implicit none
+
+  type(field_type), intent(inout) :: level
+  type(field_proxy_type) :: l_p
+  integer :: cell, ncell, ndf, undf
+  real(kind=r_def), pointer :: nodes(:,:) => null()
+  integer, pointer :: map(:) => null()
+
+  l_p = level%get_proxy()
+  undf = l_p%vspace%get_undf()
+  ndf  = l_p%vspace%get_ndf()
+  nodes => l_p%vspace%get_nodes( )
+ 
+  ncell = l_p%vspace%get_ncell()
+
+  do cell = 1,ncell
+    map => l_p%vspace%get_cell_dofmap(cell)
+    call compute_dof_level_code(l_p%vspace%get_nlayers(),                 &
+                                l_p%data,                                 &
+                                ndf,                                      &
+                                undf,                                     &
+                                map,                                      &
+                                nodes                                     &
+                               )
+  end do 
+
+  end subroutine invoke_compute_dof_level_kernel
+
+!------------------------------------------------------------------------------- 
+subroutine invoke_write_fields(nodal_coordinates, level, nodal_output, fspace_dimension, output_unit, fname)
+  use constants_mod,      only: str_max_filename
+
+  implicit none
+  type(field_type), intent(in) :: nodal_coordinates(3), level, nodal_output(3)
+  integer,          intent(in) :: fspace_dimension, output_unit
+  character(str_max_filename), intent(in) :: fname
+  type(field_proxy_type) :: x_p(3), l_p, n_p(3)
+
+  integer :: df, undf, i
+
+
+  do i = 1,3
+    x_p(i) = nodal_coordinates(i)%get_proxy()
+    n_p(i) = nodal_output(i)%get_proxy()
+  end do
+  l_p = level%get_proxy()
+
+  undf = n_p(1)%vspace%get_undf()
+
+  open(OUTPUT_UNIT, file = trim(fname), status = "replace")   
+  write(OUTPUT_UNIT,'(A)') 'x = [' 
+  if ( fspace_dimension  == 1 ) then
+    do df = 1,undf
+      write(OUTPUT_UNIT,'(5e16.8)') x_p(1)%data(df), x_p(2)%data(df), x_p(3)%data(df), l_p%data(df), n_p(1)%data(df)
+    end do
+  else
+    do df = 1,undf
+      write(OUTPUT_UNIT,'(7e16.8)') x_p(1)%data(df), x_p(2)%data(df), x_p(3)%data(df), l_p%data(df), &
+                                    n_p(1)%data(df), n_p(2)%data(df), n_p(3)%data(df)
+    end do
+  end if
+  write(OUTPUT_UNIT,'(A)') '];'
+  close(OUTPUT_UNIT)
+  
+end subroutine invoke_write_fields
+
 end module psykal_lite_mod

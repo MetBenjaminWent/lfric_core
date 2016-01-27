@@ -127,4 +127,17 @@ contains
     return
   end function matrix_invert_3x3
 
+!> @detailsComputes the determinant of 3x3 matrix using the exact formula
+!> @param[in] j Real 3x3 array. Holds the values of the matrix to be inverted
+!> @param[return] determinant_3x3 Real. Holds the values of the computed
+!! determinant
+pure real(kind=r_def) function determinant_3x3(j)
+  real(kind=r_def), intent(in) :: j(3,3)
+  
+  determinant_3x3 = j(1,1)*(j(2,2)*j(3,3) - j(2,3)*j(3,2)) &
+                  - j(1,2)*(j(2,1)*j(3,3) - j(2,3)*j(3,1)) &
+                  + j(1,3)*(j(2,1)*j(3,2) - j(2,2)*j(3,1))
+
+end function determinant_3x3
+
 end module matrix_invert_mod

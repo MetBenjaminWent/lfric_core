@@ -1,0 +1,95 @@
+!-----------------------------------------------------------------------------
+! (c) The copyright relating to this work is owned jointly by the Crown, 
+! Met Office and NERC 2014. 
+! However, it has been created with the help of the GungHo Consortium, 
+! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
+!-----------------------------------------------------------------------------
+
+module compute_dof_level_kernel_mod_test
+
+  implicit none 
+
+
+contains
+
+  @test
+  subroutine compute_dof_level_kernel_test()
+
+    use pFUnit_Mod
+    use function_space_build_mod,   only : fs_build, fs_destroy
+    use field_mod,                  only : field_type,      &
+                                           field_proxy_type
+    use function_space_mod,         only : function_space_type, &
+                                           W0, W1, W2, W3
+    use constants_mod,              only : r_def
+    use quadrature_mod,             only : quadrature_type, GAUSSIAN
+    use mesh_mod,                   only : mesh_type, PLANE_BI_PERIODIC
+
+    use compute_dof_level_kernel_mod, only: compute_dof_level_code
+    implicit none
+
+    type(function_space_type) :: fs
+    type( quadrature_type)    :: qr
+    type(mesh_type)  :: mesh
+
+    real(kind=r_def) :: tol, answer
+
+    integer :: k
+
+    ! Variables for testing kernel
+    type(field_type) :: level
+    type(field_proxy_type) :: l_p
+    integer :: cell, ncell, ndf, undf
+    real(kind=r_def), pointer :: nodes(:,:) => null()
+    integer, pointer :: map(:) => null()
+
+    ! Setup
+    tol = 1.0e-6_r_def  
+    qr = quadrature_type(3, GAUSSIAN)
+    mesh = mesh_type(PLANE_BI_PERIODIC)
+
+    ! Build some function spaces ...
+    call fs_build(mesh)
+
+    ! Test flux computation
+    level = field_type( vector_space = fs%get_instance( mesh, W2 ) )
+
+    ! Insert Psykal_lite unpacking code here
+    l_p = level%get_proxy()
+    undf = l_p%vspace%get_undf()
+    ndf  = l_p%vspace%get_ndf()
+    nodes => l_p%vspace%get_nodes( )
+ 
+    ncell = l_p%vspace%get_ncell()
+    ! Create the data   
+    l_p%data(:) = 0.0_r_def
+
+
+    ! Call the kernel    
+    do cell = 1,ncell
+      map => l_p%vspace%get_cell_dofmap(cell)
+      call compute_dof_level_code(l_p%vspace%get_nlayers(),                 &
+                                  l_p%data,                                 &
+                                  ndf,                                      &
+                                  undf,                                     &
+                                  map,                                      &
+                                  nodes                                     &
+                                 )
+    end do      
+
+    !Test the answer
+    do k = 0,l_p%vspace%get_nlayers()-1
+      answer = 0.5_r_def + real(k,r_def) 
+      @assertEqual(answer, l_p%data(map(1) + k ), tol)
+      answer = real(k,r_def)
+      @assertEqual(answer, l_p%data(map(5) + k ), tol)
+      answer = 1.0_r_def + real(k,r_def)
+      @assertEqual(answer, l_p%data(map(6) + k ), tol)
+    end do
+
+    ! Tear down ...
+    call fs_destroy()
+  
+  end subroutine compute_dof_level_kernel_test
+
+end module compute_dof_level_kernel_mod_test

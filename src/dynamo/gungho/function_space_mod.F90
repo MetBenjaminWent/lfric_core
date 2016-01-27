@@ -185,6 +185,15 @@ contains
   !! functions
   procedure compute_diff_basis_function
 
+  !> Subroutine to evaluate the differential basis function at a set of nodes
+  !> @param[out] dbasis real 3 dimensional array holding the evaluated
+  !!             differential basis functions
+  !> @param[in] ndf integer number of dofs
+  !> @param[in] n_node integer number of nodal points
+  !> @param[in] x_node real three dimensional array holding the nodal
+  !>            coordinates
+  procedure compute_nodal_diff_basis_function
+
   !> @brief Gets the size of the space 
   !!(1 is scalar 3 is vector). Returns dim
   !> @param[in] self The calling get_dim_space
@@ -901,6 +910,30 @@ subroutine compute_diff_basis_function(self, &
   end do
 
 end subroutine compute_diff_basis_function
+
+!-----------------------------------------------------------------------------
+! Evaluates the diff basis function for a given set of nodal points
+!-----------------------------------------------------------------------------
+subroutine compute_nodal_diff_basis_function(self, &
+     dbasis, ndf, n_node, x_node)
+  implicit none
+  class(function_space_type), intent(in)  :: self
+  integer,                                                intent(in)  :: ndf
+  integer,                                                intent(in)  :: n_node
+  real(kind=r_def), dimension(3,n_node),                  intent(in)  :: x_node
+  real(kind=r_def), dimension(self%dim_space_diff,ndf,n_node), intent(out) :: dbasis
+
+  ! local variables - loop counters
+  integer :: df
+  integer :: qp
+
+  do qp = 1, n_node
+    do df = 1, ndf
+      dbasis(:,df,qp) = self%evaluate_diff_basis(df,x_node(:,qp))
+    end do
+  end do
+  
+end subroutine compute_nodal_diff_basis_function
 
 !-----------------------------------------------------------------------------
 ! Gets order for this space

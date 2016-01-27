@@ -137,6 +137,12 @@ module configuration_mod
   integer (kind=i_def) :: solver_option = BICG_SOLVER    !< Choice of solver from the list of options.
   !> @}
 
+  !> @name Output postprocessing options
+  !> @{
+  logical :: write_interpolated_output = .true.
+  logical :: write_nodal_output        = .false.
+  !> @}
+
 contains
 
 !> @brief Subroutine which configures Dynamo.
@@ -172,6 +178,7 @@ subroutine configure_dynamo( restart, local_rank, total_ranks )
   namelist /formulation_nml/ l_nonlinear, l_rotating, l_newton_krylov, l_supg
   namelist /solver_nml/ solver_option
   namelist /timestepping_nml/ itimestep_option, dt, restart_filename
+  namelist /output_nml/ write_interpolated_output, write_nodal_output
 
   !============ Configuration file  ===========================================!
   ! Name of configuration file
@@ -238,6 +245,13 @@ subroutine configure_dynamo( restart, local_rank, total_ranks )
   read(funit, nml = timestepping_nml, iostat = ierr, iomsg = ioerrmsg)
   if (ierr /= 0) then
     write(log_scratch_space,'(A,A)') "Problems reading timestepping_nml in ", &
+          trim(config_fname)
+    call log_event(log_scratch_space,LOG_LEVEL_INFO)
+    call log_event(ioerrmsg,LOG_LEVEL_ERROR)
+  end if
+  read(funit, nml = output_nml, iostat = ierr, iomsg = ioerrmsg)
+  if (ierr /= 0) then
+    write(log_scratch_space,'(A,A)') "Problems reading output_nml in ", &
           trim(config_fname)
     call log_event(log_scratch_space,LOG_LEVEL_INFO)
     call log_event(ioerrmsg,LOG_LEVEL_ERROR)

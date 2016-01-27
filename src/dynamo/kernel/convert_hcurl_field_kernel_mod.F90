@@ -1,0 +1,137 @@
+!-------------------------------------------------------------------------------
+! (c) The copyright relating to this work is owned jointly by the Crown, 
+! Met Office and NERC 2014. 
+! However, it has been created with the help of the GungHo Consortium, 
+! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
+!-------------------------------------------------------------------------------
+!
+!-------------------------------------------------------------------------------
+
+!> @brief Kernel to compute the apply the curl conforming Piola transform to a
+!! computational vector field and return the 3 components of the physical field as
+!! separate fields
+
+module convert_hcurl_field_kernel_mod
+use kernel_mod,              only : kernel_type
+use argument_mod,            only : arg_type, func_type,                     &
+                                    GH_FIELD, GH_READ, GH_INC,               &
+                                    W0, ANY_SPACE_1,                         &
+                                    GH_DIFF_BASIS, GH_BASIS,                 &
+                                    CELLS
+use constants_mod,           only : r_def
+
+implicit none
+
+!-------------------------------------------------------------------------------
+! Public types
+!-------------------------------------------------------------------------------
+!> The type declaration for the kernel. Contains the metadata needed by the Psy layer
+type, public, extends(kernel_type) :: convert_hcurl_field_kernel_type
+  private
+  type(arg_type) :: meta_args(3) = (/                                  &
+       arg_type(GH_FIELD*3,  GH_INC,  ANY_SPACE_1),                    &
+       arg_type(GH_FIELD,    GH_READ, ANY_SPACE_1),                    &
+       arg_type(GH_FIELD*3,  GH_READ, W0)                              &
+       /)
+  type(func_type) :: meta_funcs(2) = (/                                &
+       func_type(ANY_SPACE_1, GH_BASIS),                               &
+       func_type(W0, GH_DIFF_BASIS)                                    &
+       /)
+  integer :: iterates_over = CELLS
+contains
+  procedure, nopass ::convert_hcurl_field_code
+end type
+
+!-------------------------------------------------------------------------------
+! Constructors
+!-------------------------------------------------------------------------------
+
+! overload the default structure constructor for function space
+interface convert_hcurl_field_kernel_type
+   module procedure convert_hcurl_field_kernel_constructor
+end interface
+
+!-------------------------------------------------------------------------------
+! Contained functions/subroutines
+!-------------------------------------------------------------------------------
+public convert_hcurl_field_code
+contains
+
+type(convert_hcurl_field_kernel_type) function convert_hcurl_field_kernel_constructor() result(self)
+  return
+end function convert_hcurl_field_kernel_constructor
+
+!> @param[in] nlayers Integer the number of layers
+!> @param[in] ndf The number of degrees of freedom per cell for the output field
+!> @param[in] undf The number of unique degrees of freedom for the output field
+!> @param[in] map Integer array holding the dofmap for the cell at the base of the column for the output field
+!> @param[inout] physical_field1 The first component of the output field in physical units
+!> @param[inout] physical_field2 The second component of the  output field in physical units
+!> @param[inout] physical_field3 The third component of the  output field in physical units
+!> @param[in] computationall_field The input field in computational units
+!> @param[in] chi1 the array of coordinates in the first direction
+!> @param[in] chi2 the array of coordinates in the second direction
+!> @param[in] chi3 the array of coordinates in the third direction
+!> @param[in] ndf_chi The number of degrees of freedom per cell for the coordinate field
+!> @param[in] undf_chi The number of unique degrees of freedom for the coordinate field
+!> @param[in] map_chi Integer array holding the dofmap for the cell at the base of the column for the coordinate field
+!> @param[in] basis the basis functions of the output field evaluated at its nodal points
+!> @param[in] diff_basis_chi the diff basis functions of the coordinate space evaluated at the nodal points
+subroutine convert_hcurl_field_code(nlayers,                                  &
+                                    physical_field1,                          &
+                                    physical_field2,                          &
+                                    physical_field3,                          &
+                                    computational_field,                      &
+                                    chi1, chi2, chi3,                         &
+                                    ndf, undf, map,                           &
+                                    ndf_chi, undf_chi, map_chi,               &
+                                    basis,                                    &
+                                    diff_basis_chi                            &
+                                  )
+
+  use coordinate_jacobian_mod, only: coordinate_jacobian, coordinate_jacobian_inverse
+  implicit none                              
+  !Arguments
+  integer,                                    intent(in)    :: nlayers
+  integer,                                    intent(in)    :: ndf, undf, &
+                                                               ndf_chi, undf_chi
+  integer,          dimension(ndf),           intent(in)    :: map
+  integer,          dimension(ndf_chi),       intent(in)    :: map_chi
+  real(kind=r_def), dimension(undf),          intent(in)    :: computational_field
+  real(kind=r_def), dimension(undf_chi),      intent(in)    :: chi1, chi2, chi3
+  real(kind=r_def), dimension(undf),          intent(inout) :: physical_field1,&
+                                                               physical_field2,&
+                                                               physical_field3
+  real(kind=r_def), dimension(3,ndf_chi,ndf), intent(in)    :: diff_basis_chi
+  real(kind=r_def), dimension(3,ndf,ndf),     intent(in)    :: basis
+
+  !Internal variables
+  integer          :: df, df2, k
+  real(kind=r_def) :: jacobian(3,3,ndf,1), jacobian_inv(3,3,ndf,1), dj(ndf,1)
+  real(kind=r_def) :: vector_in(3), vector_out(3)
+  real(kind=r_def), dimension(ndf_chi) :: chi1_e, chi2_e, chi3_e 
+
+  do k = 0, nlayers-1
+    do df = 1,ndf_chi
+      chi1_e(df) = chi1(map_chi(df) + k)
+      chi2_e(df) = chi2(map_chi(df) + k)
+      chi3_e(df) = chi3(map_chi(df) + k)
+    end do
+    call coordinate_jacobian(ndf_chi, ndf, 1, chi1_e, chi2_e, chi3_e,  &
+                             diff_basis_chi, jacobian, dj)
+    call coordinate_jacobian_inverse(ndf, 1, jacobian, dj, jacobian_inv)  
+    do df = 1,ndf
+      vector_in(:) = 0.0_r_def
+      do df2 = 1,ndf
+        vector_in(:) = vector_in(:) + computational_field(map(df2)+k)*basis(:,df2,df)
+      end do
+      vector_out(:) = matmul(transpose(jacobian_inv(:,:,df,1)),vector_in)
+      physical_field1(map(df)+k) = physical_field1(map(df)+k) + vector_out(1)
+      physical_field2(map(df)+k) = physical_field2(map(df)+k) + vector_out(2)
+      physical_field3(map(df)+k) = physical_field3(map(df)+k) + vector_out(3)
+    end do
+  end do
+
+end subroutine convert_hcurl_field_code
+
+end module convert_hcurl_field_kernel_mod
