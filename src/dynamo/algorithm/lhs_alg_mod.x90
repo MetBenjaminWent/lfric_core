@@ -19,6 +19,7 @@ module lhs_alg_mod
   use pert_pressure_gradient_kernel_mod, only: pert_pressure_gradient_kernel_type
   use matrix_vector_mm_mod,              only: matrix_vector_kernel_mm_type
   use multiplicity_kernel_mod,           only: multiplicity_kernel_type
+  use w3_solver_kernel_mod,              only: w3_solver_kernel_type
 
   use mesh_mod,                          only: mesh_type
   use field_mod,                         only: field_type
@@ -69,13 +70,13 @@ contains
   type(function_space_type) :: fs
 
   type(field_type), pointer :: chi(:)=> null()
-  type(operator_type), pointer :: mm_w2, mm_w0, mm_w3_inv => null()
+  type(operator_type), pointer :: mm_w2, mm_w0 => null()
   type(mesh_type),           pointer :: mesh   => null()
   type(function_space_type), pointer :: rho_fs => null()
   type(function_space_type), pointer :: u_fs   => null()
 
   type(field_type), pointer :: u ,theta, rho, u_ref, theta_ref, rho_ref
-  type(field_type)          :: ones, f_star, w2_multiplicity, r_rho
+  type(field_type)          :: ones, f_star, w2_multiplicity 
 
 
 
@@ -84,7 +85,6 @@ contains
   mesh         => runtime_constants%get_mesh()
   mm_w0        => runtime_constants%get_mass_matrix(0)
   mm_w2        => runtime_constants%get_mass_matrix(2)
-  mm_w3_inv    => runtime_constants%get_mass_matrix(4)
   chi          => runtime_constants%get_coordinates()
 
   u     => state(1)
@@ -132,10 +132,8 @@ contains
   call invoke_set_field_scalar( 0.0_r_def, f_star )
   call invoke_sample_flux_kernel( f_star, u, w2_multiplicity, rho_ref )
 
-  r_rho = field_type( vector_space = rho_fs )
-  call invoke( rrho_kernel_type( r_rho, f_star, qr ) )  
-  call invoke_set_field_scalar( 0.0_r_def, lhs_tmp(3) )
-  call invoke( matrix_vector_kernel_mm_type( lhs_tmp(3), r_rho, mm_w3_inv) )
+  call invoke( rrho_kernel_type( lhs_tmp(3), f_star, qr ) )  
+  call invoke( w3_solver_kernel_type(lhs_tmp(3), lhs_tmp(3), chi, qr) )
   call invoke_axpy( alpha_dt, lhs_tmp(3), rho, lhs(3) )
 
   end subroutine lhs_alg

@@ -56,27 +56,24 @@ module runtime_constants_mod
     module procedure runtime_constants_constructor
   end interface
 contains
-  function runtime_constants_constructor(mesh, coords, phi, mm0, mm1, mm2, mm3, &
-                                         mm3_inv, &
+  function runtime_constants_constructor(mesh, coords, phi, mm0, mm1, mm2, &
                                          mm0d, mm1d, mm2d, mm3d ) &
                                          result(self)
     implicit none
     type(mesh_type),     target, intent(in) :: mesh
     type(field_type),    target, intent(in) :: coords(3)
     type(field_type),    target, intent(in) :: phi
-    type(operator_type), target, intent(in) :: mm0, mm1, mm2, mm3, mm3_inv
+    type(operator_type), target, intent(in) :: mm0, mm1, mm2
     type(field_type),    target, intent(in) :: mm0d, mm1d, mm2d, mm3d
     type(runtime_constants_type), target    :: self
 
     self%mesh => mesh
     self%coordinates => coords(:)
     self%geopotential => phi
-    allocate(self%mass_matrix(0:4))
+    allocate(self%mass_matrix(0:2))
     self%mass_matrix(0)%p => mm0
     self%mass_matrix(1)%p => mm1
     self%mass_matrix(2)%p => mm2
-    self%mass_matrix(3)%p => mm3
-    self%mass_matrix(4)%p => mm3_inv
     allocate(self%mass_matrix_diagonal(0:3))
     self%mass_matrix_diagonal(0)%p => mm0d
     self%mass_matrix_diagonal(1)%p => mm1d

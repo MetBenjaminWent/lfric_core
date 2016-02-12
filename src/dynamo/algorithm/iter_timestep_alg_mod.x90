@@ -40,10 +40,8 @@ module iter_timestep_alg_mod
   use compute_mass_matrix_kernel_w0_mod, only: compute_mass_matrix_kernel_w0_type
   use compute_mass_matrix_kernel_w1_mod, only: compute_mass_matrix_kernel_w1_type
   use compute_mass_matrix_kernel_w2_mod, only: compute_mass_matrix_kernel_w2_type
-  use compute_mass_matrix_kernel_w3_mod, only: compute_mass_matrix_kernel_w3_type
   use compute_geopotential_kernel_mod,   only: compute_geopotential_kernel_type
   use mm_diagonal_kernel_mod,            only: mm_diagonal_kernel_type
-  use invert_local_operator_kernel_mod,  only: invert_local_operator_kernel_type
 
   ! Derived Types
   use mesh_mod,                          only: mesh_type
@@ -62,7 +60,7 @@ module iter_timestep_alg_mod
   use si_solver_alg_mod,                 only: si_solver_alg
 
   ! Handles
-  use fs_continuity_mod,                 only: W0, W1, W2, W3
+  use fs_continuity_mod,                 only: W0, W1, W2
 
   implicit none
 
@@ -113,12 +111,11 @@ contains
     type( field_type ) :: mm_diagonal_w3, &
                           mm_diagonal_w2, &
                           mm_diagonal_w1, &
-                          mm_diagonal_w0
+                          mm_diagonal_w0,
     
     type( runtime_constants_type ) :: runtime_constants
 
     type(quadrature_type)     :: qr
-    type(quadrature_type)     :: qr_low
     type(function_space_type) :: fs
     type(function_space_type), pointer :: theta_fs => null()
     type(function_space_type), pointer :: rho_fs   => null()
@@ -127,10 +124,9 @@ contains
     type(function_space_type), pointer :: w0_fs    => null()
     type(function_space_type), pointer :: w1_fs    => null()
     type(function_space_type), pointer :: w2_fs    => null()
-    type(function_space_type), pointer :: w3_fs    => null()
 
 
-    type( operator_type )            :: mm_w3, mm_w2, mm_w1, mm_w0, mm_w3_inv
+    type( operator_type )            :: mm_w2, mm_w1, mm_w0
 
     ! Iterative timestepping variables
     integer            :: timestep, ts_init
@@ -150,10 +146,8 @@ contains
     w0_fs => fs%get_instance( mesh, element_order, W0 )
     w1_fs => fs%get_instance( mesh, element_order, W1 )
     w2_fs => fs%get_instance( mesh, element_order, W2 )
-    w3_fs => fs%get_instance( mesh, element_order, W3 )
 
     qr = quadrature_type(element_order+3, GAUSSIAN)
-    qr_low = quadrature_type(element_order+1, GAUSSIAN)
 
     ! Create field bundles
     state_np1(1) = field_type( vector_space = u_fs     )
@@ -175,8 +169,6 @@ contains
     mm_w0 = operator_type( w0_fs, w0_fs )
     mm_w1 = operator_type( w1_fs, w1_fs )
     mm_w2 = operator_type( w2_fs, w2_fs )
-    mm_w3 = operator_type( w3_fs, w3_fs )
-    mm_w3_inv = operator_type( w3_fs, w3_fs )
 
     !=== Section 2: Initialise local algorithm fields ========================!
     call log_event( "Dynamo: computing Semi-Implicit algorithm fields", &
@@ -186,9 +178,7 @@ contains
     ! Compute mass matrices
     call invoke( compute_mass_matrix_kernel_w0_type(mm_w0, chi, qr), &
                  compute_mass_matrix_kernel_w1_type(mm_w1, chi, qr), &
-                 compute_mass_matrix_kernel_w2_type(mm_w2, chi, qr))
-    call invoke( compute_mass_matrix_kernel_w3_type(mm_w3, chi, qr_low), & 
-                 invert_local_operator_kernel_type(mm_w3_inv, mm_w3) )
+                 compute_mass_matrix_kernel_w2_type(mm_w2, chi, qr) )
 
     ! Compute mass matrix diagonals
     mm_diagonal_w0 = field_type( vector_space = theta_fs )
@@ -208,8 +198,7 @@ contains
 
     ! Create fixed state container
     runtime_constants = runtime_constants_type(mesh, chi, geopotential, &
-                                               mm_w0, mm_w1, mm_w2, mm_w3, &
-                                               mm_w3_inv,&
+                                               mm_w0, mm_w1, mm_w2, &
                                                mm_diagonal_w0, &
                                                mm_diagonal_w1, &
                                                mm_diagonal_w2, &

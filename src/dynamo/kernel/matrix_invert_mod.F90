@@ -15,7 +15,7 @@ contains
 !-------------------------------------------------------------------------------
 ! Contained functions/subroutines
 !-------------------------------------------------------------------------------
-!> Subroutine Computes the inverse of a n x n 
+!> Subroutine Computes the inverse of the matrix an n x n 
 !! matrix, a and returns the inverse in b.
 !! uses Dolittle alogorithm for LU factorisation on a small, dense, matrix.
 !! @param[in] a Real 2-dim array. Holds the values of the matrix

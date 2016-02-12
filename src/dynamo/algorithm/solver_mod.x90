@@ -112,10 +112,9 @@ contains
        end if
     else if( .not.present(qr) .and. present(mm) ) then
        ! mass matrix
-
        if(fs_l == W3) then
-         ! mm is inverse mass matrix 
-         call invoke( matrix_vector_kernel_mm_type(rhs,lhs,mm) )
+          write(log_scratch_space,'(A)') "solver_algorithm: mass-matrix not implemented for W3, stopping"
+          call log_event(log_scratch_space, LOG_LEVEL_ERROR)
        else
        select case ( solver_type )
           case ( CG_SOLVER )
