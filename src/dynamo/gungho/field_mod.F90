@@ -248,7 +248,7 @@ contains
 
     nullify(self%vspace)
     if(associated(self%data)) then
-      call ESMF_ArrayDestroy(self%esmf_array, rc=rc)
+      call ESMF_ArrayDestroy(self%esmf_array, noGarbage=.TRUE., rc=rc)
       if (rc /= ESMF_SUCCESS ) &
         call log_event( "ESMF failed to destroy a field.", &
                         LOG_LEVEL_ERROR )
@@ -273,7 +273,7 @@ contains
     do i=lbound(self,1), ubound(self,1)
       nullify(self(i)%vspace)
       if(associated(self(i)%data)) then
-        call ESMF_ArrayDestroy(self(i)%esmf_array, rc=rc)
+        call ESMF_ArrayDestroy(self(i)%esmf_array, noGarbage=.TRUE., rc=rc)
         if (rc /= ESMF_SUCCESS ) &
           call log_event( "ESMF failed to destroy a 1d array of fields.", &
                           LOG_LEVEL_ERROR )
@@ -299,7 +299,7 @@ contains
       do j=lbound(self,2), ubound(self,2)
         nullify(self(i,j)%vspace)
         if(associated(self(i,j)%data)) then
-          call ESMF_ArrayDestroy(self(i,j)%esmf_array, rc=rc)
+          call ESMF_ArrayDestroy(self(i,j)%esmf_array, noGarbage=.TRUE., rc=rc)
           if (rc /= ESMF_SUCCESS ) &
             call log_event( "ESMF failed to destroy a 2d array of fields.", &
                             LOG_LEVEL_ERROR )

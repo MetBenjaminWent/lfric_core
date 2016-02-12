@@ -576,6 +576,7 @@ subroutine init_function_space( self )
     ! Clean up the temporary array used to generate the routing table 
     if (rc == ESMF_SUCCESS) &
       call ESMF_ArrayDestroy(array=temporary_esmf_array, &
+                             noGarbage=.TRUE. , &
                              rc=rc)
 
   end do

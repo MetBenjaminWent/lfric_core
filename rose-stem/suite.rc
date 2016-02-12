@@ -1,8 +1,8 @@
 #!jinja2
 {% set targets = ['fast-debug'] %}
-{% set module_setup_script = "/data/cr1/mhambley/modules/setup" %}
+{% set module_setup_script = "/data/users/lfric/modules/setup" %}
 
-{% set environment_commands = "source " + module_setup_script + "; module load environment/dynamo/base" %}
+{% set environment_commands = "source " + module_setup_script + "; module load base-environment/dynamo/base" %}
 {% set display_environment = "module list 2>&1" %}
 
 {% set default_compiler, default_version = DEFAULT_ENVIRONMENT %}
@@ -145,7 +145,7 @@
         inherit = CLEANLINESS_ENVIRONMENT
         pre-command scripting = """
                                 {{ environment_commands }}
-                                module load environment/dynamo/compiler/{{default_compiler}}/{{default_version}}
+                                module load environment/dynamo/{{default_compiler}}/{{default_version}}
                                 {{ display_environment }}
                                 """
 
@@ -180,7 +180,7 @@
         inherit = {{family}}_ENVIRONMENT, {{ target | upper }}
         pre-command scripting = """
                                 {{ environment_commands }}
-                                module load environment/dynamo/compiler/{{compiler}}/{{version}}
+                                module load environment/dynamo/{{compiler}}/{{version}}
                                 {{ display_environment }}
                                 """
         [[[environment]]]
