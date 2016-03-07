@@ -50,8 +50,9 @@ program dynamo
   use set_up_mod,                     only : set_up
   use timestepping_config_mod,        only : method,                          &
                                            timestepping_method_semi_implicit, &
-                                           timestepping_method_rk_ssp3
+                                           timestepping_method_rk
 
+  use runge_kutta_init_mod,    only: runge_kutta_init
   implicit none
 
   type( function_space_type ) :: fs
@@ -118,7 +119,8 @@ program dynamo
     select case( method )
       case( timestepping_method_semi_implicit )  ! Semi-Implicit 
         call iter_timestep_alg( mesh, chi, u, rho, theta, xi, restart)
-      case( timestepping_method_rk_ssp3 )        ! RK SSP3
+      case( timestepping_method_rk )             ! RK
+        call runge_kutta_init()
         call rk_alg_timestep( mesh, chi, u, rho, theta, xi, restart)
       case default
         call log_event("Dynamo: Incorrect time stepping option chosen, "// &
@@ -129,10 +131,11 @@ program dynamo
   else                       ! Linear timestepping options
 
     select case( method )
-      case( timestepping_method_rk_ssp3 )        ! RK SSP3
+      case( timestepping_method_rk )        ! RK 
+        call runge_kutta_init()
         call lin_rk_alg_timestep( mesh, chi, u, rho, theta, restart)
       case default
-        call log_event("Dynamo: Only RK SSP3 available for linear equations. ", &
+        call log_event("Dynamo: Only RK available for linear equations. ", &
                         LOG_LEVEL_INFO )
         call log_event("Dynamo: Incorrect time stepping option chosen, "// &
                        "stopping program! ",LOG_LEVEL_ERROR)

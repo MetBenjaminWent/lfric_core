@@ -24,7 +24,7 @@ module lin_rk_alg_timestep_mod
   use restart_control_mod,       only : restart_type
   use solver_config_mod,         only : method
   use timestepping_config_mod,   only : dt
-
+  use runge_kutta_init_mod, only: ak, num_rk_stage
   ! PsyKAl-lite kernels
   use psykal_lite_mod,     only: invoke_copy_field_data,                          &
                                invoke_set_field_scalar,                         &
@@ -108,22 +108,14 @@ contains
     type(function_space_type), pointer :: w0_fs    => null()
     type(function_space_type), pointer :: w2_fs    => null()
 
-    real(kind=r_def), allocatable :: ak(:,:)
     type(operator_type) :: mm_w2, mm_w0  
 
     ! Timestepping variables
     integer :: timestep, ts_init
-    integer :: stage, num_rk_stage, st
+    integer :: stage, st
     type(quadrature_type) :: qr 
     integer, parameter :: vector_field = 3, &
                           scalar_field = 1
-    
-! SSP3 weights
-    num_rk_stage = 3
-    allocate ( ak (num_rk_stage,num_rk_stage) )
-    ak(1,:) = (/ 1.0_r_def,  0.0_r_def,  0.0_r_def /)
-    ak(2,:) = (/ 0.25_r_def, 0.25_r_def, 0.0_r_def /)
-    ak(3,:) = (/ 1.0_r_def,  1.0_r_def,  4.0_r_def /)/6.0_r_def
     
     allocate ( rt_prediction(num_rk_stage), &
                ru_prediction(num_rk_stage), & 

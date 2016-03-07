@@ -67,7 +67,7 @@
 /
 
 &solver
-  method             = 'gmres'
+  method             = 'bicgstab'
   maximum_iterations = 99
   tolerance          = 1.0e-4
   preconditioner     = 'diagonal'
@@ -81,9 +81,10 @@
 /
 
 &timestepping
-  method           = 'semi_implicit'
-  dt               = 10.0
-  alpha            = 0.5
-  outer_iterations = 2
-  inner_iterations = 2
+  method             = 'semi_implicit'
+  dt                 = 10.0
+  alpha              = 0.5
+  outer_iterations   = 2
+  inner_iterations   = 2
+  runge_kutta_method = 'ssp3'
 /

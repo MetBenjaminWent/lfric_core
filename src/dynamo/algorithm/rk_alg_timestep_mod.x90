@@ -21,19 +21,23 @@ module rk_alg_timestep_mod
   use finite_element_config_mod, only : element_order
   use formulation_config_mod,    only : rotating
   use restart_control_mod,       only : restart_type
-  use solver_config_mod,         only : method
+  use solver_config_mod,         only : method, preconditioner
   use timestepping_config_mod,   only : dt
+  use runge_kutta_init_mod,      only : num_rk_stage, ak
 
   ! PsyKAl-lite kernels
-  use psykal_lite_mod, only: invoke_axpy,             &
-                             invoke_copy_field_data,  &
-                             invoke_set_field_scalar, &
-                             invoke_flux_rhs
+  use psykal_lite_mod,                  only: invoke_axpy,             &
+                                              invoke_copy_field_data,  &
+                                              invoke_set_field_scalar, &
+                                              invoke_flux_rhs
 
   ! PsyKAl PSYClone kernels
   use compute_mass_matrix_kernel_w0_mod, only: compute_mass_matrix_kernel_w0_type
   use compute_mass_matrix_kernel_w1_mod, only: compute_mass_matrix_kernel_w1_type
   use compute_mass_matrix_kernel_w2_mod, only: compute_mass_matrix_kernel_w2_type
+  use compute_mass_matrix_kernel_w3_mod, only: compute_mass_matrix_kernel_w3_type
+  use mm_diagonal_kernel_mod,            only: mm_diagonal_kernel_type
+  use invert_local_operator_kernel_mod,  only: invert_local_operator_kernel_type
   use compute_geopotential_kernel_mod,   only: compute_geopotential_kernel_type
   use rtheta_kernel_mod,                 only: rtheta_kernel_type
   use enforce_bc_kernel_mod,             only: enforce_bc_kernel_type
@@ -44,20 +48,30 @@ module rk_alg_timestep_mod
   use kinetic_energy_gradient_kernel_mod,only: kinetic_energy_gradient_kernel_type
   use geopotential_gradient_kernel_mod,  only: geopotential_gradient_kernel_type
   use vorticity_advection_kernel_mod,    only: vorticity_advection_kernel_type
+  use compute_grad_operator_kernel_mod,  only: compute_grad_operator_kernel_type
+  use compute_curl_operator_kernel_mod,  only: compute_curl_operator_kernel_type
+  use compute_div_operator_kernel_mod,   only: compute_div_operator_kernel_type
 
   ! Derived Types
-  use mesh_mod,            only: mesh_type
-  use field_mod,           only: field_type
-  use function_space_mod,  only: function_space_type
-  use fs_continuity_mod,   only: W0, W1, W2
-  use operator_mod,        only: operator_type
-
+  use mesh_mod,                          only: mesh_type
+  use field_mod,                         only: field_type
+  use function_space_mod,                only: function_space_type
+  use fs_continuity_mod,                 only: W0, W1, W2, W3
+  use operator_mod,                      only: operator_type
+  use runtime_constants_mod,             only: runtime_constants_type
+  use quadrature_mod,                    only: quadrature_type, GAUSSIAN
+  use field_bundle_mod,                  only: clone_bundle, & 
+                                               bundle_axpy, & 
+                                               bundle_axpby, &
+                                               add_bundle, &
+                                               copy_bundle, &
+                                               set_bundle_scalar
   ! Algorithms
-  use solver_mod,          only: solver_algorithm
-  use quadrature_mod, only: quadrature_type, GAUSSIAN
-  use conservation_algorithm_mod, &
-                           only: conservation_algorithm
-  use output_alg_mod,      only: output_alg
+  use solver_mod,                        only: solver_algorithm
+  use conservation_algorithm_mod,        only: conservation_algorithm
+  use output_alg_mod,                    only: output_alg
+  use advection_alg_mod,                 only: advection_alg
+
 
   implicit none
 
@@ -96,17 +110,20 @@ contains
     type( field_type ), intent( inout ) :: u, rho, theta, xi
     ! Restart for timestep control and diagnostic output control 
     type( restart_type ), intent( in )  :: restart
+    type( operator_type ) :: mm_w3, mm_w2, mm_w1, mm_w0, mm_w3_inv
+    type( operator_type ) :: grad, curl, div
+
+    type( field_type ) :: mm_diagonal_w3, &
+                          mm_diagonal_w2, &
+                          mm_diagonal_w1, &
+                          mm_diagonal_w0
+    
+    type( runtime_constants_type ) :: runtime_constants
 
     ! Temporary fields
-    type( field_type ) :: u_n, rho_n, theta_n,       &
-                          r_u, r_rho, r_theta,       &
-                          u_inc, rho_inc, theta_inc, &
-                          mass_flux, rhs_xi,         &
-                          geopotential
-
-    type( field_type ), allocatable :: rt_prediction(:),  &
-                                       ru_prediction(:),  &
-                                       rr_prediction(:)
+    type( field_type )              :: geopotential, diagnostic_field
+    type( field_type )              :: state(3), state_n(3), rhs(3), inc(3)
+    type( field_type ), allocatable :: rhs_prediction(:,:)
 
     type(function_space_type) :: fs
     type(function_space_type), pointer :: theta_fs => null()
@@ -116,29 +133,17 @@ contains
     type(function_space_type), pointer :: w0_fs    => null()
     type(function_space_type), pointer :: w1_fs    => null()
     type(function_space_type), pointer :: w2_fs    => null()
+    type(function_space_type), pointer :: w3_fs    => null()
 
-
-    real(kind=r_def), allocatable :: ak(:,:)
     type( quadrature_type) :: qr 
     integer, parameter :: VECTOR_FIELD = 3, &
                           SCALAR_FIELD = 1
 
     ! Timestepping variables
     integer :: timestep, ts_init
-    integer :: stage, num_rk_stage, st
-    type(operator_type) :: mm_w2, mm_w1, mm_w0
+    integer :: stage, st
 
-    !=== Section 0: Create RK weights and objects =============================!
-    ! SSP3 weights
-    num_rk_stage = 3
-    allocate ( ak (num_rk_stage,num_rk_stage) )
-    ak(1,:) = (/ 1.0_r_def,  0.0_r_def,  0.0_r_def /)
-    ak(2,:) = (/ 0.25_r_def, 0.25_r_def, 0.0_r_def /)
-    ak(3,:) = (/ 1.0_r_def,  1.0_r_def,  4.0_r_def /)/6.0_r_def
-
-    allocate ( rt_prediction(num_rk_stage), &
-               ru_prediction(num_rk_stage), &
-               rr_prediction(num_rk_stage) )
+    allocate ( rhs_prediction(3,num_rk_stage) )
 
     !=== Section 1: Create field objects =====================================!
     ! Function spaces
@@ -149,33 +154,32 @@ contains
     w0_fs    => fs%get_instance( mesh, element_order, W0 )
     w1_fs    => fs%get_instance( mesh, element_order, W1 )
     w2_fs    => fs%get_instance( mesh, element_order, W2 )
+    w3_fs    => fs%get_instance( mesh, element_order, W3 )
 
     qr = quadrature_type(element_order+3, GAUSSIAN)
 
     ! Local fields
-    theta_n      = field_type( vector_space = theta_fs )
-    u_n          = field_type( vector_space = u_fs     )
-    rho_n        = field_type( vector_space = rho_fs   )
-    r_theta      = field_type( vector_space = theta_fs )
-    r_u          = field_type( vector_space = u_fs     )
-    r_rho        = field_type( vector_space = rho_fs   )
-    theta_inc    = field_type( vector_space = theta_fs )
-    u_inc        = field_type( vector_space = u_fs     )
-    rho_inc      = field_type( vector_space = rho_fs   )
-    mass_flux    = field_type( vector_space = u_fs     )
-    rhs_xi       = field_type( vector_space = xi_fs    )
     geopotential = field_type( vector_space = theta_fs )
-
+    state(1) = field_type( vector_space = u_fs     )
+    state(2) = field_type( vector_space = theta_fs )
+    state(3) = field_type( vector_space = rho_fs   )
+    call clone_bundle(state, state_n, 3)
+    call clone_bundle(state, rhs, 3)
+    call clone_bundle(state, inc, 3)
     do stage = 1,num_rk_stage
-      rt_prediction(stage) = field_type( vector_space = theta_fs )
-      ru_prediction(stage) = field_type( vector_space = u_fs     )
-      rr_prediction(stage) = field_type( vector_space = rho_fs   )
+      call clone_bundle(state, rhs_prediction(:,stage), 3) 
     end do
 
     ! Create operators needed for timestepping
     mm_w0 = operator_type(W0_fs, W0_fs)
     mm_w1 = operator_type(W1_fs, W1_fs)
     mm_w2 = operator_type(W2_fs, W2_fs)
+    mm_w3 = operator_type( w3_fs, w3_fs )
+    mm_w3_inv = operator_type( w3_fs, w3_fs )
+
+    grad = operator_type( w1_fs, w0_fs )
+    curl = operator_type( w2_fs, w1_fs )
+    div  = operator_type( w3_fs, w2_fs )
 
     !=== Section 2: Initialise local algorithm fields ========================!
     call log_event( "Dynamo: Computing Nonlinear RK algorithm fields", &
@@ -183,11 +187,44 @@ contains
     ! Compute geopotential
     call invoke(compute_geopotential_kernel_type( geopotential, chi ) )
     ! Compute mass matrices
-    call invoke( compute_mass_matrix_kernel_w0_type(mm_w0, chi, qr),           &
-                 compute_mass_matrix_kernel_w1_type(mm_w1, chi, qr),           &
-                 compute_mass_matrix_kernel_w2_type(mm_w2, chi, qr) )
+    call invoke( compute_mass_matrix_kernel_w0_type(mm_w0, chi, qr), &
+                 compute_mass_matrix_kernel_w1_type(mm_w1, chi, qr), &
+                 compute_mass_matrix_kernel_w2_type(mm_w2, chi, qr), &
+                 compute_mass_matrix_kernel_w3_type(mm_w3, chi, qr), &
+                 invert_local_operator_kernel_type(mm_w3_inv, mm_w3) )
+    ! These are seperate invokes as chi is defined as any space and psyclone 
+    ! does not support multiple any_spaces in the same invoke
+    call invoke( compute_grad_operator_kernel_type(grad, chi, qr) )
+    call invoke( compute_curl_operator_kernel_type(curl, chi, qr) )
+    call invoke( compute_div_operator_kernel_type (div,  chi, qr) )
+
+    ! Compute mass matrix diagonals
+    mm_diagonal_w0 = field_type( vector_space = theta_fs )
+    mm_diagonal_w1 = field_type( vector_space = xi_fs    )
+    mm_diagonal_w2 = field_type( vector_space = u_fs     )
+    mm_diagonal_w3 = field_type( vector_space = rho_fs   )
+    call invoke_set_field_scalar(0.0_r_def,mm_diagonal_w0)
+    call invoke_set_field_scalar(0.0_r_def,mm_diagonal_w1)
+    call invoke_set_field_scalar(0.0_r_def,mm_diagonal_w2)
+
+    call invoke( mm_diagonal_kernel_type(mm_diagonal_w0,mm_w0))
+    call invoke( mm_diagonal_kernel_type(mm_diagonal_w1,mm_w1))
+    call invoke( mm_diagonal_kernel_type(mm_diagonal_w2,mm_w2))
+    ! W3 equations are solved pointwise and so the mass matrix is inverted
+    ! exactly, therfore the diagonal, where used should be 1
+    call invoke_set_field_scalar(1.0_r_def,mm_diagonal_w3)
+
+    ! Create fixed state container
+    runtime_constants = runtime_constants_type(mesh, chi, geopotential, &
+                                               mm_w0, mm_w1, mm_w2, mm_w3, &
+                                               mm_w3_inv,&
+                                               mm_diagonal_w0, &
+                                               mm_diagonal_w1, &
+                                               mm_diagonal_w2, &
+                                               mm_diagonal_w3, &
+                                               grad, curl, div)
+
     ! Initialise other required fields
-    call invoke_set_field_scalar(0.0_r_def, mass_flux)
     call invoke_set_field_scalar(0.0_r_def, xi)
 
     !--- Intial output and output frequency -----------------------------------! 
@@ -199,6 +236,9 @@ contains
                                 geopotential, chi)
 
     !=== Section 3: Timestepping ==============================================!
+    call invoke_copy_field_data(u,     state(1))
+    call invoke_copy_field_data(theta, state(2))
+    call invoke_copy_field_data(rho,   state(3))
 
     do timestep = restart%ts_start(),restart%ts_end()
       call log_event( "&
@@ -207,97 +247,59 @@ contains
       write( log_scratch_space, '(A,I0)' ) 'Start of timestep ', timestep
       call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
-      call invoke_copy_field_data(theta,theta_n)
-      call invoke_copy_field_data(u,u_n)
-      call invoke_copy_field_data(rho,rho_n)
-
       ! Runge-Kutta algorithm
+      call copy_bundle(state, state_n, 3)
       do stage = 1,num_rk_stage
         write( log_scratch_space, '(A,I0)' ) '  Start of stage ', stage
         call log_event( log_scratch_space, LOG_LEVEL_INFO )
         ! Compute advection terms
-        ! mass flux ( F = rho * u )
-        call invoke_set_field_scalar(0.0_r_def, r_u)
-        call invoke_flux_rhs( r_u, u, rho, chi, qr ) 
-
-        call solver_algorithm( mass_flux     &
-                             , r_u           &
-                             , mesh          &
-                             , chi           &
-                             , method &
-                             , mm=mm_w2 )
-
-        ! Compute rrho = div(F)
-        call invoke( rrho_kernel_type  ( rr_prediction(stage), mass_flux, qr ) )
-        ! Compute vorticity
-        call invoke_set_field_scalar(0.0_r_def, rhs_xi)
-        call invoke( vorticity_rhs_kernel_type( rhs_xi, u, chi, qr ) )
-        call invoke( enforce_bc_kernel_type( rhs_xi ) )
-        call solver_algorithm( xi, rhs_xi, mesh, chi, method, mm=mm_w1)
-
+        call advection_alg( rhs_prediction(:,stage), &
+                            state, state, state_n, xi, &
+                            runtime_constants)
         ! Compute new rhs
-        call invoke_set_field_scalar(0.0_r_def, rt_prediction(stage))
-        call invoke( rtheta_kernel_type( rt_prediction(stage), theta, &
-             mass_flux, rho, qr) )
-        call invoke_set_field_scalar(0.0_r_def, ru_prediction(stage))
         if ( rotating ) &
-          call invoke( rotation_kernel_type( ru_prediction(stage), u, chi, qr ) )
+          call invoke( rotation_kernel_type( rhs_prediction(1,stage), state(1), chi, qr ) )
         call invoke( pressure_gradient_kernel_type       &
-             ( ru_prediction(stage), rho, theta, qr ) )
+             ( rhs_prediction(1,stage), state(3), state(2), qr ) )
         call invoke( kinetic_energy_gradient_kernel_type &
-             ( ru_prediction(stage), u, chi, qr ) )
+             ( rhs_prediction(1,stage), state(1), chi, qr ) )
         call invoke( geopotential_gradient_kernel_type   &
-             ( ru_prediction(stage), geopotential, qr ) )
-        call invoke( vorticity_advection_kernel_type     &
-             ( ru_prediction(stage), mass_flux, rho, xi, chi, qr ) )
-        call invoke( enforce_bc_kernel_type( ru_prediction(stage) ) ) 
-
-        call invoke_set_field_scalar(0.0_r_def, r_theta)
-        call invoke_set_field_scalar(0.0_r_def, r_u)
-        call invoke_set_field_scalar(0.0_r_def, r_rho)
+             ( rhs_prediction(1,stage), geopotential, qr ) )
+        call invoke( enforce_bc_kernel_type( rhs_prediction(1,stage) ) ) 
+        call set_bundle_scalar(0.0_r_def, rhs, 3)
 
         do st = 1, stage
-          call invoke_axpy(ak(stage,st), rt_prediction(st),r_theta, r_theta)
-          call invoke_axpy(ak(stage,st), ru_prediction(st),r_u, r_u)
-          call invoke_axpy(ak(stage,st), rr_prediction(st),r_rho, r_rho)
+          call bundle_axpy(ak(stage,st), rhs_prediction(:,stage), rhs, rhs, 3)
         end do
 
         ! Invert mass matrices
-        call solver_algorithm( theta_inc     &
-                             , r_theta       &
-                             , mesh          &
-                             , chi           &
-                             , method &
-                             , mm=mm_w0 )
-        call solver_algorithm( u_inc         &
-                             , r_u           &
-                             , mesh          &
-                             , chi           &
-                             , method &
-                             , mm=mm_w2 )
-        call solver_algorithm( rho_inc       &
-                             , r_rho         &
-                             , mesh          &
-                             , chi           &
-                             , method &
-                             , qr=qr )
+        call solver_algorithm( inc(2), rhs(2),       &
+                               mesh, chi, method, mm=mm_w0,&
+                               mmd=mm_diagonal_w0, &
+                               preconditioner_choice=preconditioner )
+        call solver_algorithm( inc(1), rhs(1),       &
+                               mesh,, chi, method, mm=mm_w2, &
+                               mmd=mm_diagonal_w2, & 
+                               preconditioner_choice=preconditioner )
+        call invoke_copy_field_data(rhs(3),inc(3))
 
         ! Add increments
-        call invoke_axpy(dt, theta_inc, theta_n, theta)
-        call invoke_axpy(dt, u_inc, u_n, u)
-        call invoke_axpy(dt, rho_inc, rho_n, rho)
+        call bundle_axpy(dt, inc, state_n, state, 3)
 
         ! Diagnostics
-        call theta_inc%log_minmax(LOG_LEVEL_TRACE, 'theta_inc');
-        call u_inc%log_minmax(LOG_LEVEL_TRACE, 'u_inc');
-        call rho_inc%log_minmax(LOG_LEVEL_TRACE, 'rho_inc');
+        diagnostic_field = inc(2)
+        call diagnostic_field%log_minmax(LOG_LEVEL_TRACE, 'theta_inc');
+        diagnostic_field = inc(1)
+        call diagnostic_field%log_minmax(LOG_LEVEL_TRACE, 'u_inc');
+        diagnostic_field = inc(3)
+        call diagnostic_field%log_minmax(LOG_LEVEL_TRACE, 'rho_inc');
 
       end do
        !---------End of timestep diagnostics ----------------------------------!
       if ( mod(timestep, (restart%ts_start()+restart%diag_freq() - 1) )  == 0 ) then
-        call output_alg(timestep, restart, theta, xi, u, rho, chi, mesh, mm_w0)
+        call output_alg(timestep, restart, state(2), xi, state(1), state(3), chi, mesh, mm_w0)
       end if
-      call conservation_algorithm(timestep, mesh, rho, u, theta, xi, &
+      call conservation_algorithm(timestep, mesh, state(3), state(1), state(2), xi, &
                                   geopotential, chi)
 
       write( log_scratch_space, '(A,I0)' ) 'End of timestep ', timestep
@@ -306,6 +308,11 @@ contains
       '\****************************************************************************/ ', &
                       LOG_LEVEL_TRACE )
     end do
+
+    ! Return fields in u, theta, rho arrays
+    call invoke_copy_field_data(state(1), u)
+    call invoke_copy_field_data(state(2), theta)
+    call invoke_copy_field_data(state(3), rho)
     call log_event( "Dynamo: Finished timestep", LOG_LEVEL_INFO )
     !==========================================================================
 
