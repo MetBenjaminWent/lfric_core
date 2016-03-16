@@ -1,6 +1,8 @@
 namelist output
 
-    write_interpolated_output : logical
-    write_nodal_output        : logical
+    diag_stem_name            : string( filename ) ! filename stem for diagnostic files
+    write_interpolated_output : logical ! write interpolated output
+    write_nodal_output        : logical ! write nodal output
+    diagnostic_frequency      : integer ! frequency of diagnostic output
 
 end namelist output

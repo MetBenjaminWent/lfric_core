@@ -48,8 +48,10 @@
 /
 
 &output
-  write_interpolated_output = .true
-  write_nodal_output        = .true
+  diag_stem_name            = 'diagDynamo'
+  write_interpolated_output = .true.
+  write_nodal_output        = .true.
+  diagnostic_frequency      = 3
 /
 
 &planet

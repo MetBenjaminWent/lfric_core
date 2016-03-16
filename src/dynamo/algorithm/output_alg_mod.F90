@@ -18,10 +18,10 @@ module output_alg_mod
   use nodal_output_alg_mod,              only: nodal_output_alg
   use operator_mod,                      only: operator_type
   use output_config_mod,                 only: write_nodal_output,        &
-                                               write_interpolated_output
+                                               write_interpolated_output, &
+                                               diag_stem_name
   use psykal_lite_mod,                   only: invoke_set_field_scalar
   use quadrature_mod,                    only: quadrature_type, GAUSSIAN
-  use restart_control_mod,               only: restart_type
 
   implicit none
 
@@ -36,14 +36,13 @@ contains
 !>          regular grid and writes them to .m formated files indexed by a 
 !>          timestep stamp
 !> @param[in] n integer giving the time step index
-!> @param[in] rs checkpoint/restart type with timestepping information
 !> @param[inout] theta the potential temperature field
 !> @param[inout] u the vector wind field
 !> @param[inout] rho the density field
 !> @param[inout] chi the fem coordinate field array
 !> @param[in] mesh  The mesh all fields are on
 !> @param[inout] mm_w0 The mass matrix operator for the field to be projected to
-  subroutine output_alg(n, rs, theta, xi, u, rho, chi, mesh, mm_w0)
+  subroutine output_alg(n, theta, xi, u, rho, chi, mesh, mm_w0)
 
     implicit none
  
@@ -51,7 +50,6 @@ contains
     type(field_type),    intent(inout) :: theta, xi, u, rho, chi(3)
     type(mesh_type),     intent(in)    :: mesh
     type(operator_type), intent(inout) :: mm_w0
-    type(restart_type),  intent(in)    :: rs
 
     ! output variables
     integer :: dir
@@ -89,38 +87,50 @@ contains
 
       call galerkin_projection_algorithm(W0_projected_field(1), theta, mesh, chi, &
                                          SCALAR_FIELD, qr, mm=mm_w0)
-      fname=trim(rs%ts_fname("interp_theta",n))//rank_name
+      fname=trim(ts_fname("interp_theta",n, rank_name))
       call interpolated_output(SCALAR_FIELD, W0_projected_field(1), mesh, chi, &
                                fname)
       call invoke_set_field_scalar(0.0_r_def, W3_projected_field(1)) 
       call galerkin_projection_algorithm(W3_projected_field(1), rho, mesh, chi, &
                                          SCALAR_FIELD, qr)
-      fname=trim(rs%ts_fname("interp_rho",n))//rank_name
+      fname=trim(ts_fname("interp_rho",n, rank_name))
       call interpolated_output(SCALAR_FIELD, W3_projected_field(1), mesh, chi, &
                                fname)
       call galerkin_projection_algorithm(W0_projected_field(:), u, mesh, chi, &
                                          VECTOR_FIELD, qr, mm=mm_w0)
-      fname=trim(rs%ts_fname("interp_u",n))//rank_name
+      fname=trim(ts_fname("interp_u",n, rank_name))
       call interpolated_output(VECTOR_FIELD, W0_projected_field(:), mesh, chi, &
                                fname)
       call galerkin_projection_algorithm(W0_projected_field(:), xi, mesh, chi, &
                                          VECTOR_FIELD, qr, mm=mm_w0)
-      fname=trim(rs%ts_fname("interp_xi",n))//rank_name
+      fname=trim(ts_fname("interp_xi",n, rank_name))
       call interpolated_output(VECTOR_FIELD, W0_projected_field(:), mesh, chi, &
                                fname)
     end if
 
     if ( write_nodal_output ) then  
-      fname=trim(rs%ts_fname("nodal_theta",n))//rank_name
+      fname=trim(ts_fname("nodal_theta",n, rank_name))
       call nodal_output_alg(theta, chi, fname, mesh)
-      fname=trim(rs%ts_fname("nodal_u",n))//rank_name
+      fname=trim(ts_fname("nodal_u",n, rank_name))
       call nodal_output_alg(u, chi, fname, mesh)
-      fname=trim(rs%ts_fname("nodal_rho",n))//rank_name
+      fname=trim(ts_fname("nodal_rho",n, rank_name))
       call nodal_output_alg(rho, chi, fname, mesh)
-      fname=trim(rs%ts_fname("nodal_xi",n))//rank_name
+      fname=trim(ts_fname("nodal_xi",n, rank_name))
       call nodal_output_alg(xi, chi, fname, mesh)
     end if
   end subroutine output_alg
+
+  ! Private function to determine diagnostic output filename at a given timestep
+  function ts_fname(field_name,ts, rank_name)
+
+    character(len=*),    intent(in) :: field_name
+    integer,             intent(in) :: ts
+    character(len=*),    intent(in) :: rank_name
+    character(len=str_max_filename) :: ts_fname
+    write(ts_fname,'(A,A,A,A,I6.6,A)') trim(diag_stem_name),"_", &
+         trim(field_name),"_T",ts,trim(rank_name)
+
+  end function ts_fname
 
 end module output_alg_mod
 

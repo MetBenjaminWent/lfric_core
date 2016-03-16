@@ -21,6 +21,7 @@ module rk_alg_timestep_mod
   use finite_element_config_mod, only : element_order
   use formulation_config_mod,    only : rotating
   use restart_control_mod,       only : restart_type
+  use output_config_mod,         only : diagnostic_frequency
   use solver_config_mod,         only : method, preconditioner
   use timestepping_config_mod,   only : dt
   use runge_kutta_init_mod,      only : num_rk_stage, ak
@@ -108,7 +109,7 @@ contains
     type( field_type ), intent( inout ) :: chi(3)
     ! Prognostic fields
     type( field_type ), intent( inout ) :: u, rho, theta, xi
-    ! Restart for timestep control and diagnostic output control 
+    ! Restart for timestep control
     type( restart_type ), intent( in )  :: restart
     type( operator_type ) :: mm_w3, mm_w2, mm_w1, mm_w0, mm_w3_inv
     type( operator_type ) :: grad, curl, div
@@ -231,7 +232,7 @@ contains
     ! Output initial conditions
     call log_event( "Dynamo: Outputing initial fields", LOG_LEVEL_INFO )
     ts_init = max( (restart%ts_start() - 1), 0 ) ! 0 or t previous.
-    call output_alg(ts_init, restart, theta, xi, u, rho, chi, mesh, mm_w0)
+    call output_alg(ts_init, theta, xi, u, rho, chi, mesh, mm_w0)
     call conservation_algorithm(ts_init, mesh, rho, u, theta, xi, &
                                 geopotential, chi)
 
@@ -295,9 +296,12 @@ contains
         call diagnostic_field%log_minmax(LOG_LEVEL_TRACE, 'rho_inc');
 
       end do
-       !---------End of timestep diagnostics ----------------------------------!
-      if ( mod(timestep, (restart%ts_start()+restart%diag_freq() - 1) )  == 0 ) then
-        call output_alg(timestep, restart, state(2), xi, state(1), state(3), chi, mesh, mm_w0)
+      !---------End of timestep diagnostics ----------------------------------!
+      ! Here we need to use diagnostic output frequency to determine when to 
+      ! write diagnostics
+
+      if ( mod(timestep, diagnostic_frequency) == 0 ) then
+        call output_alg(timestep, state(2), xi, state(1), state(3), chi, mesh, mm_w0)
       end if
       call conservation_algorithm(timestep, mesh, state(3), state(1), state(2), xi, &
                                   geopotential, chi)

@@ -2,7 +2,6 @@
 checkpoint_read = .F
 timestep_start = 1
 timestep_end = 3
-checkpoint_write = .F
+checkpoint_write = .T
 restart_stem_name="restartDynamo"
-diagnostic_frequency = 3
 /

@@ -22,6 +22,7 @@ module lin_rk_alg_timestep_mod
   ! Configuration and restart/checkpoint options
   use finite_element_config_mod, only : element_order
   use restart_control_mod,       only : restart_type
+  use output_config_mod,         only : diagnostic_frequency
   use solver_config_mod,         only : method
   use timestepping_config_mod,   only : dt
   use runge_kutta_init_mod, only: ak, num_rk_stage
@@ -192,7 +193,7 @@ contains
                                       , qr                 &
                                       , mm=mm_w0 ) 
     ts_init = max( (restart%ts_start() - 1), 0 ) ! 0 or t previous.
-    call output_alg(ts_init, restart, theta, xi, u, rho, chi, mesh, mm_w0)
+    call output_alg(ts_init, theta, xi, u, rho, chi, mesh, mm_w0)
 
     !=== Section 3: Timestepping ==============================================!   
 
@@ -259,10 +260,14 @@ contains
         call rho_inc%log_minmax(LOG_LEVEL_TRACE, 'rho_inc');
 
       end do
-       !---------End of timestep diagnostics ----------------------------------!
-      if ( mod(timestep, (restart%ts_start()+restart%diag_freq()) )  == 0 ) then
-        call output_alg(timestep, restart, theta, xi, u, rho, chi, mesh, mm_w0)
+      !---------End of timestep diagnostics ----------------------------------!
+      ! Here we need to use diagnostic output frequency to determine when to 
+      ! write diagnostics
+
+      if ( mod(timestep, diagnostic_frequency) == 0 ) then
+        call output_alg(timestep, theta, xi, u, rho, chi, mesh, mm_w0)
       end if
+
       write( log_scratch_space, '(A,I0)' ) 'End of timestep ', timestep
       call log_event( log_scratch_space, LOG_LEVEL_INFO )
       call log_event( '\****************************************************************************/ ', &

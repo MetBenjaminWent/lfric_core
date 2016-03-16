@@ -19,6 +19,7 @@ module iter_timestep_alg_mod
   use finite_element_config_mod, only: element_order
   use formulation_config_mod,    only: newton_krylov
   use restart_control_mod,       only: restart_type
+  use output_config_mod,         only: diagnostic_frequency
   use solver_config_mod,         only: method
   use timestepping_config_mod,   only: dt, alpha, beta, &
                                        outer_iterations, inner_iterations
@@ -110,7 +111,7 @@ contains
 
     ! Prognostic fields    
     type( field_type ), intent( inout ) :: u, rho, theta, xi
-    ! Restart for timestep control and diagnostic output control
+    ! Restart for timestep control
     type( restart_type ), intent(in)    :: restart
 
     ! Temporary fields    
@@ -249,7 +250,7 @@ contains
     ! Output initial conditions
     call log_event( "Dynamo: Outputing initial fields", LOG_LEVEL_INFO )
     ts_init = max( (restart%ts_start() - 1), 0 ) ! 0 or t previous.
-    call output_alg(ts_init, restart, theta, xi, u, rho, chi, mesh, mm_w0)
+    call output_alg(ts_init, theta, xi, u, rho, chi, mesh, mm_w0)
     call conservation_algorithm(ts_init, mesh, rho, u, theta, xi, &
                                 geopotential, chi)
 
@@ -304,8 +305,11 @@ contains
        end do
        !=== End Section 3.1 ===================================================!
        !=== Section 3.4: End of timestep diagnostics ==========================!
-       if ( mod(timestep, (restart%ts_start()+restart%diag_freq() - 1) ) == 0 ) then
-         call output_alg(timestep, restart, state_np1(2), xi, state_np1(1), &
+       ! Here we need to use diagnostic output frequency to determine when to 
+       ! write diagnostics
+
+       if ( mod(timestep, diagnostic_frequency) == 0 ) then
+         call output_alg(timestep, state_np1(2), xi, state_np1(1), &
                          state_np1(3), chi, mesh, mm_w0)
        end if
        call conservation_algorithm(timestep, mesh, state_np1(3), state_np1(1), &
