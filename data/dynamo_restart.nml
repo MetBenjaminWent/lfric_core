@@ -4,4 +4,5 @@ timestep_start = 1
 timestep_end = 3
 checkpoint_write = .F
 restart_stem_name="restartDynamo"
+checkpoint_frequency = 9999
 /

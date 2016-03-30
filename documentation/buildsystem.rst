@@ -20,6 +20,15 @@ level ``make`` file, as described in the following sections.
 Building
 ~~~~~~~~
 
+It is necessary for PSyclone to know which platform you are building on in
+order that it be able to select the correct optimisation scripts. This is
+achieved through the `DYNAMO_BUILD_TARGET` environment variable. It should
+contain a single platform identifier following the same convention as outlined
+for test suite targets, detailed in the section on testing.
+
+This variable will be set up for Met Office developers using the LFRic module
+system.
+
 Three build targets are offered: ``full-debug``, ``fast-debug`` and
 ``production``. The default is ``fast-debug`` if no target is specified.
 
@@ -273,3 +282,17 @@ way.
    You should ensure that the Dynamo and PSyclone developers are aware of your
    need to modify the PSy-layer code, to ensure that your changes fit in with
    the ongoing development of Dynamo and PSyclone.
+
+Optimisation
+^^^^^^^^^^^^
+
+PSyclone is able to make use of scripts to apply optimisations to the code as
+it is generating it.
+
+The build system will look for ``optimisation/<platform>/global.py`` which will
+be applied to all algorithm files. The "platform" specifier follows the same
+form as that used for test suite targetting.
+
+If a file ``optimisation/<platform>/<algorithm>.py`` exists it will be used in
+preference to the global script. The algorithm name is taken from
+``src/dynamo/algorithms/<algorithm>.x90``.

@@ -7,9 +7,13 @@
 
 PSYCLONE ?= python2.7 $(PSYCLONE_DIR)/src/generator.py
 
+DYNAMO_BUILD_TARGET ?= meto-desktop
+
 PSY_ALGORITHM_PATH = algorithm
 PSY_PSY_PATH       = psy
 PSY_KERNEL_PATH    = kernel
+
+PSY_OPTIMISATION_PATH = $(ROOT)/optimisation
 
 PSY_AUTO_ALGORITHM_PATH = $(OBJ_DIR)/algorithm
 PSY_AUTO_PSY_PATH       = $(OBJ_DIR)/psy
@@ -35,16 +39,43 @@ export PYTHONPATH := $(PSYCLONE_DIR)/f2py_93:$(PSYCLONE_DIR)/src:$(PYTHONPATH)
 .PHONY: generate-psykal
 generate-psykal: $(PSY_AUTO_FILES) $(PSY_MANUAL_FILES) $(PSY_ALGORITHM_FILES)
 
-$(PSY_AUTO_ALGORITHM_PATH)/%.f90:$(PSY_ALGORITHM_PATH)/%.x90 | $(PSY_AUTO_ALGORITHM_PATH)
-	@echo -e $(VT_BOLD)PSycloning$(VT_RESET) $<
-	$(PSYCLONE) -api dynamo0.3 -d $(PSY_KERNEL_PATH)                    \
+$(PSY_AUTO_ALGORITHM_PATH)/%.f90: $(PSY_ALGORITHM_PATH)/%.x90 \
+                                  | $(PSY_AUTO_ALGORITHM_PATH)
+	@echo -e $(VT_BOLD)Overridden PSyclone$(VT_RESET) $<
+	$(PSYCLONE) -api dynamo0.3 -d $(PSY_KERNEL_PATH) \
 	            -oalg $@ \
+	            $<
+
+.SECONDEXPANSION:
+
+$(PSY_AUTO_PSY_PATH)/psy_%.f90: $(PSY_ALGORITHM_PATH)/%.x90  \
+                        $(PSY_OPTIMISATION_PATH)/$(DYNAMO_BUILD_TARGET)/%.py \
+                                | $(PSY_AUTO_PSY_PATH)       \
+                                  $(PSY_AUTO_ALGORITHM_PATH)
+	@echo -e $(VT_BOLD)Full PSyclone, local optimisations$(VT_RESET) $<
+	$(PSYCLONE) -api dynamo0.3 -d $(PSY_KERNEL_PATH)                     \
+	            -s $(PSY_OPTIMISATION_PATH)/$(DYNAMO_BUILD_TARGET)/$*.py \
+	            -opsy $@                                                 \
+	            -oalg $(patsubst $(PSY_ALGORITHM_PATH)/%.x90, \
+	                             $(PSY_AUTO_ALGORITHM_PATH)/%.f90, $< )  \
+	            $<
+
+$(PSY_AUTO_PSY_PATH)/psy_%.f90: $(PSY_ALGORITHM_PATH)/%.x90  \
+                    $(PSY_OPTIMISATION_PATH)/$(DYNAMO_BUILD_TARGET)/global.py \
+                                | $(PSY_AUTO_PSY_PATH)       \
+                                  $(PSY_AUTO_ALGORITHM_PATH)
+	@echo -e $(VT_BOLD)Full PSyclone, global optimisations$(VT_RESET) $<
+	$(PSYCLONE) -api dynamo0.3 -d $(PSY_KERNEL_PATH)                      \
+	         -s $(PSY_OPTIMISATION_PATH)/$(DYNAMO_BUILD_TARGET)/global.py \
+	            -opsy $@                                                  \
+	            -oalg $(patsubst $(PSY_ALGORITHM_PATH)/%.x90, \
+	                             $(PSY_AUTO_ALGORITHM_PATH)/%.f90, $< )   \
 	            $<
 
 $(PSY_AUTO_PSY_PATH)/psy_%.f90: $(PSY_ALGORITHM_PATH)/%.x90 \
                                 | $(PSY_AUTO_PSY_PATH)      \
                                   $(PSY_AUTO_ALGORITHM_PATH)
-	@echo -e $(VT_BOLD)PSycloning$(VT_RESET) $<
+	@echo -e $(VT_BOLD)Full PSyclone$(VT_RESET) $<
 	$(PSYCLONE) -api dynamo0.3 -d $(PSY_KERNEL_PATH) \
 	            -opsy $@ \
 	            -oalg $(patsubst $(PSY_ALGORITHM_PATH)/%.x90, \
