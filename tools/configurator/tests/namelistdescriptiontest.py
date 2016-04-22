@@ -68,9 +68,7 @@ module test_config_mod
   real(r_double), public, protected :: lreal
   real(r_single), public, protected :: sreal
 
-  character(str_short), parameter :: enum_key(3) = (/'one', 'two', 'three'/)
-  integer(i_native), public, protected :: module_enum
-  equivalence( module_enum, enum )
+  character(str_short), parameter :: enum_key(3) = [character(len=str_short) :: 'one', 'two', 'three']
 
   logical :: namelist_loaded = .False.
 
@@ -138,12 +136,19 @@ contains
   !> \param [in] file_unit Unit number of the file to read from.
   !>
   subroutine read_test_namelist( file_unit )
+    implicit none
+    integer(i_native), intent(in) :: file_unit
+    call read_namelist( file_unit, enum )
+  end subroutine read_test_namelist
+
+  subroutine read_namelist( file_unit, dummy_enum )
 
 
 
     implicit none
 
-    integer(i_native), intent(in) :: file_unit
+    integer(i_native), intent(in)  :: file_unit
+    integer(i_native), intent(out) :: dummy_enum
 
     character(str_short) :: enum
 
@@ -156,13 +161,13 @@ contains
       call log_event( log_scratch_space, LOG_LEVEL_ERROR )
     end if
 
-    module_enum = enum_from_key( enum )
+    dummy_enum = enum_from_key( enum )
 
 
 
     namelist_loaded = .True.
 
-  end subroutine read_test_namelist
+  end subroutine read_namelist
 
   !> Can this namelist be loaded?
   !>
@@ -254,12 +259,19 @@ contains
   !> \param [in] file_unit Unit number of the file to read from.
   !>
   subroutine read_test_namelist( file_unit )
+    implicit none
+    integer(i_native), intent(in) :: file_unit
+    call read_namelist( file_unit )
+  end subroutine read_test_namelist
+
+  subroutine read_namelist( file_unit )
 
 
 
     implicit none
 
-    integer(i_native), intent(in) :: file_unit
+    integer(i_native), intent(in)  :: file_unit
+
 
 
 
@@ -278,7 +290,7 @@ contains
 
     namelist_loaded = .True.
 
-  end subroutine read_test_namelist
+  end subroutine read_namelist
 
   !> Can this namelist be loaded?
   !>
@@ -350,12 +362,19 @@ contains
   !> \param [in] file_unit Unit number of the file to read from.
   !>
   subroutine read_test_namelist( file_unit )
+    implicit none
+    integer(i_native), intent(in) :: file_unit
+    call read_namelist( file_unit )
+  end subroutine read_test_namelist
+
+  subroutine read_namelist( file_unit )
 
 
 
     implicit none
 
-    integer(i_native), intent(in) :: file_unit
+    integer(i_native), intent(in)  :: file_unit
+
 
 
 
@@ -374,7 +393,7 @@ contains
 
     namelist_loaded = .True.
 
-  end subroutine read_test_namelist
+  end subroutine read_namelist
 
   !> Can this namelist be loaded?
   !>
@@ -447,9 +466,7 @@ module enum_config_mod
 
   integer(i_native), public, protected :: value
 
-  character(str_short), parameter :: value_key(3) = (/'one', 'two', 'three'/)
-  integer(i_native), public, protected :: module_value
-  equivalence( module_value, value )
+  character(str_short), parameter :: value_key(3) = [character(len=str_short) :: 'one', 'two', 'three']
 
   logical :: namelist_loaded = .False.
 
@@ -517,12 +534,19 @@ contains
   !> \param [in] file_unit Unit number of the file to read from.
   !>
   subroutine read_enum_namelist( file_unit )
+    implicit none
+    integer(i_native), intent(in) :: file_unit
+    call read_namelist( file_unit, value )
+  end subroutine read_enum_namelist
+
+  subroutine read_namelist( file_unit, dummy_value )
 
 
 
     implicit none
 
-    integer(i_native), intent(in) :: file_unit
+    integer(i_native), intent(in)  :: file_unit
+    integer(i_native), intent(out) :: dummy_value
 
     character(str_short) :: value
 
@@ -535,13 +559,13 @@ contains
       call log_event( log_scratch_space, LOG_LEVEL_ERROR )
     end if
 
-    module_value = value_from_key( value )
+    dummy_value = value_from_key( value )
 
 
 
     namelist_loaded = .True.
 
-  end subroutine read_enum_namelist
+  end subroutine read_namelist
 
   !> Can this namelist be loaded?
   !>
@@ -623,12 +647,19 @@ contains
   !> \param [in] file_unit Unit number of the file to read from.
   !>
   subroutine read_teapot_namelist( file_unit )
+    implicit none
+    integer(i_native), intent(in) :: file_unit
+    call read_namelist( file_unit )
+  end subroutine read_teapot_namelist
+
+  subroutine read_namelist( file_unit )
 
 
 
     implicit none
 
-    integer(i_native), intent(in) :: file_unit
+    integer(i_native), intent(in)  :: file_unit
+
 
 
 
@@ -647,7 +678,7 @@ contains
 
     namelist_loaded = .True.
 
-  end subroutine read_teapot_namelist
+  end subroutine read_namelist
 
   !> Can this namelist be loaded?
   !>
@@ -730,12 +761,19 @@ contains
   !> \param [in] file_unit Unit number of the file to read from.
   !>
   subroutine read_cheese_namelist( file_unit )
+    implicit none
+    integer(i_native), intent(in) :: file_unit
+    call read_namelist( file_unit )
+  end subroutine read_cheese_namelist
+
+  subroutine read_namelist( file_unit )
 
     use constants_mod, only : FUDGE
 
     implicit none
 
-    integer(i_native), intent(in) :: file_unit
+    integer(i_native), intent(in)  :: file_unit
+
 
 
 
@@ -754,7 +792,7 @@ contains
 
     namelist_loaded = .True.
 
-  end subroutine read_cheese_namelist
+  end subroutine read_namelist
 
   !> Can this namelist be loaded?
   !>

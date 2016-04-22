@@ -58,12 +58,19 @@ contains
   !> \\param [in] file_unit Unit number of the file to read from.
   !>
   subroutine read_{listname}_namelist( file_unit )
+    implicit none
+    integer(i_native), intent(in) :: file_unit
+    call read_namelist( file_unit{enumsArgsList} )
+  end subroutine read_{listname}_namelist
+
+  subroutine read_namelist( file_unit{dummyEnumArgsList} )
 
 {constants}
 
     implicit none
 
-    integer(i_native), intent(in) :: file_unit
+    integer(i_native), intent(in)  :: file_unit
+{dummyEnumArgs}
 
 {enumerationKeys}
 
@@ -82,7 +89,7 @@ contains
 
     namelist_loaded = .True.
 
-  end subroutine read_{listname}_namelist
+  end subroutine read_namelist
 
   !> Can this namelist be loaded?
   !>
@@ -120,11 +127,11 @@ end module {listname}_config_mod
     _variableTemplate = '  {type}({kind}), public, protected :: {name}'
     _enumVariableTemplate = '  {type}({kind}), public, protected :: {name}'
 
-    _enumerationHelperTemplate = '''  character(str_short), parameter :: {enumeration}_key({key_count}) = (/{keys}/)
-  integer(i_native), public, protected :: module_{enumeration}
-  equivalence( module_{enumeration}, {enumeration} )'''
+    _enumerationHelperTemplate = '''  character(str_short), parameter :: {enumeration}_key({key_count}) = [character(len=str_short) :: {keys}]'''
 
     _enumerationKeyTemplate = '    character(str_short) :: {enumeration}'
+    
+    _dummyEnumArgTemplate = '    integer(i_native), intent(out) :: {arg}'
 
     _namelistTemplate = '    namelist /{listname}/ {variables}'
 
@@ -184,7 +191,7 @@ end module {listname}_config_mod
 
   end function key_from_{enumeration}'''
 
-    _interpretEnumerationKeyTemplate = '''    module_{enumeration} = {enumeration}_from_key( {enumeration} )'''
+    _interpretEnumerationKeyTemplate = '''    dummy_{enumeration} = {enumeration}_from_key( {enumeration} )'''
 
     _constantsTemplate = '    use constants_mod, only : {constants}'
 
@@ -291,6 +298,7 @@ end module {listname}_config_mod
         enumerationFuncts   = []
         enumerationKeys     = []
         enumInterpreters    = []
+        dummyEnumArgs       = []
         names               = []
         interfaceProcedures = []
         definitions         = {}
@@ -349,6 +357,10 @@ end module {listname}_config_mod
                         text = self._enumerationKeyTemplate.format( **inserts )
                         enumerationKeys.append( text )
 
+                        inserts = {'arg' : 'dummy_' + name.lower()}
+                        text = self._dummyEnumArgTemplate.format( **inserts )
+                        dummyEnumArgs.append( text )
+
                         firstKey = None
                         keys = []
                         for eid in args:
@@ -403,6 +415,10 @@ end module {listname}_config_mod
         else:
             constants = ''
 
+        leadingEnumKeyList = ['']
+        leadingEnumKeyList.extend( self._enumerations.keys() )
+        leadingDummyEnumKeyList = ['']
+        leadingDummyEnumKeyList.extend( ['dummy_' + enum for enum in self._enumerations.keys()] )
         inserts = {'listname'                : self._name,                    \
                    'kindlist'                : ', '.join( sorted( kindset ) ),\
                    'publics'                 : ', '.join( sorted( publics ) ),\
@@ -411,6 +427,9 @@ end module {listname}_config_mod
                    'enumerationHelpers'      : '\n'.join(enumerationHelpers), \
                    'enumerationKeyFunctions' : '\n'.join(enumerationFuncts),  \
                    'enumerationKeys'         : '\n'.join(enumerationKeys),    \
+                   'enumsArgsList'           : ', '.join(leadingEnumKeyList),  \
+                   'dummyEnumArgsList'      : ', '.join(leadingDummyEnumKeyList), \
+                   'dummyEnumArgs'           : '\n'.join(dummyEnumArgs),
                    'namelist'                : namelist,                      \
                    'interpretEnumerationKey' : '\n'.join(enumInterpreters),   \
                    'constants'               : constants,                     \

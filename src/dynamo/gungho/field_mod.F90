@@ -96,6 +96,12 @@ module field_mod
 
     private
 
+    !> An unused allocatable integer that prevents an intenal compiler error
+    !> with the Gnu Fortran compiler. Adding an allocatable forces the compiler
+    !> to accept that the object has a finaliser. It gets confused without it.
+    !> This is a workaround for GCC bug id 61767 - when this bug is fixed, the
+    !> integer can be removed. 
+    integer(kind=i_def), allocatable :: dummy_for_gnu
     !> Each field has a pointer to the function space on which it lives
     type( function_space_type ), pointer, public :: vspace => null()
     !> Allocatable array of type real which holds the values of the field

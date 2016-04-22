@@ -58,7 +58,7 @@
             copy_{{label}}_to_target       => compile_with_{{label}}
             compile_with_{{label}}         => generate_{{label}}_cubedsphere
             compile_with_{{label}}         => generate_{{label}}_biperiodic
-{%-    if not TARGET_SKIP_UNIT_TESTS %}
+{%-    if compiler not in TARGET_SKIP_UNIT_TESTS %}
             compile_with_{{label}}         => unit_test_with_{{label}}
             unit_test_with_{{label}}       => clean_build_{{label}}
 {%-    else %}

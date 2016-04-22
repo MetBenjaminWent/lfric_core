@@ -24,18 +24,7 @@ module linked_list_data_mod
     procedure, public :: set_id
   end type linked_list_data_type
 
-  interface data_item
-     module procedure linked_list_data_constructor
-  end interface data_item
-
 contains
-
-type(linked_list_data_type) function linked_list_data_constructor(id)
-
-   integer(i_def), intent(in)           :: id
-   linked_list_data_constructor%id = id
-
-end function linked_list_data_constructor
 
 function get_id(self) result(id)
 
