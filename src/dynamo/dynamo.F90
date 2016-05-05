@@ -30,13 +30,14 @@ program dynamo
                                              read_state_netcdf
   use field_mod,                      only : field_type
   use finite_element_config_mod,      only : element_order
-  use formulation_config_mod,         only : nonlinear
+  use formulation_config_mod,         only : nonlinear, transport_only
   use function_space_collection_mod,  only : function_space_collection_type, &
                                              function_space_collection
   use fs_continuity_mod,              only : W0, W1, W2, W3, Wtheta, W2V, W2H
   use init_prognostic_fields_alg_mod, only : init_prognostic_fields_alg
   use iter_timestep_alg_mod,          only : iter_timestep_alg
   use lin_rk_alg_timestep_mod,        only : lin_rk_alg_timestep
+  use rk_transport_mod,               only : rk_transport
   use log_mod,                        only : log_event,         &
                                              log_set_level,     &
                                              log_scratch_space, &
@@ -125,33 +126,42 @@ program dynamo
   call init_prognostic_fields_alg( mesh, chi, u, rho, theta, xi, restart)
 
   ! Run timestepping algorithms
-  if ( nonlinear ) then    ! Nonlinear timestepping options
+  if ( transport_only ) then
 
-    select case( method )
-      case( timestepping_method_semi_implicit )  ! Semi-Implicit 
-        call iter_timestep_alg( mesh, chi, u, rho, theta, xi, restart)
-      case( timestepping_method_rk )             ! RK
-        call runge_kutta_init()
-        call rk_alg_timestep( mesh, chi, u, rho, theta, xi, restart)
-      case default
-        call log_event("Dynamo: Incorrect time stepping option chosen, "// &
-                       "stopping program! ",LOG_LEVEL_ERROR)
-        stop
-    end select
+    call runge_kutta_init()
+    call rk_transport( mesh, chi, u, rho, restart)
 
-  else                       ! Linear timestepping options
+  else
 
-    select case( method )
-      case( timestepping_method_rk )        ! RK 
-        call runge_kutta_init()
-        call lin_rk_alg_timestep( mesh, chi, u, rho, theta, restart)
-      case default
-        call log_event("Dynamo: Only RK available for linear equations. ", &
-                        LOG_LEVEL_INFO )
-        call log_event("Dynamo: Incorrect time stepping option chosen, "// &
-                       "stopping program! ",LOG_LEVEL_ERROR)
-        stop
-    end select
+    if ( nonlinear ) then    ! Nonlinear timestepping options
+
+      select case( method )
+        case( timestepping_method_semi_implicit )  ! Semi-Implicit 
+          call iter_timestep_alg( mesh, chi, u, rho, theta, xi, restart)
+        case( timestepping_method_rk )             ! RK
+          call runge_kutta_init()
+          call rk_alg_timestep( mesh, chi, u, rho, theta, xi, restart)
+        case default
+          call log_event("Dynamo: Incorrect time stepping option chosen, "// &
+                         "stopping program! ",LOG_LEVEL_ERROR)
+          stop
+      end select
+
+    else                       ! Linear timestepping options
+
+      select case( method )
+        case( timestepping_method_rk )        ! RK 
+          call runge_kutta_init()
+          call lin_rk_alg_timestep( mesh, chi, u, rho, theta, restart)
+        case default
+          call log_event("Dynamo: Only RK available for linear equations. ", &
+                          LOG_LEVEL_INFO )
+          call log_event("Dynamo: Incorrect time stepping option chosen, "// &
+                         "stopping program! ",LOG_LEVEL_ERROR)
+          stop
+      end select
+
+    end if
 
   end if
 

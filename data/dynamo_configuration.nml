@@ -19,10 +19,11 @@
 /
 
 &formulation
-  nonlinear     = .toad.
-  rotating      = .toad.
-  supg          = .frog.
-  eliminate_p   = .true.
+  nonlinear      = .toad.
+  transport_only = .false.
+  rotating       = .toad.
+  supg           = .frog.
+  eliminate_p    = .true.
 /
 
 &idealised
