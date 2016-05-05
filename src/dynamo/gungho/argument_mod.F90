@@ -30,6 +30,8 @@ module argument_mod
 ! argument types
   integer, public, parameter :: GH_FIELD    = 1 
   integer, public, parameter :: GH_OPERATOR = 2
+  integer, public, parameter :: GH_REAL     = 3
+  integer, public, parameter :: GH_INTEGER  = 4
 
 ! access descriptors
   integer, public, parameter :: GH_READ  = 11
@@ -63,9 +65,9 @@ module argument_mod
   integer, public, parameter :: ALL_DOFS  = 402
 
   type, public :: arg_type
-     integer :: arg_type         ! {GH_FIELD, GH_OPERATOR}
+     integer :: arg_type         ! {GH_FIELD, GH_OPERATOR, GH_REAL, GH_INTEGER}
      integer :: arg_intent       ! {GH_READ, GH_WRITE, GH_RW, GH_INC, GH_SUM, GH_MIN, GH_MAX}
-     integer :: wspace           ! {W0, W1, W2, W3, ANY_SPACE_[0-9]+}
+     integer :: wspace      = -1 ! {W0, W1, W2, W3, ANY_SPACE_[0-9]+}
      integer :: from_wspace = -1 ! { " } only required for gh_operator
   end type arg_type
 
