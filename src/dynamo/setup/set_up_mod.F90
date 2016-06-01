@@ -26,13 +26,16 @@ module set_up_mod
                                         extrusion_method_quadratic, &
                                         extrusion_method_geometric, &
                                         extrusion_method_dcmip
-  use finite_element_config_mod, only : finite_element_shape_triangle, &
+  use finite_element_config_mod, only : shape,                         &
+                                        finite_element_shape_triangle, &
                                         finite_element_shape_quadrilateral
   use global_mesh_mod,           only : global_mesh_type
   use reference_element_mod,     only : reference_cube, reference_element, &
                                         nfaces, nedges, nverts
   use mesh_mod,                  only : mesh_type
-  use log_mod,                   only : log_event, LOG_LEVEL_INFO
+  use log_mod,                   only : log_event,      &
+                                        LOG_LEVEL_INFO, &
+                                        LOG_LEVEL_ERROR
   use partition_mod,             only : partition_type,                   &
                                         partitioner_interface,            &
                                         partitioner_cubedsphere_serial,   &
@@ -88,10 +91,12 @@ contains
 
     call log_event( "set_up: Generating/reading the mesh", LOG_LEVEL_INFO )
 
+    reference_element = shape
+
     ! Currently only quad elements are fully functional
     if ( reference_element /= finite_element_shape_quadrilateral ) then
       call log_event( "set_up: Reference_element must be QUAD for now...", &
-                      LOG_LEVEL_INFO )
+                      LOG_LEVEL_ERROR )
     end if
     ! Setup reference cube
     call reference_cube()
