@@ -30,6 +30,8 @@ else ifeq '$(FORTRAN_COMPILER)' 'xlf'
   PFUNIT_COMPILER_ID = XL
 else ifeq '$(FORTRAN_COMPILER)' 'crayftn'
   PFUNIT_COMPILER_ID = CRAY
+else ifeq '$(FORTRAN_COMPILER)' 'pgfortran'
+  PFUNIT_COMPILER_ID = PGI
 else
   $(error Unrecognised compiler "$(FORTRAN_COMPILER)")
 endif

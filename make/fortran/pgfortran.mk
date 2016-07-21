@@ -5,4 +5,9 @@
 # https://puma.nerc.ac.uk/trac/GungHo/wiki
 ##############################################################################
 
-F_MOD_DESTINATION_ARG     = -module$(SPACE)
+PGFORTRAN_VERSION := $(shell pgfortran --version \
+                             | awk -F "[. -]" '/[0-9]+\.[0-9]+-[0-9]+/ { printf "%03i%03i%03i", $$(2), $$(3), $$(4) }' )
+
+$(info ** Portland Fortran version $(PGFORTRAN_VERSION))
+
+F_MOD_DESTINATION_ARG = -module$(SPACE)

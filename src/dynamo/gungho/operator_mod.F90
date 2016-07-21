@@ -95,7 +95,7 @@ module operator_mod
 !------------------------------------------------------------------------------
 
 contains
-  
+
 
   !> Construct an <code>operator_type</code> object.
   !>
@@ -105,8 +105,8 @@ contains
   !>
   function operator_constructor( fs_to,fs_from ) result(self)
 
-    type(function_space_type), target, intent(in) :: fs_to
-    type(function_space_type), target, intent(in) :: fs_from
+    class(function_space_type), target, intent(in) :: fs_to
+    class(function_space_type), target, intent(in) :: fs_from
 
 
     type(operator_type), target :: self
@@ -117,7 +117,7 @@ contains
     self%ncell_3d = fs_from%get_ncell() * fs_from%get_nlayers()
     ! allocate the array in memory
     allocate(self%local_stencil( fs_to%get_ndf(),fs_from%get_ndf(), self%ncell_3d ) )
-    
+
   end function operator_constructor
 
   !---------------------------------------------------------------------------

@@ -58,9 +58,9 @@
             copy_{{label}}_to_target       => compile_with_{{label}}
             compile_with_{{label}}         => generate_{{label}}_cubedsphere
             compile_with_{{label}}         => generate_{{label}}_biperiodic
-{%-    if compiler in TARGET_PERFORM_UNIT_TESTS %}
+{%-     if compiler in TARGET_PERFORM_UNIT_TESTS %}
             compile_with_{{label}}         => unit_test_with_{{label}}
-{%-    endif %}
+{%-     endif %}
 {%-    if compiler in TARGET_PERFORM_FUNCTIONAL_TESTS %}
             compile_with_{{label}}         => functional_test_with_{{label}}
 {%-    endif %}
@@ -69,17 +69,19 @@
             generate_{{label}}_cubedsphere => check_{{label}}_cubedsphere_data
             generate_{{label}}_biperiodic  => check_{{label}}_biperiodic_metadata
             generate_{{label}}_biperiodic  => check_{{label}}_biperiodic_data
-{%-    endif %}
-            compile_with_{{label}} => run_{{label}}_boundary_test
-            run_{{label}}_boundary_test => check_{{label}}_boundary_test
-{%-    for config in science_configs %}
-{#-       At the point where we have more than one compiler or target we will #}
-{#-       need some logic here.                                               #}
-{%-       set config_label = config | lower + '_' + label %}
-                compile_with_{{label}}    => run_{{config_label}}_dynamo
-{%-       if compiler in TARGET_PERFORM_KGO_TESTS %}
+{%-     endif %}
+{%-     for config in science_configs %}
+{#-         At the point where we have more than one compiler or target we  #}
+{#-         will need some logic here.                                      #}
+{%-         set config_label = config | lower + '_' + label %}
+{%-         if compiler in TARGET_PERFORM_RUN %}
+                compile_with_{{label}} => run_{{config_label}}_dynamo
+                compile_with_{{label}} => run_{{label}}_boundary_test
+{%-             if compiler in TARGET_PERFORM_KGO_TESTS %}
                 run_{{config_label}}_dynamo => check_{{config_label}}_dynamo
-{%-       endif %}
+                run_{{label}}_boundary_test => check_{{label}}_boundary_test
+{%-             endif %}
+{%-         endif %}
 {%-     endfor %}
 {%-   endfor %}
 {%- endfor %}

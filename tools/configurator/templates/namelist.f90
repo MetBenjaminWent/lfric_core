@@ -47,7 +47,13 @@ module {{listname}}_config_mod
 {%- if enumerations %}
 {{-'\n'}}
 {%-   for enumeration, pairs in enumerations | dictsort %}
-  character(str_short), parameter :: {{enumeration}}_key({{pairs | length()}}) = [character(len=str_short) :: '{{ pairs | join( "', '", attribute='key' )}}']
+  character(str_short), parameter :: {{enumeration}}_key({{pairs | length()}}) &
+{%      set indent = '          = [character(len=str_short) :: ' %}
+{%-       for pair in pairs %}
+{%-         if not loop.first %}, &{{'\n'}}{% endif %}
+{{- indent }}'{{ pair.key }}'
+{%-       set indent = ' ' * indent | length() %}
+{%-     endfor %}]
 {%-   endfor %}
 {%- endif %}
 

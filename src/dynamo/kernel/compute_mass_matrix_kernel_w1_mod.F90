@@ -8,12 +8,10 @@
 !-------------------------------------------------------------------------------
 
 !> @brief Provides access to the members of the w1_kernel class.
-
-!> @details Accessor functions for the w1_kernel class are defined in this module.
-
-!> @param RHS_w1_code              Code to implement the RHS for a w1 field
-!> @param gaussian_quadrature      Contains result of gaussian quadrature
-
+!>
+!> @details Accessor functions for the w1_kernel class are defined in this
+!>          module.
+!
 module compute_mass_matrix_kernel_w1_mod
 use constants_mod,           only: r_def
 use kernel_mod,              only: kernel_type
@@ -62,7 +60,8 @@ end interface
 public compute_mass_matrix_w1_code
 contains
 
-type(compute_mass_matrix_kernel_w1_type) function compute_mass_matrix_constructor() result(self)
+type(compute_mass_matrix_kernel_w1_type) &
+                        function compute_mass_matrix_constructor() result(self)
   return
 end function compute_mass_matrix_constructor
 
@@ -71,12 +70,14 @@ end function compute_mass_matrix_constructor
 !! @param[in] nlayers Integer: The number of layers.
 !! @param[in] ndf_w1 Integer: The number of degrees of freedom per cell.
 !! @param[in] ncell_3d Integer: ncell*ndf
-!! @param[in] basis_w1 Real: 4-dim array holding VECTOR basis functions evaluated at quadrature points.
+!! @param[in] basis_w1 VECTOR basis functions evaluated at quadrature points.
 !! @param[in] mm Real array, the local stencil or mass matrix
-!! @param[in] ndf_chi Integer: number of degrees of freedum per cell for chi field
-!! @param[in] undf_chi Integer: number of unique degrees of freedum  for chi field
-!! @param[in] map_chi Integer: Array holding the dofmap for the cell at the base of the column, for the space on which the chi field lives
-!! @param[in] diff_basis_chi Real: 4-dim array holding VECTOR differential basis functions evaluated at quadrature points.
+!! @param[in] ndf_chi number of degrees of freedum per cell for chi field
+!! @param[in] undf_chi number of unique degrees of freedum  for chi field
+!! @param[in] map_chi DoFmap for the cell at the base of the column, for the
+!!                    space on which the chi field lives
+!! @param[in] diff_basis_chi VECTOR differential basis functions evaluated at
+!!                           quadrature points.
 !! @param[inout] chi1 Real: The data array for chi in the first dir
 !! @param[inout] chi2 Real: The data array for chi in the 2nd dir
 !! @param[inout] chi3 Real: The data array for chi in the 3rd dir
@@ -100,14 +101,14 @@ subroutine compute_mass_matrix_w1_code(cell, nlayers, ncell_3d,          &
   integer,   intent(in)     :: ndf_chi
   integer,   intent(in)     :: undf_chi
   integer, dimension(ndf_chi), intent(in) :: map_chi
-  real(kind=r_def), dimension(ndf_w1,ndf_w1,ncell_3d),  intent(inout)  :: mm
-  real(kind=r_def), dimension(3,ndf_chi,nqp_h,nqp_v), intent(in) :: diff_basis_chi
-  real(kind=r_def), dimension(3,ndf_w1,nqp_h,nqp_v), intent(in)     :: basis_w1
-  real(kind=r_def), dimension(undf_chi), intent(inout) :: chi1
-  real(kind=r_def), dimension(undf_chi), intent(inout) :: chi2
-  real(kind=r_def), dimension(undf_chi), intent(inout) :: chi3
-  real(kind=r_def), dimension(nqp_h),    intent(in)    :: wqp_h
-  real(kind=r_def), dimension(nqp_v),    intent(in)    :: wqp_v
+  real(kind=r_def), intent(inout) :: mm(ndf_w1,ndf_w1,ncell_3d)
+  real(kind=r_def), intent(in)    :: diff_basis_chi(3,ndf_chi,nqp_h,nqp_v)
+  real(kind=r_def), intent(in)    :: basis_w1(3,ndf_w1,nqp_h,nqp_v)
+  real(kind=r_def), intent(inout) :: chi1(undf_chi)
+  real(kind=r_def), intent(inout) :: chi2(undf_chi)
+  real(kind=r_def), intent(inout) :: chi3(undf_chi)
+  real(kind=r_def), intent(in)    :: wqp_h(nqp_h)
+  real(kind=r_def), intent(in)    :: wqp_v(nqp_v)
 
   !Internal variables
   integer                                      :: df, df2, k, ik
@@ -132,13 +133,13 @@ subroutine compute_mass_matrix_w1_code(cell, nlayers, ncell_3d,          &
 
     call coordinate_jacobian(ndf_chi, nqp_h, nqp_v, chi1_e, chi2_e, chi3_e,  &
                              diff_basis_chi, jac, dj)
-    call coordinate_jacobian_inverse(nqp_h, nqp_v, jac, dj, jac_inv)  
+    call coordinate_jacobian_inverse(nqp_h, nqp_v, jac, dj, jac_inv)
     do df2 = 1, ndf_w1
        do df = df2, ndf_w1 ! mass matrix is symmetric
           mm(df,df2,ik) = 0.0_r_def
           do qp2 = 1, nqp_v
              do qp1 = 1, nqp_h
-                integrand = wqp_h(qp1) * wqp_v(qp2) *                         & 
+                integrand = wqp_h(qp1) * wqp_v(qp2) *                         &
                      dot_product(                                             &
                      matmul(transpose(jac_inv(:,:,qp1,qp2)),                  &
                             basis_w1(:,df,qp1,qp2)),                          &
@@ -149,7 +150,7 @@ subroutine compute_mass_matrix_w1_code(cell, nlayers, ncell_3d,          &
              end do
           end do
        end do
-       do df = df2, 1, -1  
+       do df = df2, 1, -1
           mm(df,df2,ik) = mm(df2,df,ik)
        end do
     end do

@@ -71,7 +71,10 @@ module test_config_mod
 
   logical :: namelist_loaded = .false.
 
-  character(str_short), parameter :: enum_key(3) = [character(len=str_short) :: 'one', 'two', 'three']
+  character(str_short), parameter :: enum_key(3) &
+          = [character(len=str_short) :: 'one', &
+                                         'two', &
+                                         'three']
 
 contains
 
@@ -447,7 +450,10 @@ module enum_config_mod
 
   logical :: namelist_loaded = .false.
 
-  character(str_short), parameter :: value_key(3) = [character(len=str_short) :: 'one', 'two', 'three']
+  character(str_short), parameter :: value_key(3) &
+          = [character(len=str_short) :: 'one', &
+                                         'two', &
+                                         'three']
 
 contains
 

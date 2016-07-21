@@ -55,7 +55,8 @@ end interface
 public compute_curl_operator_code
 contains
 
-type(compute_curl_operator_kernel_type) function compute_curl_operator_constructor() result(self)
+type(compute_curl_operator_kernel_type) &
+                      function compute_curl_operator_constructor() result(self)
   return
 end function compute_curl_operator_constructor
 
@@ -64,14 +65,21 @@ end function compute_curl_operator_constructor
 !! @param[in] nlayers Integer: The number of layers.
 !! @param[in] ncell_3d Integer: ncell*ndf
 !! @param[in] ndf_w2 Integer: The number of degrees of freedom per cell.
-!! @param[in] basis_w2 Real: 4-dim array holding VECTOR basis functions evaluated at quadrature points.
+!! @param[in] basis_w2 Real: 4-dim array holding VECTOR basis functions
+!!                    evaluated at quadrature points.
 !! @param[in] ndf_w1 Integer: The number of degrees of freedom per cell.
-!! @param[in] diff_basis_w1 Real: 4-dim array holding differential VECTOR basis functions evaluated at quadrature points.
+!! @param[in] diff_basis_w1 Real: 4-dim array holding differential VECTOR basis
+!!                    functions evaluated at quadrature points.
 !! @param[in] curl real array, the local stencil of the curl operator
-!! @param[in] ndf_chi Integer: number of degrees of freedom per cell for chi field
-!! @param[in] undf_chi Integer: number of unique degrees of freedom  for chi field
-!! @param[in] map_chi Integer: Array holding the dofmap for the cell at the base of the column, for the space on which the chi field lives
-!! @param[in] diff_basis_chi Real: 4-dim array holding VECTOR differential basis functions evaluated at quadrature points.
+!! @param[in] ndf_chi Integer: number of degrees of freedom per cell for chi
+!!                    field
+!! @param[in] undf_chi Integer: number of unique degrees of freedom  for chi
+!!                    field
+!! @param[in] map_chi Integer: Array holding the dofmap for the cell at the
+!!                    base of the column, for the space on which the chi field
+!!                    lives
+!! @param[in] diff_basis_chi Real: 4-dim array holding VECTOR differential
+!!                    basis functions evaluated at quadrature points.
 !! @param[inout] chi1 Real: The data array for chi in the first dir
 !! @param[inout] chi2 Real: The data array for chi in the 2nd dir
 !! @param[inout] chi3 Real: The data array for chi in the 3rd dir
@@ -97,9 +105,9 @@ subroutine compute_curl_operator_code(cell, nlayers, ncell_3d,          &
   integer,                     intent(in) :: ndf_chi, undf_chi
   integer, dimension(ndf_chi), intent(in) :: map_chi
 
-  real(kind=r_def), dimension(3,ndf_chi,nqp_h,nqp_v),  intent(in) :: diff_basis_chi
-  real(kind=r_def), dimension(3,ndf_w2, nqp_h,nqp_v),  intent(in) :: basis_w2
-  real(kind=r_def), dimension(3,ndf_w1, nqp_h,nqp_v),  intent(in) :: diff_basis_w1
+  real(kind=r_def), intent(in) :: diff_basis_chi(3,ndf_chi,nqp_h,nqp_v)
+  real(kind=r_def), intent(in) :: basis_w2(3,ndf_w2, nqp_h,nqp_v)
+  real(kind=r_def), intent(in) :: diff_basis_w1(3,ndf_w1, nqp_h,nqp_v)
 
   real(kind=r_def), dimension(ndf_w2,ndf_w1,ncell_3d), intent(inout) :: curl
   real(kind=r_def), dimension(undf_chi),               intent(in)    :: chi1

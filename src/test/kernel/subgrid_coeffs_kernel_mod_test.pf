@@ -84,6 +84,7 @@ contains
     implicit none
 
     type(rho_parameter_type) :: parameters(11)
+
     parameters &
      = [ rho_parameter_type( subgrid_rho_approximation_constant_subgrid,      &
                  (/ 3.0_r_def, 2.0_r_def, 4.0_r_def, 1.0_r_def, 5.0_r_def /), &
@@ -147,7 +148,8 @@ contains
     integer(i_def), parameter :: cell    = 1
     integer(i_def), parameter :: undf_w3 = 5
     integer(i_def), parameter :: ndf_w3  = 1
-    integer(i_def), parameter :: dof_map(1,1:5) = (/1, 2, 3, 4, 5/)
+    integer(i_def), parameter :: dof_map(1,1:5) = reshape( (/1, 2, 3, 4, 5/), &
+                                                           (/1, 5/) )
 
     real(kind=r_def) :: a0(1:5)
     real(kind=r_def) :: a1(1:5)

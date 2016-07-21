@@ -75,9 +75,11 @@ contains
   subroutine calc_dep_point_test()
 
     use pFUnit_Mod
-    use constants_mod, only: r_def
-    use biperiodic_deppts_mod, only: calc_dep_point
-    use biperiodic_deppt_config_mod, only: biperiodic_deppt_method_euler, biperiodic_deppt_method_midpoint, biperiodic_deppt_method_trapezoidal
+    use constants_mod,               only: r_def
+    use biperiodic_deppts_mod,       only: calc_dep_point
+    use biperiodic_deppt_config_mod, only: biperiodic_deppt_method_euler,    &
+                                           biperiodic_deppt_method_midpoint, &
+                                           biperiodic_deppt_method_trapezoidal
 
     implicit none
 

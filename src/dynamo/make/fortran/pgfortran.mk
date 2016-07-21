@@ -8,9 +8,17 @@
 #
 $(info ** Chosen Portland Fortran compiler)
 
+ifdef PGFORTRAN_VERSION
+  ifeq ($(shell test $(PGFORTRAN_VERSION) -lt 015007000; echo $$?), 0)
+    $(error PGFortran is too old. Must be at least 15.7)
+  endif
+endif
+
 FFLAGS_COMPILER           = -mp
 FFLAGS_NO_OPTIMISATION    = -O0
 FFLAGS_SAFE_OPTIMISATION  = -O2
 FFLAGS_RISKY_OPTIMISATION = -O4
 FFLAGS_DEBUG              = -g -traceback
 FFLAGS_RUNTIME            = -Mbounds -Mchkptr -Mchkstk
+
+LDFLAGS_COMPILER = -g

@@ -8,14 +8,13 @@
 !-------------------------------------------------------------------------------
 
 !> @brief Provides access to the members of the w2_kernel class.
-
-!> @details Accessor functions for the w2_kernel class are defined in this module.
-
-!> @param RHS_w2_code              Code to implement the RHS for a w2 field
-!> @param gaussian_quadrature      Contains result of gaussian quadrature
-
+!>
+!> @detail Accessor functions for the w2_kernel class are defined in this
+!>         module.
+!
 module compute_mass_matrix_kernel_w2_mod
-use constants_mod,           only: r_def
+
+use constants_mod,           only: i_def, r_def
 use kernel_mod,              only: kernel_type
 use argument_mod,            only: arg_type, func_type,             &
                                    GH_OPERATOR, GH_FIELD,           &
@@ -61,28 +60,32 @@ end interface
 public compute_mass_matrix_w2_code
 contains
 
-type(compute_mass_matrix_kernel_w2_type) function compute_mass_matrix_constructor() result(self)
+type(compute_mass_matrix_kernel_w2_type) &
+                        function compute_mass_matrix_constructor() result(self)
   return
 end function compute_mass_matrix_constructor
 
-!> @brief This subroutine computes the mass matrix for the w2 space
-!! @param[in] cell Integer: The cell number
-!! @param[in] nlayers Integer: The number of layers.
-!! @param[in] ndf Integer: The number of degrees of freedom per cell.
-!! @param[in] ncell_3d Integer: ncell*ndf
-!! @param[in] basis Real: 4-dim array holding VECTOR basis functions evaluated at quadrature points.
-!! @param[in] mm Real array, the local stencil or mass matrix
-!! @param[in] ndf_chi Integer: number of degrees of freedum per cell for chi field
-!! @param[in] undf_chi Integer: number of unique degrees of freedum  for chi field
-!! @param[in] map_chi Integer: Array holding the dofmap for the cell at the base of the column, for the space on which the chi field lives
-!! @param[in] diff_basis_chi Real: 4-dim array holding VECTOR differential basis functions evaluated at quadrature points.
-!! @param[inout] chi1 Real: The data array for chi in the first dir
-!! @param[inout] chi2 Real: The data array for chi in the 2nd dir
-!! @param[inout] chi3 Real: The data array for chi in the 3rd dir
-!! @param[in] nqp_h Integer number of horizontal quadrature points
-!! @param[in] nqp_v Integer number of vertical quadrature points
-!! @param[in] wqp_h Real array. Quadrature weights horizontal
-!! @param[in] wqp_v Real array. Quadrature weights vertical
+!> @brief Computes the mass matrix for the w2 space.
+!!
+!! @param[in] cell     Identifying number of cell.
+!! @param[in] nlayers  Number of layers.
+!! @param[in] ndf      Degrees of freedom per cell.
+!! @param[in] ncell_3d ncell*ndf
+!! @param[in] basis    VECTOR basis functions evaluated at quadrature points.
+!! @param[in] mm       Local stencil or mass matrix.
+!! @param[in] ndf_chi  Degrees of freedum per cell for chi field.
+!! @param[in] undf_chi Unique degrees of freedum  for chi field.
+!! @param[in] map_chi  DoFmap for the cell at the base of the column, for the
+!!                     space on which the chi field lives
+!! @param[in] diff_basis_chi VECTOR differential basis functions evaluated at
+!!                           quadrature points.
+!! @param[inout] chi1  Chi data in the 1st dir.
+!! @param[inout] chi2  Chi data in the 2nd dir.
+!! @param[inout] chi3  Chi data in the 3rd dir.
+!! @param[in] nqp_h    Horizontal quadrature points.
+!! @param[in] nqp_v    Vertical quadrature points.
+!! @param[in] wqp_h    Quadrature weights horizontal.
+!! @param[in] wqp_v    Quadrature weights vertical.
 
 subroutine compute_mass_matrix_w2_code(cell, nlayers, ncell_3d,     &
                                        mm,                          &
@@ -100,14 +103,14 @@ subroutine compute_mass_matrix_w2_code(cell, nlayers, ncell_3d,     &
   real(kind=r_def), dimension(3,ndf_w2,nqp_h,nqp_v), intent(in) :: basis_w2
   integer,   intent(in)     :: ndf_chi
   integer,   intent(in)     :: undf_chi
-  integer, dimension(ndf_chi), intent(in)     :: map_chi
-  real(kind=r_def), dimension(ndf_w2,ndf_w2,ncell_3d),  intent(inout)  :: mm
-  real(kind=r_def), dimension(3,ndf_chi,nqp_h,nqp_v), intent(in) :: diff_basis_chi
-  real(kind=r_def), dimension(undf_chi), intent(inout) :: chi1
-  real(kind=r_def), dimension(undf_chi), intent(inout) :: chi2
-  real(kind=r_def), dimension(undf_chi), intent(inout) :: chi3
-  real(kind=r_def), dimension(nqp_h),    intent(in)    :: wqp_h
-  real(kind=r_def), dimension(nqp_v),    intent(in)    :: wqp_v
+  integer(i_def), intent(in)    :: map_chi(ndf_chi)
+  real(r_def),    intent(inout) :: mm(ndf_w2,ndf_w2,ncell_3d)
+  real(r_def),    intent(in)    :: diff_basis_chi(3,ndf_chi,nqp_h,nqp_v)
+  real(r_def),    intent(inout) :: chi1(undf_chi)
+  real(r_def),    intent(inout) :: chi2(undf_chi)
+  real(r_def),    intent(inout) :: chi3(undf_chi)
+  real(r_def),    intent(in)    :: wqp_h(nqp_h)
+  real(r_def),    intent(in)    :: wqp_v(nqp_v)
 
   !Internal variables
   integer                                      :: df, df2, k, ik
@@ -145,7 +148,7 @@ subroutine compute_mass_matrix_w2_code(cell, nlayers, ncell_3d,     &
              end do
           end do
        end do
-       do df = df2, 1, -1  
+       do df = df2, 1, -1
           mm(df,df2,ik) = mm(df2,df,ik)
        end do
     end do

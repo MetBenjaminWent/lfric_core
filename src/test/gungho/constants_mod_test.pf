@@ -15,51 +15,6 @@ module constants_mod_test
 
 contains
 
-  !> Test to ensure that real type real32 is 32 bits
-  !>
-  @test
-  subroutine test_constants_real32( )
-    implicit none
-
-    real (kind=real32) :: val
-    
-    !> Need to cast the return value of storage_size to int to get around a problem 
-    !> in the gfortran compiler version 3.9 which does not return a default integer 
-
-    @assertEqual(int(storage_size(val)), 32)
-
-  end subroutine test_constants_real32
-
-  !> Test to ensure that real type real64 is 64 bits
-  !>
-  @test
-  subroutine test_constants_real64( )
-    implicit none
-
-    real (kind=real64) :: val
-    
-    !> Need to cast the return value of storage_size to int to get around a problem 
-    !> in the gfortran compiler version 3.9 which does not return a default integer 
-
-    @assertEqual(int(storage_size(val)), 64)
-
-  end subroutine test_constants_real64
-
-  !> Test to ensure that real type real128 is 128 bits
-  !>
-  @test
-  subroutine test_constants_real128( )
-    implicit none
-
-    real (kind=real128) :: val
-    
-    !> Need to cast the return value of storage_size to int to get around a problem 
-    !> in the gfortran compiler version 3.9 which does not return a default integer 
-
-    @assertEqual(int(storage_size(val)), 128)
-
-  end subroutine test_constants_real128
-
   !> Test to ensure that real type r_native is the same kind as a default real
   !>
   @test
@@ -69,70 +24,10 @@ contains
 
     real (kind=r_native) :: val_native
     real                 :: val_default
-    
+
     @assertEqual(kind(val_native), kind(val_default))
 
   end subroutine test_constants_r_native
-
-  !> Test to ensure that real type int8 is 8 bits
-  !>
-  @test
-  subroutine test_constants_int8( )
-    implicit none
-
-    integer (kind=int8) :: val
-    
-    !> Need to cast the return value of storage_size to int to get around a problem 
-    !> in the gfortran compiler version 3.9 which does not return a default integer 
-
-    @assertEqual(int(storage_size(val)), 8)
-
-  end subroutine test_constants_int8
-
-  !> Test to ensure that real type int16 is 16 bits
-  !>
-  @test
-  subroutine test_constants_int16( )
-    implicit none
-
-    integer (kind=int16) :: val
-    
-    !> Need to cast the return value of storage_size to int to get around a problem 
-    !> in the gfortran compiler version 3.9 which does not return a default integer 
-
-    @assertEqual(int(storage_size(val)), 16)
-
-  end subroutine test_constants_int16
-
-  !> Test to ensure that real type int32 is 32 bits
-  !>
-  @test
-  subroutine test_constants_int32( )
-    implicit none
-
-    integer (kind=int32) :: val
-    
-    !> Need to cast the return value of storage_size to int to get around a problem 
-    !> in the gfortran compiler version 3.9 which does not return a default integer 
-
-    @assertEqual(int(storage_size(val)), 32)
-
-  end subroutine test_constants_int32
-
-  !> Test to ensure that real type int64 is 64 bits
-  !>
-  @test
-  subroutine test_constants_int64( )
-    implicit none
-
-    integer (kind=int64) :: val
-    
-    !> Need to cast the return value of storage_size to int to get around a problem 
-    !> in the gfortran compiler version 3.9 which does not return a default integer 
-
-    @assertEqual(int(storage_size(val)), 64)
-
-  end subroutine test_constants_int64
 
   !> Test to ensure that integer type i_native is the same kind as a default integer
   !>
@@ -143,7 +38,7 @@ contains
 
     integer (kind=i_native) :: val_native
     integer                 :: val_default
-    
+
     @assertEqual(kind(val_native), kind(val_default))
 
   end subroutine test_constants_i_native
@@ -157,7 +52,7 @@ contains
 
     logical (kind=l_native) :: val_native
     logical                 :: val_default
-    
+
     @assertEqual(kind(val_native), kind(val_default))
 
   end subroutine test_constants_l_native
@@ -171,7 +66,7 @@ contains
 
     character (kind=c_native) :: val_native
     character                 :: val_default
-    
+
     @assertEqual(kind(val_native), kind(val_default))
 
   end subroutine test_constants_c_native

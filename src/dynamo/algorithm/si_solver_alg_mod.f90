@@ -7,6 +7,8 @@
 !>@brief Routines for solving the semi-implicit equation set
 module si_solver_alg_mod
 
+  use, intrinsic :: ieee_arithmetic
+
   use constants_mod,           only: r_def, str_def, i_def
   use field_bundle_mod,        only: clone_bundle, &
                                      set_bundle_scalar, &
@@ -42,7 +44,7 @@ module si_solver_alg_mod
   type(field_type), allocatable, private :: dx(:), Ax(:), residual(:), s(:), &
                                             w(:)
   type(field_type), allocatable, private :: v(:,:)
-  type(field_type), allocatable, private :: x0_ext(:), rhs0_ext(:)     
+  type(field_type), allocatable, private :: x0_ext(:), rhs0_ext(:)
 
 private
   public  :: si_solver_alg
@@ -63,7 +65,8 @@ contains
     implicit none
 
     type(field_type), intent(inout)          :: x0(bundle_size)
-    type(field_type), intent(in)             :: rhs0(bundle_size), x_ref(bundle_size)
+    type(field_type), intent(in)             :: rhs0(bundle_size), &
+                                                x_ref(bundle_size)
  
     real(kind=r_def)                         :: tau_dt ! tau_dt would eventually be set globally 
                                                        ! (probably the same place as alpha)
@@ -165,6 +168,7 @@ contains
 
   subroutine mixed_gmres_alg(x0, rhs0, x_ref, tau_dt)
     use psykal_lite_mod, only: invoke_inner_prod
+
     implicit none
 
     type(field_type),             intent(inout) :: x0(si_bundle_size)
@@ -303,9 +307,11 @@ contains
 
     end do
 
-    if( (iter >= MAX_GMRES_ITER .and. err >  tolerance) .or. isnan(err) ) then
+    if ((iter >= MAX_GMRES_ITER .and. err >  tolerance) &
+        .or. ieee_is_nan(err)) then
       write( log_scratch_space, '(A, I3, A, E15.8)') &
-           "GMRES solver_algorithm: NOT converged in", MAX_GMRES_ITER, " iters, Res=", err
+           "GMRES solver_algorithm: NOT converged in", MAX_GMRES_ITER, &
+           " iters, Res=", err
       call log_event( log_scratch_space, LOG_LEVEL_ERROR )
     end if
     ! Add increments to field

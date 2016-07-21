@@ -41,6 +41,8 @@ ifdef PE_ENV
         FORTRAN_COMPILER = ifort
     else ifeq '$(PE_ENV)' 'GNU'
         FORTRAN_COMPILER = gfortran
+    else ifeq '$(PE_ENV)' 'PGI'
+        FORTRAN_COMPILER = pgfortran
     else
         $(error Unrecognised Cray programming environment)
     endif

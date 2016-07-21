@@ -40,7 +40,7 @@ generate-psykal: $(PSY_AUTO_FILES) $(PSY_MANUAL_FILES) $(PSY_ALGORITHM_FILES)
 $(PSY_AUTO_ALGORITHM_PATH)/%.f90: $(PSY_ALGORITHM_PATH)/%.x90 \
                                   | $(PSY_AUTO_ALGORITHM_PATH)
 	@echo -e $(VT_BOLD)Overridden PSyclone$(VT_RESET) $<
-	$(PSYCLONE) -api dynamo0.3 -d $(PSY_KERNEL_PATH) \
+	$(PSYCLONE) -api dynamo0.3 -l -d $(PSY_KERNEL_PATH) \
 	            -oalg $@ \
 	            $<
 
@@ -49,7 +49,7 @@ $(PSY_AUTO_PSY_PATH)/psy_%.f90: $(PSY_ALGORITHM_PATH)/%.x90  \
                                 | $(PSY_AUTO_PSY_PATH)       \
                                   $(PSY_AUTO_ALGORITHM_PATH)
 	@echo -e $(VT_BOLD)Full PSyclone, local optimisations$(VT_RESET) $<
-	$(PSYCLONE) -api dynamo0.3 -d $(PSY_KERNEL_PATH)                     \
+	$(PSYCLONE) -api dynamo0.3 -l -d $(PSY_KERNEL_PATH)                     \
 	            -s $(PSY_OPTIMISATION_PATH)/$(DYNAMO_BUILD_TARGET)/$*.py \
 	            -opsy $@                                                 \
 	            -oalg $(patsubst $(PSY_ALGORITHM_PATH)/%.x90, \
@@ -61,7 +61,7 @@ $(PSY_AUTO_PSY_PATH)/psy_%.f90: $(PSY_ALGORITHM_PATH)/%.x90  \
                                 | $(PSY_AUTO_PSY_PATH)       \
                                   $(PSY_AUTO_ALGORITHM_PATH)
 	@echo -e $(VT_BOLD)Full PSyclone, global optimisations$(VT_RESET) $<
-	$(PSYCLONE) -api dynamo0.3 -d $(PSY_KERNEL_PATH)                      \
+	$(PSYCLONE) -api dynamo0.3 -l -d $(PSY_KERNEL_PATH)                      \
 	         -s $(PSY_OPTIMISATION_PATH)/$(DYNAMO_BUILD_TARGET)/global.py \
 	            -opsy $@                                                  \
 	            -oalg $(patsubst $(PSY_ALGORITHM_PATH)/%.x90, \
@@ -72,7 +72,7 @@ $(PSY_AUTO_PSY_PATH)/psy_%.f90: $(PSY_ALGORITHM_PATH)/%.x90 \
                                 | $(PSY_AUTO_PSY_PATH)      \
                                   $(PSY_AUTO_ALGORITHM_PATH)
 	@echo -e $(VT_BOLD)Full PSyclone$(VT_RESET) $<
-	$(PSYCLONE) -api dynamo0.3 -d $(PSY_KERNEL_PATH) \
+	$(PSYCLONE) -api dynamo0.3 -l -d $(PSY_KERNEL_PATH) \
 	            -opsy $@ \
 	            -oalg $(patsubst $(PSY_ALGORITHM_PATH)/%.x90, \
 	                             $(PSY_AUTO_ALGORITHM_PATH)/%.f90, $< ) \
