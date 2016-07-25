@@ -27,7 +27,8 @@
 [cylc]
     UTC mode = True
     [[event hooks]]
-        timeout handler = "rose suite-hook --mail --shutdown"
+        mail events = timeout
+        abort on timeout = True
         timeout = 180 # 3 hours
 
 [scheduling]
@@ -95,15 +96,10 @@
                             export ROSE_VERSION={{ROSE_VERSION}}
                             """
         script     = "rose task-run"
-        [[[event hooks]]]
-            succeeded handler          = "rose suite-hook"
-            failed handler             = "rose suite-hook"
-            retry handler              = "rose suite-hook --mail"
-            submission failed handler  = "rose suite-hook --mail"
-            submission timeout         = 720 # 12 hours
-            submission timeout handler = "rose suite-hook --mail"
-            execution timeout          =  180 # 3 hours
-            execution timeout handler  = "rose suite-hook --mail"
+        [[[events]]]
+            mail events = retry, submission failed, submission timout, execution timeout
+            submission timeout = 720 # 12 hours
+            execution timeout  =  180 # 3 hours
         [[[environment]]]
             SOURCE_ROOT = $CYLC_SUITE_SHARE_DIR/source
             OUTPUT_ROOT = $CYLC_SUITE_SHARE_DIR/output
