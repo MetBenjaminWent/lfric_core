@@ -12,8 +12,9 @@
 
 module global_mesh_mod
 
-use constants_mod,        only: r_def, i_def, str_max_filename
-use linked_list_data_mod, only: linked_list_data_type
+use constants_mod,                  only: r_def, i_def, str_max_filename
+use linked_list_data_mod,           only: linked_list_data_type
+use global_mesh_map_collection_mod, only: global_mesh_map_collection_type
 
 implicit none
 
@@ -50,6 +51,8 @@ type, extends(linked_list_data_type), public :: global_mesh_type
   integer              :: nedges_per_cell
 !> maximum number of cells around a vertex
   integer              :: max_cells_per_vertex
+!> Collection of global mesh maps in global cell ids
+  type(global_mesh_map_collection_type) :: global_mesh_maps
 
 !-------------------------------------------------------------------------------
 ! Contained functions/subroutines
@@ -137,6 +140,16 @@ contains
   !> @return The global cell id that the edge has been allocated to
   procedure, public :: get_edge_cell_owner
 
+  !> Gets a pointer to this objects global mesh map collection
+  !> @return global_mesh_maps global_mesh_map_collection_type <pointer>
+  procedure, public :: get_global_mesh_maps
+ 
+  !> Manually clear all allocatable arrays and items from
+  !> mesh maps collection.
+  procedure, public :: clear
+
+  final :: global_mesh_destructor
+
 end type global_mesh_type
 
 interface global_mesh_type
@@ -213,7 +226,6 @@ call self%set_id(global_mesh_id_counter)
 self%nverts = nvert_in
 self%nedges = nedge_in
 self%ncells = nface_in
-
 self%nverts_per_cell      = num_nodes_per_face
 self%nedges_per_cell      = num_edges_per_face
 self%max_cells_per_vertex = max_num_faces_per_node
@@ -239,7 +251,8 @@ call calc_cell_on_vertex( self%vert_on_cell_2d, &
                           nvert_in)
 
 ! Populate cells either side of each edge
-allocate( self%cell_on_edge_2d(2,nedge_in) )  ! There can only ever be 2 cells incident on an edge (whatever the topography!)
+! There can only ever be 2 cells incident on an edge (whatever the topography!)
+allocate( self%cell_on_edge_2d(2,nedge_in) )  
 call calc_cell_on_edge( self%edge_on_cell_2d, &
                         num_edges_per_face, &
                         nface_in, &
@@ -259,6 +272,10 @@ allocate( self%edge_cell_owner(nedge_in) )
 do ientity=1,nedge_in
   self%edge_cell_owner(ientity)=maxval( self%cell_on_edge_2d(:,ientity) )
 end do
+
+! Initialise values in this objects global mesh maps collection
+self%global_mesh_maps = global_mesh_map_collection_type                        &
+                                         ( global_mesh_id_counter, self%ncells )
 
 end function global_mesh_constructor
 
@@ -599,6 +616,19 @@ function get_edge_cell_owner ( self, edge ) result ( cell )
 end function get_edge_cell_owner
 
 
+function get_global_mesh_maps(self) result(global_mesh_maps)
+
+  implicit none
+
+  class(global_mesh_type), target :: self
+  type(global_mesh_map_collection_type), pointer :: global_mesh_maps
+
+  global_mesh_maps => self%global_mesh_maps
+
+  return
+end function get_global_mesh_maps
+
+
 !==============================================================================
 ! The following routines are only available when setting data for unit testing.
 !==============================================================================
@@ -736,5 +766,48 @@ function global_mesh_constructor_unit_test_data() result (self)
                              7, 8, 9, 7, 8, 9, 9, 7, 8, 9]
 
 end function global_mesh_constructor_unit_test_data
+
+
+!-----------------------------------------------------------------------------
+!  Function to clear up objects - called by destructor
+!-----------------------------------------------------------------------------
+!> @details Explcitly deallocates any allocatable arrays in the object
+!>          to avoid memory leaks
+subroutine clear(self)
+
+  implicit none
+
+  class (global_mesh_type), intent(inout) :: self
+
+  if (allocated(self%vert_coords))       deallocate( self%vert_coords     )
+  if (allocated(self%cell_next_2d))      deallocate( self%cell_next_2d    )
+  if (allocated(self%vert_on_cell_2d))   deallocate( self%vert_on_cell_2d )
+  if (allocated(self%cell_on_vert_2d))   deallocate( self%cell_on_vert_2d )
+  if (allocated(self%edge_on_cell_2d))   deallocate( self%edge_on_cell_2d )
+  if (allocated(self%cell_on_edge_2d))   deallocate( self%cell_on_edge_2d )
+  if (allocated(self%vert_cell_owner))   deallocate( self%vert_cell_owner )
+  if (allocated(self%edge_cell_owner))   deallocate( self%edge_cell_owner )
+
+  call self%global_mesh_maps%clear()
+  
+  return
+end subroutine clear
+
+!-----------------------------------------------------------------------------
+! Mesh destructor
+!-----------------------------------------------------------------------------
+
+subroutine global_mesh_destructor(self)
+
+  implicit none
+
+  type (global_mesh_type), intent(inout) :: self
+
+  call self%clear()
+
+end subroutine global_mesh_destructor
+
+
+
 
 end module global_mesh_mod

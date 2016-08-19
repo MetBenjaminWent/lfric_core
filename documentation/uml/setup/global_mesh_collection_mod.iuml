@@ -9,7 +9,7 @@ class global_mesh_collection_mod::global_mesh_collection_type {
   +add_new_global_mesh       ( <<in>>filename: character ) : global_mesh_id<<integer>>
   +add_unit_test_global_mesh () : mesh_id<<integer>>
 
-  +get_mesh( <<in>>global_mesh_id: integer ): global_mesh_type<<pointer>>
+  +get_global_mesh( <<in>>global_mesh_id: integer ): global_mesh_type<<pointer>>
 }
 
 

@@ -60,11 +60,15 @@ contains
   use constants_mod,         only : str_max_filename
   use reference_element_mod, only : reference_cube, deallocate_reference
   use global_mesh_mod,       only : global_mesh_type
+  use global_mesh_map_collection_mod, only : global_mesh_map_collection_type
+
   implicit none
 
   class( global_mesh_test_type ), intent( inout ) :: this
  
   type(global_mesh_type) :: global_mesh
+  type(global_mesh_map_collection_type), pointer ::                            &
+                                         global_mesh_map_collection => null()
 
   integer :: cell_id
   integer :: verts(4)
@@ -171,6 +175,13 @@ contains
 
   cell_owner=global_mesh%get_edge_cell_owner(1)
   @assertEqual( 65, cell_owner )
+
+
+  ! Test retrival of mesh map collection from this global mesh object
+  global_mesh_map_collection => global_mesh%get_global_mesh_maps()
+  @assertEqual( global_mesh_map_collection%get_source_id(),     global_mesh%get_id())
+  @assertEqual( global_mesh_map_collection%get_source_ncells(), global_mesh%get_ncells())
+
 
   end subroutine test_global_mesh
 

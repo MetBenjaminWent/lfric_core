@@ -13,6 +13,7 @@ class global_mesh_mod::global_mesh_type {
   -vert_cell_owner: integer[] <<allocatable>>
   -vert_coords: real[::] <<allocatable>>
   -vert_on_cell_2d: integer[::] <<allocatable>>
+  -global_mesh_maps: global_mesh_map_collection_type
 
   +<<create>>global_mesh_constructor( <<in>>filename: string ) : global_mesh_type
   +<<create>>global_mesh_unit_test_data() : global_mesh_type
@@ -23,6 +24,7 @@ class global_mesh_mod::global_mesh_type {
   +get_cell_on_vert( <<in>>vertex_number: integer, <<out>>cells: integer[] )
   +get_edge_cell_owner( <<in>>edge: integer ) : integer
   +get_edge_on_cell( <<in>>cell_gid: integer, <<out>>edges: integer[] )
+  +get_global_mesh_maps() : global_mesh_map_collection_type
   +get_max_cells_per_vertex() : integer
   +get_ncells() : integer
   +get_nedges() : integer

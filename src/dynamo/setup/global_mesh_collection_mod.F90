@@ -28,11 +28,9 @@ module global_mesh_collection_mod
 
   type, public :: global_mesh_collection_type
     private
-    type(linked_list_type), private :: global_mesh_list
+    type(linked_list_type) :: global_mesh_list
 
   contains
-    private
-
     procedure, public :: add_new_global_meshes ! Will use multimesh ugrid files
     procedure, public :: add_new_global_mesh   ! Deprecated on multimesh ugrid file
     procedure, public :: add_unit_test_global_mesh
@@ -41,7 +39,6 @@ module global_mesh_collection_mod
     procedure, public :: clear
 
     final             :: global_mesh_collection_destructor
-
 
   end type global_mesh_collection_type
 
