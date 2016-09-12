@@ -78,10 +78,11 @@
   method             = 'bicgstab'
   maximum_iterations = 99
   tolerance          = 1.0e-4
-  preconditioner     = 'diagonal'
+  preconditioner     = 'tridiagonal'
   gcrk               = 32
   helmholtz_solve    = .true.
   use_operators      = .true.
+  normalise          = .true.
 /
 
 &subgrid

@@ -13,7 +13,9 @@ module si_operators_alg_mod
   use log_mod,      only: log_event, &
                           LOG_LEVEL_INFO, &
                           LOG_LEVEL_ERROR
-
+  use solver_config_mod, only: preconditioner, &
+                               solver_preconditioner_tridiagonal, &
+                               normalise
   implicit none
   private
 
@@ -28,6 +30,8 @@ module si_operators_alg_mod
   type(operator_type), target :: compound_div
   type(field_type),    target :: rho_at_u
   type(field_type),    target :: m0_lumped
+  type(field_type),    target :: tri_precon(3)
+  type(field_type),    target :: Helm_diag
 
  ! Public functions to create and access the module contents
   public :: create_si_operators
@@ -41,7 +45,8 @@ module si_operators_alg_mod
   public :: get_compound_div 
   public :: get_rho_at_u 
   public :: get_m0_lumped
- 
+  public :: get_tri_precon
+  public :: get_helm_diag
 contains
 
 !> Subroutine to create the si operators
@@ -79,6 +84,17 @@ subroutine create_si_operators(mesh_id)
   rho_at_u  = field_type(vector_space = w2_fs)
   m0_lumped = field_type(vector_space = w0_fs)
 
+  if ( preconditioner == solver_preconditioner_tridiagonal ) then
+    if ( element_order /= 0 ) then
+      call log_event( "tridiagonal precon only valid for order 0", &
+                      LOG_LEVEL_ERROR )
+    end if
+    tri_precon(1) = field_type(vector_space = w3_fs)
+    tri_precon(2) = field_type(vector_space = w3_fs)
+    tri_precon(3) = field_type(vector_space = w3_fs)
+  end if
+  helm_diag = field_type(vector_space = w3_fs)
+
 end subroutine create_si_operators
 
 !> Subroutine to compute the si operators
@@ -92,7 +108,9 @@ subroutine compute_si_operators(ref_state)
   use weighted_proj_3theta_kernel_mod, only: weighted_proj_3theta_kernel_type
   use compound_operator_kernel_mod,    only: compound_operator_kernel_type
   use psykal_lite_mod,                 only: invoke_sample_flux_kernel, &
-                                             invoke_set_field_scalar
+                                             invoke_set_field_scalar, &
+                                             invoke_compute_tri_precon_kernel, &
+                                             invoke_divide_field_data
   use multiplicity_kernel_mod,         only: multiplicity_kernel_type
   use finite_element_config_mod,       only: element_order
   use function_space_mod,              only: function_space_type
@@ -102,7 +120,6 @@ subroutine compute_si_operators(ref_state)
                                              get_div, &
                                              get_mass_matrix
   use derived_config_mod,              only: bundle_size
-
   implicit none
 
   type(field_type), target, intent(in) :: ref_state(bundle_size) ! (u, theta, rho)
@@ -150,6 +167,23 @@ subroutine compute_si_operators(ref_state)
   call invoke_set_field_scalar( 1.0_r_def, ones )
   call invoke_set_field_scalar( 0.0_r_def,  m0_lumped)
   call invoke(matrix_vector_kernel_type(m0_lumped, ones, m0) )
+
+  ! compute terms for tridiagonal preconditioner
+  if ( preconditioner == solver_preconditioner_tridiagonal ) then
+    call invoke_compute_tri_precon_kernel(tri_precon, theta, rho, chi)
+  end if
+  if ( normalise ) then
+    if ( preconditioner == solver_preconditioner_tridiagonal) then
+      Helm_diag = tri_precon(1)
+      call invoke_divide_field_data(tri_precon(1), Helm_diag)
+      call invoke_divide_field_data(tri_precon(2), Helm_diag)
+      call invoke_divide_field_data(tri_precon(3), Helm_diag)
+    else
+      call invoke_set_field_scalar( 1.0_r_def, Helm_diag)
+    end if
+  else
+    call invoke_set_field_scalar( 1.0_r_def, Helm_diag)
+  end if
 
 end subroutine compute_si_operators
 
@@ -225,5 +259,21 @@ end subroutine compute_si_operators
     type(field_type), pointer :: field
     field => m0_lumped
   end function get_m0_lumped
+
+ !> Function to return a pointer to the tri_precon
+ !> @return The field
+  function get_tri_precon() result(field)
+    implicit none
+    type(field_type), pointer :: field(:)
+    field => tri_precon
+  end function get_tri_precon
+
+ !> Function to return a pointer to the Helm diagonal
+ !> @return The field
+  function get_helm_diag() result(field)
+    implicit none
+    type(field_type), pointer :: field
+    field => helm_diag
+  end function get_helm_diag
 
 end module si_operators_alg_mod

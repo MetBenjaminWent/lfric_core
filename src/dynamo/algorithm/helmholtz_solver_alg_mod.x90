@@ -18,11 +18,14 @@ module helmholtz_solver_alg_mod
                                     get_p2theta, &
                                     get_m0_lumped, &
                                     get_p3theta, &
-                                    get_rho_at_u 
+                                    get_rho_at_u, &
+                                    get_tri_precon, &
+                                    get_helm_diag 
   use runtime_constants_mod,  only: get_coordinates, &
                                     get_mass_matrix, &
                                     get_mass_matrix_diagonal, &
                                     get_div
+  use solver_config_mod,      only: normalise
   implicit none
 
   private
@@ -166,7 +169,7 @@ contains
 !>         equations respectively
   subroutine apply_variable_helmholtz(Hx, x)
     use psykal_lite_mod,             only: invoke_set_field_scalar, &
-                                          invoke_multiply_field_data, &
+                                           invoke_multiply_field_data, &
                                            invoke_divide_field_data, &
                                            invoke_copy_field_data, &
                                            invoke_scale_field_data
@@ -209,6 +212,7 @@ contains
   subroutine build_helmholtz_rhs(helmholtz_rhs, rhs0)
     use psykal_lite_mod,          only: invoke_divide_field, &
                                         invoke_set_field_scalar, &
+                                        invoke_divide_field_data, &
                                         invoke_inc_axpy
     use matrix_vector_kernel_mod, only: matrix_vector_kernel_type
     use dg_matrix_vector_kernel_mod, only: dg_matrix_vector_kernel_type
@@ -225,6 +229,7 @@ contains
     type(operator_type), pointer :: m3_rho_star, m3_inv, &
                                     p2theta, p3theta => null()
     type(field_type),    pointer :: m0_diag => null()
+    type(field_type),    pointer :: H_diag => null()
 
     p2theta     => get_p2theta()
     p3theta     => get_p3theta()
@@ -257,7 +262,12 @@ contains
 
     call invoke_inc_axpy(-dt, helmholtz_rhs, r_p)
 
-    call helmholtz_rhs%log_minmax(LOG_LEVEL_INFO,  'helmholtz_rhs ') 
+    if ( normalise ) then 
+      H_diag => get_helm_diag()
+      call invoke_divide_field_data(helmholtz_rhs, H_diag)
+    end if
+    call helmholtz_rhs%log_minmax(LOG_LEVEL_INFO,  'helmholtz_rhs ')
+
   end subroutine build_helmholtz_rhs
 
 !=============================================================================!
@@ -407,6 +417,7 @@ contains
     use transpose_matrix_vector_kernel_mod, &
                                   only: transpose_matrix_vector_kernel_type
     use psykal_lite_mod,          only: invoke_set_field_scalar, &
+                                        invoke_divide_field_data, &
                                         invoke_inc_axpby
     use operator_mod,             only: operator_type
     use enforce_bc_kernel_mod,    only: enforce_bc_kernel_type
@@ -416,7 +427,7 @@ contains
 
     type(operator_type), pointer :: m3_exner_star, div_star => null()
     real(kind=r_def)             :: kappa_term, timestep_term
-    
+    type(field_type),    pointer :: H_diag => null()
     m3_exner_star => get_m3_exner_star()
     div_star      => get_div_star()
 
@@ -439,6 +450,11 @@ contains
     ! Add (1-k)/k * Pi'
     call invoke( dg_matrix_vector_kernel_type(pi_term, p, m3_exner_star) )    
     call invoke_inc_axpby( timestep_term, Hp, kappa_term, pi_term)
+
+    if ( normalise ) then 
+      H_diag => get_helm_diag()
+      call invoke_divide_field_data(Hp, H_diag)
+    end if
 
   end subroutine apply_helmholtz_lhs
 
@@ -641,30 +657,41 @@ contains
 !>@brief Preconditioner for the helmholtz equation 
 !>@details Options to precondition the helmholtz equation, currently allows only
 !>         preconditioning with the inverse mass matrix or no preconditioner
-  subroutine helmholtz_precondition( y, x, preconditioner)
+  subroutine helmholtz_precondition( y, x, prec)
     use psykal_lite_mod,          only: invoke_set_field_scalar, &
                                         invoke_copy_field_data
     use dg_matrix_vector_kernel_mod, only: dg_matrix_vector_kernel_type
-    use operator_mod,             only: operator_type  
+    use operator_mod,             only: operator_type 
+    use tri_solve_kernel_mod,     only: tri_solve_kernel_type
+    use solver_config_mod,        only: preconditioner, &
+                                        solver_preconditioner_tridiagonal, & 
+                                        solver_preconditioner_diagonal 
 
     implicit none
     type(field_type),             intent(inout) :: y
     type(field_type),             intent(inout) :: x! Should in intent(in), but psyclone doesnt support this
-    integer, intent(in), optional :: preconditioner
+    integer, intent(in), optional :: prec
 
     integer                      :: precon
     type(operator_type), pointer :: m3_inv => null()
+    type(field_type)             :: z
+    type(field_type),   pointer  :: tri(:) => null()
 
-    if ( .not. present(preconditioner) ) then
-      precon = inverse_preconditioner
-    else
+    if ( .not. present(prec) ) then
       precon = preconditioner
+    else
+      precon = prec
     end if
     select case ( precon )
-      case ( inverse_preconditioner )
-        ! Multiply by inverse W3 mass matrix
+      case ( solver_preconditioner_diagonal )       
         m3_inv   => get_mass_matrix(4)
-        call invoke( dg_matrix_vector_kernel_type( y, x, m3_inv) )
+        call invoke( dg_matrix_vector_kernel_type( y, x, m3_inv) )     
+      case ( solver_preconditioner_tridiagonal )
+        z = y
+        tri => get_tri_precon()
+        m3_inv   => get_mass_matrix(4)
+        call invoke( dg_matrix_vector_kernel_type( z, x, m3_inv), &
+                     tri_solve_kernel_type(y, z, tri) )
       case default
         call invoke_copy_field_data( x, y )
     end select

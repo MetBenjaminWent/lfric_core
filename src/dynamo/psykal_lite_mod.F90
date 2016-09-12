@@ -2569,4 +2569,120 @@ subroutine invoke_sample_poly_adv( adv, wind, tracer, stencil_extent)
 
 end subroutine invoke_sample_poly_adv
 !-------------------------------------------------------------------------------   
+! Needs differential nodal basis for chi space which is not currently
+! supported by psyclone. Dynamo tickets #723, #734 address this as new types of
+! quadrature that will then need to be supported by psyclone
+    subroutine invoke_compute_tri_precon_kernel(tri_precon, theta, rho, chi)
+      use compute_tri_precon_kernel_mod, only: compute_tri_precon_code
+      use mesh_mod, only: mesh_type
+      type(field_type), intent(inout) :: tri_precon(3)
+      type(field_type), intent(in) :: theta, rho, chi(3)
+      integer, pointer :: map_w3(:) => null(), map_w0(:) => null(), map_any_space_1_chi(:) => null()
+      integer :: cell
+      integer :: ndf_w3, undf_w3, ndf_w0, undf_w0, ndf_any_space_1_chi, undf_any_space_1_chi
+      type(mesh_type), pointer :: mesh => null()
+      integer :: nlayers
+      type(field_proxy_type) :: tri_precon_proxy(3), theta_proxy, rho_proxy, chi_proxy(3)
+      real(kind=r_def), pointer :: nodes(:,:) => null()
+      real(kind=r_def), allocatable :: diff_basis_chi(:,:,:)
+      integer :: diff_dim_chi
+      !
+      ! Initialise field proxies
+      !
+      tri_precon_proxy(1) = tri_precon(1)%get_proxy()
+      tri_precon_proxy(2) = tri_precon(2)%get_proxy()
+      tri_precon_proxy(3) = tri_precon(3)%get_proxy()
+      theta_proxy = theta%get_proxy()
+      rho_proxy = rho%get_proxy()
+      chi_proxy(1) = chi(1)%get_proxy()
+      chi_proxy(2) = chi(2)%get_proxy()
+      chi_proxy(3) = chi(3)%get_proxy()
+      !
+      ! Initialise number of layers
+      !
+      nlayers = tri_precon_proxy(1)%vspace%get_nlayers()
+      !
+      ! Create a mesh object
+      !
+      mesh => tri_precon(1)%get_mesh()
+      !
+      ! Initialise sizes and allocate any basis arrays for w3
+      !
+      ndf_w3 = tri_precon_proxy(1)%vspace%get_ndf()
+      undf_w3 = tri_precon_proxy(1)%vspace%get_undf()
+      !
+      ! Initialise sizes and allocate any basis arrays for w0
+      !
+      ndf_w0 = theta_proxy%vspace%get_ndf()
+      undf_w0 = theta_proxy%vspace%get_undf()
+      !
+      ! Initialise sizes and allocate any basis arrays for any_space_1_chi
+      !
+      ndf_any_space_1_chi = chi_proxy(1)%vspace%get_ndf()
+      undf_any_space_1_chi = chi_proxy(1)%vspace%get_undf()
+
+      ! Compute nodal basis functions
+      diff_dim_chi  = chi_proxy(1)%vspace%get_dim_space_diff( )
+      allocate( diff_basis_chi(diff_dim_chi, ndf_any_space_1_chi, ndf_w3) )
+      nodes => rho_proxy%vspace%get_nodes( )
+      call chi_proxy(1)%vspace%compute_nodal_diff_basis_function( diff_basis_chi, ndf_any_space_1_chi, ndf_w3, nodes)
+      !
+      ! Call kernels and communication routines
+      !
+      if (theta_proxy%is_dirty(depth=1)) then
+        call theta_proxy%halo_exchange(depth=1)
+      end if 
+      !
+      if (rho_proxy%is_dirty(depth=1)) then
+        call rho_proxy%halo_exchange(depth=1)
+      end if 
+      !
+      if (chi_proxy(1)%is_dirty(depth=1)) then
+        CALL chi_proxy(1)%halo_exchange(depth=1)
+      end if 
+      !
+      if (chi_proxy(2)%is_dirty(depth=1)) then
+        CALL chi_proxy(2)%halo_exchange(depth=1)
+      end if 
+      !
+      if (chi_proxy(3)%is_dirty(depth=1)) then
+        CALL chi_proxy(3)%halo_exchange(depth=1)
+      end if 
+      !
+      do cell=1,mesh%get_last_edge_cell()
+        !
+        map_w3 => tri_precon_proxy(1)%vspace%get_cell_dofmap(cell)
+        map_w0 => theta_proxy%vspace%get_cell_dofmap(cell)
+        map_any_space_1_chi => chi_proxy(1)%vspace%get_cell_dofmap(cell)
+        !
+        CALL compute_tri_precon_code(nlayers, &
+                                     tri_precon_proxy(1)%data, &
+                                     tri_precon_proxy(2)%data, &
+                                     tri_precon_proxy(3)%data, &
+                                     theta_proxy%data, &
+                                     rho_proxy%data, &
+                                     chi_proxy(1)%data, &
+                                     chi_proxy(2)%data, &
+                                     chi_proxy(3)%data, &
+                                     ndf_w3, &
+                                     undf_w3, &
+                                     map_w3, &
+                                     ndf_w0, &
+                                     undf_w0, &
+                                     map_w0, &
+                                     ndf_any_space_1_chi, &
+                                     undf_any_space_1_chi, &
+                                     map_any_space_1_chi, &
+                                     diff_basis_chi)
+      end do 
+      !
+      ! Set halos dirty for fields modified in the above loop
+      !
+      call tri_precon_proxy(1)%set_dirty()
+      call tri_precon_proxy(2)%set_dirty()
+      call tri_precon_proxy(3)%set_dirty()
+       
+       
+    end subroutine invoke_compute_tri_precon_kernel
+
 end module psykal_lite_mod

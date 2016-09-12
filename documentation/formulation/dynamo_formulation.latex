@@ -761,7 +761,7 @@ the Helmholtz equation can be simplified somewhat to
 \end{equation}
 and the right hand side becomes
 \begin{equation}
-\mathfrak{R} \equiv \mathfrak{R}_{\Pi} - \Delta t H\left(H_{B}^{-1}\mathfrak{R}_{u}\right).\label{helmholtz_rhs_simplified}
+\mathfrak{R} \equiv \mathfrak{R}_{\Pi} - \Delta t H\left(H_{B}^{-1}\mathfrak{R}_{u}\right).\label{eq:helmholtz_rhs_simplified}
 \end{equation}
 In order to construct \eqref{eq:helmholtz_lhs} and \eqref{eq:helmholtz_rhs} and a number of operator invereses are needed: $M_{3}^{-1}, M_{\theta}^{-1}$ and $H_{B}^{-1}$. The inverse of the $\mathbb{W}_3$ mass matrix is simple to compute since it is in a discontinuous space and so the element inverse can be cheaply computed and stored. The mass matrix for the $\theta$ space is either a global matrix (if $\theta\in\mathbb{W}_{0}$) or is a column matrix (if $\theta\in\mathbb{W}_{\theta}$) and it is therefore unlikely to be feasible to compute and store the exact inverse and instead it must be approximated such as using the diagonal $M_{\theta}^{-1} \approx 1/\mathrm{diag}\left(M_{\theta}\right)$. Lastly the inverse of the $H_{B}$ operator is needed. It is unlikely the diagonal of this will be accurate enough as this would lose the orographic terms (contained in the off-diagonal elements of $M_{2}$), the proposal here is to use a small number of  iterations of a cheap iterative method, such as conjugate gradient or Jacobi to invert $H_{B}$, i.e. obtain $y$ such that $H_{B}y = x$. To solve the Helmholtz equation \eqref{eq:helmholtz_lhs} a Krylov method can be used, such as bicgstab or GMRes which only requires the application of the left hand side of \eqref{eq:helmholtz_lhs}. Once the pressure increment is obtained the other prognostic variables can be obtained by a back substituion process, $u'$ is obtained from
 \begin{equation}
@@ -796,7 +796,22 @@ and $\Pi^{\left(k+1\right)}$ will be diagnosed from the equation of state using 
 }%
 \end{minipage}}
 
-
+\subsection{\label{sub:preconditioner}Preconditioner}
+Inspired by the vertical preconditioner used in ENDGame we seek to form a vertical tridiagonal preconditioner to be used for Gung-Ho. For lowest order elements the layout of dof's is the same as ENDGame and so we can use a form similar to that for a finite difference model. The goal is to seek pressure increments $\Pi'$ that solve the tridiagonal system of equations
+\begin{equation}
+A^{+}_{ij,k}\left(\Pi'\right)_{ij}^{k+1} + A^{0}_{ij,k}\left(\Pi'\right)_{ij}^{k} + A^{-}_{ij,k}\left(\Pi'\right)_{ij}^{k-1} = \left(R_{\Pi}\right)_{ij,k},\label{eq:tri_precon}
+\end{equation}
+where $ij$ is the horizontal index, $k$ is the layer index and $A^+,\,A^0,\,A^-$ are the upper, centre and lower diagonal terms respectively, with this set up \eqref{eq:tri_precon} is suitable to be solved exactly using the Thomas algorithm provided that it is diagonally dominant, that is $\left|A^0\right| >> \left|A^+ + A^-\right|$. Working though the terms in \eqref{eq:helmholtz_rhs_simplified} and neglecting any horizontal terms, lumping all mass matrices and averaging the $\theta$ terms to vertical velocity points yields
+\begin{eqnarray}
+A^+ & = & -\frac{\tau_{\rho}\Delta t}{\rho^*\det\left(J\right)}\overline{\rho^*\det\left(J\right)}^{z}\widetilde{H_B}^{-1}\tau_u\Delta t c_{pd}\theta^* - \frac{\tau_{\theta}\Delta t}{2\theta^*}\left(\widetilde{H_B}^{-1}\tau_u\Delta t c_{pd}\theta^{*}\frac{\partial\theta^*}{\partial\hat{\chi}_3}\right),\label{eq:tri_precon_Ap}\\
+A^- & = & -\frac{\tau_{\rho}\Delta t}{\rho^*\det\left(J\right)}\overline{\rho^*\det\left(J\right)}^{z}\widetilde{H_B}^{-1}\tau_u\Delta t c_{pd}\theta^* + \frac{\tau_{\theta}\Delta t}{2\theta^*}\left(\widetilde{H_B}^{-1}\tau_u\Delta t c_{pd}\theta^{*}\frac{\partial\theta^*}{\partial\hat{\chi}_3}\right),\label{eq:tri_precon_Ap}\\
+A^0 & = &\frac{1-\kappa}{\kappa}\left(\Pi^*\right)^{-1} - A^+ - A^-,\label{eq:tri_precon_Ap}\\
+\end{eqnarray}
+All derivatives are computed in computational space, $\frac{\partial f}{\partial\hat{\chi}_3} = f^+ - f^-$ and $\widetilde{H_B}$ is an approximation to the true $H_B$
+\begin{equation}
+\widetilde{H_B}\equiv J^T J\hat{\mathbf{z}}.\hat{\mathbf{z}}-\tau_u\tau_{\theta}\Delta t^2 c_{pd}\frac{\partial\theta^*}{\partial\hat{\chi}_3}\frac{\partial\Pi^*}{\partial\hat{\chi}_3},\label{eq:tri_precon_H_B}
+\end{equation}
+and only the terms that maps the vertical velocity component to itself of $J^T J$ is kept, (equivalent to $\Delta z^2$ in a uniform domain). To ensure stability this operator is forced to be positive by maxing it with a small positive constant.
 
 
 \section{\label{sec:Advection}Advection}
