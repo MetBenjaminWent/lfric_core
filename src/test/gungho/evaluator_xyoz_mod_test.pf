@@ -1,0 +1,141 @@
+module evaluator_xyoz_mod_test
+
+  implicit none
+
+contains
+
+  @test
+  subroutine test_evaluator_xyoz()
+
+    use pFUnit_Mod
+
+    use evaluator_xyoz_mod, only : evaluator_xyoz_type, evaluator_xyoz_proxy_type
+    use constants_mod,      only : r_def
+
+    integer, parameter              :: npoints_xy=9, npoints_z=3
+    type(evaluator_xyoz_type)       :: evaluator
+    type(evaluator_xyoz_proxy_type) :: evaluator_proxy
+    real(kind=r_def)                :: epsilon
+
+    real(kind=r_def) :: points_z(npoints_z), points_xy(2,npoints_xy)
+    real(kind=r_def) :: test_points_z(npoints_z), test_points_xy(2,npoints_xy)
+
+    epsilon = 1.0e-14_r_def
+
+    test_points_z(:)    = [2.000000000000000E-001_r_def, &
+                           5.000000000000000E-001_r_def, &
+                           8.000000000000000E-001_r_def]
+
+    test_points_xy(1,:) = [2.000000000000000E-001_r_def, &
+                           2.000000000000000E-001_r_def, &
+                           2.000000000000000E-001_r_def, &
+                           5.000000000000000E-001_r_def, &
+                           5.000000000000000E-001_r_def, &
+                           5.000000000000000E-001_r_def, &
+                           8.000000000000000E-001_r_def, &
+                           8.000000000000000E-001_r_def, &
+                           8.000000000000000E-001_r_def]
+
+    test_points_xy(2,:) = [2.000000000000000E-001_r_def, &
+                           5.000000000000000E-001_r_def, &
+                           8.000000000000000E-001_r_def, &
+                           2.000000000000000E-001_r_def, &
+                           5.000000000000000E-001_r_def, &
+                           8.000000000000000E-001_r_def, &
+                           2.000000000000000E-001_r_def, &
+                           5.000000000000000E-001_r_def, &
+                           8.000000000000000E-001_r_def]
+
+    evaluator = evaluator_xyoz_type(npoints_xy, npoints_z, test_points_xy, test_points_z)
+    evaluator_proxy = evaluator%get_evaluator_proxy()
+
+    points_z = evaluator_proxy % points_z
+    @assertEqual( test_points_z, points_z, epsilon )
+
+    points_xy = evaluator_proxy % points_xy
+    @assertEqual( test_points_xy, points_xy, epsilon )
+
+  end subroutine test_evaluator_xyoz
+
+  @test
+  subroutine test_quadrature_xyoz()
+
+    use pFUnit_Mod
+
+    use evaluator_xyoz_mod,           only : quadrature_xyoz_type, quadrature_xyoz_proxy_type
+    use constants_mod,                only : r_def
+    use quadrature_rule_gaussian_mod, only : quadrature_rule_gaussian_type
+
+    integer, parameter :: npoints_xy=9, npoints_z=3
+
+    real(kind=r_def) :: epsilon
+
+    real(kind=r_def) :: points_z(npoints_z), points_xy(2,npoints_xy)
+    real(kind=r_def) :: weights_z(npoints_z), weights_xy(npoints_xy)
+
+    real(kind=r_def) :: test_points_z(npoints_z), test_points_xy(2,npoints_xy)
+    real(kind=r_def) :: test_weights_z(npoints_z), test_weights_xy(npoints_xy)
+
+    type(quadrature_xyoz_type)          :: qr
+    type(quadrature_xyoz_proxy_type)    :: qr_proxy
+
+    type(quadrature_rule_gaussian_type) :: gaussian_quadrature
+
+    qr = quadrature_xyoz_type(npoints_xy, npoints_z, gaussian_quadrature)
+    qr_proxy = qr%get_quadrature_proxy()
+
+    epsilon = 1.0e-14_r_def
+
+    test_points_z(:)    = [1.127016653792583E-001_r_def, &
+                           5.000000000000000E-001_r_def, &
+                           8.872983346207417E-001_r_def]
+
+    test_points_xy(1,:) = [1.127016653792583E-001_r_def, &
+                           1.127016653792583E-001_r_def, &
+                           1.127016653792583E-001_r_def, &
+                           5.000000000000000E-001_r_def, &
+                           5.000000000000000E-001_r_def, &
+                           5.000000000000000E-001_r_def, &
+                           8.872983346207417E-001_r_def, &
+                           8.872983346207417E-001_r_def, &
+                           8.872983346207417E-001_r_def]
+
+    test_points_xy(2,:) = [1.127016653792583E-001_r_def, &
+                           5.000000000000000E-001_r_def, &
+                           8.872983346207417E-001_r_def, &
+                           1.127016653792583E-001_r_def, &
+                           5.000000000000000E-001_r_def, &
+                           8.872983346207417E-001_r_def, &
+                           1.127016653792583E-001_r_def, &
+                           5.000000000000000E-001_r_def, &
+                           8.872983346207417E-001_r_def]
+
+    test_weights_z(:)   = [2.777777777777763E-001_r_def, &
+                           4.444444444444444E-001_r_def, &
+                           2.777777777777763E-001_r_def]
+
+    test_weights_xy(:)  = [7.716049382715970E-002_r_def, &
+                           1.234567901234561E-001_r_def, &
+                           7.716049382715970E-002_r_def, &
+                           1.234567901234561E-001_r_def, &
+                           1.975308641975309E-001_r_def, &
+                           1.234567901234561E-001_r_def, &
+                           7.716049382715970E-002_r_def, &
+                           1.234567901234561E-001_r_def, &
+                           7.716049382715970E-002_r_def]
+
+    points_z = qr_proxy % points_z
+    @assertEqual( test_points_z, points_z, epsilon )
+
+    points_xy = qr_proxy % points_xy
+    @assertEqual( test_points_xy, points_xy, epsilon )
+
+    weights_z = qr_proxy % weights_z
+    @assertEqual( test_weights_z, weights_z, epsilon )
+
+    weights_xy = qr_proxy % weights_xy
+    @assertEqual( test_weights_xy, weights_xy, epsilon )
+
+  end subroutine test_quadrature_xyoz
+
+end module evaluator_xyoz_mod_test

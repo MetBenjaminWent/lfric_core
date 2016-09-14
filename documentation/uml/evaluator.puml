@@ -1,0 +1,15 @@
+@startuml
+
+!include look.iuml
+!include gungho/quadrature_rule_mod.iuml
+!include gungho/quadrature_rule_gaussian_mod.iuml
+!include gungho/quadrature_rule_newton_cotes_mod.iuml
+!include gungho/evaluator_mod.iuml
+!include gungho/evaluator_xoyoz_mod.iuml
+!include gungho/evaluator_xyz_mod.iuml
+!include gungho/evaluator_xyoz_mod.iuml
+
+evaluator_xoyoz_mod -[hidden]- evaluator_xyz_mod
+evaluator_xyz_mod -[hidden]- evaluator_xyoz_mod
+
+@enduml

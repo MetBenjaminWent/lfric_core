@@ -31,8 +31,8 @@ module iter_timestep_alg_mod
 
   ! PsyKAl-lite kernels
   use psykal_lite_mod,                   only: invoke_copy_field_data,  &
-                                               invoke_set_field_scalar, &
-                                               invoke_initial_u_kernel
+                                               invoke_set_field_scalar
+
   use field_bundle_mod,                  only: clone_bundle, & 
                                                bundle_axpy, & 
                                                bundle_axpby, &

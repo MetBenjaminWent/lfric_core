@@ -14,102 +14,22 @@
 
 module psykal_lite_mod
 
-  use field_mod,      only : field_type, field_proxy_type 
-  use scalar_mod,     only : scalar_type
-  use operator_mod,   only : operator_type, operator_proxy_type
-  use quadrature_mod, only : quadrature_type
-  use constants_mod,  only : r_def, i_def, cache_block
-  use mesh_mod,       only : mesh_type
-
-  use quadrature_3d_xyoz_mod, only : quadrature_3d_xyoz_type, &
-                                     quadrature_3d_xyoz_proxy_type
-  use quadrature_3d_xyz_mod
-  use quadrature_3d_xoyoz_mod
+  use field_mod,          only : field_type, field_proxy_type 
+  use scalar_mod,         only : scalar_type
+  use operator_mod,       only : operator_type, operator_proxy_type
+  use quadrature_mod,     only : quadrature_type
+  use constants_mod,      only : r_def, i_def, cache_block
+  use mesh_mod,           only : mesh_type
+  use evaluator_xyoz_mod, only : quadrature_xyoz_type, &
+                                 quadrature_xyoz_proxy_type
+  use evaluator_xoyoz_mod
+  use evaluator_xyz_mod
+  use evaluate_function_mod, only : BASIS, DIFF_BASIS
 
   implicit none
   public
 
 contains
-
-! ------------------------------------------------------------------------------
-! This routine has been added to illustrate how the new quadrature type should
-! be implimneted.
-
-    SUBROUTINE invoke_initial_u_kernel(r_u, chi, qr)
-      USE initial_u_kernel_mod, ONLY: initial_u_code
-      TYPE(field_type), intent(inout) :: r_u, chi(3)
-      TYPE(quadrature_3d_xyoz_type), intent(in) :: qr
-      TYPE(quadrature_3d_xyoz_proxy_type) :: qr_proxy
-      INTEGER, pointer :: map_w2(:) => null(), map_w0(:) => null()
-      INTEGER cell
-      REAL(KIND=r_def), allocatable :: basis_w2(:,:,:,:), basis_w0(:,:,:,:), diff_basis_w0(:,:,:,:)
-      INTEGER dim_w2, dim_w0, diff_dim_w0
-      INTEGER ndf_w2, undf_w2, ndf_w0, undf_w0
-      REAL(KIND=r_def), pointer :: xqp_z(:) => null(), wqp_xy(:) => null(), wqp_z(:) => null()
-      REAL(KIND=r_def), pointer :: xqp_xy(:,:) => null()
-      INTEGER nqp_xy, nqp_z
-      INTEGER nlayers
-      TYPE(field_proxy_type) r_u_proxy, chi_proxy(3)
-      !
-      ! Initialise field proxies
-      !
-      r_u_proxy = r_u%get_proxy()
-      chi_proxy(1) = chi(1)%get_proxy()
-      chi_proxy(2) = chi(2)%get_proxy()
-      chi_proxy(3) = chi(3)%get_proxy()
-      !
-      ! Initialise number of layers
-      !
-      nlayers = r_u_proxy%vspace%get_nlayers()
-      !
-      ! Get the quadrature data
-      !
-      qr_proxy = qr%get_proxy()
-      xqp_xy => qr_proxy%xqp_xy
-      xqp_z => qr_proxy%xqp_z
-      wqp_xy => qr_proxy%wqp_xy
-      wqp_z => qr_proxy%wqp_z
-      nqp_xy = qr_proxy%nqp_xy
-      nqp_z = qr_proxy%nqp_z
-
-      !
-      ! Initialise sizes and allocate any basis arrays for w2
-      !
-      ndf_w2 = r_u_proxy%vspace%get_ndf()
-      undf_w2 = r_u_proxy%vspace%get_undf()
-      dim_w2 = r_u_proxy%vspace%get_dim_space()
-      ALLOCATE (basis_w2(dim_w2, ndf_w2, nqp_xy, nqp_z))
-
-      ! Initialise sizes and allocate any basis arrays for w0
-      !
-      ndf_w0 = chi_proxy(1)%vspace%get_ndf()
-      undf_w0 = chi_proxy(1)%vspace%get_undf()
-      dim_w0 = chi_proxy(1)%vspace%get_dim_space()
-      ALLOCATE (basis_w0(dim_w0, ndf_w0, nqp_xy, nqp_z))
-      diff_dim_w0 = chi_proxy(1)%vspace%get_dim_space_diff()
-      ALLOCATE (diff_basis_w0(diff_dim_w0, ndf_w0, nqp_xy, nqp_z))
-      !
-      ! Compute basis arrays
-      !
-      CALL r_u_proxy%vspace%compute_basis_function_3d_xyoz(basis_w2, ndf_w2, nqp_xy, nqp_z, xqp_xy, xqp_z)
-      CALL chi_proxy(1)%vspace%compute_basis_function_3d_xyoz(basis_w0, ndf_w0, nqp_xy, nqp_z, xqp_xy, xqp_z)
-      CALL chi_proxy(1)%vspace%compute_diff_basis_function_3d_xyoz(diff_basis_w0, ndf_w0, nqp_xy, nqp_z, xqp_xy, xqp_z)
-      !
-      ! Call our kernels
-      !
-      DO cell=1,r_u_proxy%vspace%get_ncell()
-        !
-        map_w2 => r_u_proxy%vspace%get_cell_dofmap(cell)
-        map_w0 => chi_proxy(1)%vspace%get_cell_dofmap(cell)
-        !
-        CALL initial_u_code(nlayers, r_u_proxy%data, chi_proxy(1)%data, chi_proxy(2)%data, chi_proxy(3)%data, ndf_w2, undf_w2, map_w2, basis_w2, ndf_w0, undf_w0, map_w0, basis_w0, diff_basis_w0, nqp_xy, nqp_z, wqp_xy, wqp_z)
-      END DO
-      !
-      ! Deallocate basis arrays
-      !
-      DEALLOCATE (basis_w2, basis_w0, diff_basis_w0)
-      !
-    END SUBROUTINE invoke_initial_u_kernel
 
   !------------------------------------------------------------------------------
   !> invoke_initial_theta_kernel: invoke the potential temperature initialization for a generic space
@@ -1265,7 +1185,7 @@ contains
     allocate(basis_q(dim_q, ndf_q, ndf_f))
 
     nodes => flux_p%vspace%get_nodes( )
-    call q_p%vspace%compute_basis_function_3d_xyz(basis_q, ndf_q, ndf_f, nodes)
+    call q_p%vspace%compute_nodal_basis_function(basis_q, ndf_q, ndf_f, nodes)
 
     if(flux_p%is_dirty(depth=1) ) then
       call flux_p%halo_exchange(depth=1)
@@ -2447,7 +2367,7 @@ subroutine invoke_sample_poly_flux( flux, wind, density, stencil_extent)
   dim_w2  = flux_proxy%vspace%get_dim_space()
   allocate (basis_w2(dim_w2, ndf_w2, ndf_w2))
   nodes => flux_proxy%vspace%get_nodes( )
-  call flux_proxy%vspace%compute_basis_function_3d_xyz(basis_w2, ndf_w2, ndf_w2, nodes)
+  call flux_proxy%vspace%compute_nodal_basis_function(basis_w2, ndf_w2, ndf_w2, nodes)
 
   nlayers = flux_proxy%vspace%get_nlayers()
 
@@ -2529,7 +2449,7 @@ subroutine invoke_sample_poly_adv( adv, wind, tracer, stencil_extent)
   dim_w2  = wind_proxy%vspace%get_dim_space()
   allocate (basis_w2(dim_w2, ndf_w2, ndf_wt))
   nodes => tracer_proxy%vspace%get_nodes( )
-  call wind_proxy%vspace%compute_basis_function_3d_xyz(basis_w2, ndf_w2, ndf_wt, nodes)
+  call wind_proxy%vspace%compute_nodal_basis_function(basis_w2, ndf_w2, ndf_wt, nodes)
 
   nlayers = adv_proxy%vspace%get_nlayers()
 

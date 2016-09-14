@@ -1,0 +1,37 @@
+class evaluator_xyz_mod::evaluator_xyz_type {
+
+  -np_xyz: integer
+  -points_xyz: real[::] <<allocatable>>
+
+  +<<create>>init_evaluator( <<in>>np_xyz: integer,  <<in>>points_xyz: real[::] ) : evaluator_xyz_type
+  +compute_evaluate( <<in>>func_to_call: integer, <<in>> ef: evaluate_function_type, <<in>>ef_dim: integer, <<in>>ndf: integer, <<out>>basis: real[:::] )
+  +get_evaluator_proxy() : quadrature_3d_xyz_proxy_type
+  +<<destroy>>evaluator_destructor()
+}
+
+class evaluator_xyz_mod::quadrature_xyz_type {
+  -weights_xyz: real[:] <<allocatable>>
+
+  +<<create>>init_quadrature( <<in>>np_xyz: integer, <<in>>rule: quadrature_rule ) : quadrature_xyz_type
+  +get_quadrature_proxy() : quadrature_3d_xyz_proxy_type
+  +<<destroy>>quadrature_destructor()
+}
+
+
+class evaluator_xyz_mod::evaluator_xyz_proxy_type {
+  +np_xyz: integer
+  +points_xyz: real[::] <<pointer>>
+}
+
+
+class evaluator_xyz_mod::quadrature_xyz_proxy_type {
+  +np_xyz: integer 
+  +weights_xyz: real[:] <<pointer>>
+  +points_xyz: real[::] <<pointer>>
+}
+
+
+evaluator_mod::evaluator_type <|-- evaluator_xyz_mod::evaluator_xyz_type
+evaluator_xyz_mod::evaluator_xyz_type <|-- evaluator_xyz_mod::quadrature_xyz_type
+evaluator_xyz_mod::evaluator_xyz_proxy_type -> evaluator_xyz_mod::evaluator_xyz_type
+evaluator_xyz_mod::quadrature_xyz_proxy_type -> evaluator_xyz_mod::quadrature_xyz_type
