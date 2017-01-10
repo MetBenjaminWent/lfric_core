@@ -11,19 +11,15 @@ Implements a Jinja2 filter to run a macro specified by a string.
 '''
 from jinja2 import contextfilter
 import re
+import ast
 
 @contextfilter
-def executeMacro(context, call, is_crun=False):
+def getEnvMacro(context, call):
     '''
-    Takes a string and executes it as though it were a Jinja2 macro call.
-
-    The call string has the syntax <macro name>([<argument>]...).
-
-    Arguments can be either position or keyword based.
-
+    Takes a string and parses any instances of an env dictionary. 
     @param [inout] context Jinja2 instance to run macro against.
     @param [in]    call    Invokation string.
-    @return String resulting from calling the macro.
+    @return String resulting from setting the environment.
     '''
     if call.find('(') == -1:
         macroName = call
@@ -49,19 +45,21 @@ def executeMacro(context, call, is_crun=False):
         key, value = re.split(' *= *', argument)
         argumentDictionary[key] = value
 
-    # If we're called for doing a crun, but the macro isn't
-    # we don't want to do anything.
-    # Similarly if we're not called for a crun, but the macro 
-    # is set for a crun, then we still don't want to do anything
-
-    if 'crun' in argumentDictionary.keys():
-        nrun=argumentDictionary['crun']
+    # We only do work on the 'env' dictionary
+    if 'env' in argumentDictionary.keys():
+        envDict=ast.literal_eval(argumentDictionary['env'])
     else:
-        nrun=1
+        envDict={}
 
-    if (nrun > 1 and is_crun ) or (nrun < 2 and not is_crun):
-        return_value=context.vars[macroName]( *argumentList, **argumentDictionary )
+    envVariables=[]
+    for key, value in envDict.items():
+        envVariables.append('%s = %s' % (key, value) )
+            
+    values='\n'.join(envVariables)
+
+    if arguments == '':
+        return_value = None, None
     else:
-        return_value=''
-    
+        return_value = arguments[0], values
+
     return return_value

@@ -18,6 +18,7 @@
                                 'godlines',
                                 'cleanlines'],
 		  'csar':    ['science(robert)',
+                              'science(robert, crun=3, env={"nrun":50})',
                               'science(robert-moist)',
                               'science(biperiodic_p0_gw)',
                               'science(dcmip301)',
@@ -29,6 +30,7 @@
                               'check_compilers(full-debug, True)',
                               'godlines(True)',
                               'publish_index']} %}
+{%- set maxnrun = 3 %}
 {%- set mesh_types = ['cubedsphere', 'biperiodic'] %}
 {%- set ts_config = {} %}
 {%- set compiler_setup = {} -%}
@@ -46,18 +48,14 @@
 {%-   set groupsToRun = ['developer'] %}
 {%- endif %}
 
-[cylc]
-    UTC mode = True
-    [[events]]
-        abort on timeout = True
-{%- if 'nightly' in groupsToRun %}
-        abort on stalled = True
-{%- endif %}
-        timeout = PT3H
-
 {#- #########################################################################}
-{%- macro science( configuration, plotting=False, timestep='T000360') %}
-{%-   set label =  TARGET_SCIENCE_COMPILER + '_fast-debug' %}
+{%-   set SCIENCE_LABEL =  TARGET_SCIENCE_COMPILER + '_fast-debug' %}
+{%- macro science( configuration, plotting=False, timestep='T000360', crun=0, env=None ) %}
+{%-   set label = SCIENCE_LABEL %}
+{%- if crun > 1 %}
+            run_{{configuration}}_{{label}}[-P1]:finish => run_{{configuration}}_{{label}}
+            run_{{configuration}}_{{label}}[{{crun}}]:finish => !run_{{configuration}}_{{label}}
+{%- else %}
             purge_local => purge_target
             purge_target => export_for_{{label}}
             export_for_{{label}} => compile_with_{{label}}
@@ -71,6 +69,7 @@
 {%-     do ts_config.update( {configuration : timestep} ) %}
             run_{{configuration}}_{{label}} => plot_{{configuration}}_{{label}}
             plot_{{configuration}}_{{label}} => copy_results_{{configuration}}_{{label}}
+{%-   endif %}
 {%-   endif %}
 {%- endmacro %}
 {#- #########################################################################}
@@ -165,16 +164,41 @@
 {%-   endfor %}
 {%- endmacro %}
 {#- #########################################################################}
-{%- macro schedule() %}
+{%- macro schedule(is_crun=False) %}
 {%-   for group in groupsToRun %}
 {%-       for mission in groups[group] %}
-{{          mission | executeMacro() }}
+{{          mission | executeMacro(is_crun) }}
 {%-       endfor %}
 {%-   endfor %}
 {%- endmacro %}
+{#- #########################################################################}
+{%- macro setTaskEnv(scheduledTasksEnv) %}
+{%-   for group in groupsToRun %}
+{%-       for mission in groups[group] %}
+{%-           set k,v = mission | getEnvMacro() %}
+{%-       if k is not none %}
+{%            set key = k + '_' + SCIENCE_LABEL %} 
+{%-           do scheduledTasksEnv.update({key : v})  -%}
+{%-       endif %}
+{%-       endfor %}
+{%-   endfor %}
+{%- endmacro %}
+
+
+[cylc]
+    UTC mode = True
+    [[events]]
+        mail events = timeout
+        abort on timeout = True
+{%- if 'nightly' in groupsToRun %}
+        abort on stalled = True
+{%- endif %}
+        timeout = PT3H
+
 [scheduling]
     cycling mode        = integer
     initial cycle point = 1
+    final cycle point   = {{ maxnrun }}
     [[queues]]
         [[[host_throttle]]]
             limit = {{ TARGET_THROTTLE }}
@@ -182,10 +206,14 @@
     [[dependencies]]
         [[[R1]]]
             graph = """
-{%- set scheduledTasks = schedule() | deduplicateSchedule() %}
+{%- set scheduledTasks = schedule(is_crun=false) | deduplicateSchedule() %}
 {{scheduledTasks}}
                     """
-
+        [[[P1]]]
+            graph = """
+{%- set scheduledCrunTasks = schedule(is_crun=true) | deduplicateSchedule() %}
+{{scheduledCrunTasks}}
+                    """
 [runtime]
     [[root]]
         initial scripting = """
@@ -216,6 +244,8 @@
         [[[job]]]
             batch system = {{TARGET_BATCHER}}
 
+{%- set scheduledTasksEnv = {} %}
+{%- set dummy = setTaskEnv(scheduledTasksEnv) -%}
 {%- macro ensureDestination() %}
                      mkdir -p $DESTINATION
                      chmod 755 $DESTINATION
@@ -443,6 +473,16 @@
                       """
         [[[environment]]]
             OMP_NUM_THREADS=2
+{% if configuration_label in scheduledTasksEnv.keys() %}
+{{          scheduledTasksEnv[configuration_label] }}
+{% endif %}
+            RESTART_NTS   = $(echo ${nrun:-1})
+            RESTART_NO    = $(echo $[$CYLC_TASK_CYCLE_POINT -1])
+            RESTART       = $(if [ $CYLC_TASK_CYCLE_POINT == $CYLC_SUITE_INITIAL_CYCLE_POINT ] && [ $CYLC_TASK_TRY_NUMBER -eq 1 ]; then echo ""; else echo "true"; fi)
+            RESTART_START = $(echo $[$RESTART_NO*$RESTART_NTS + 1])
+            RESTART_STOP  = $(echo $[$RESTART_NO*$RESTART_NTS + $RESTART_NTS])
+            RESTART_READ  = $(if [[ $RESTART ]]; then echo ".true."; else echo ".false."; fi) 
+
         [[[directives]]]
 {%-         for DIRECTIVE in TARGET_RUN_BATCHER_DIRECTIVES %}
             {{DIRECTIVE}}
