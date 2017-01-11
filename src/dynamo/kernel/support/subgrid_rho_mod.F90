@@ -65,43 +65,6 @@ contains
     end if
   end function maxmod_function
 
-  !--------------------------------------------------------------------------------
-  !>  @brief  Returns the coefficients,a0,a1,a2 which are a quadratic representation
-  !!          of rho within the cell, rho(x)=a0 + a1*x + a2*x^2. This is performed in
-  !!          one-direction only and neighbouring density values are supplied. The
-  !!          order in which the density values are supplied is | 1 | 2 | 3 | 4 | 5 |
-  !!          where the subgrid coefficients are estimated for cell 3 i.e. the middle cell.
-  !!
-  !!  @param[in]   density        Density values of five cells which have the ordering
-  !!                              | 1 | 2 | 3 | 4 | 5 |
-  !!  @param[out]  coeffs         Coefficients for cell 3 with coeffs(1)=a0,
-  !!                              coeffs(2)=a1, coeffs(3)=a2
-  !!  @param[in]   positive       Ensures returned estimate of rho at the cell edge is positive
-  !!  @param[in]   monotone       Ensures no over or undershoots are produced
-  !--------------------------------------------------------------------------------
-  subroutine return_ppm_output(density,coeffs,positive,monotone)
-    implicit none
-    real(kind=r_def), intent(in)    :: density(1:5)
-    real(kind=r_def), intent(out)   :: coeffs(1:3)
-    logical, intent(in)             :: positive
-    logical, intent(in)             :: monotone
-
-    real(kind=r_def)                :: local_density(1:5)
-
-    ! The ordering of the dofmaps for the cells in density is
-    ! | 4 | 2 | 1 | 3 | 5 |
-    ! However second_order_coeffs requires the dofmap to be of the form
-    ! | 1 | 2 | 3 | 4 | 5 |
-    ! where 3 points to the cell which the coefficients are being calculated for.
-    local_density(1) = density(4)
-    local_density(2) = density(2)
-    local_density(3) = density(1)
-    local_density(4) = density(3)
-    local_density(5) = density(5)
-
-    call second_order_coeffs(local_density,coeffs,positive,monotone)
-
-  end subroutine return_ppm_output
 
   !--------------------------------------------------------------------------------
   !>  @brief  Returns the coefficients,a0,a1,a2 which are a quadratic representation

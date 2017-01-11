@@ -84,46 +84,63 @@ end function subgrid_coeffs_kernel_constructor
 !! @param[in] ndf_w3 Number of degrees of freedom for W3 per cell
 !! @param[in] undf_w3 Number unique of degrees of freedom for W3
 !! @param[in] rho Density
+!! @param[in] rho Orientation of cell
 !! @param[in] stencil_length Local length of a stencil (5 for PPM)
-!! @param[in] stencil_map Dofmap foe the stencil
+!! @param[in] stencil_map Dofmap for the stencil
+!! @param[in] direction Direction of cosmic update
 !! @param[out] a0 Coefficient a0
 !! @param[out] a1 Coefficient a1
 !! @param[out] a2 Coefficient a2
+
 subroutine subgrid_coeffs_code(                                               &
                                 nlayers,                                      &
                                 subgridrho_option,                            &
                                 undf_w3,                                      &
                                 rho,                                          &
+                                orientation,                                  &
                                 ndf_w3,                                       &
                                 stencil_length,                               &
                                 stencil_map,                                  &
+                                direction,                                    &
                                 a0,                                           &
                                 a1,                                           &
                                 a2                                            &
                                 )
 
-  use subgrid_rho_mod, only: return_ppm_output, minmod_function, maxmod_function
+  use subgrid_rho_mod, only: minmod_function, maxmod_function, second_order_coeffs
+  use cosmic_flux_mod,    only : stencil_ordering_and_orientation
 
   !Arguments
   integer, intent(in)               :: nlayers
   integer, intent(in)               :: subgridrho_option
   integer, intent(in)               :: undf_w3
   real(kind=r_def), intent(in)      :: rho(undf_w3)
+  integer, intent(in)               :: orientation
   integer, intent(in)               :: ndf_w3
   integer, intent(in)               :: stencil_length
   integer, intent(in)               :: stencil_map(1:ndf_w3,1:stencil_length)
   real(kind=r_def), intent(inout)   :: a0(undf_w3)
   real(kind=r_def), intent(inout)   :: a1(undf_w3)
   real(kind=r_def), intent(inout)   :: a2(undf_w3)
+  integer, intent(in)               :: direction
 
   real(kind=r_def)               :: sigma1,sigma2
   real(kind=r_def)               :: coeffs(1:3)
+  real(kind=r_def)               :: rho_local(1:stencil_length)
 
-  integer :: k
+  integer :: k, ii
+  integer :: stencil_ordering(1:stencil_length)
 
   logical :: positive,monotone
 
+  call stencil_ordering_and_orientation(stencil_length,orientation,direction,stencil_ordering)
+
+
   do k=0,nlayers-1
+
+    do ii=1,stencil_length
+      rho_local(ii) = rho( stencil_map(1,stencil_ordering(ii)) )
+    end do
 
     select case(subgridrho_option)
       case (subgrid_rho_approximation_constant_subgrid)
@@ -164,7 +181,7 @@ subroutine subgrid_coeffs_code(                                               &
       case (subgrid_rho_approximation_ppm_no_limiter)
         positive=.false.
         monotone=.false.
-        call return_ppm_output(rho(stencil_map(1,1:5)),coeffs,positive,monotone)
+        call second_order_coeffs(rho_local,coeffs,positive,monotone)
         a0(stencil_map(1,1)) = coeffs(1)
         a1(stencil_map(1,1)) = coeffs(2)
         a2(stencil_map(1,1)) = coeffs(3)
@@ -174,7 +191,7 @@ subroutine subgrid_coeffs_code(                                               &
         positive=.true.
         monotone=.false.
         if ( subgridrho_option == subgrid_rho_approximation_ppm_positive_monotone) monotone=.true.
-        call return_ppm_output(rho(stencil_map(1,1:5)),coeffs,positive,monotone)
+        call second_order_coeffs(rho_local,coeffs,positive,monotone)
         a0(stencil_map(1,1)) = coeffs(1)
         a1(stencil_map(1,1)) = coeffs(2)
         a2(stencil_map(1,1)) = coeffs(3)

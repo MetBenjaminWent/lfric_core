@@ -2169,6 +2169,8 @@ subroutine invoke_subgrid_coeffs(a0,a1,a2,rho,direction,rho_stencil_extent)
     integer                  :: d
     logical                  :: swap
 
+    integer                 :: orientation
+
     a0_proxy   = a0%get_proxy()
     a1_proxy   = a1%get_proxy()
     a2_proxy   = a2%get_proxy()
@@ -2191,6 +2193,8 @@ subroutine invoke_subgrid_coeffs(a0,a1,a2,rho,direction,rho_stencil_extent)
     end if
     rho_stencil_size = map%get_size()
 
+    orientation = 1
+
     swap = .false.
     do d = 1,rho_stencil_extent
       if (rho_proxy%is_dirty(depth=d)) swap = .true.
@@ -2206,9 +2210,11 @@ subroutine invoke_subgrid_coeffs(a0,a1,a2,rho,direction,rho_stencil_extent)
                                 rho_approximation,                        &
                                 undf_w3,                                  &
                                 rho_proxy%data,                           &
+                                orientation,                              &
                                 ndf_w3,                                   &
                                 rho_stencil_size,                         &
                                 stencil_map,                              &
+                                direction,                                &
                                 a0_proxy%data,                            &
                                 a1_proxy%data,                            &
                                 a2_proxy%data                             &

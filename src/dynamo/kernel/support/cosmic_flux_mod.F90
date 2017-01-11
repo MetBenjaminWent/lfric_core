@@ -25,6 +25,7 @@ private
 
 ! Public subroutines
 public :: calc_stencil_ordering
+public :: stencil_ordering_and_orientation
 public :: frac_and_int_part
 public :: calc_integration_limits
 public :: populate_array
@@ -218,5 +219,79 @@ contains
     end do
   end subroutine calc_stencil_ordering
 
+
+  !--------------------------------------------------------------------------------
+  !>  @brief  Returns the ordering of the W3 dofs in a stencil dependent on cell
+  !!          orientation and direction
+  !!
+  !!  @param[in]   stencil_length     The length of the stencil
+  !!  @param[in]   orientation        The orientation of cell 1
+  !!  @param[in]   direction          The direction of cosmic update
+  !!  @param[out]  stencil_order_out  An integer array
+  !--------------------------------------------------------------------------------
+  subroutine stencil_ordering_and_orientation(stencil_length,orientation,direction,stencil_order_out)
+
+    use flux_direction_mod,     only : x_direction, y_direction
+    use log_mod,                only : log_event, LOG_LEVEL_ERROR, log_scratch_space, LOG_LEVEL_INFO
+
+    implicit none
+
+    integer, intent(in)   :: stencil_length
+    integer, intent(in)   :: orientation
+    integer, intent(out)  :: stencil_order_out(1:stencil_length)
+    integer, intent(in)   :: direction
+
+    integer :: ii, n
+
+    ! Further details of this routine can be found in Ticket #868
+
+    n = (stencil_length-1)/2
+
+    if (direction .eq. x_direction ) then
+      if (orientation .EQ. 1 .or. orientation .EQ. 2) then
+
+        do ii=1,n
+          stencil_order_out(ii) = (stencil_length+1) - 2*ii
+        end do
+        do ii=n+1,stencil_length
+          stencil_order_out(ii) = 2*ii-stencil_length
+        end do
+
+      elseif  (orientation .EQ. 3 .or. orientation .EQ. 4) then
+
+        do ii=1,n+1
+          stencil_order_out(ii) = (stencil_length+2)-2*ii
+        end do
+        do ii=n+2,stencil_length
+          stencil_order_out(ii) = 2*ii-(stencil_length+1)
+        end do
+
+      else
+        call log_event( "Error 1, orientation not specified", LOG_LEVEL_ERROR )
+      end if
+    elseif (direction .eq. y_direction ) then
+      if (orientation .EQ. 1 .or. orientation .EQ. 4) then
+
+        do ii=1,n
+          stencil_order_out(ii) = (stencil_length+1) - 2*ii
+        end do
+        do ii=n+1,stencil_length
+          stencil_order_out(ii) = 2*ii-stencil_length
+        end do
+
+      elseif  (orientation .EQ. 2 .or. orientation .EQ. 3) then
+
+        do ii=1,n+1
+          stencil_order_out(ii) = (stencil_length+2)-2*ii
+        end do
+        do ii=n+2,stencil_length
+          stencil_order_out(ii) = 2*ii-(stencil_length+1)
+        end do
+
+      else
+        call log_event( "Error 2, orientation not specified", LOG_LEVEL_ERROR )
+      end if
+    end if
+  end subroutine stencil_ordering_and_orientation
 
 end module cosmic_flux_mod
