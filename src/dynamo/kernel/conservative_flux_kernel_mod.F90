@@ -141,68 +141,70 @@ subroutine conservative_flux_code( nlayers,              &
 
   integer :: stencil_ordering(1:stencil_length)
   integer :: k
-  integer :: df1
+  integer :: dof_iterator
   integer :: ii
-  integer :: edge_option
+  integer :: edge_options(1:2), local_dofs(1:2)
   integer :: n_cells_to_sum
 
 
   call calc_stencil_ordering(stencil_length,stencil_ordering)
 
-  if (direction .EQ. x_direction ) then
-    edge_option = 0
-    df1=1
-  elseif (direction .EQ. y_direction) then
-    edge_option = 0
-    df1=2
-  endif
-
+  edge_options = (/ 0, 1 /)
+  if (direction .EQ. x_direction) then
+    local_dofs = (/ 1, 3 /)
+  else
+    local_dofs = (/ 2, 4 /)
+  end if
 
   do k=0,nlayers-1
 
-    departure_dist = dep_pts( map_w2(df1) + k )
+    do dof_iterator=1,2
 
-    ! Rearrange data such that it is in the order 1 | 2 | 3 | 4 | 5 | 6 | 7 etc
+      departure_dist = dep_pts( map_w2(local_dofs(dof_iterator)) + k )
 
-    do ii=1,stencil_length
-      rho_local(ii) = rho( stencil_map(stencil_ordering(ii)) )
-      a0_local(ii)  = a0_coeffs( stencil_map(stencil_ordering(ii)) )
-      a1_local(ii)  = a1_coeffs( stencil_map(stencil_ordering(ii)) )
-      a2_local(ii)  = a2_coeffs( stencil_map(stencil_ordering(ii)) )
+      ! Rearrange data such that it is in the order 1 | 2 | 3 | 4 | 5 | 6 | 7 etc
+
+      do ii=1,stencil_length
+        rho_local(ii) = rho( stencil_map(stencil_ordering(ii)) )
+        a0_local(ii)  = a0_coeffs( stencil_map(stencil_ordering(ii)) )
+        a1_local(ii)  = a1_coeffs( stencil_map(stencil_ordering(ii)) )
+        a2_local(ii)  = a2_coeffs( stencil_map(stencil_ordering(ii)) )
+      end do
+
+      ! Calculates number of cells of interest and fraction of a cell to add.
+      call frac_and_int_part(departure_dist,n_cells_to_sum,fractional_distance)
+
+      ! Calculates the left and right integration limits for the fractional cell.
+      call calc_integration_limits( departure_dist,             &
+                                    fractional_distance,        &
+                                    left_integration_limit,     &
+                                    right_integration_limit )
+
+      allocate(index_array(n_cells_to_sum))
+      allocate(local_density_index(n_cells_to_sum))
+
+      call populate_array(n_cells_to_sum,index_array,departure_dist,edge_options(dof_iterator))
+
+      do ii=1,n_cells_to_sum
+        local_density_index(ii) = map_cell_index(index_array(ii),stencil_length)
+      end do
+
+      mass_from_whole_cells = sum(rho_local(local_density_index(1:n_cells_to_sum-1)))
+
+      subgrid_coeffs = (/ a0_local(local_density_index(n_cells_to_sum)), &
+                          a1_local(local_density_index(n_cells_to_sum)), &
+                          a2_local(local_density_index(n_cells_to_sum)) /)
+
+      mass_frac = return_part_mass(3,subgrid_coeffs,left_integration_limit,right_integration_limit)
+
+      mass_total = mass_from_whole_cells + mass_frac
+
+      flux( map_w2(local_dofs(dof_iterator)) + k ) = sign(1.0_r_def,u_piola( map_w2(local_dofs(dof_iterator)) + k ))*mass_total/deltaT
+
+      if (allocated(index_array)) deallocate(index_array)
+      if (allocated(local_density_index)) deallocate(local_density_index)
+
     end do
-
-    ! Calculates number of cells of interest and fraction of a cell to add.
-    call frac_and_int_part(departure_dist,n_cells_to_sum,fractional_distance)
-
-    ! Calcuates the left and right integration limits for the fractional cell.
-    call calc_integration_limits( departure_dist,             &
-                                  fractional_distance,        &
-                                  left_integration_limit,     &
-                                  right_integration_limit )
-
-    allocate(index_array(n_cells_to_sum))
-    allocate(local_density_index(n_cells_to_sum))
-
-    call populate_array(n_cells_to_sum,index_array,departure_dist,edge_option)
-
-    do ii=1,n_cells_to_sum
-      local_density_index(ii) = map_cell_index(index_array(ii),stencil_length)
-    end do
-
-    mass_from_whole_cells = sum(rho_local(local_density_index(1:n_cells_to_sum-1)))
-
-    subgrid_coeffs = (/ a0_local(local_density_index(n_cells_to_sum)), &
-                        a1_local(local_density_index(n_cells_to_sum)), &
-                        a2_local(local_density_index(n_cells_to_sum)) /)
-
-    mass_frac = return_part_mass(3,subgrid_coeffs,left_integration_limit,right_integration_limit)
-
-    mass_total = mass_from_whole_cells + mass_frac
-
-    flux( map_w2(df1) + k ) = sign(1.0_r_def,u_piola( map_w2(df1) + k ))*mass_total/deltaT
-
-    if (allocated(index_array)) deallocate(index_array)
-    if (allocated(local_density_index)) deallocate(local_density_index)
 
   end do
 

@@ -29,7 +29,7 @@ module conservative_flux_kernel_mod_test
     real(kind=r_def), allocatable :: a0_coeffs(:), a1_coeffs(:), a2_coeffs(:)
     integer(i_def),   allocatable :: stencil_map(:)
 
-    integer(i_def) :: map_w2(1:2)
+    integer(i_def) :: map_w2(1:4)
   contains
     procedure setUp
     procedure tearDown
@@ -42,10 +42,10 @@ module conservative_flux_kernel_mod_test
 
     integer(i_def), parameter :: stencil_length = 9
     integer(i_def), parameter :: nlayers = 1
-    integer(i_def), parameter :: ndf_w2  = 2
-    integer(i_def), parameter :: undf_w2 = 11
+    integer(i_def), parameter :: ndf_w2  = 4
+    integer(i_def), parameter :: undf_w2 = 28
     integer(i_def), parameter :: ndf_w3  = 1
-    integer(i_def), parameter :: undf_w3 = 10
+    integer(i_def), parameter :: undf_w3 = 9
 
     real(r_def),    parameter :: deltaT  = 1.0_r_def
     real(r_def),    parameter :: fr      = 5.0_r_def / 6.0_r_def
@@ -61,7 +61,7 @@ contains
 
     integer :: ii
 
-    this%map_w2 = (/ 1,2 /)
+    this%map_w2 = (/ 1,2,3,4 /)
 
     allocate( this%dep_pts(1:undf_w2) )
     allocate( this%u_piola(1:undf_w2) )
@@ -123,7 +123,9 @@ contains
 
     real(r_def), parameter :: tol    = 1.0e-6_r_def
 
-    integer, pointer :: map_w3(:) => null()
+    integer  :: map_w3(1)
+
+    map_w3(1) = 1
 
     this%dep_pts(:) = 3.34_r_def
     this%u_piola(:) = 3.34_r_def
@@ -152,6 +154,7 @@ contains
                                  x_direction, &
                                  deltaT )
     @assertEqual(3.34_r_def, this%flux(1), tol)
+    @assertEqual(3.34_r_def, this%flux(3), tol)
 
 end subroutine test_positive_flux_large_cfl
 
@@ -206,7 +209,9 @@ end subroutine test_positive_flux_large_cfl
 
     real(r_def), parameter :: tol    = 1.0e-6_r_def
 
-    integer, pointer :: map_w3(:) => null()
+    integer :: map_w3(1)
+
+    map_w3(1) = 1
 
     this%dep_pts(:) = -1.0_r_def
     this%u_piola(:) = -1.0_r_def
@@ -245,7 +250,10 @@ end subroutine test_positive_flux_large_cfl
 
     real(r_def), parameter :: tol    = 1.0e-6_r_def
 
-    integer, pointer :: map_w3(:) => null()
+    integer :: map_w3(1)
+
+
+    map_w3(1) = 1
 
     this%dep_pts(:) = -2.0_r_def
     this%u_piola(:) = -2.0_r_def
@@ -284,7 +292,9 @@ end subroutine test_positive_flux_large_cfl
 
     real(r_def), parameter :: tol    = 1.0e-6_r_def
 
-    integer, pointer :: map_w3(:) => null()
+    integer :: map_w3(1)
+
+    map_w3(1) = 1
 
     this%dep_pts(:) = 1.0_r_def
     this%u_piola(:) = 1.0_r_def
