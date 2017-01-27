@@ -266,7 +266,7 @@
     final cycle point   = {{ crunInfo['maxcrun'] }}
     [[queues]]
         [[[host_throttle]]]
-            limit = 10
+            limit = {{ TARGET_THROTTLE }}
             members = root
     [[dependencies]]
 {%- set scheduledTasks = schedule() | deduplicateSchedule()%}

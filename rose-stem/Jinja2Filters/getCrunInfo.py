@@ -49,6 +49,6 @@ def getCrunInfo(context, call):
     # Return info about the crun arguments
     return_value={}
     if 'crun' in argumentDictionary.keys():
-        return_value.update({'crun':argumentDictionary['crun']})
+        return_value.update({'crun':int(argumentDictionary['crun'])})
 
     return return_value
