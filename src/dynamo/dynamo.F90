@@ -67,7 +67,9 @@ program dynamo
                                              get_geopotential
   use checksum_alg_mod,               only : checksum_alg
   use diagnostic_alg_mod,             only : divergence_diagnostic_alg
-  use mr_indices_mod,                 only : imr_v, imr_c, imr_r, imr_nc, imr_nr, nummr
+  use mr_indices_mod,                 only : imr_v, imr_c, imr_r, imr_nc, &
+                                             imr_nr, nummr
+
   implicit none
 
   character(:), allocatable :: filename

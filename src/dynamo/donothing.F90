@@ -8,6 +8,7 @@ program donothing
   use columnwise_op_mul_kernel_mod, only : columnwise_op_mul_kernel_type
   use columnwise_op_scaledadd_kernel_mod, only : columnwise_op_scaledadd_kernel_type
   use field_vector_mod
+  use function_space_chain_mod
 
   implicit none
 

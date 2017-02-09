@@ -5,12 +5,8 @@
 ! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
 !-------------------------------------------------------------------------------
 !
-!> @brief   Object to hold mesh cell mappings (local ids) between two mesh
-!>          objects.
+!> Mesh map
 !>
-!> @details Cell mappings are from LID of a cell in the source mesh to LIDs of
-!>          overlapping cells in the target mesh object.
-!
 module mesh_map_mod
 
 use constants_mod,         only: i_def, str_def
@@ -21,35 +17,39 @@ use log_mod,               only: log_event, log_scratch_space, &
 implicit none
 
 private
+public :: generate_mesh_map_id
 
+!> Stores mesh cell mappings in local ids (LID) between two mesh objects.
+!> Cell mappings are from a LID of a cell in the source mesh to LIDs of
+!> overlapping cells in the target mesh object.
+!>
 !===============================================================================
 type, extends(linked_list_data_type), public :: mesh_map_type
+
   private
 
-  integer(i_def), allocatable :: mesh_map(:,:) ! In lids
+  integer(i_def), allocatable :: mesh_map(:,:) ! In LIDs
 
 contains
 
-  !> @brief  Returns the ID of the mesh object used as the source for this
-  !>         mesh map object.
+  !> Gets the ID of the source mesh object for this mesh map object.
   !> @return Id of source mesh object
   procedure, public :: get_source_id
   !>
-  !> @brief  Returns the ID of the mesh object used as the target for this
-  !>         mesh map object.
+  !> Gets the ID of the target mesh object for this mesh map object.
   !> @return Id of target mesh object
   procedure, public :: get_target_id
   !>
-  !> @brief  Returns the number of source cells in this mapping object.
+  !> Gets the number of source cells in this mesh map object.
   !> @return Number of cells in source mesh
   procedure, public :: get_nsource_cells
   !>
-  !> @brief  Returns the number of target cells for each source cell in this
-  !>         mapping object.
+  !> Gets the number of target cells for each source cell in this
+  !> mesh map object.
   !> @return Number of target cells per source cell
   procedure, public :: get_ntarget_cells_per_source_cell
   !>
-  !> @brief  Gets the target cells ids mapped to requested source cell
+  !> Gets the target cells ids mapped to the requested source cell
   !> @param [in]  source_lid Local ID of requested source cell
   !> @param [out] map        Local IDs of cells in target mesh which overlap
   !>                         with the requested Local ID in source mesh.
@@ -57,7 +57,7 @@ contains
   !>                         [ntarget_cells_per_source_cell]
   procedure, public :: get_map_from_cell
   !>
-  !> @brief  Gets the target cells ids mapped to requested source cells
+  !> Gets the target cells ids mapped to the requested source cells
   !> @param [in]  source_lids Local IDs of requested source cells
   !> @param [out] map         Local IDs of cells in target mesh which overlap
   !>                          with the requested Local IDs in source mesh.
@@ -66,7 +66,7 @@ contains
   !>                           nrequested_source_cells]
   procedure, public :: get_map_from_cells
   !>
-  !> @brief Gets the target cells ids mapped to all source cells.
+  !> Gets the target cells ids mapped to all source cells.
   !> @param [out] map         Local IDs of cells in target mesh which overlap
   !>                          with the requested Local IDs in source mesh.
   !>                          Argument should be of dimension,
@@ -74,13 +74,13 @@ contains
   !>                           nsource_cells]
   procedure, public :: get_full_map
   !>
-  !> @brief Forced clear of this oject from memory.
-  !>        This routine should not need to be called manually except
-  !>        (possibly) in pfunit tests
+  !> Forced clear of this oject from memory.
+  !> This routine should not need to be called manually except
+  !> (possibly) in pfunit tests
   procedure, public :: clear
 
-  !> @brief Finalizer routine, should be called automatically by
-  !>        code when the object is out of scope
+  !> Finalizer routine, should be called automatically by code when
+  !> the object is out of scope
   final :: mesh_map_destructor
 
 end type mesh_map_type
@@ -91,8 +91,7 @@ end interface
 
 contains
 
-!>
-!> @brief     Constructor for mesh map object
+!> Instantiates a mesh map object
 !> @param[in] source_mesh_id  ID of source mesh object
 !> @param[in] target_mesh_id  ID of target mesh object
 !> @param[in] map             LID-LID cell map. Dimensions
@@ -114,7 +113,7 @@ integer(i_def) :: mesh_map_id
 integer(i_def) :: nsource_cells
 integer(i_def) :: ntarget_cells_per_source_cell
 
-mesh_map_id = (10000*source_mesh_id) + target_mesh_id
+mesh_map_id = generate_mesh_map_id(source_mesh_id, target_mesh_id)
 
 ! Set the map id
 !-------------------------------------------------
@@ -300,5 +299,25 @@ return
 end subroutine mesh_map_destructor
 
 
+!> Returns a mesh map id using the ids of source and target meshes.
+!> @param[in] source_mesh_id  ID of source mesh object
+!> @param[in] target_mesh_id  ID of target mesh object
+!> @return    mesh_map_id
+!==============================================================================
+function generate_mesh_map_id( source_mesh_id,  &
+                               target_mesh_id ) &
+                       result( mesh_map_id )
+
+implicit none
+
+integer(i_def), intent(in) :: source_mesh_id
+integer(i_def), intent(in) :: target_mesh_id
+
+integer(i_def) :: mesh_map_id
+
+mesh_map_id = 10000*source_mesh_id + target_mesh_id
+
+return
+end function generate_mesh_map_id
 
 end module mesh_map_mod

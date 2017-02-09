@@ -29,7 +29,7 @@ contains
 function get_id(self) result(id)
 
   class(linked_list_data_type), intent (in)  :: self
-  integer(i_def)                          :: id
+  integer(i_def)                             :: id
 
   id = self%id
 

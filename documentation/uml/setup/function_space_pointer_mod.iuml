@@ -1,0 +1,7 @@
+class function_space_pointer_mod::function_space_pointer_type{
+-function_space_target: function_space_type <<pointer>>
++<<create>> function_space_pointer_constructor(<in>function_space:<<function_space_type, pointer>>): function_space_pointer_type
++get_target(): function_space_type <<pointer>>
+}
+
+function_space_pointer_mod::function_space_pointer_type -> function_space_mod::function_space_type : <size:8>-function_space_target\n<size:8><<pointer>>
