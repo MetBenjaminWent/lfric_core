@@ -421,7 +421,7 @@ test -w "{{directory}}" -o ! -e "{{directory}}" && rm -rf {{directory}} || ( ech
     [[api_documentation]]
         inherit = None, LOCAL, TECHNICAL
         pre-script = """
-                     {{'\n'|commandList( LOCAL_BASE_SETUP, LOCAL_REVEAL_SETUP, 'mkdir -p $DYNAMO_DESTINATION_DIRECTORY') }}
+                     {{'\n'|commandList( LOCAL_BASE_SETUP, LOCAL_TECHNICAL_SETUP, LOCAL_REVEAL_SETUP, 'mkdir -p $DYNAMO_DESTINATION_DIRECTORY') }}
                      """
         script = make -C $DYNAMO_SOURCE_DIRECTORY/documentation api-documents
         post-script = """
@@ -460,7 +460,7 @@ test -w "{{directory}}" -o ! -e "{{directory}}" && rm -rf {{directory}} || ( ech
     [[design_documentation]]
         inherit = None, LOCAL, TECHNICAL
         pre-script = """
-                     {{'\n'|commandList( LOCAL_BASE_SETUP, LOCAL_REVEAL_SETUP) }}
+                     {{'\n'|commandList( LOCAL_BASE_SETUP, LOCAL_TECHNICAL_SETUP, LOCAL_REVEAL_SETUP) }}
                      """
         script = make -C $DYNAMO_SOURCE_DIRECTORY/documentation design-documents.tar
 {%- endif %}

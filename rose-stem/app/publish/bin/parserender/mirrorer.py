@@ -380,6 +380,7 @@ class Mirrorer:
       # In the absense of a comprehensive list to just lift up and use we
       # include only those actually appearing in our documents.
       xmlParser.entity['nbsp']  = unichr(160)
+      xmlParser.entity['sect']  = unichr(167)
       xmlParser.entity['ndash'] = unichr(2013)
       xmlParser.entity['mdash'] = unichr(2014)
       try:
