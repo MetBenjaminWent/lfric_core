@@ -1,7 +1,7 @@
 !-------------------------------------------------------------------------------
-! (c) The copyright relating to this work is owned jointly by the Crown, 
-! Met Office and NERC 2014. 
-! However, it has been created with the help of the GungHo Consortium, 
+! (c) The copyright relating to this work is owned jointly by the Crown,
+! Met Office and NERC 2014.
+! However, it has been created with the help of the GungHo Consortium,
 ! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
 !-------------------------------------------------------------------------------
 !>  @brief Abstract mesh generator type.
@@ -11,7 +11,7 @@
 !-------------------------------------------------------------------------------
 
 module ugrid_generator_mod
-use constants_mod, only : r_def
+use constants_mod, only : i_def, r_def, str_def, str_long
 implicit none
 private
 
@@ -20,12 +20,14 @@ private
 !-------------------------------------------------------------------------------
 type, abstract, public :: ugrid_generator_type
   private
+
 contains
   procedure (generate_interface         ), deferred :: generate
+  procedure (get_metadata_interface     ), deferred :: get_metadata
   procedure (get_dimensions_interface   ), deferred :: get_dimensions
   procedure (get_coordinates_interface  ), deferred :: get_coordinates
   procedure (get_connectivity_interface ), deferred :: get_connectivity
-end type ugrid_generator_type 
+end type ugrid_generator_type
 
 !-------------------------------------------------------------------------------
 ! Abstract interfaces
@@ -34,7 +36,7 @@ end type ugrid_generator_type
 abstract interface
 
   !-----------------------------------------------------------------------------
-  !> @brief Interface: runs the mesh generator strategy. 
+  !> @brief Interface: runs the mesh generator strategy.
   !!
   !! @param[in,out] self  The generator strategy object.
   !-----------------------------------------------------------------------------
@@ -44,8 +46,25 @@ abstract interface
     class(ugrid_generator_type), intent(inout) :: self
   end subroutine generate_interface
 
+
   !-----------------------------------------------------------------------------
-  !> @brief Interface: returns mesh dimension information. 
+  !> @brief Interface: returns mesh metadata information.
+  !!
+  !! @param[in]     self           The generator strategy object.
+  !! @param[out]    mesh_class     Primitive shape, i.e. sphere, plane
+  !-----------------------------------------------------------------------------
+  subroutine get_metadata_interface ( self, mesh_class )
+
+    import :: ugrid_generator_type, str_def
+
+    class(ugrid_generator_type), intent(in)  :: self
+    character(str_def),          intent(out) :: mesh_class
+
+  end subroutine get_metadata_interface
+
+
+  !-----------------------------------------------------------------------------
+  !> @brief Interface: returns mesh dimension information.
   !!
   !! @param[in]     self                   The generator strategy object.
   !! @param[out]    num_nodes              Number of nodes
@@ -73,15 +92,15 @@ abstract interface
 
   !-----------------------------------------------------------------------------
   !> @brief Interface: Gets coordinates of nodes, edges and faces.
-  !! @param[in]     self                   The generator strategy object. 
+  !! @param[in]     self                   The generator strategy object.
   !! @param[out]    node_coordinates       Node coordinates
   !-----------------------------------------------------------------------------
 
   subroutine get_coordinates_interface (self, node_coordinates)
 
     import :: ugrid_generator_type, r_def
-    class(ugrid_generator_type), intent(in) :: self
 
+    class(ugrid_generator_type), intent(in) :: self
     real(kind=r_def), intent(out) :: node_coordinates(:,:)
 
   end subroutine get_coordinates_interface
@@ -89,7 +108,7 @@ abstract interface
   !-----------------------------------------------------------------------------
   !> @brief Interface: gets a selection of connectivity information from the
   !!                   mesh generator.
-  !! @param[in]     self                   The generator strategy object. 
+  !! @param[in]     self                   The generator strategy object.
   !! @param[out]    face_node_connectivity Nodes around each face
   !! @param[out]    edge_node_connectivity Nodes defining each edge
   !! @param[out]    face_face_connectivity Faces adjacent to each face.
@@ -103,11 +122,12 @@ abstract interface
     class(ugrid_generator_type), intent(in) :: self
 
     integer, intent(out) :: face_node_connectivity(:,:)
-    integer, intent(out) :: edge_node_connectivity(:,:) 
-    integer, intent(out) :: face_edge_connectivity(:,:) 
+    integer, intent(out) :: edge_node_connectivity(:,:)
+    integer, intent(out) :: face_edge_connectivity(:,:)
     integer, intent(out) :: face_face_connectivity(:,:)
 
   end subroutine get_connectivity_interface
+
 end interface
 
 end module ugrid_generator_mod

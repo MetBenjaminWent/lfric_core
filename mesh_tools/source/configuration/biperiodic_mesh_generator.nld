@@ -2,8 +2,8 @@ namelist biperiodic_mesh_generator
 
   cells_in_x    : integer
   cells_in_y    : integer
-  cell_width    : real ! Vertex coordinate X increment
-  cell_height   : real ! Vertex coordinate Y increment
+  cell_width    : real ! Vertex coordinate x increment (m)
+  cell_height   : real ! Vertex coordinate y increment (m)
   mesh_filename : string(filename)
 
 end namelist biperiodic_mesh_generator

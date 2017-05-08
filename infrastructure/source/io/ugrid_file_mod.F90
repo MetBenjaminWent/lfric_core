@@ -1,7 +1,7 @@
 !-------------------------------------------------------------------------------
-! (c) The copyright relating to this work is owned jointly by the Crown, 
-! Met Office and NERC 2014. 
-! However, it has been created with the help of the GungHo Consortium, 
+! (c) The copyright relating to this work is owned jointly by the Crown,
+! Met Office and NERC 2014.
+! However, it has been created with the help of the GungHo Consortium,
 ! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
 !-------------------------------------------------------------------------------
 !>  @brief Abstract ugrid file type.
@@ -10,7 +10,7 @@
 !!           procedure interfaces. Used to implement the OO strategy pattern.
 !-------------------------------------------------------------------------------
 module ugrid_file_mod
-use constants_mod, only : r_def
+use constants_mod, only : r_def, str_def
 use file_mod, only      : file_type
 
 implicit none
@@ -29,7 +29,7 @@ contains
   procedure (get_dimensions_interface), deferred :: get_dimensions
   procedure (read_interface ),          deferred :: read
   procedure (write_interface),          deferred :: write
-end type ugrid_file_type 
+end type ugrid_file_type
 
 !-------------------------------------------------------------------------------
 ! Abstract interfaces
@@ -59,7 +59,7 @@ abstract interface
     import :: ugrid_file_type
 
     !Arguments
-    class(ugrid_file_type), intent(inout)  :: self                        
+    class(ugrid_file_type), intent(inout)  :: self
     integer,                intent(out)    :: num_nodes
     integer,                intent(out)    :: num_edges
     integer,                intent(out)    :: num_faces
@@ -89,12 +89,12 @@ abstract interface
     import :: ugrid_file_type, r_def
 
     !Arguments
-    class(ugrid_file_type), intent(inout) :: self                        
-    real(kind=r_def),       intent(out)   :: node_coordinates(:,:)       
-    integer,                intent(out)   :: face_node_connectivity(:,:) 
-    integer,                intent(out)   :: edge_node_connectivity(:,:) 
-    integer,                intent(out)   :: face_edge_connectivity(:,:) 
-    integer,                intent(out)   :: face_face_connectivity(:,:) 
+    class(ugrid_file_type), intent(inout) :: self
+    real(kind=r_def),       intent(out)   :: node_coordinates(:,:)
+    integer,                intent(out)   :: face_node_connectivity(:,:)
+    integer,                intent(out)   :: edge_node_connectivity(:,:)
+    integer,                intent(out)   :: face_edge_connectivity(:,:)
+    integer,                intent(out)   :: face_face_connectivity(:,:)
 
   end subroutine read_interface
 
@@ -112,24 +112,25 @@ abstract interface
   !! @param[in]      face_face_connectivity  Faces adjacent to each face.
   !-----------------------------------------------------------------------------
 
-  subroutine  write_interface(self,                                        &
+  subroutine  write_interface(self, mesh_class,                            &
                   num_nodes, num_edges, num_faces,                         &
                   node_coordinates,                                        &
                   face_node_connectivity, edge_node_connectivity,          &
                   face_edge_connectivity, face_face_connectivity)
 
-    import :: ugrid_file_type, r_def
+    import :: ugrid_file_type, r_def, str_def
 
     !Arguments
-    class(ugrid_file_type), intent(inout) :: self                        
-    integer,                intent(in)    :: num_nodes                   
-    integer,                intent(in)    :: num_edges                   
-    integer,                intent(in)    :: num_faces                   
-    real(kind=r_def),       intent(in)    :: node_coordinates(:,:)       
-    integer,                intent(in)    :: face_node_connectivity(:,:) 
-    integer,                intent(in)    :: edge_node_connectivity(:,:) 
-    integer,                intent(in)    :: face_edge_connectivity(:,:) 
-    integer,                intent(in)    :: face_face_connectivity(:,:) 
+    class(ugrid_file_type), intent(inout) :: self
+    character(str_def),     intent(in)    :: mesh_class
+    integer,                intent(in)    :: num_nodes
+    integer,                intent(in)    :: num_edges
+    integer,                intent(in)    :: num_faces
+    real(kind=r_def),       intent(in)    :: node_coordinates(:,:)
+    integer,                intent(in)    :: face_node_connectivity(:,:)
+    integer,                intent(in)    :: edge_node_connectivity(:,:)
+    integer,                intent(in)    :: face_edge_connectivity(:,:)
+    integer,                intent(in)    :: face_face_connectivity(:,:)
 
   end subroutine write_interface
 

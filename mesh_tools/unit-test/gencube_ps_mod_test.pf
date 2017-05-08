@@ -4,10 +4,10 @@
 ! However, it has been created with the help of the GungHo Consortium, 
 ! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
 !-------------------------------------------------------------------------------
-module gencube_mod_test
+module gencube_ps_mod_test
 
-  use constants_mod, only: i_def, r_def
-  use gencube_mod,   only: gencube_ps_type
+  use constants_mod,  only: i_def, r_def
+  use gencube_ps_mod, only: gencube_ps_type
   use pFUnit_Mod
 
   implicit none
@@ -129,4 +129,4 @@ contains
 
   end subroutine test_all
 
-end module gencube_mod_test
+end module gencube_ps_mod_test

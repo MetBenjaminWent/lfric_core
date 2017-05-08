@@ -1,7 +1,7 @@
 !-------------------------------------------------------------------------------
-! (c) The copyright relating to this work is owned jointly by the Crown, 
-! Met Office and NERC 2014. 
-! However, it has been created with the help of the GungHo Consortium, 
+! (c) The copyright relating to this work is owned jointly by the Crown,
+! Met Office and NERC 2014.
+! However, it has been created with the help of the GungHo Consortium,
 ! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
 !-------------------------------------------------------------------------------
 !>  @brief      Module to define the genbiperiodic_type, a subclass of the
@@ -11,12 +11,12 @@
 !!  @details    Type implements the ugrid_generator_type interface to
 !!              construct a biperiodic mesh.  All required connectivity is
 !!              calculated and made availabel to the ugrid writer.
-!!         
+!!
 !-------------------------------------------------------------------------------
 module genbiperiodic_mod
 !-------------------------------------------------------------------------------
 use ugrid_generator_mod,   only : ugrid_generator_type
-use constants_mod,         only : r_def, i_def
+use constants_mod,         only : r_def, i_def, str_def
 use log_mod,               only : log_event, LOG_LEVEL_ERROR
 use reference_element_mod, only : W, S, E, N, SWB, SEB, NWB, NEB
 implicit none
@@ -28,10 +28,13 @@ integer, parameter     :: NE = NEB
 integer, parameter     :: SE = SEB
 integer, parameter     :: SW = SWB
 ! Prefix for error messages
-character(len=*), parameter  :: prefix = "[Biperiodic Mesh] "
+character(len=*),   parameter :: prefix = "[Biperiodic Mesh] "
+character(str_def), parameter :: mesh_class = 'plane'
 !-------------------------------------------------------------------------------
 type, extends(ugrid_generator_type), public :: genbiperiodic_type
   private
+
+  character(str_def)                 :: mesh_class
   integer                            :: nx, ny
   real(kind=r_def)                   :: dx, dy
   integer, allocatable               :: cell_next(:,:)     ! (4, nx*ny)
@@ -39,11 +42,13 @@ type, extends(ugrid_generator_type), public :: genbiperiodic_type
   integer, allocatable               :: edges_on_cell(:,:) ! (4, nx*ny)
   integer, allocatable               :: verts_on_edge(:,:) ! (2, nx*ny)
   real(kind=r_def), allocatable      :: vert_coords(:,:)   ! (2, nx*ny)
+
 contains
   procedure :: calc_adjacency
   procedure :: calc_face_to_vert
   procedure :: calc_edges
   procedure :: calc_coords
+  procedure :: get_metadata
   procedure :: get_dimensions
   procedure :: get_coordinates
   procedure :: get_connectivity
@@ -80,6 +85,7 @@ type(genbiperiodic_type) function genbiperiodic_constructor(nx, ny, dx, dy) &
     call log_event(prefix//"Invalid dimension argument.", LOG_LEVEL_ERROR)
   end if
 
+  self%mesh_class = mesh_class
   self%nx = nx
   self%ny = ny
 
@@ -428,8 +434,8 @@ end subroutine calc_coords
 !>  @brief       Populates the arguments with the dimensions defining
 !!               the biperiodic mesh.
 !!
-!!  @details     
-!!            
+!!  @details
+!!
 !!
 !!  @param[in]   self                 The genbiperiodic_type instance reference.
 !!  @param[out]  num_nodes            The number of nodes on the mesh.
@@ -488,7 +494,7 @@ end subroutine get_coordinates
 !!
 !!  @details     Implements the connectivity-providing interface required
 !!               by the ugrid writer.
-!!         
+!!
 !!
 !!  @param[in]   self
 !!  @param[out]  face_node_connectivity   Face-node connectivity.
@@ -534,12 +540,12 @@ subroutine generate(self)
   call calc_face_to_vert(self, self%mesh)
   call calc_edges(self, self%edges_on_cell, self%verts_on_edge)
   call calc_coords(self, self%vert_coords)
-  
+
 end subroutine generate
 !-------------------------------------------------------------------------------
 !>  @brief         Writes out the mesh and connectivity for debugging purposes.
 !!
-!!  @details       
+!!  @details
 !!
 !!  @param[in,out]  self The genbiperiodic_type instance reference.
 !-------------------------------------------------------------------------------
@@ -584,5 +590,24 @@ subroutine write_mesh(self)
   end do
 
 end subroutine write_mesh
+
+!-----------------------------------------------------------------------------
+!> @brief Returns mesh metadata information.
+!!
+!! @param[in]     self           The generator strategy object.
+!! @param[out]    mesh_class     Primitive shape, i.e. plane
+!-----------------------------------------------------------------------------
+subroutine get_metadata( self, mesh_class )
+
+  implicit none
+
+  class(genbiperiodic_type), intent(in)  :: self
+  character(str_def),     intent(out) :: mesh_class
+
+  mesh_class = self%mesh_class
+
+  return
+end subroutine  get_metadata
+
 !-------------------------------------------------------------------------------
 end module genbiperiodic_mod

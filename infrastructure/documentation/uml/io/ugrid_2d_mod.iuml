@@ -5,6 +5,7 @@
 
 class ugrid_2d_mod::ugrid_2d_type {
   -file_handler: ugrid_file_type <<allocatable>>
+  -mesh_class: string
   -num_cells: integer
   -num_nodes: integer
   -num_edges: integer

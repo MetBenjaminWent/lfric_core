@@ -19,7 +19,7 @@ program cubedsphere_mesh_generator
                        only : read_cubedsphere_mesh_generator_namelist, &
                               edge_cells, smooth_passes, mesh_filename
   use ESMF
-  use gencube_mod,     only : gencube_ps_type
+  use gencube_ps_mod,  only : gencube_ps_type
   use io_utility_mod,  only : open_file, close_file
   use log_mod,         only : log_scratch_space, log_event, &
                               LOG_LEVEL_INFO, LOG_LEVEL_ERROR
@@ -40,7 +40,7 @@ program cubedsphere_mesh_generator
   class(ugrid_file_type), allocatable :: ugrid_file
   integer                             :: fsize
 
-  call ESMF_Initialize(vm=vm, defaultlogfilename="biperiodic.log", &
+  call ESMF_Initialize(vm=vm, defaultlogfilename="cubedsphere.log", &
                        logkindflag=ESMF_LOGKIND_SINGLE, rc=rc)
   if (rc /= ESMF_SUCCESS) call log_event( 'Failed to initialise ESMF.', &
                                           LOG_LEVEL_ERROR )

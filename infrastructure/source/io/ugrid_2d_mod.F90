@@ -1,7 +1,7 @@
 !-------------------------------------------------------------------------------
-! (c) The copyright relating to this work is owned jointly by the Crown, 
-! Met Office and NERC 2014. 
-! However, it has been created with the help of the GungHo Consortium, 
+! (c) The copyright relating to this work is owned jointly by the Crown,
+! Met Office and NERC 2014.
+! However, it has been created with the help of the GungHo Consortium,
 ! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
 !-------------------------------------------------------------------------------
 !  @brief Store 2-dimensional ugrid mesh data.
@@ -12,7 +12,7 @@
 !-------------------------------------------------------------------------------
 
 module ugrid_2d_mod
-use constants_mod,  only : r_def
+use constants_mod,  only : r_def, str_def
 use ugrid_file_mod, only : ugrid_file_type
 implicit none
 private
@@ -28,6 +28,8 @@ integer, parameter :: TOPOLOGY_DIMENSION  = 2
 !-------------------------------------------------------------------------------
 type, public :: ugrid_2d_type
   private
+
+  character(str_def) :: mesh_class    !< Primitive class of mesh, i.e. sphere, plane
 
   !Numbers of different entities
   integer :: num_cells                !< Number of cells
@@ -108,9 +110,9 @@ subroutine get_dimensions(self, num_nodes, num_edges, num_faces,    &
   num_edges = self%num_edges
   num_faces = self%num_faces
 
-  num_nodes_per_face = self%num_nodes_per_face 
-  num_edges_per_face = self%num_edges_per_face 
-  num_nodes_per_edge = self%num_nodes_per_edge 
+  num_nodes_per_face = self%num_nodes_per_face
+  num_edges_per_face = self%num_edges_per_face
+  num_nodes_per_edge = self%num_nodes_per_edge
   max_num_faces_per_node = self%max_num_faces_per_node
 
   return
@@ -157,7 +159,7 @@ end subroutine allocate_arrays
 !>  @brief Allocates ugrid_2d internal storage, populated by ugrid file.
 !!
 !!  @details  Allocates component arrays according to sizes already stored in
-!!            the ugrid_2d object. These arrays are populated elsewhere 
+!!            the ugrid_2d object. These arrays are populated elsewhere
 !!            by a ugrid file strategy.
 !!
 !!  @param[in,out] self    The ugrid object for which to allocate storage.
@@ -196,12 +198,14 @@ subroutine set_by_generator(self, generator_strategy)
   class(ugrid_2d_type),        intent(inout) :: self
   class(ugrid_generator_type), intent(inout) :: generator_strategy
 
+  call generator_strategy%get_metadata( mesh_class=self%mesh_class )
+
   call generator_strategy%generate()
 
   call allocate_arrays(self, generator_strategy)
 
   call generator_strategy%get_coordinates(           &
-         node_coordinates = self%node_coordinates)
+         node_coordinates = self%node_coordinates )
 
   call generator_strategy%get_connectivity(                       &
          face_node_connectivity = self%face_node_connectivity,    &
@@ -216,7 +220,7 @@ end subroutine set_by_generator
 !> @brief Sets the file read/write strategy.
 !!
 !! @details Receives a file-handler object and moves its allocation into
-!!          the appropriate type component. On exit, the file_handler 
+!!          the appropriate type component. On exit, the file_handler
 !!          dummy argument will no longer be allocated.
 !!
 !! @param[in,out] self         Calling ugrid object.
@@ -240,7 +244,7 @@ end subroutine set_file_handler
 !!
 !! @details Calls back to the file handler strategy (component) in order to
 !!          read the ugrid mesh data and populate internal arrays with data
-!!          from a file. 
+!!          from a file.
 !!
 !! @param[in,out] self  Calling ugrid object.
 !-------------------------------------------------------------------------------
@@ -282,7 +286,7 @@ end subroutine read_from_file
 !!
 !! @details Calls back to the file handler strategy (component) in order to
 !!          read the ugrid mesh data and populate internal arrays with data
-!!          from a file. 
+!!          from a file.
 !!
 !! @param[in,out] self  The calling ugrid object.
 !-------------------------------------------------------------------------------
@@ -297,6 +301,7 @@ subroutine write_to_file(self, filename)
   call self%file_handler%file_new(trim(filename))
 
   call self%file_handler%write(                             &
+      mesh_class             = self%mesh_class,             &
       num_nodes              = self%num_nodes,              &
       num_edges              = self%num_edges,              &
       num_faces              = self%num_faces,              &
@@ -340,9 +345,9 @@ end subroutine get_node_coords
 !-------------------------------------------------------------------------------
 !> @brief Gets node coordinates with transposed ugrid array index ordering.
 !!
-!! @details Returns a rank-two array of node coordinates, with the 
+!! @details Returns a rank-two array of node coordinates, with the
 !!          coordinate dimension index outermost, and the node number
-!!          innermost. This is the transpose of the ugrid index ordering. 
+!!          innermost. This is the transpose of the ugrid index ordering.
 !!          Format: [long, lat, radius].
 !!
 !! @param[in]   self        Calling ugrid object.
@@ -394,7 +399,7 @@ end subroutine get_face_node_connectivity
 !-------------------------------------------------------------------------------
 !> @brief  Gets an array of node indices surrounding each face with transposed
 !!         ugrid index ordering.
-!!               
+!!
 !! @details  Returns a rank-two array of nodes surrounding each face, with the
 !!           face indices being contiguous and the nodes surrounding any single
 !!           face being non-contiguous. This is the transpose of the ugrid
@@ -452,7 +457,7 @@ end subroutine get_face_edge_connectivity
 !-------------------------------------------------------------------------------
 !> @brief  Gets an array of edge indices surrounding each face with transposed
 !!         ugrid index ordering.
-!!               
+!!
 !! @details  Returns a rank-two array of edges surrounding each face, with the
 !!           face indices being contiguous and the edges surrounding any single
 !!           face being non-contiguous. This is the transpose of the ugrid
@@ -482,7 +487,7 @@ end subroutine get_face_edge_connectivity_transpose
 
 !-------------------------------------------------------------------------------
 !> @brief  Gets an array of face indices surrounding each face.
-!!               
+!!
 !! @details  Returns a rank-two array of faces surrounding each face, with
 !!           the faces surrounding any single face being contiguous.
 !!
@@ -510,7 +515,7 @@ end subroutine get_face_face_connectivity
 !-------------------------------------------------------------------------------
 !> @brief   Gets an array of face indices surrounding each face with transposed
 !!          ugrid index ordering.
-!!               
+!!
 !! @details  Returns a rank-two array of faces surrounding each face, with the
 !!           face indices being contiguous and the the faces surrounding any
 !!           single face being non-contiguous. This transpose routine is needed
@@ -540,7 +545,7 @@ end subroutine get_face_face_connectivity_transpose
 !-------------------------------------------------------------------------------
 !> @brief   Writes coordinates to a .dat file in the units they are held in
 !!          within the UGRID file.
-!!               
+!!
 !! @details  Produces a file with rough output of coordinates. Intended to be
 !!           a temporary routine only: would be better implemented for the
 !!           long-term as a plain-text ugrid file strategy. Hence the

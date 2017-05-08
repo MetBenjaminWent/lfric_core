@@ -1,7 +1,7 @@
 !-------------------------------------------------------------------------------
-! (c) The copyright relating to this work is owned jointly by the Crown, 
-! Met Office and NERC 2014. 
-! However, it has been created with the help of the GungHo Consortium, 
+! (c) The copyright relating to this work is owned jointly by the Crown,
+! Met Office and NERC 2014.
+! However, it has been created with the help of the GungHo Consortium,
 ! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
 !-------------------------------------------------------------------------------
 !>  @brief      Module to define the gencube_ps_type, a subclass of the
@@ -11,7 +11,7 @@
 !!  @details    Type implements the ugrid_generator_type interface to
 !!              construct a cubed-sphere mesh.  All required connectivity is
 !!              calculated and made available to the ugrid writer.
-!!         
+!!
 !!      +---+
 !!      | 5 |
 !!  +---+---+---+---+
@@ -19,12 +19,12 @@
 !!  +---+---+---+---+
 !!      | 6 |
 !!      +---+
-!! 
+!!
 !-------------------------------------------------------------------------------
-module gencube_mod
+module gencube_ps_mod
 !-------------------------------------------------------------------------------
 use ugrid_generator_mod,   only : ugrid_generator_type
-use constants_mod,         only : r_def, i_def
+use constants_mod,         only : r_def, i_def, str_def
 use log_mod,               only : log_event, LOG_LEVEL_ERROR
 use reference_element_mod, only : W, S, E, N, SWB, SEB, NWB, NEB
 implicit none
@@ -36,12 +36,16 @@ integer, parameter     :: NE = NEB
 integer, parameter     :: SE = SEB
 integer, parameter     :: SW = SWB
 ! Prefix for error messages
-character(len=*), parameter  :: prefix = "[Cubed-Sphere Mesh] "
+character(len=*),   parameter :: prefix = "[Cubed-Sphere Mesh] "
+character(str_def), parameter :: mesh_class = 'sphere'
+
 ! flag to print out mesh data for debugging purposes
 logical, parameter :: debug = .false.
 !-------------------------------------------------------------------------------
 type, extends(ugrid_generator_type), public :: gencube_ps_type
   private
+
+  character(str_def)                 :: mesh_class
   integer                            :: ndivs
   integer                            :: nsmooth
   integer, allocatable               :: cell_next(:,:)
@@ -50,6 +54,7 @@ type, extends(ugrid_generator_type), public :: gencube_ps_type
   integer, allocatable               :: verts_on_edge(:,:)
   real(kind=r_def), allocatable      :: vert_coords(:,:)
 contains
+  procedure :: get_metadata
   procedure :: calc_adjacency
   procedure :: calc_face_to_vert
   procedure :: calc_edges
@@ -88,6 +93,7 @@ type(gencube_ps_type) function gencube_ps_constructor(ndivs, nsmooth) &
     call log_event(prefix//"Invalid dimension argument.", LOG_LEVEL_ERROR)
   end if
 
+  self%mesh_class = mesh_class
   self%ndivs = ndivs
   self%nsmooth = nsmooth
 
@@ -321,7 +327,7 @@ subroutine calc_face_to_vert(self, verts_on_cell)
       nxf = nxf+1
       verts_on_cell(SW, self%cell_next(E, cell)) = verts_on_cell(SE, cell)
       verts_on_cell(NE, self%cell_next(S, cell)) = verts_on_cell(SE, cell)
-      ! Transitive is valid here 
+      ! Transitive is valid here
       verts_on_cell(NW, self%cell_next(E, self%cell_next(S, cell))) = verts_on_cell(SE, cell)
     end do
   end do
@@ -589,7 +595,7 @@ end subroutine calc_edges
 !!               vertex according to its Cartesian position in the mesh.
 !!
 !!  @param[in]   self        The gencube_ps_type instance reference.
-!!  @param[out]  vert_coords A rank 2 (2,ncells)-sized real array of long and 
+!!  @param[out]  vert_coords A rank 2 (2,ncells)-sized real array of long and
 !!                           lat coordinates respectively for each vertex.
 !-------------------------------------------------------------------------------
 subroutine calc_coords(self, vert_coords)
@@ -625,15 +631,15 @@ subroutine calc_coords(self, vert_coords)
 ! Panels I-IV
   do y=1,ndivs
     lambda2 = (y-1)*dlambda - pio4
-    t2 = tan(lambda2) 
+    t2 = tan(lambda2)
     do x=1,ndivs
       lambda1 = (x-1)*dlambda - pio4
       t1 = tan(lambda1)
 
       ! Panel I
-      xs = 1.0_r_def/sqrt(1.0_r_def + t1*t1 + t2*t2) 
-      ys = xs*t1 
-      zs = xs*t2 
+      xs = 1.0_r_def/sqrt(1.0_r_def + t1*t1 + t2*t2)
+      ys = xs*t1
+      zs = xs*t2
 
       call xyz2ll(xs, ys, zs, long, lat)
       vert_coords(1, vert) = long
@@ -679,13 +685,13 @@ subroutine calc_coords(self, vert_coords)
 
   do y=1, ndivs-1
     lambda2 = y*dlambda - pio4 ! NB not y-1
-    t2 = tan(lambda2) 
+    t2 = tan(lambda2)
     do x=1, ndivs-1
       lambda1 = x*dlambda - pio4 ! NB not x-1
-      t1 = tan(lambda1) 
+      t1 = tan(lambda1)
 
-      xs = 1.0_r_def/sqrt(1.0_r_def + t1*t1 + t2*t2) 
-      ys = xs*t1 
+      xs = 1.0_r_def/sqrt(1.0_r_def + t1*t1 + t2*t2)
+      ys = xs*t1
       zs = xs*t2
       ! Lookup vert with x offset
       vert0 = self%verts_on_cell(SE, cell+x)
@@ -707,13 +713,13 @@ subroutine calc_coords(self, vert_coords)
 
   do y=1, ndivs
     lambda2 = (y-1)*dlambda - pio4
-    t2 = tan(lambda2) 
+    t2 = tan(lambda2)
     do x=1, ndivs
       lambda1 = (x-1)*dlambda - pio4
-      t1 = tan(lambda1) 
+      t1 = tan(lambda1)
 
-      xs = 1.0_r_def/sqrt(1.0_r_def + t1*t1 + t2*t2) 
-      ys = xs*t1 
+      xs = 1.0_r_def/sqrt(1.0_r_def + t1*t1 + t2*t2)
+      ys = xs*t1
       zs = xs*t2
       ! Lookup vert
       vert0 = self%verts_on_cell(NW, cell)
@@ -735,13 +741,13 @@ subroutine calc_coords(self, vert_coords)
 
   ! y constant
   lambda2 = ndivs*dlambda - pio4
-  t2 = tan(lambda2) 
+  t2 = tan(lambda2)
   do x=1, ndivs
     lambda1 = (x-1)*dlambda - pio4
-    t1 = tan(lambda1) 
+    t1 = tan(lambda1)
 
-    xs = 1.0_r_def/sqrt(1.0_r_def + t1*t1 + t2*t2) 
-    ys = xs*t1 
+    xs = 1.0_r_def/sqrt(1.0_r_def + t1*t1 + t2*t2)
+    ys = xs*t1
     zs = xs*t2
 
     vert0 = self%verts_on_cell(SW, cell)
@@ -762,13 +768,13 @@ subroutine calc_coords(self, vert_coords)
 
   ! x constant
   lambda1 = ndivs*dlambda - pio4
-  t1 = tan(lambda1) 
+  t1 = tan(lambda1)
   do y=1, ndivs
     lambda2 = (y-1)*dlambda - pio4
     t2 = tan(lambda2)
 
-    xs = 1.0_r_def/sqrt(1.0_r_def + t1*t1 + t2*t2) 
-    ys = xs*t1 
+    xs = 1.0_r_def/sqrt(1.0_r_def + t1*t1 + t2*t2)
+    ys = xs*t1
     zs = xs*t2
 
     vert0 = self%verts_on_cell(NE, cell)
@@ -786,12 +792,12 @@ subroutine calc_coords(self, vert_coords)
 
 ! 6*ndivs*ndivs+2
   lambda1 = ndivs*dlambda - pio4
-  t1 = tan(lambda1) 
+  t1 = tan(lambda1)
   lambda2 = ndivs*dlambda - pio4
-  t2 = tan(lambda2) 
+  t2 = tan(lambda2)
 
-  xs = 1.0_r_def/sqrt(1.0_r_def + t1*t1 + t2*t2) 
-  ys = xs*t1 
+  xs = 1.0_r_def/sqrt(1.0_r_def + t1*t1 + t2*t2)
+  ys = xs*t1
   zs = xs*t2
 
   x0 = -ys
@@ -808,7 +814,7 @@ end subroutine calc_coords
 !>  @brief       Populates the arguments with the dimensions defining
 !!               the mesh.
 !!
-!!  @details     
+!!  @details
 !!
 !!  @param[in]   self                 The gencube_ps_type instance reference.
 !!  @param[out]  num_nodes            The number of nodes on the mesh.
@@ -857,7 +863,6 @@ subroutine get_coordinates(self, node_coordinates)
   class(gencube_ps_type), intent(in)               :: self
   real(kind=r_def), intent(out)                    :: node_coordinates(:,:)
 
-
   node_coordinates = self%vert_coords
 
 end subroutine get_coordinates
@@ -867,7 +872,7 @@ end subroutine get_coordinates
 !!
 !!  @details     Implements the connectivity-providing interface required
 !!               by the ugrid writer.
-!!         
+!!
 !!
 !!  @param[in]   self
 !!  @param[out]  face_node_connectivity   Face-node connectivity.
@@ -911,16 +916,16 @@ subroutine generate(self)
   call calc_adjacency(self, self%cell_next)
   call calc_face_to_vert(self, self%verts_on_cell)
   call calc_edges(self, self%edges_on_cell, self%verts_on_edge)
-  call calc_coords(self, self%vert_coords)  
+  call calc_coords(self, self%vert_coords)
   call orient_lfric(self)
   if (self%nsmooth > 0_i_def) call smooth(self)
   if (debug) call write_mesh(self)
-  
+
 end subroutine generate
 !-------------------------------------------------------------------------------
 !>  @brief      Writes out the mesh and connectivity for debugging purposes.
 !!
-!!  @details       
+!!  @details
 !!
 !!  @param[in]  self The gencube_ps_type instance reference.
 !-------------------------------------------------------------------------------
@@ -932,7 +937,6 @@ subroutine write_mesh(self)
   class(gencube_ps_type), intent(in)            :: self
 
   integer(kind=i_def)                           :: i, cell, vert, ncells
-  real(kind=r_def)                              :: x,y,z
 
   ncells = 6*self%ndivs*self%ndivs
 
@@ -1017,7 +1021,7 @@ subroutine orient_lfric(self)
 end subroutine orient_lfric
 
 !>  @brief  Smooth the cube grid
-!>  @details Smooth the grid by iteratively computing the face centres as 
+!>  @details Smooth the grid by iteratively computing the face centres as
 !!           barycentres of the surrounding vertices and then the vertices
 !!           as  barycentres of the surrounding faces
 !!  @param[in,out]  self The gencube_ps_type instance reference.
@@ -1027,7 +1031,7 @@ subroutine smooth(self)
 
   implicit none
 
-  class(gencube_ps_type), intent(inout)  :: self 
+  class(gencube_ps_type), intent(inout)  :: self
 
   integer(kind=i_def)                              :: s, ncells, nverts, v, i, &
                                                       j, cell, f
@@ -1036,7 +1040,7 @@ subroutine smooth(self)
   real(kind=r_def),    allocatable, dimension(:,:) :: cell_coords
   real(kind=r_def)                                 :: xc(3), x0(3), &
                                                       radius_ratio, ll(2)
-  
+
 
   ncells = 6*self%ndivs*self%ndivs
   nverts = ncells + 2
@@ -1050,7 +1054,7 @@ subroutine smooth(self)
   ncell_on_vert(:) = 0_i_def
   do cell = 1,ncells
     do i = 1,4
-      v = self%verts_on_cell(i,cell)   
+      v = self%verts_on_cell(i,cell)
       do j = 1,4
         if (cell_on_vert(j,v) == -1_i_def ) then
           cell_on_vert(j,v) = cell
@@ -1065,7 +1069,7 @@ subroutine smooth(self)
   do f = 1,ncells
     xc(:) = 0.0_r_def
     do v = 1,4
-      ll = self%vert_coords(:,self%verts_on_cell(v,f))         
+      ll = self%vert_coords(:,self%verts_on_cell(v,f))
       call ll2xyz(ll(1),ll(2),x0(1),x0(2),x0(3))
       xc(:) = xc(:) + x0(:)
     end do
@@ -1078,7 +1082,7 @@ subroutine smooth(self)
     ! Compute vertices of barycentres of surrounding faces
     do v = 1,nverts
       xc(:) = 0.0_r_def
-      do f = 1,ncell_on_vert(v)        
+      do f = 1,ncell_on_vert(v)
         xc(:) = xc(:) + cell_coords(:,cell_on_vert(f,v))
       end do
       radius_ratio = 1.0_r_def/sqrt( xc(1)**2 + xc(2)**2 + xc(3)**2)
@@ -1088,8 +1092,8 @@ subroutine smooth(self)
     ! Compute faces as barycentres of surrounding vertices
     do f = 1,ncells
       xc(:) = 0.0_r_def
-      do v = 1,4      
-        ll = self%vert_coords(:,self%verts_on_cell(v,f))         
+      do v = 1,4
+        ll = self%vert_coords(:,self%verts_on_cell(v,f))
         call ll2xyz(ll(1),ll(2),x0(1),x0(2),x0(3))
         xc(:) = xc(:) + x0(:)
       end do
@@ -1100,4 +1104,22 @@ subroutine smooth(self)
 
 end subroutine smooth
 
-end module gencube_mod
+!-----------------------------------------------------------------------------
+!> @brief Returns mesh metadata information.
+!!
+!! @param[in]     self           The generator strategy object.
+!! @param[out]    mesh_class     Primitive shape, i.e. sphere
+!-----------------------------------------------------------------------------
+subroutine get_metadata( self, mesh_class )
+
+  implicit none
+
+  class(gencube_ps_type), intent(in) :: self
+  character(str_def), intent(out)    :: mesh_class
+
+  mesh_class = self%mesh_class
+
+  return
+end subroutine  get_metadata
+
+end module gencube_ps_mod

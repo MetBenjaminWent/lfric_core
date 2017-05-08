@@ -7,6 +7,7 @@ class ncdf_quad_mod::ncdf_quad_type {
   -file_name: string
   -four_dim_id: integer
   -ncid: integer
+  -mesh2_class: string
   -mesh2_edge_nodes_id: integer
   -mesh2_face_edges_id: integer
   -mesh2_face_links_id: integer

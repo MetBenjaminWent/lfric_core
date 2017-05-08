@@ -1,7 +1,7 @@
 !-------------------------------------------------------------------------------
-! (c) The copyright relating to this work is owned jointly by the Crown, 
-! Met Office and NERC 2014. 
-! However, it has been created with the help of the GungHo Consortium, 
+! (c) The copyright relating to this work is owned jointly by the Crown,
+! Met Office and NERC 2014.
+! However, it has been created with the help of the GungHo Consortium,
 ! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
 !-------------------------------------------------------------------------------
 !>  @brief   File handler for NetCDF ugrid files.
@@ -9,10 +9,10 @@
 !!  @details Implementation of the ugrid file class for quads in netCDF format.
 !-------------------------------------------------------------------------------
 module ncdf_quad_mod
-use constants_mod,  only : r_def
+use constants_mod,  only : r_def, str_def
 use ugrid_file_mod, only : ugrid_file_type
 use netcdf,         only : nf90_max_name, nf90_open, nf90_write, nf90_noerr,   &
-                           nf90_strerror, nf90_put_var, nf90_get_var,          &      
+                           nf90_strerror, nf90_put_var, nf90_get_var,          &
                            nf90_def_var, nf90_inq_varid, nf90_int, nf90_double,&
                            nf90_clobber, nf90_enddef, nf90_inquire_dimension,  &
                            nf90_inq_dimid, nf90_def_dim, nf90_create,          &
@@ -29,7 +29,7 @@ integer, parameter :: TWO  = 2                   !< Two
 integer, parameter :: FOUR = 4                   !< Four
 
 !Ranks for each variable.
-integer, parameter :: MESH2_RANK            = 0 
+integer, parameter :: MESH2_RANK            = 0
 integer, parameter :: MESH2_FACE_NODES_RANK = 2  !< Rank of face-node connectivity arrays
 integer, parameter :: MESH2_EDGE_NODES_RANK = 2  !< Rank of edge-node connectivity arrays
 integer, parameter :: MESH2_FACE_EDGES_RANK = 2  !< Rank of face-edge connectivity arrays
@@ -40,11 +40,14 @@ integer, parameter :: MESH2_NODE_Y_RANK     = 1  !< Rank of node latitude  coord
 !-------------------------------------------------------------------------------
 !> @brief    NetCDF quad file type
 !!
-!! @details  Implements the ugrid file type for NetCDF files storing 2D quads.  
+!! @details  Implements the ugrid file type for NetCDF files storing 2D quads.
 !-------------------------------------------------------------------------------
 
 type, public, extends(ugrid_file_type) :: ncdf_quad_type
   private
+
+  character(str_def) :: mesh2_class        !< Primitive class of mesh, 
+                                           !< i.e. sphere, plane
 
   !Dimension lengths
   integer :: nMesh2_node_len               !< Number of nodes
@@ -68,8 +71,10 @@ type, public, extends(ugrid_file_type) :: ncdf_quad_type
   integer :: mesh2_edge_nodes_id  !< NetCDF-assigned ID for the edge-node connectivity
   integer :: mesh2_face_edges_id  !< NetCDF-assigned ID for the face-edge connectivity
   integer :: mesh2_face_links_id  !< NetCDF-assigned ID for the face-face connectivity
-  integer :: mesh2_node_x_id  !< NetCDF-assigned ID for node longitude coordinates
-  integer :: mesh2_node_y_id  !< NetCDF-assigned ID for node latitude  coordinates
+
+  integer :: mesh2_node_x_id !< NetCDF-assigned ID for node 1st coordinate
+  integer :: mesh2_node_y_id !< NetCDF-assigned ID for node 2nd coordinate
+
 
 contains
   procedure :: get_dimensions
@@ -86,7 +91,7 @@ end type
 contains
 
 !-------------------------------------------------------------------------------
-!>  @brief   Open an existing netCDF file.  
+!>  @brief   Open an existing netCDF file.
 !!
 !!  @param[in,out]  self      The netcdf file object.
 !!  @param[in]      file_name Name of the file to open.
@@ -105,10 +110,10 @@ subroutine file_open(self, file_name)
   self%file_name = file_name
 
   ierr = nf90_open( trim(self%file_name), nf90_write, self%ncid )
-  if (ierr /= nf90_noerr) then 
+  if (ierr /= nf90_noerr) then
     write (log_scratch_space,*) 'Error in ncdf_open: '                         &
                     // trim(nf90_strerror(ierr)) //' : '// trim(self%file_name)
-    call log_event( trim(log_scratch_space), LOG_LEVEL_ERROR ) 
+    call log_event( trim(log_scratch_space), LOG_LEVEL_ERROR )
   end if
 
   !Set up the variable ids
@@ -136,7 +141,7 @@ subroutine file_close(self)
   if (ierr /= nf90_noerr) then
     write (log_scratch_space,*) 'Error in ncdf_close: '                        &
                     // trim(nf90_strerror(ierr)) //' : '// trim(self%file_name)
-    call log_event( trim(log_scratch_space), LOG_LEVEL_ERROR ) 
+    call log_event( trim(log_scratch_space), LOG_LEVEL_ERROR )
   end if
 
   return
@@ -172,7 +177,7 @@ subroutine file_new(self, file_name)
   if (ierr /= NF90_NOERR) then
     write (log_scratch_space,*) 'Error in ncdf_create: '                       &
                     // trim(nf90_strerror(ierr)) //' : '// trim(self%file_name)
-    call log_event( trim(log_scratch_space), LOG_LEVEL_ERROR ) 
+    call log_event( trim(log_scratch_space), LOG_LEVEL_ERROR )
   end if
 
   return
@@ -306,6 +311,13 @@ subroutine assign_attributes(self)
   !Internal variables
   integer :: ierr
 
+  character(str_def) ::  std_x_name
+  character(str_def) ::  std_y_name
+  character(str_def) ::  long_x_name
+  character(str_def) ::  long_y_name
+  character(str_def) ::  coord_units
+
+
   ierr = nf90_put_att(self%ncid, self%Mesh2_id, 'cf_role', 'mesh_topology')
   call check_err(ierr)
 
@@ -317,9 +329,10 @@ subroutine assign_attributes(self)
   ierr = nf90_put_att(self%ncid, self%Mesh2_id, 'topology_dimension', [2])
   call check_err(ierr)
 
-  ierr = nf90_put_att(self%ncid, self%Mesh2_id,                              &
-                      'node_coordinates', 'Mesh2_node_x Mesh2_node_y')
-  call check_err(ierr)
+
+  ierr = nf90_put_att( self%ncid, self%Mesh2_id, 'node_coordinates',         &
+                       'Mesh2_node_x Mesh2_node_y')
+   call check_err(ierr)
 
   ierr = nf90_put_att(self%ncid, self%Mesh2_id,                              &
                       'face_node_connectivity', 'Mesh2_face_nodes')
@@ -362,7 +375,7 @@ subroutine assign_attributes(self)
   call check_err(ierr)
 
   ierr = nf90_put_att(self%ncid, self%Mesh2_face_edges_id,                   &
-                      'cf_role', ' face_edge_connectivity')
+                      'cf_role', 'face_edge_connectivity')
   call check_err(ierr)
 
   ierr = nf90_put_att(self%ncid, self%Mesh2_face_edges_id, 'long_name',      &
@@ -391,27 +404,49 @@ subroutine assign_attributes(self)
                       'flag_meanings', 'out_of_mesh')
   call check_err(ierr)
 
-  ierr = nf90_put_att(self%ncid, self%Mesh2_node_x_id,                       &
-                      'standard_name', 'node_longitude')
+
+
+  select case (trim(self%mesh2_class))
+  case ('sphere')
+    std_x_name  = 'longitude'
+    std_y_name  = 'latitude'
+    long_x_name = 'longitude of 2D mesh nodes.'
+    long_y_name = 'latitude of 2D mesh nodes.'
+    coord_units = 'radians'
+  case ('plane')
+    std_x_name  = 'projection_x_coordinate'
+    std_y_name  = 'projection_y_coordinate'
+    long_x_name = 'x coordinate of 2D mesh nodes.'
+    long_y_name = 'y coordinate of 2D mesh nodes.'
+    coord_units = 'm'
+  end select
+
+  ierr = nf90_put_att( self%ncid, self%Mesh2_node_x_id,              &
+                       'standard_name', std_x_name)
   call check_err(ierr)
 
-  ierr = nf90_put_att(self%ncid, self%Mesh2_node_x_id,                       &
-                      'long_name',  'Longitude of 2D mesh nodes.')
+  ierr = nf90_put_att( self%ncid, self%Mesh2_node_x_id,              &
+                       'long_name',  long_x_name)
   call check_err(ierr)
 
-  ierr = nf90_put_att(self%ncid, self%Mesh2_node_x_id, 'units', 'degrees_east')
+  ierr = nf90_put_att( self%ncid, self%Mesh2_node_x_id,              &
+                       'units', coord_units)
   call check_err(ierr)
 
-  ierr = nf90_put_att(self%ncid, self%Mesh2_node_y_id,                       &
-                      'standard_name', 'node_latitude')
+  ierr = nf90_put_att( self%ncid, self%Mesh2_node_y_id,              &
+                       'standard_name', std_y_name)
   call check_err(ierr)
 
-  ierr = nf90_put_att(self%ncid, self%Mesh2_node_y_id,                       &
-                      'long_name', 'Latitude of 2D mesh nodes.')
+  ierr = nf90_put_att( self%ncid, self%Mesh2_node_y_id,              &
+                       'long_name',  long_y_name)
   call check_err(ierr)
 
-  ierr = nf90_put_att(self%ncid, self%Mesh2_node_y_id, 'units', 'degrees_north')
+  ierr = nf90_put_att( self%ncid, self%Mesh2_node_y_id,              &
+                       'units', coord_units)
   call check_err(ierr)
+
+
+
 
   return
 end subroutine assign_attributes
@@ -494,8 +529,8 @@ subroutine check_err(ierr)
 
   if (ierr /= NF90_NOERR) then
     write(log_scratch_space,*) 'Error in ncdf_quad: '//  nf90_strerror(ierr)
-    call log_event( trim(log_scratch_space), LOG_LEVEL_ERROR ) 
-  end if 
+    call log_event( trim(log_scratch_space), LOG_LEVEL_ERROR )
+  end if
 
   return
 end subroutine check_err
@@ -552,7 +587,7 @@ subroutine get_dimensions(self, &
   num_nodes = self%nmesh2_node_len
   num_edges = self%nmesh2_edge_len
   num_faces = self%nmesh2_face_len
-  
+
   num_nodes_per_face = 4
   num_edges_per_face = 4
   num_nodes_per_edge = 2
@@ -581,12 +616,12 @@ subroutine read(self,                                                    &
   implicit none
 
   !Arguments
-  class(ncdf_quad_type),  intent(inout) :: self                        
-  real(kind=r_def),          intent(out)   :: node_coordinates(:,:)       
-  integer,                intent(out)   :: face_node_connectivity(:,:) 
-  integer,                intent(out)   :: edge_node_connectivity(:,:) 
-  integer,                intent(out)   :: face_edge_connectivity(:,:) 
-  integer,                intent(out)   :: face_face_connectivity(:,:) 
+  class(ncdf_quad_type),  intent(inout) :: self
+  real(kind=r_def),          intent(out)   :: node_coordinates(:,:)
+  integer,                intent(out)   :: face_node_connectivity(:,:)
+  integer,                intent(out)   :: edge_node_connectivity(:,:)
+  integer,                intent(out)   :: face_edge_connectivity(:,:)
+  integer,                intent(out)   :: face_face_connectivity(:,:)
 
   !Internal variables
   integer :: ierr
@@ -637,7 +672,7 @@ end subroutine read
 !!  @param[in]      face_face_connectivity   Faces adjoining each face (links).
 !-------------------------------------------------------------------------------
 
-subroutine write(self,                                                   &
+subroutine write(self, mesh_class,                                       &
                  num_nodes, num_edges, num_faces,                        &
                  node_coordinates,                                       &
                  face_node_connectivity, edge_node_connectivity,         &
@@ -645,15 +680,16 @@ subroutine write(self,                                                   &
   implicit none
 
   !Arguments
-  class(ncdf_quad_type), intent(inout) :: self                        
-  integer,               intent(in)    :: num_nodes                   
-  integer,               intent(in)    :: num_edges                   
-  integer,               intent(in)    :: num_faces                   
-  real(kind=r_def),      intent(in)    :: node_coordinates(:,:)       
-  integer,               intent(in)    :: face_node_connectivity(:,:) 
-  integer,               intent(in)    :: edge_node_connectivity(:,:) 
-  integer,               intent(in)    :: face_edge_connectivity(:,:) 
-  integer,               intent(in)    :: face_face_connectivity(:,:) 
+  class(ncdf_quad_type), intent(inout) :: self
+  character(str_def),    intent(in)    :: mesh_class
+  integer,               intent(in)    :: num_nodes
+  integer,               intent(in)    :: num_edges
+  integer,               intent(in)    :: num_faces
+  real(kind=r_def),      intent(in)    :: node_coordinates(:,:)
+  integer,               intent(in)    :: face_node_connectivity(:,:)
+  integer,               intent(in)    :: edge_node_connectivity(:,:)
+  integer,               intent(in)    :: face_edge_connectivity(:,:)
+  integer,               intent(in)    :: face_face_connectivity(:,:)
 
   !Internal variables
   integer :: ierr
@@ -662,6 +698,8 @@ subroutine write(self,                                                   &
   self%nMesh2_node_len = num_nodes
   self%nMesh2_edge_len = num_edges
   self%nMesh2_face_len = num_faces
+
+  self%mesh2_class = mesh_class
 
   !Set up netCDF header
   call define_dimensions (self)
