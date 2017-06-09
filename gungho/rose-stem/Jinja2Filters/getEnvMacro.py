@@ -11,6 +11,7 @@ Implements a Jinja2 filter to run a macro specified by a string.
 from jinja2 import contextfilter
 import re
 import ast
+import science_parser
 
 @contextfilter
 def getEnvMacro(context, call):
@@ -25,7 +26,7 @@ def getEnvMacro(context, call):
         arguments = ''
     else:
         macroName = call[:call.index('(')]
-        arguments = re.split(', *', call[call.index('(')+1:call.rindex(')')])
+        arguments = science_parser.science_parser(call[call.index('(')+1:call.rindex(')')])
 
     normalArguments  = [argument for argument in arguments \
                         if argument.find('=') == -1]
@@ -50,15 +51,10 @@ def getEnvMacro(context, call):
     else:
         envDict={}
 
-    envVariables=[]
-    for key, value in envDict.items():
-        envVariables.append('%s = %s' % (key, value) )
-            
-    values='\n'.join(envVariables)
-
     if arguments == '':
         return_value = None, None
     else:
-        return_value = arguments[0], values
+        return_value =  arguments[0], envDict
+
 
     return return_value
