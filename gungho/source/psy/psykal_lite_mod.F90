@@ -4343,4 +4343,71 @@ end subroutine invoke_sample_poly_adv
 
   end subroutine invoke_mpi_detj_at_w2
 
+
+  !-------------------------------------------------------------------------------
+  !> This routine is called from psykal_lite due to the variable cell_orientation
+  !> being passed into the kernel.
+  !> The cell_orientation field should not be halo exchanged across panels as the
+  !> orientation of cells is local to its own panel on the cubed-sphere.
+  subroutine invoke_fv_divergence( mass_divergence,     &
+                                   mass_flux,           &
+                                   cell_orientation,    &
+                                   direction )
+
+    use mesh_mod,                   only : mesh_type
+    use fv_divergence_kernel_mod,   only : fv_divergence_code
+
+    implicit none
+
+    type(field_type), intent(out)   :: mass_divergence
+    type(field_type), intent(in)    :: mass_flux
+    type(field_type), intent(in)    :: cell_orientation
+    integer, intent(in)             :: direction
+
+    type(mesh_type)                 :: mesh
+
+    integer, pointer                :: map_w3(:,:) => null()
+    integer, pointer                :: map_w2(:,:) => null()
+
+    type(field_proxy_type)          :: cell_orientation_proxy
+    type(field_proxy_type)          :: mass_flux_proxy
+    type(field_proxy_type)          :: mass_divergence_proxy
+
+    integer                         :: cell, nlayers
+    integer                         :: ndf_w3, undf_w3
+    integer                         :: ndf_w2, undf_w2
+
+    cell_orientation_proxy           = cell_orientation%get_proxy()
+    mass_divergence_proxy            = mass_divergence%get_proxy()
+    mass_flux_proxy                  = mass_flux%get_proxy()
+
+    nlayers = cell_orientation_proxy%vspace%get_nlayers()
+    ndf_w3  = cell_orientation_proxy%vspace%get_ndf( )
+    undf_w3 = cell_orientation_proxy%vspace%get_undf()
+    ndf_w2  = mass_flux_proxy%vspace%get_ndf( )
+    undf_w2 = mass_flux_proxy%vspace%get_undf()
+
+    mesh    = mass_flux%get_mesh()
+
+    map_w3 => cell_orientation_proxy%vspace%get_whole_dofmap()
+    map_w2 => mass_flux_proxy%vspace%get_whole_dofmap()
+
+    do cell=1,mesh%get_last_edge_cell() ! Loop over core cells only
+
+      call  fv_divergence_code(  nlayers,                             &
+                                 mass_divergence_proxy%data,          &
+                                 undf_w3,                             &
+                                 ndf_w3,                              &
+                                 map_w3(:,cell),                      &
+                                 cell_orientation_proxy%data,         &
+                                 undf_w2,                             &
+                                 ndf_w2,                              &
+                                 map_w2(:,cell),                      &
+                                 mass_flux_proxy%data,                &
+                                 direction )
+
+    end do
+
+  end subroutine invoke_fv_divergence
+
 end module psykal_lite_mod

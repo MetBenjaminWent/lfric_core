@@ -33,6 +33,7 @@ public :: eval_integral
 public :: return_part_mass
 public :: w2_dof
 public :: reorientate_w2field
+public :: dof_to_update
 
 
 !--------------------------------------------------------------------------------
@@ -360,5 +361,38 @@ contains
     end do
 
   end function
+
+
+  !--------------------------------------------------------------------------------
+  !>  @brief  Returns the local W2 dof for opposite cell faces in either the x or
+  !.          y-direction.
+  !>          This is to handle cells in the halo which may have different
+  !>          orientation due to orientation of panels in the cubed-sphere.
+  !!
+  !!  @param[in]   orientation    Orientation of the cell
+  !!  @param[in]   direction      Either x or y horizontal directions
+  !!  @param[out]  w2_dofs        Local W2 dof for opposite faces
+  !--------------------------------------------------------------------------------
+  function dof_to_update(orientation,direction) result(w2_dofs)
+    use flux_direction_mod, only : x_direction, y_direction
+    use log_mod,            only : log_event, LOG_LEVEL_ERROR
+
+    implicit none
+
+    integer               :: w2_dofs(1:2)
+    integer, intent(in)   :: orientation
+    integer, intent(in)   :: direction
+
+    select case(direction)
+      case(x_direction)
+        w2_dofs = (/ orientation, mod(orientation+1,4)+1 /)
+      case(y_direction)
+        w2_dofs = (/ mod(orientation,4)+1, mod(orientation+2,4)+1 /)
+      case default
+        call log_event( "Error: direction not defined in dof_to_update", LOG_LEVEL_ERROR )
+    end select
+
+  end function
+
 
 end module cosmic_flux_mod
