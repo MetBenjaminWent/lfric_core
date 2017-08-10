@@ -28,11 +28,12 @@ module oned_conservative_flux_alg_mod
                                                rho_approximation_stencil_extent
   use psykal_lite_mod,                   only: invoke_subgrid_coeffs,               &
                                                invoke_subgrid_coeffs_conservative,  &
-                                               invoke_conservative_fluxes
+                                               invoke_conservative_fluxes,          &
+                                               invoke_fv_mass_fluxes
   use flux_direction_mod,                only: x_direction, y_direction
-  use transport_config_mod,              only : scheme, &
-                                                transport_scheme_bip_cosmic, &
-                                                transport_scheme_cusph_cosmic
+  use transport_config_mod,              only: scheme, &
+                                               transport_scheme_bip_cosmic, &
+                                               transport_scheme_cusph_cosmic
 
   implicit none
 
@@ -111,11 +112,21 @@ contains
     end if
 
     if (direction == x_direction) then
-      call invoke_conservative_fluxes(  rho_y, dep_pts, u, mass_flux,  &
-                                  a0, a1, a2, direction, dep_pt_stencil_extent )
+      if (scheme == transport_scheme_cusph_cosmic) then
+        call invoke_fv_mass_fluxes(  rho_y, dep_pts, u, mass_flux,  &
+                                    a0, a1, a2, direction, dep_pt_stencil_extent )
+      else
+        call invoke_conservative_fluxes(  rho_y, dep_pts, u, mass_flux,  &
+                                    a0, a1, a2, direction, dep_pt_stencil_extent )
+      end if
     elseif (direction == y_direction) then
-      call invoke_conservative_fluxes(  rho_x, dep_pts, u, mass_flux,  &
-                                  a0, a1, a2, direction, dep_pt_stencil_extent )
+      if (scheme == transport_scheme_cusph_cosmic) then
+        call invoke_fv_mass_fluxes(  rho_x, dep_pts, u, mass_flux,  &
+                                    a0, a1, a2, direction, dep_pt_stencil_extent )
+      else
+        call invoke_conservative_fluxes(  rho_x, dep_pts, u, mass_flux,  &
+                                    a0, a1, a2, direction, dep_pt_stencil_extent )
+      end if
     end if
 
   end subroutine oned_conservative_flux_alg

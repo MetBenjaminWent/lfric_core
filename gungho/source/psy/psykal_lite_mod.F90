@@ -2689,6 +2689,7 @@ subroutine invoke_subgrid_coeffs_conservative( a0,                              
     logical                             :: swap
     integer                             :: ncells_to_iterate
     integer, pointer                    :: map_w3(:,:) => null()
+    integer                             :: cosmic_halo_depth
 
     a0_proxy   = a0%get_proxy()
     a1_proxy   = a1%get_proxy()
@@ -2718,22 +2719,25 @@ subroutine invoke_subgrid_coeffs_conservative( a0,                              
       map => rho_x_proxy%vspace%get_stencil_dofmap(STENCIL_1DY,rho_approximation_stencil_extent)
     end if
     rho_stencil_size = map%get_size()
-    
+
+    cosmic_halo_depth = halo_depth_to_compute + rho_approximation_stencil_extent
+
     swap = .false.
     do d = 1,halo_depth_to_compute
       if (rho_x_proxy%is_dirty(depth=d)) swap = .true.
     end do
-    if ( swap ) call rho_x_proxy%halo_exchange(depth=halo_depth_to_compute)
+    if ( swap ) call rho_x_proxy%halo_exchange(depth=cosmic_halo_depth)
 
     swap = .false.
     do d = 1,halo_depth_to_compute
       if (rho_y_proxy%is_dirty(depth=d)) swap = .true.
     end do
-    if ( swap ) call rho_y_proxy%halo_exchange(depth=halo_depth_to_compute)
+    if ( swap ) call rho_y_proxy%halo_exchange(depth=cosmic_halo_depth)
 
     mesh => a0%get_mesh()
 
-    do cell=1,mesh%get_last_edge_cell()
+    ! Loop over all core and halo cells.
+    do cell=1,mesh%get_ncells_2d()
 
       call cosmic_halo_correct_x_code(  nlayers,                            &
                                         rho_x_halos_corrected_proxy%data,   &
@@ -2745,7 +2749,8 @@ subroutine invoke_subgrid_coeffs_conservative( a0,                              
                                         map_w3(:,cell))
     end do
 
-    do cell=1,mesh%get_last_edge_cell()
+    ! Loop over all core and halo cells.
+    do cell=1,mesh%get_ncells_2d()
 
       call cosmic_halo_correct_y_code(  nlayers,                            &
                                         rho_y_halos_corrected_proxy%data,   &
