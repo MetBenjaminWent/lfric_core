@@ -25,7 +25,7 @@ module cusph_split_transport_alg_mod
                                                invoke_set_field_scalar
 
   use oned_advective_density_update_alg_mod,  only: oned_advective_density_update_alg
-  use oned_conservative_flux_alg_mod,         only: oned_conservative_flux_alg
+  use conservative_flux_alg_mod,              only: conservative_flux_alg
 
   implicit none
 
@@ -166,10 +166,8 @@ contains
     call invoke( set_field_scalar(0.0_r_def, mass_flux_x), &
                  set_field_scalar(0.0_r_def, mass_flux_y) )
 
-    call oned_conservative_flux_alg(x_direction, u_n, dep_pts_x, cell_orientation,  &
-                                                                  rho_hat_adv_x, rho_hat_adv_y, mass_flux_x)
-    call oned_conservative_flux_alg(y_direction, u_n, dep_pts_y, cell_orientation,  &
-                                                                  rho_hat_adv_x, rho_hat_adv_y, mass_flux_y)
+    call conservative_flux_alg(u_n, dep_pts_x, dep_pts_y,             &
+                           cell_orientation, rho_hat_adv_x, rho_hat_adv_y, mass_flux_x, mass_flux_y )
 
   end subroutine cusph_split_transport_alg
 

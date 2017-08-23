@@ -111,6 +111,8 @@ contains
     call cusph_fv_density_update_alg(rho_temp, mass_flux_x, mass_flux_y, rho_np1,   &
                                       cell_orientation, y_direction, detj_at_w2)
 
+    call invoke( copy_field(rho_np1,rho) )
+
   end subroutine cusph_cosmic_transport_step
 
 end module cusph_cosmic_transport_alg_mod

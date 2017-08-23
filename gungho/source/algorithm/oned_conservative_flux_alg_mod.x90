@@ -27,13 +27,9 @@ module oned_conservative_flux_alg_mod
   use subgrid_config_mod,                only: dep_pt_stencil_extent,          &
                                                rho_approximation_stencil_extent
   use psykal_lite_mod,                   only: invoke_subgrid_coeffs,               &
-                                               invoke_subgrid_coeffs_conservative,  &
                                                invoke_conservative_fluxes,          &
                                                invoke_fv_mass_fluxes
   use flux_direction_mod,                only: x_direction, y_direction
-  use transport_config_mod,              only: scheme, &
-                                               transport_scheme_bip_cosmic, &
-                                               transport_scheme_cusph_cosmic
 
   implicit none
 
@@ -94,39 +90,20 @@ contains
                  set_field_scalar(0.0_r_def, a1),        &
                  set_field_scalar(0.0_r_def, a2) )
 
-    if (scheme == transport_scheme_cusph_cosmic) then
-      call invoke_subgrid_coeffs_conservative(a0,a1,a2,rho_x,rho_y,             &
-                                              rho_x_halos_corrected,            &
-                                              rho_y_halos_corrected,            &
-                                              cell_orientation, direction,      &
-                                              rho_approximation_stencil_extent, &
-                                              dep_pt_stencil_extent)
-    elseif (scheme == transport_scheme_bip_cosmic) then
-      if (direction == x_direction) then
-        call invoke_subgrid_coeffs(a0,a1,a2,rho_y,cell_orientation,direction,  &
-                         rho_approximation_stencil_extent,dep_pt_stencil_extent)
-      elseif (direction == y_direction) then
-        call invoke_subgrid_coeffs(a0,a1,a2,rho_x,cell_orientation,direction,  &
-                         rho_approximation_stencil_extent,dep_pt_stencil_extent)
-      end if
+    if (direction == x_direction) then
+      call invoke_subgrid_coeffs(a0,a1,a2,rho_y,cell_orientation,direction,  &
+                       rho_approximation_stencil_extent,dep_pt_stencil_extent)
+    elseif (direction == y_direction) then
+      call invoke_subgrid_coeffs(a0,a1,a2,rho_x,cell_orientation,direction,  &
+                       rho_approximation_stencil_extent,dep_pt_stencil_extent)
     end if
 
     if (direction == x_direction) then
-      if (scheme == transport_scheme_cusph_cosmic) then
-        call invoke_fv_mass_fluxes(  rho_y, dep_pts, u, mass_flux,  &
-                                    a0, a1, a2, direction, dep_pt_stencil_extent )
-      else
-        call invoke_conservative_fluxes(  rho_y, dep_pts, u, mass_flux,  &
-                                    a0, a1, a2, direction, dep_pt_stencil_extent )
-      end if
+      call invoke_conservative_fluxes(  rho_y, dep_pts, u, mass_flux,  &
+                                  a0, a1, a2, direction, dep_pt_stencil_extent )
     elseif (direction == y_direction) then
-      if (scheme == transport_scheme_cusph_cosmic) then
-        call invoke_fv_mass_fluxes(  rho_x, dep_pts, u, mass_flux,  &
-                                    a0, a1, a2, direction, dep_pt_stencil_extent )
-      else
-        call invoke_conservative_fluxes(  rho_x, dep_pts, u, mass_flux,  &
-                                    a0, a1, a2, direction, dep_pt_stencil_extent )
-      end if
+      call invoke_conservative_fluxes(  rho_x, dep_pts, u, mass_flux,  &
+                                  a0, a1, a2, direction, dep_pt_stencil_extent )
     end if
 
   end subroutine oned_conservative_flux_alg

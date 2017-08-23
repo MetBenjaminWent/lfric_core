@@ -1,0 +1,136 @@
+!-----------------------------------------------------------------------------
+! (C) Crown copyright 2017 Met Office. All rights reserved.
+! For further details please refer to the file LICENCE which you should have
+! received as part of this distribution.
+!-----------------------------------------------------------------------------
+!> @brief Algorithm which calculates Cosmic conservative mass fluxes in x and y
+!>        directions.
+!> @details This algorithm calculates the conservative mass fluxes.
+!>          The PPM technique is used which allows conservative mass to be
+!>          calculated for Courant numbers greater than 1.
+!>          The subgrid representation of rho_x and rho_y, the first advective
+!>          steps of the Cosmic scheme, are first calculated.
+!>          Then the fluxes are calculated for each W2 nodal point at lowest
+!>          order in the x and y directions separately. The departure
+!>          points are an input variable as well as the density. Output variable
+!>          is the mass flux in x and y directions separately.
+module conservative_flux_alg_mod
+
+  use constants_mod,                     only: r_def, i_def
+  use field_mod,                         only: field_type
+  use function_space_mod,                only: function_space_type
+  use quadrature_mod,                    only: quadrature_type, GAUSSIAN
+  use fs_continuity_mod,                 only: W0, W3
+  use log_mod,                           only: log_event,            &
+                                               log_scratch_space,    &
+                                               LOG_LEVEL_INFO,       &
+                                               LOG_LEVEL_TRACE
+  use finite_element_config_mod,         only: element_order
+  use subgrid_config_mod,                only: dep_pt_stencil_extent,          &
+                                               rho_approximation_stencil_extent
+  use psykal_lite_mod,                   only: invoke_subgrid_coeffs,               &
+                                               invoke_subgrid_coeffs_conservative,  &
+                                               invoke_conservative_fluxes,          &
+                                               invoke_fv_mass_fluxes
+  use flux_direction_mod,                only: x_direction, y_direction
+  use transport_config_mod,              only: scheme, &
+                                               transport_scheme_bip_cosmic, &
+                                               transport_scheme_cusph_cosmic
+  use psykal_lite_mod,                   only: invoke_set_field_scalar
+
+  implicit none
+
+  private
+  public :: conservative_flux_alg
+
+contains
+
+  !> @brief Algorithm which calculates conservative mass fluxes in one direction only.
+  !> @details This algorithm calculates the conservative mass fluxes in a specified
+  !>          direction. The PPM technique is used which allows conservative mass
+  !>          mass fluxes for Courant numbers greater than 1 to be calculated.
+  !>          The subgrid representation of rho is first calculated for all cells
+  !>          in the direction which we are interested in, then the fluxes are
+  !>          calculated for each W2 nodal point at lowest order. The departure
+  !>          points is an input variable as well as the density. Output variable
+  !>          is the mass flux in one direction.
+  !> @param[in] u                   Wind values
+  !> @param[in] dep_pts_x           Departure points for the x-direction
+  !> @param[in] dep_pts_y           Departure points for the y-direction
+  !> @param[in] cell_orientation    Orientation of cells, in particular halo cells
+  !> @param[in] rho_x               Density calculated from advective Cosmic step in x-direction
+  !> @param[in] rho_y               Density calculated from advective Cosmic step in y-direction
+  !> @param[inout] mass_flux_x      1D conservative mass flux values in the x-direction
+  !> @param[inout] mass_flux_y      1D conservative mass flux values in the y-direction
+  subroutine conservative_flux_alg( u,                   &
+                                    dep_pts_x,           &
+                                    dep_pts_y,           &
+                                    cell_orientation,    &
+                                    rho_x,               &
+                                    rho_y,               &
+                                    mass_flux_x,         &
+                                    mass_flux_y )
+
+    implicit none
+
+    type(field_type),    intent(in)     :: u
+    type(field_type),    intent(in)     :: dep_pts_x
+    type(field_type),    intent(in)     :: dep_pts_y
+    type(field_type),    intent(in)     :: cell_orientation
+    type(field_type),    intent(in)     :: rho_x
+    type(field_type),    intent(in)     :: rho_y
+    type(field_type),    intent(inout)  :: mass_flux_x
+    type(field_type),    intent(inout)  :: mass_flux_y
+
+    type( field_type ) :: a0_x, a1_x, a2_x, a0_y, a1_y, a2_y
+    type( field_type ) :: rho_x_corrected, rho_y_corrected
+
+    type(function_space_type), pointer :: rho_fs   => null()
+
+    rho_fs => rho_x%get_function_space()
+
+    a0_x = field_type( vector_space = rho_fs )
+    a1_x = field_type( vector_space = rho_fs )
+    a2_x = field_type( vector_space = rho_fs )
+
+    a0_y = field_type( vector_space = rho_fs )
+    a1_y = field_type( vector_space = rho_fs )
+    a2_y = field_type( vector_space = rho_fs )
+
+    rho_x_corrected = field_type( vector_space = rho_fs )
+    rho_y_corrected = field_type( vector_space = rho_fs )
+
+    call invoke_set_field_scalar(-999999.0_r_def,a0_x)
+    call invoke_set_field_scalar(-999999.0_r_def,a1_x)
+    call invoke_set_field_scalar(-999999.0_r_def,a2_x)
+
+    call invoke_set_field_scalar(-999999.0_r_def,a0_y)
+    call invoke_set_field_scalar(-999999.0_r_def,a1_y)
+    call invoke_set_field_scalar(-999999.0_r_def,a2_y)
+
+    call invoke_set_field_scalar(-999999.0_r_def,mass_flux_x)
+    call invoke_set_field_scalar(-999999.0_r_def,mass_flux_y)
+
+    call invoke_set_field_scalar(-999999.0_r_def,rho_x_corrected)
+    call invoke_set_field_scalar(-999999.0_r_def,rho_y_corrected)
+
+
+    call invoke_subgrid_coeffs_conservative(  a0_x, a1_x, a2_x,                 &
+                                              a0_y, a1_y, a2_y,                 &
+                                              rho_x,                            &
+                                              rho_y,                            &
+                                              rho_x_corrected,                  &
+                                              rho_y_corrected,                  &
+                                              cell_orientation,                 &
+                                              rho_approximation_stencil_extent, &
+                                              dep_pt_stencil_extent  )
+
+    call invoke_fv_mass_fluxes(  rho_y, dep_pts_x, u, mass_flux_x,  &
+                                 a0_y, a1_y, a2_y, x_direction, dep_pt_stencil_extent )
+
+    call invoke_fv_mass_fluxes(  rho_x, dep_pts_y, u, mass_flux_y,  &
+                                 a0_x, a1_x, a2_x, y_direction, dep_pt_stencil_extent )
+
+  end subroutine conservative_flux_alg
+
+end module conservative_flux_alg_mod
