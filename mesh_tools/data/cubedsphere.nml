@@ -1,6 +1,7 @@
 &cubedsphere_mesh_generator
-  mesh_name = 'dynamics'
-  edge_cells = 12
+  edge_cells    = 12, 36
+  mesh_filename = mesh_C12.nc
+  mesh_names    = dynamics physics
+  nmeshes       = 2
   smooth_passes = 0
-  mesh_filename = 'mesh_C12.nc'
 /

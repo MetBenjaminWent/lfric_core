@@ -29,7 +29,7 @@ module genbiperiodic_mod
   integer(i_def), parameter :: SW = SWB
 
   ! Prefix for error messages
-  character(len=*),   parameter :: prefix = "[Biperiodic Mesh] "
+  character(len=*),   parameter :: PREFIX = "[Biperiodic Mesh] "
   character(str_def), parameter :: MESH_CLASS = "plane"
 
   type, extends(ugrid_generator_type), public :: genbiperiodic_type
@@ -68,32 +68,32 @@ module genbiperiodic_mod
 contains
 !-------------------------------------------------------------------------------
 !> @brief   Constructor for genbiperiodic_type
-!> @details Accepts mesh dimension and optional coordinate step arguments
-!>          for initialisation and validation.
+!> @details Accepts mesh dimension and optional domain size arguments
+!>          for initialisation.
 !>
 !> @param[in] mesh_name  Name of this mesh topology
-!> @param[in] nx         Number of faces in biperiodic mesh x dimension
-!> @param[in] ny         Number of faces in biperiodic mesh y dimension
-!> @param[in] dx         Optional. Size of vertex x coordinate step
-!> @param[in] dy         Optional. Size of vertex y coordinate step
+!> @param[in] nx         Number of faces in biperiodic mesh x axis
+!> @param[in] ny         Number of faces in biperiodic mesh y axis
+!> @param[in] domain_x   Optional: Domain size in x-axis
+!> @param[in] domain_y   Optional: Domain size in y-axis
 !>
 !> @return    self       Instance of genbiperiodic_type
 !-------------------------------------------------------------------------------
-function genbiperiodic_constructor( mesh_name, nx, ny, dx, dy ) &
+function genbiperiodic_constructor( mesh_name, nx, ny, domain_x, domain_y ) &
                             result( self )
 
   implicit none
 
-  character(len=*),       intent(in) :: mesh_name
-  integer(i_def),         intent(in) :: nx, ny
-  real(r_def), optional,  intent(in) :: dx, dy
-
-  character(str_def) :: rchar1, rchar2
+  character(len=*), intent(in) :: mesh_name
+  integer(i_def),   intent(in) :: nx, ny
+  real(r_def),      intent(in) :: domain_x, domain_y
 
   type( genbiperiodic_type ) :: self
+  character(str_def)         :: rchar1
+  character(str_def)         :: rchar2
 
   if (nx < 2 .or. ny < 2) then
-    call log_event(prefix//"Invalid dimension argument.", LOG_LEVEL_ERROR)
+    call log_event( PREFIX//"Invalid dimension argument.", LOG_LEVEL_ERROR )
   end if
 
   self%mesh_name  = trim(mesh_name)
@@ -101,34 +101,27 @@ function genbiperiodic_constructor( mesh_name, nx, ny, dx, dy ) &
   self%nx = nx
   self%ny = ny
 
-  if (present(dx)) then
-    if (dx < 0)                                                       &
-        call log_event( prefix//" dx argument must be non-negative.", &
-                        LOG_LEVEL_ERROR )
-    self%dx = dx
-  else
-    self%dx = 6000.0_r_def
-  end if
+  if (domain_x < 0)                                                       &
+      call log_event( PREFIX//" x-domain argument must be non-negative.", &
+                      LOG_LEVEL_ERROR )
 
-  if (present(dy)) then
-    if (dy < 0)                                                       &
-        call log_event( prefix//" dy argument must be non-negative.", &
-                        LOG_LEVEL_ERROR )
-    self%dy = dy
-  else
-    self%dy = 2000.0_r_def
-  end if
+  if (domain_y < 0)                                                       &
+      call log_event( PREFIX//" y-domain argument must be non-negative.", &
+                      LOG_LEVEL_ERROR )
 
-  write(rchar1,'(F10.2)') self%dx
-  write(rchar2,'(F10.2)') self%dy
+  self%dx = domain_x / self%nx
+  self%dy = domain_y / self%ny
+
+
+  write(rchar1,'(F10.2)') domain_x
+  write(rchar2,'(F10.2)') domain_y
   write(self%generator_inputs,'(2(A,I0),2(A))') &
-      'cells_in_x=', self%nx,                   &
-      ';cells_in_y=', self%ny,                  &
-      ';cell_width='//trim(adjustl(rchar1))//   &
-      ';cell_height='//trim(adjustl(rchar2))
+      'edge_cells_x=', self%nx,                 &
+      ';edge_cells_y=', self%ny,                &
+      ';domain_x='//trim(adjustl(rchar1))//     &
+      ';domain_y='//trim(adjustl(rchar2))
 
   return
-
 end function genbiperiodic_constructor
 !-------------------------------------------------------------------------------
 !> @brief   For each cell, calculates the set of cells to which it is
@@ -157,7 +150,7 @@ subroutine calc_adjacency(self, cell_next)
   allocate(cell_next(4, ncells), stat=astat)
 
   if (astat /= 0)                                               &
-      call log_event( prefix//"Failure to allocate cell_next.", &
+      call log_event( PREFIX//"Failure to allocate cell_next.", &
                       LOG_LEVEL_ERROR )
 
   do cell=1, ncells
@@ -216,7 +209,7 @@ subroutine calc_face_to_vert(self, verts_on_cell)
   allocate(verts_on_cell(4, ncells), stat=astat)
 
   if (astat /= 0)                                          &
-      call log_event( prefix//"Failure to allocate mesh.", &
+      call log_event( PREFIX//"Failure to allocate mesh.", &
                       LOG_LEVEL_ERROR )
 
   do vert = 1, 4
@@ -354,13 +347,13 @@ subroutine calc_edges(self, edges_on_cell, verts_on_edge)
   allocate(edges_on_cell(4, nx*ny), stat=astat)
 
   if (astat /= 0)                                                   &
-      call log_event( prefix//"Failure to allocate edges_on_cell.", &
+      call log_event( PREFIX//"Failure to allocate edges_on_cell.", &
                       LOG_LEVEL_ERROR )
 
   allocate(verts_on_edge(2, 2*nx*ny), stat=astat)
 
   if (astat /= 0)                                                   &
-      call log_event( prefix//"Failure to allocate verts_on_edge.", &
+      call log_event( PREFIX//"Failure to allocate verts_on_edge.", &
                       LOG_LEVEL_ERROR )
 
   ! Top row
@@ -449,7 +442,7 @@ subroutine calc_coords(self, vert_coords)
   allocate(vert_coords(2, ncells), stat=astat)
 
   if (astat /= 0)                                                 &
-      call log_event( prefix//"Failure to allocate vert_coords.", &
+      call log_event( PREFIX//"Failure to allocate vert_coords.", &
                       LOG_LEVEL_ERROR )
 
   do cell = 1, ncells

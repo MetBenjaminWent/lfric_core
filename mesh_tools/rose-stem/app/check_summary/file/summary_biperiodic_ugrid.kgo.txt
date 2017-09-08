@@ -1,9 +1,19 @@
 "dynamics":
   Class:               plane
-  Generator inputs:    cells_in_x=16;cells_in_y=8;cell_width=100.00;cell_height=50.00
+  Generator inputs:    edge_cells_x=16;edge_cells_y=8;domain_x=1600.00;domain_y=400.00
   Nodes:               128
   Edges:               256
   Faces:               128
+  Nodes per face:      4
+  Edges per face:      4
+  Nodes per edge:      2
+  Max. faces per node: 4
+"physics":
+  Class:               plane
+  Generator inputs:    edge_cells_x=48;edge_cells_y=24;domain_x=1600.00;domain_y=400.00
+  Nodes:               1152
+  Edges:               2304
+  Faces:               1152
   Nodes per face:      4
   Edges per face:      4
   Nodes per edge:      2

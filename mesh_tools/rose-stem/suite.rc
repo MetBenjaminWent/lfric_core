@@ -207,6 +207,7 @@ test -w "{{directory}}" -o ! -e "{{directory}}" && rm -rf {{directory}} || ( ech
       SOURCE_DIRECTORY      = $SOURCE_ROOT/{{label}}
       DESTINATION_DIRECTORY = $OUTPUT_ROOT/{{label}}
       COMPILER              = {{compiler}}
+      PLATFORM_OPT          = {{PLATFORM_OPT}}
       {#- We can't define WORKING_DIR here as it may contain    #}
       {#- target specific variables not existing on the local machine #}
 

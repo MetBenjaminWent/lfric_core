@@ -41,6 +41,8 @@ module genbiperiodic_mod_test
   character(str_def), parameter :: mesh_name = 'unit_test'
   integer(i_def),     parameter :: nx = 5
   integer(i_def),     parameter :: ny = 4
+  real(r_def),        parameter :: domain_x = 30000.0
+  real(r_def),        parameter :: domain_y = 8000.0
 
 contains
 
@@ -90,7 +92,7 @@ contains
     character(str_def)  :: test_str1, test_str2
     character(str_long) :: test_str3
 
-    bpgen = genbiperiodic_type(mesh_name, nx, ny)
+    bpgen = genbiperiodic_type(mesh_name, nx, ny, domain_x, domain_y)
 
     ! Test metadata retrieval
     call bpgen%get_metadata( mesh_name        = test_str1, &
@@ -98,7 +100,7 @@ contains
                              generator_inputs = test_str3 )
     @assertEqual( mesh_name, trim(test_str1) )
     @assertEqual( 'plane', trim(test_str2) )
-    @assertEqual( 'cells_in_x=5;cells_in_y=4;cell_width=6000.00;cell_height=2000.00', trim(test_str3) )
+    @assertEqual( 'edge_cells_x=5;edge_cells_y=4;domain_x=30000.00;domain_y=8000.00', trim(test_str3) )
 
     ! Generate the mesh and connectivity
     call bpgen%generate()

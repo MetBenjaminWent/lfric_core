@@ -1,8 +1,9 @@
 &biperiodic_mesh_generator
-  mesh_name = 'dynamics'
-  cells_in_x  = 40
-  cells_in_y  = 40
-  cell_width  = 5.0
-  cell_height = 5.0
-  mesh_filename = 'mesh_BiP40x40-5x5.nc'
-/
+  edge_cells_x  = 40, 120
+  edge_cells_y  = 40, 120
+  domain_x      = 5.0
+  domain_y      = 5.0
+  mesh_filename = mesh_BiP40x40-5x5.nc
+  mesh_names    = dynamics physics
+  nmeshes       = 2
+ /

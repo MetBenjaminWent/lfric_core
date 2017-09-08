@@ -15,22 +15,22 @@
 !-----------------------------------------------------------------------------
 program biperiodic_mesh_generator
 
-  use biperiodic_mesh_generator_config_mod,                                  &
-                      only : read_biperiodic_mesh_generator_namelist,        &
-                             postprocess_biperiodic_mesh_generator_namelist, &
-                             cells_in_x, cells_in_y,                         &
-                             cell_width, cell_height,                        &
-                             mesh_name, mesh_filename
-  use cli_mod,           only : get_initial_filename
-  use constants_mod,     only : i_def, str_def
+  use biperiodic_mesh_generator_config_mod,                                    &
+                         only: read_biperiodic_mesh_generator_namelist,        &
+                               postprocess_biperiodic_mesh_generator_namelist, &
+                               edge_cells_x, edge_cells_y, domain_x, domain_y, &
+                               nmeshes, mesh_names, mesh_filename
+
+  use cli_mod,           only: get_initial_filename
+  use constants_mod,     only: i_def, str_def
   use ESMF
-  use genbiperiodic_mod, only : genbiperiodic_type
-  use io_utility_mod,    only : open_file, close_file
-  use log_mod,           only : log_scratch_space, log_event, &
+  use genbiperiodic_mod, only: genbiperiodic_type
+  use io_utility_mod,    only: open_file, close_file
+  use log_mod,           only: log_scratch_space, log_event, &
                                 LOG_LEVEL_INFO, LOG_LEVEL_ERROR
-  use ncdf_quad_mod,     only : ncdf_quad_type
-  use ugrid_2d_mod,      only : ugrid_2d_type
-  use ugrid_file_mod,    only : ugrid_file_type
+  use ncdf_quad_mod,     only: ncdf_quad_type
+  use ugrid_2d_mod,      only: ugrid_2d_type
+  use ugrid_file_mod,    only: ugrid_file_type
 
   implicit none
 
@@ -40,17 +40,20 @@ program biperiodic_mesh_generator
   character(:), allocatable :: filename
   integer(i_def)            :: namelist_unit
 
-  type(genbiperiodic_type)            :: bpgen
-  type(ugrid_2d_type)                 :: ugrid_2d
-  class(ugrid_file_type), allocatable :: ugrid_file
-  integer(i_def)                      :: fsize
+  type(genbiperiodic_type), allocatable :: bpgen(:)
+  type(ugrid_2d_type),      allocatable :: ugrid_2d(:)
+  class(ugrid_file_type),   allocatable :: ugrid_file
+
+  integer(i_def) :: fsize
+  integer(i_def) :: i
 
   character(str_def) :: rchar
   character(str_def) :: fmt_str
 
   ! Start up ESMF
-  call ESMF_Initialize( vm=vm, defaultlogfilename="biperiodic.log", &
-                        logkindflag=ESMF_LOGKIND_SINGLE, rc=rc )
+  call ESMF_Initialize( vm=vm, rc=rc,                    &
+                        logkindflag=ESMF_LOGKIND_SINGLE, &
+                        defaultlogfilename="biperiodic.log" )
   if (rc /= ESMF_SUCCESS) call log_event( 'Failed to initialise ESMF.', &
                                           LOG_LEVEL_ERROR )
 
@@ -62,55 +65,79 @@ program biperiodic_mesh_generator
   call close_file( namelist_unit )
   deallocate( filename )
 
-  ! Create object to manipulate UGRID conforming NetCDF file
-  allocate(ncdf_quad_type::ugrid_file)
-  call ugrid_2d%set_file_handler(ugrid_file)
+  ! Create objects to manipulate UGRID conforming NetCDF file
+  allocate(bpgen(nmeshes))
+  allocate(ugrid_2d(nmeshes))
 
-  ! Create object which can generate the biperiodic mesh from
-  ! specified inputs.
-  bpgen = genbiperiodic_type( mesh_name,              &
-                              cells_in_x, cells_in_y, &
-                              cell_width, cell_height )
+  ! Create each mesh in chain by setting details in ugrid_2d object
+  ! using mesh_generators
+  do i=1, nmeshes
 
-  ! Mesh for the UGRID conforming NetCDF file is
-  ! set by the generator passed to it
-  call log_event( 'Generating biperiodic mesh, "' // trim(mesh_name)// &
-                  '", with...', LOG_LEVEL_INFO )
+    ! Create object which can generate the biperiodic mesh from
+    ! specified inputs.
+    bpgen(i) = genbiperiodic_type( mesh_names(i),   &
+                                   edge_cells_x(i), &
+                                   edge_cells_y(i), &
+                                   domain_x,        &
+                                   domain_y )
 
-  fmt_str = '(A,T16,I0)'
+    fmt_str ='(A,I0)'
+    write(log_scratch_space, fmt_str) &
+        "Generating biperiodic mesh: "//trim(mesh_names(i))
+    call log_event( log_scratch_space, LOG_LEVEL_INFO )
+    write(log_scratch_space, fmt_str) &
+        "  Cells in x:  ", edge_cells_x(i)
+    call log_event( log_scratch_space, LOG_LEVEL_INFO )
+    write(log_scratch_space, fmt_str) &
+        "  Cells in y:  ", edge_cells_y(i)
+    call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
-  write(log_scratch_space, fmt_str) "  Cells in x:", cells_in_x
-  call log_event( log_scratch_space, LOG_LEVEL_INFO )
+    fmt_str ='(A)'
+    write(rchar, '(F6.1)') domain_x / edge_cells_x(i)
+    write(log_scratch_space, fmt_str) &
+        "  Cell width:  "//trim(adjustl(rchar))
+    call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
-  write(log_scratch_space, fmt_str) "  Cells in y:", cells_in_y
-  call log_event( log_scratch_space, LOG_LEVEL_INFO )
+    write(rchar, '(F6.1)') domain_x / edge_cells_y(i)
+    write(log_scratch_space, fmt_str) &
+        "  Cell height: "//trim(adjustl(rchar))
+    call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
-  fmt_str = '(A,T16,A)'
+    ! Mesh for the UGRID conforming NetCDF file is
+    ! set by the generator passed to it
+    call ugrid_2d(i)%set_by_generator(bpgen(i))
 
-  write(rchar, '(F6.1)') cell_width
-  write(log_scratch_space, fmt_str) &
-      "  Cell width:",trim(adjustl(rchar))
-  call log_event( log_scratch_space, LOG_LEVEL_INFO )
-
-  write(rchar, '(F6.1)') cell_height
-  write(log_scratch_space, fmt_str) &
-      "  Cell height:",trim(adjustl(rchar))
-  call log_event( log_scratch_space, LOG_LEVEL_INFO )
-
-  ! Mesh for the UGRID conforming NetCDF file is
-  ! set by the generator passed to it
-  call ugrid_2d%set_by_generator( bpgen )
-
-  ! Now the write out mesh to the NetCDF file
-  call ugrid_2d%write_to_file( trim(mesh_filename) )
+  end do
 
   call log_event( "...generation complete.", LOG_LEVEL_INFO )
-  inquire(file=mesh_filename, size=fsize)
-  write( log_scratch_space, '(A,I0,A)' )                       &
-      'Writing ugrid mesh to '//trim(adjustl(mesh_filename))// &
-      ' - ', fsize, ' bytes written.'
-  call log_event( log_scratch_space, LOG_LEVEL_INFO )
+
+
+  ! Now the write out mesh to the NetCDF file
+  do i=1, nmeshes
+
+    if (.not. allocated(ugrid_file)) allocate(ncdf_quad_type::ugrid_file)
+
+    call ugrid_2d(i)%set_file_handler(ugrid_file)
+
+    if (i==1) then
+      call ugrid_2d(i)%write_to_file( trim(mesh_filename) )
+    else
+      call ugrid_2d(i)%append_to_file( trim(mesh_filename) )
+    end if
+
+    inquire(file=mesh_filename, size=fsize)
+    write( log_scratch_space, '(A,I0,A)')                          &
+        'Writing ugrid mesh to ' // trim(adjustl(mesh_filename))// &
+        ' - ', fsize, ' bytes written.'
+
+    call log_event( log_scratch_space, LOG_LEVEL_INFO )
+    if (allocated(ugrid_file)) deallocate(ugrid_file)
+
+  end do
 
   call ESMF_Finalize(rc=rc)
+
+  if ( allocated( bpgen ) )    deallocate (bpgen)
+  if ( allocated( ugrid_2d ) ) deallocate (ugrid_2d)
 
 end program biperiodic_mesh_generator

@@ -19,7 +19,7 @@ class genbiperiodic_mod::genbiperiodic_type {
   -verts_on_edge: integer[::] <<allocatable>>
   -vert_coords: real[::] <<allocatable>>
 
-  +<<create>>genbiperiodic_constructor( <<in>> mesh_name: string, <<in>> nx: integer, <<in>> ny: integer, <<in>> dx: integer, <<in>> dy: integer ): genbiperiodic_type
+  +<<create>>genbiperiodic_constructor( <<in>> mesh_name: string, <<in>> nx: integer, <<in>> ny: integer, <<in>> domain_x: integer, <<in>> domain_y: integer ): genbiperiodic_type
 
   +calc_adjacency( <<out>> cell_next:integer[::] <<allocatable>> )
   +calc_face_to_vert( <<out>> verts_on_cell: integer[::] <<allocatable>> )

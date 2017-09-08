@@ -1,10 +1,11 @@
 namelist biperiodic_mesh_generator
 
-  mesh_name     : string(default)  ! variable name to assign to mesh
-  cells_in_x    : integer
-  cells_in_y    : integer
-  cell_width    : real ! Vertex coordinate x increment (m)
-  cell_height   : real ! Vertex coordinate y increment (m)
-  mesh_filename : string(filename)
+  domain_x              : real              ! Size of domain in x-axis
+  domain_y              : real              ! Size of domain in y-axis
+  edge_cells_x(nmeshes) : integer           ! Number of cells in mesh x-axis
+  edge_cells_y(nmeshes) : integer           ! Number of cells in mesh y-axis
+  mesh_filename         : string(filename)  ! Ouput filename
+  mesh_names(nmeshes)   : string            ! Tags to identify meshes in NetCDF output
+  nmeshes               : integer           ! Number of meshes to generate
 
 end namelist biperiodic_mesh_generator

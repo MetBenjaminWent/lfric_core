@@ -22,27 +22,30 @@
 module gencube_ps_mod
 !-------------------------------------------------------------------------------
   use ugrid_generator_mod,   only : ugrid_generator_type
-  use constants_mod,         only : r_def, i_def, str_def, str_long
-  use log_mod,               only : log_event, LOG_LEVEL_ERROR
+  use constants_mod,         only : r_def, i_def, str_def, l_def, str_long
+  use log_mod,               only : log_event, log_scratch_space, &
+                                    LOG_LEVEL_ERROR, LOG_LEVEL_INFO
   use reference_element_mod, only : W, S, E, N, SWB, SEB, NWB, NEB
 
   implicit none
 
   private
 
-!-------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------
   ! Mesh Vertex directions: local aliases for reference_element_mod values
   integer(i_def), parameter :: NW = NWB
   integer(i_def), parameter :: NE = NEB
   integer(i_def), parameter :: SE = SEB
   integer(i_def), parameter :: SW = SWB
 
+  integer(i_def), parameter :: nPanels = 6
+
   ! Prefix for error messages
-  character(len=*), parameter       :: prefix = "[Cubed-Sphere Mesh] "
-  character(len=str_def), parameter :: MESH_CLASS = "sphere"
+  character(*),       parameter :: PREFIX = "[Cubed-Sphere Mesh] "
+  character(str_def), parameter :: MESH_CLASS = "sphere"
 
   ! flag to print out mesh data for debugging purposes
-  logical, parameter :: debug = .false.
+  logical(l_def),     parameter :: DEBUG = .false.
 !-------------------------------------------------------------------------------
 
   type, extends(ugrid_generator_type), public :: gencube_ps_type
@@ -81,14 +84,14 @@ module gencube_ps_mod
 !-------------------------------------------------------------------------------
 contains
 !-------------------------------------------------------------------------------
-!> @brief   Constructor for gencube_ps_type
+!> @brief   Constructor for gencube_ps_type.
 !> @details Accepts mesh dimension for initialisation and validation.
 !>
-!> @param[in]  mesh_name  Name of this mesh topology
-!> @param[in]  edge_cells Number of cells per panel edge of the cubed-sphere.
-!>                        Each panel will contain edge_cells*edge_cells faces.
+!> @param[in]  mesh_name   Name of this mesh topology
+!> @param[in]  edge_cells  Number of cells per panel edge of the cubed-sphere.
+!>                         Each panel will contain edge_cells*edge_cells faces.
 !>
-!> @return  self  Instance of gencube_ps_type 
+!> @return  self  Instance of gencube_ps_type
 !-------------------------------------------------------------------------------
 function gencube_ps_constructor( mesh_name, edge_cells, nsmooth )  &
                          result( self )
@@ -102,7 +105,10 @@ function gencube_ps_constructor( mesh_name, edge_cells, nsmooth )  &
   type( gencube_ps_type ) :: self
 
   if (edge_cells < 3) then
-    call log_event( prefix//"Invalid dimension argument.", LOG_LEVEL_ERROR )
+    write(log_scratch_space,'(A,I0,A)')               &
+        ' Invalid argument [edge_cells:', edge_cells, &
+        '], edge_cells must be >2'
+    call log_event( trim(log_scratch_space), LOG_LEVEL_ERROR )
   end if
 
   self%mesh_name  = (trim(mesh_name))
@@ -133,47 +139,66 @@ subroutine calc_adjacency(self, cell_next)
   integer(i_def), allocatable, intent(out) :: cell_next(:,:)
 
   integer(i_def) :: edge_cells, ncells, cpp
-  integer(i_def) :: cell, astat
+  integer(i_def) :: cell, astat, panel_number
 
 
   edge_cells = self%edge_cells
-  cpp = self%edge_cells*self%edge_cells
-  ncells = 6*self%edge_cells*self%edge_cells
+  cpp        = edge_cells*edge_cells
+  ncells     = cpp*nPanels
 
   allocate(cell_next(4, ncells), stat=astat)
 
   if (astat /= 0)                                               &
-      call log_event( prefix//"Failure to allocate cell_next.", &
+      call log_event( PREFIX//"Failure to allocate cell_next.", &
                       LOG_LEVEL_ERROR )
 
   cell_next = 0
 
-  ! Panel I
-  do cell = 1, cpp
+  ! Panels are arranged and numbered as indicated
+  !==============================================
+  !      +---+
+  !      | 5 |
+  !  +---+---+---+---+
+  !  | 1 | 2 | 3 | 4 |
+  !  +---+---+---+---+
+  !      | 6 |
+  !      +---+
+
+  ! Default settings
+  do cell=1, ncells
     ! Default: W, S, E, N
     cell_next(:, cell) = (/ cell-1, cell+edge_cells, cell+1, cell-edge_cells /)
+  end do
+
+  ! Panel I
+  panel_number = 1
+  do cell = (panel_number-1)*cpp + 1, panel_number*cpp
+
     ! Top edge
     if (cell <= edge_cells) then
       cell_next(N, cell) = 4*cpp+1+(cell-1)*edge_cells
     end if
+
     ! Right edge
     if (mod(cell, edge_cells) == 0) then
       cell_next(E, cell) = cpp+1+cell-edge_cells
     end if
+
     ! Bottom edge
     if (cell > cpp-edge_cells) then
       cell_next(S, cell) = 5*cpp+1+(cpp-cell)*edge_cells
     end if
+
     ! Left edge
     if (mod(cell, edge_cells) == 1) then
       cell_next(W, cell) = 3*cpp+(cell/edge_cells+1)*edge_cells
     end if
   end do
 
+  panel_number = 2
   ! Panel II
-  do cell = cpp+1, 2*cpp
-    ! Default: W, S, E, N
-    cell_next(:, cell) = (/ cell-1, cell+edge_cells, cell+1, cell-edge_cells /)
+  do cell = (panel_number-1)*cpp+1, panel_number*cpp
+
     ! Top edge
     if (cell <= cpp+edge_cells) then
       cell_next(N, cell) = 5*cpp-edge_cells+cell-cpp
@@ -193,9 +218,9 @@ subroutine calc_adjacency(self, cell_next)
   end do
 
   ! Panel III
-  do cell = 2*cpp+1, 3*cpp
-    ! Default: W, S, E, N
-    cell_next(:, cell) = (/ cell-1, cell+edge_cells, cell+1, cell-edge_cells /)
+  panel_number = 3
+  do cell = (panel_number-1)*cpp+1, panel_number*cpp
+
     ! Top edge
     if (cell <= 2*cpp+edge_cells) then
       cell_next(N, cell) = 5*cpp-(cell-1-2*cpp)*edge_cells
@@ -215,9 +240,9 @@ subroutine calc_adjacency(self, cell_next)
   end do
 
   ! Panel IV
-  do cell = 3*cpp+1, 4*cpp
-    ! Default: W, S, E, N
-    cell_next(:, cell) = (/ cell-1, cell+edge_cells, cell+1, cell-edge_cells /)
+  panel_number = 4
+  do cell = (panel_number-1)*cpp+1, panel_number*cpp
+
     ! Top edge
     if (cell <= 3*cpp+edge_cells) then
       cell_next(N, cell) = 4*cpp+1+edge_cells-(cell-3*cpp)
@@ -237,9 +262,9 @@ subroutine calc_adjacency(self, cell_next)
   end do
 
   ! Panel V
-  do cell = 4*cpp+1, 5*cpp
-    ! Default: W, S, E, N
-    cell_next(:, cell) = (/ cell-1, cell+edge_cells, cell+1, cell-edge_cells /)
+  panel_number = 5
+  do cell = (panel_number-1)*cpp+1, panel_number*cpp
+
     ! Top edge
     if (cell <= 4*cpp+edge_cells) then
       cell_next(N, cell) = 3*cpp+edge_cells-(cell-1-4*cpp)
@@ -259,9 +284,9 @@ subroutine calc_adjacency(self, cell_next)
   end do
 
   ! Panel VI
-  do cell = 5*cpp+1, 6*cpp
-    ! Default: W, S, E, N
-    cell_next(:, cell) = (/ cell-1, cell+edge_cells, cell+1, cell-edge_cells /)
+  panel_number = 6
+  do cell = (panel_number-1)*cpp+1, panel_number*cpp
+
     ! Top edge
     if (cell <= 5*cpp+edge_cells) then
       cell_next(N, cell) = 2*cpp-edge_cells + cell-5*cpp
@@ -303,13 +328,13 @@ subroutine calc_face_to_vert(self, verts_on_cell)
   integer(i_def) :: cell, idx, panel, nxf, astat
 
   edge_cells = self%edge_cells
-  cpp = self%edge_cells*self%edge_cells
-  ncells = 6*self%edge_cells*self%edge_cells
+  cpp        = edge_cells*edge_cells
+  ncells     = cpp*nPanels
 
   allocate(verts_on_cell(4, 6*cpp), stat=astat)
 
   if (astat /= 0)                                                   &
-      call log_event( prefix//"Failure to allocate verts_on_cell.", &
+      call log_event( PREFIX//"Failure to allocate verts_on_cell.", &
                       LOG_LEVEL_ERROR )
 
   verts_on_cell = 0
@@ -463,19 +488,19 @@ subroutine calc_edges(self, edges_on_cell, verts_on_edge)
   integer(i_def) :: cell, panel, idx, nxf, astat
 
   edge_cells = self%edge_cells
-  cpp = self%edge_cells*self%edge_cells
-  ncells = 6*self%edge_cells*self%edge_cells
+  cpp        = edge_cells*edge_cells
+  ncells     = cpp*nPanels
 
   allocate(edges_on_cell(4, ncells), stat=astat)
 
   if (astat /= 0)                                                   &
-      call log_event( prefix//"Failure to allocate edges_on_cell.", &
+      call log_event( PREFIX//"Failure to allocate edges_on_cell.", &
                       LOG_LEVEL_ERROR )
 
   allocate(verts_on_edge(2, 2*ncells), stat=astat)
 
   if (astat /= 0)                                                   &
-      call log_event( prefix//"Failure to allocate verts_on_edge.", &
+      call log_event( PREFIX//"Failure to allocate verts_on_edge.", &
                       LOG_LEVEL_ERROR )
 
   edges_on_cell = 0
@@ -637,14 +662,14 @@ subroutine calc_coords(self, vert_coords)
   real(r_def), parameter :: pio4 = PI/4.0_r_def
 
   edge_cells = self%edge_cells
-  ncells = 6*edge_cells*edge_cells
-  nverts = ncells+2
-  cpp = self%edge_cells*self%edge_cells
+  cpp        = edge_cells*edge_cells
+  ncells     = cpp*nPanels
+  nverts     = ncells+2
 
   allocate(vert_coords(2, nverts), stat=astat)
 
   if (astat /= 0)                                                 &
-      call log_event( prefix//"Failure to allocate vert_coords.", &
+      call log_event( PREFIX//"Failure to allocate vert_coords.", &
                       LOG_LEVEL_ERROR )
 
   vert_coords = 0.0_r_def
@@ -862,9 +887,15 @@ subroutine get_dimensions(self, num_nodes, num_edges, num_faces,        &
   integer(i_def), intent(out) :: num_edges_per_face
   integer(i_def), intent(out) :: num_nodes_per_edge
 
-  num_faces =   6*self%edge_cells*self%edge_cells
-  num_nodes =   6*self%edge_cells*self%edge_cells+2
-  num_edges = 2*6*self%edge_cells*self%edge_cells
+  integer(i_def) :: edge_cells, cpp, ncells
+
+  edge_cells = self%edge_cells
+  cpp        = edge_cells*edge_cells
+  ncells     = cpp*nPanels
+
+  num_faces = ncells
+  num_nodes = ncells + 2
+  num_edges = ncells * 2
 
   num_nodes_per_face = 4
   num_edges_per_face = 4
@@ -945,7 +976,7 @@ subroutine generate(self)
   call calc_coords(self, self%vert_coords)
   call orient_lfric(self)
   if (self%nsmooth > 0_i_def) call smooth(self)
-  if (debug) call write_mesh(self)
+  if (DEBUG) call write_mesh(self)
 
   return
 end subroutine generate
@@ -966,7 +997,7 @@ subroutine write_mesh(self)
 
   integer(i_def) :: i, cell, vert, ncells
 
-  ncells = 6*self%edge_cells*self%edge_cells
+  ncells = nPanels*self%edge_cells*self%edge_cells
 
   write(stdout,*) "cell_next"
   do cell=1, ncells
@@ -1082,7 +1113,7 @@ subroutine smooth(self)
   ! Counters
   integer(i_def) :: i, j, smooth_pass, cell, vert
 
-  ncells = 6*self%edge_cells*self%edge_cells
+  ncells = nPanels*self%edge_cells*self%edge_cells
   nverts = ncells + 2
 
   allocate( cell_on_vert(4,nverts) )
