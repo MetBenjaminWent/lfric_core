@@ -247,13 +247,13 @@ test -w "{{directory}}" -o ! -e "{{directory}}" && rm -rf {{directory}} || ( ech
                   echo $CYLC_TASK_LOG_ROOT > $DESTINATION_DIRECTORY/lfric.mesher.{{compiler}}.log
                   """
     [[[environment]]]
-      WORKING_DIR          = {{TARGET_BUILD_ROOT}}/{{label}}/mesh_tools
-      BIN_DIR              = $DESTINATION_DIRECTORY
-      BUILD_TARGET         = {{build}}
-      OPTIMISATION_PROFILE = {{PLATFORM_OPT}}
-      PROFILE              = {{build}}
-      TARGET               = build
-      MAKE_THREADS         = 4
+      WORKING_DIR           = {{TARGET_BUILD_ROOT}}/{{label}}/mesh_tools
+      BIN_DIR               = $DESTINATION_DIRECTORY
+      BUILD_TARGET          = {{build}}
+      LFRIC_TARGET_PLATFORM = {{PLATFORM_OPT}}
+      PROFILE               = {{build}}
+      TARGET                = build
+      MAKE_THREADS          = 4
     [[[directives]]]
 {%-       for DIRECTIVE in TARGET_BUILD_BATCHER_DIRECTIVES %}
       {{DIRECTIVE}}

@@ -10,9 +10,8 @@ export IGNORE_DEPENDENCIES = netcdf MPI ESMF pfunit_mod planet_constants_mod xio
 export EXTERNAL_DYNAMIC_LIBRARIES = esmf netcdff netcdf hdf5
 export EXTERNAL_STATIC_LIBRARIES = xios
 
-ifdef OPTIMISATION_PROFILE
-  export OPTIMISATION_PATH = optimisation/$(OPTIMISATION_PROFILE)
-endif
+LFRIC_TARGET_PLATFORM ?= generic-x86
+export OPTIMISATION_PATH ?= $(wildcard optimisation/$(LFRIC_TARGET_PLATFORM))
 
 export PROJECT_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 ROOT_DIR ?= ../

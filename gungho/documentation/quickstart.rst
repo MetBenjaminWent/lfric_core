@@ -255,7 +255,7 @@ Pass the ``PROFILE`` variable to make in order to select one of these profies::
 
 In order for PSyclone to select the correct optimisation script it must know
 the platform you are building on. This is achieved by setting the
-``OPTIMISATION_PROFILE`` environment variable to a single platform identifier,
+``LFRIC_TARGET_PLATFORM`` environment variable to a single platform identifier,
 as defined above.
 
 Use ``make clean`` to remove all compiled application and unit test output.

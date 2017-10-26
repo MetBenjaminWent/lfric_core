@@ -1,0 +1,4 @@
+generic-x86: ifort: meto-x86-ifort
+meto-spice:  ifort: meto-x86-ifort
+meto-xc40:   ifort: meto-xc40-ifort
+meto-xcsr:   ifort: meto-xc40-ifort

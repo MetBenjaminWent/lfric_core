@@ -12,14 +12,10 @@ export EXTERNAL_STATIC_LIBRARIES = xios
 
 export UMPHYSICS_TARGETS = extract-um-physics
 export UMPHYSICS_CLEAN   = clean-um-physics
-# Note that this defaults to the xcr0 build, but will be
-# set to the appropriate target if using the test-umphysics suites
-export UM_ENV=set_environment-xc40.sh
 export UM_FCM=$(UM_PHYS_DIR)/
 
-ifdef OPTIMISATION_PROFILE
-  export OPTIMISATION_PATH = optimisation/$(OPTIMISATION_PROFILE)
-endif
+LFRIC_TARGET_PLATFORM ?= generic-x86
+export OPTIMISATION_PATH ?= $(wildcard optimisation/$(LFRIC_TARGET_PLATFORM))
 
 export PROJECT_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 ROOT_DIR ?= ../
@@ -85,13 +81,16 @@ extract-gungho: ALWAYS
 	        PROJECT=$(PROJECT) WORKING_DIR=$(abspath $(WORKING_DIR))
 
 .PHONY: extract-um-physics
+extract-um-physics: export platform_config_dir=$(strip $(shell grep -E "$(LFRIC_TARGET_PLATFORM)\s*:\s*$(FORTRAN_COMPILER)\s*:" $(PROJECT_DIR)/fcm-make/target-map.txt | cut -d : -f 3))
 extract-um-physics:
 	$(call MESSAGE,Extracting,UM physics)
+	$(Q)if [ x$(platform_config_dir) = x ] ; then echo Unable to convert $(LFRIC_TARGET_PLATFORM):$(FORTRAN_COMPILER) to a UM target; false; fi
+	$(info Using UM target $(platform_config_dir))
 	# Retrieve and preprocess the UM, Jules and Socrates code
 	# The UM_ENV file contains the appropriate locations and UM side
 	# environment variables
-	$(Q)source $(UM_ENV); \
-	    fcm make -C $(SCRATCH_DIR) -f $(PROJECT_DIR)/fcm-make.cfg
+	$(Q)source $(PROJECT_DIR)/fcm-make/parameters.sh && \
+	    fcm make -C $(SCRATCH_DIR) -f $(PROJECT_DIR)/fcm-make/extract.cfg
 	# Note that if wanting to modify UM source this should be done via the
 	# UM repository either through a working copy or branch
 	$(Q)rsync -avz $(SCRATCH_DIR)/preprocess-atmos/ $(WORKING_DIR)/science/

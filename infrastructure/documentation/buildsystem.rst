@@ -104,14 +104,15 @@ which to perform the compile
 
 .. note::
   Regardless of where the working directory is the finished build products will
-  end up in directories ``bin`` and ``tests`` in the root of the working copy.
+  end up in directories ``bin`` and ``tests`` in the root of the sub-project.
 
 Verbose Building
 ^^^^^^^^^^^^^^^^
 
 By default the build system will suppress as much output as possible to reduce
-clutter. When resolving problems it may be useful to see the output. If you want
-to see the actual commands being run by the build set the ``VERBOSE`` variable::
+clutter. When resolving problems it may be useful to see that clutter. If you
+want to see the actual commands being run by the build set the ``VERBOSE``
+variable::
 
   make VERBOSE=1
 
@@ -144,9 +145,9 @@ artefacts. These include working files and complete executable binaries.
 Testing
 ^^^^^^^
 
-Unit tests will be built and run as part of a normal build, so there is no
-need to worry about that. The test suite, on the other hand, must be
-manually invoked.
+Unit tests and integration tests will be built and run as part of a normal
+build, so there is no need to worry about that. The test suite, on the other
+hand, must be manually invoked.
 
 When ``make test-suite`` is used a number of instances of Rose Stem will be
 launched. The environment variable ``TEST_SUITE_TARGETS`` holds a space
@@ -162,7 +163,7 @@ for you. e.g. On the desktop do::
 
   module load common-environment/lfric
 
-The top level Makefile will launch the test suite for sll dub-projects listed
+The top level Makefile will launch the test suite for sll sub-projects listed
 in ``OPERATE_ON``. This defaults to Infrastructure, Mesh tools and Gung Ho.
 
 For further information an testing see `Dynamo/Testing`:trac:.
@@ -229,8 +230,8 @@ and maintain dependency information automatically.
 
 The dependency analyser scans Fortran source looking for "use" statements
 to determine the prerequisites of a source file. It relies on source files
-having the same name as the module they contain, which implies that they contain
-only one module.
+having the same name as the module they contain, which implies that they
+contain only one module.
 
 e.g. if the module is called "my_special_stuff_mod" then the file name
 should be "my_special_stuff_mod.f90". If this is not the case these modules will
@@ -318,7 +319,7 @@ it is generating it.
 
 It is necessary for PSyclone to know which platform you are building on in
 order to select the correct optimisation scripts. This is achieved through the
-`OPTIMISATION_PROFILE` environment variable. It should contain a single
+`LFRIC_TARGET_PLATFORM` environment variable. It should contain a single
 platform identifier following the convention outlined above.
 
 The build system will look for ``optimisation/<platform id>/global.py`` which
@@ -332,63 +333,38 @@ in preference to the global script. The algorithm name is taken from
 UM physics codes
 ~~~~~~~~~~~~~~~~
 
-We attempt to develop LFric with single source physics taken from the UM
-repository.  In order to build in the UM code, fcm make is used to extract
-and preprocess the code; this is then rsync'd with the working build directory
-such that the LFRic build system can proceed with analysing and building this 
-code.
+If you wish to compile the GungHo core with UM physics you should use the
+"um_physics" sub-project. This is not built by default by the top level
+make file due to the time it takes to compile. It can be added to the
+``OPERATE_ON`` environment variable should you want it to build from the top
+level.
 
-Since this process results in the build system analysing a considerable
-amount of additional code, this version is hived off into a separate
-sub-project, ``umphysics``. Its Makefile offers a special target
-``partial-clean`` or ``pclean`` which deletes only the working Gung Ho copy,
-not the UM copy.
+In order to build the UM code with GungHo, fcm make is used to extract and
+preprocess it; this is then rsync'd with the working build directory such that
+the LFRic build system can proceed with analysing and building the whole code.
 
-The make procedure will then carry out the ``fcm make`` invocation and then
+The `LFRIC_TARGET_PLATFORM` environment variable is used to determine how to
+extract the UM source. A lookup table in ``um_physics/fcm-make/target-map.txt``
+is used to map LFRic target platform to UM target platform.
+
+The UM code is a conserable size so filters are specified in
+``um_physics/fcm-make/extract.cfg`` to restrict the number of files extracted.
+
+The make procedure will first carry out the FCM extract invocation, then
 subsequently rsync the extracted and preprocessed code to the ``working``
 directory tree. It is the intention that the UM code for the build is kept
 separate from the main LFRic source and any modifications on the UM side should
-be made through the branches incorporated at the fcm make stage (these could be
-a separate working copy). To change the UM branches incorporated into the
-build, modify the ``um_sources`` environment variable in the
-``set_environment-<platform>.sh`` file.
+be made through the branches incorporated at the FCM extract stage (these could
+be a separate working copy). To change the UM branches incorporated into the
+build, modify the ``um_sources`` environment variable in
+``um_physics/fcm-make/parameters.sh``.
 
 Since the UM code will continue to evolve and we will want to source difference
 versions/branches from the UM repository, the environment variables needed by
-the fcm make command (including the paths to the repository/branches/working)
-are set in ``um_physics/set_environment-<platform>.sh``.  Typically, this
-script will be maintained in the LFRic repository but can be overridden if a
-different UM source/configuration is required.
+FCM extract (including the paths to the repository/branches/working) are set
+in ``um_physics/fcm_make/parameters.sh``.  Typically, this script will be
+maintained in the LFRic repository but can be overridden if a different UM
+source/configuration is required.
 
-fcm-make
-~~~~~~~~
-
-This section has been rendered inacurate and the associated apability
-inoperative by the replacement of the build system. It is left here for
-reference until such times as it can be redeveloped.
-
-The Dynamo code, together with PSyclone and pFUnit, can be extracted using 
-fcm-make. This can extract direct to the local machine without the need for a
-mirroring step.
-
-  ``fcm make -f fcm-make/<site-platform-compiler>/<optimisation>.cfg``
-
-This will extract the code to a directory named "extract". Because fcm-make
-extracts code in a different directory structure than the compilation system
-expects, the following environment variables need to be set before invoking
-``make``. Note that the final three environment variables are only required to 
-run the unit tests.
-
-=============================  ===========================================================================================================
-Environment Variable           Setting
-=============================  ===========================================================================================================
-``DYNAMO_BUILD_ROOT``          $PWD/extract/dynamo
-``PSYCLONE``                   python2.7 $PWD/extract/psyclone/src/generator.py
-``PSYCLONE_DIR``               $PWD/extract/psyclone
-``PYTHONPATH``                 $PWD/extract/psyclone/f2py_93:$PWD/extract/psyclone/src:$PYTHONPATH
-``PFUNIT_SOURCE_DIR``          $PWD/extract/pfunit
-``PFUNIT_BUILD_DIR``           $PWD/extract/pfunit
-``INSTALL_DIR``                $PWD/extract/dynamo/pfunit-install
-``F90``                        ifort
-``F90_VENDOR``                 Intel
-=============================  ===========================================================================================================
+The um_physics sub-project offers a special make target ``partial-clean`` or
+``pclean`` which deletes only the working Gung Ho copy, not the UM copy.

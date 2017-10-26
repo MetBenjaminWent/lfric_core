@@ -769,11 +769,11 @@ test -w "{{directory}}" -o ! -e "{{directory}}" && rm -rf {{directory}} || ( ech
                       echo $RELATIVE_LOG_ROOT > $DESTINATION_DIRECTORY/compile.log.path
                       """
         [[[environment]]]
-            WORKING_DIR          = {{TARGET_BUILD_ROOT}}/{{label}}
-            TARGET               = build
-            PROFILE              = {{build}}
-            OPTIMISATION_PROFILE = {{TARGET_OPT}}
-            MAKE_THREADS         = 4
+            WORKING_DIR           = {{TARGET_BUILD_ROOT}}/{{label}}
+            TARGET                = build
+            PROFILE               = {{build}}
+            LFRIC_TARGET_PLATFORM = {{TARGET_OPT}}
+            MAKE_THREADS          = 4
         [[[directives]]]
 {%-       for DIRECTIVE in TARGET_BUILD_BATCHER_DIRECTIVES %}
             {{DIRECTIVE}}
@@ -798,13 +798,13 @@ test -w "{{directory}}" -o ! -e "{{directory}}" && rm -rf {{directory}} || ( ech
                       {{deleteDirectory('$WORKING_DIR')}}
                       """
         [[[environment]]]
-            SOURCE_DIRECTORY     = $SOURCE_ROOT/{{label}}/mesh_tools
-            WORKING_DIR          = {{TARGET_BUILD_ROOT}}/{{label}}
-            BIN_DIR              = $DESTINATION_DIRECTORY/bin
-            TARGET               = build
-            PROFILE              = {{build}}
-            OPTIMISATION_PROFILE = {{TARGET_OPT}}
-            MAKE_THREADS         = 4
+            SOURCE_DIRECTORY      = $SOURCE_ROOT/{{label}}/mesh_tools
+            WORKING_DIR           = {{TARGET_BUILD_ROOT}}/{{label}}
+            BIN_DIR               = $DESTINATION_DIRECTORY/bin
+            TARGET                = build
+            PROFILE               = {{build}}
+            LFRIC_TARGET_PLATFORM = {{TARGET_OPT}}
+            MAKE_THREADS          = 4
         [[[directives]]]
 {%-       for DIRECTIVE in TARGET_BUILD_BATCHER_DIRECTIVES %}
             {{DIRECTIVE}}
@@ -1169,11 +1169,11 @@ causes override warnings when using csar.
                       {{deleteDirectory('$WORKING_DIR')}}
                       """
         [[[environment]]]
-            WORKING_DIR          = {{TARGET_BUILD_ROOT}}/{{label}}
-            TARGET               = unit-tests
-            PROFILE              = {{build}}
-            OPTIMISATION_PROFILE = {{TARGET_OPT}}
-            MAKE_THREADS         = 4
+            WORKING_DIR           = {{TARGET_BUILD_ROOT}}/{{label}}
+            TARGET                = unit-tests
+            PROFILE               = {{build}}
+            LFRIC_TARGET_PLATFORM = {{TARGET_OPT}}
+            MAKE_THREADS          = 4
         [[[directives]]]
 {%-       for DIRECTIVE in TARGET_BUILD_BATCHER_DIRECTIVES %}
             {{DIRECTIVE}}
