@@ -78,15 +78,19 @@ subroutine nodal_output_alg(field, chi, nodal_output, nodal_coordinates, level)
         call invoke( setval_X(nodal_output(1), field) )
         output_dim = 1
     end select
-    ! (3) If in spherical geometry convert the vector spaces to standard SI units
-    ! (m/s) in orthogonal directions and convert the coordinate field to
-    ! (longitude, latitude, radius)
+
+    if ( output_fs == W1 .or. output_fs == W2) then
+      nodal_rmultiplicity => get_rmultiplicity( output_fs ) 
+      do i = 1,output_dim
+        call invoke( inc_X_times_Y(nodal_output(i), nodal_rmultiplicity) )
+      end do
+    end if
+
+    ! (3) Convert the vector spaces to standard SI units
+    ! (m/s) in orthogonal directions and, if in spherical geometry,
+    !  convert the coordinate field to (longitude, latitude, radius)
     if ( geometry == base_mesh_geometry_spherical ) then
       if ( output_fs == W1 .or. output_fs == W2) then
-        nodal_rmultiplicity => get_rmultiplicity( output_fs ) 
-        do i = 1,output_dim
-          call invoke( inc_X_times_Y(nodal_output(i), nodal_rmultiplicity) )
-        end do
         call invoke_convert_cart2sphere_vector(nodal_output, nodal_coordinates)         
       end if
       call invoke_pointwise_convert_xyz2llr(nodal_coordinates) 
