@@ -8,15 +8,17 @@ class ncdf_quad_mod::ncdf_quad_type {
   -file_name: string
   -mesh_name: string
   -mesh_class: string
-  -generator_inputs: string
+  -constructor_inputs: string
 
   -nmesh_nodes: integer
   -nmesh_edges: integer
   -nmesh_faces: integer
+  -nmesh_targets: integer
 
   -nmesh_nodes_dim_id: integer
   -nmesh_edges_dim_id: integer
   -nmesh_faces_dim_id: integer
+  -ntargets_per_source_dim_id: integer[:] <<allocatable>>
   -two_dim_id: integer
   -four_dim_id: integer
 
@@ -24,7 +26,7 @@ class ncdf_quad_mod::ncdf_quad_type {
   -mesh_edge_nodes_id: integer
   -mesh_face_nodes_id: integer
   -mesh_face_edges_id: integer
-  -mesh_face_links_id: integer
+  -mesh_mesh_links_id: integer[:] <<allocatable>>
 
   -mesh_node_x_id: integer
   -mesh_node_y_id: integer

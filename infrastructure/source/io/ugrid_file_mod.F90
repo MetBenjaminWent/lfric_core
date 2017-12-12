@@ -9,11 +9,14 @@
 !>           procedure interfaces. Used to implement the OO strategy pattern.
 !-------------------------------------------------------------------------------
 module ugrid_file_mod
-use constants_mod, only : i_def, r_def, str_def, str_long, l_def
-use file_mod, only      : file_type
 
-implicit none
-private
+  use constants_mod, only: i_def, r_def, str_def, str_long, l_def
+  use file_mod,      only: file_type
+  use global_mesh_map_collection_mod, only: global_mesh_map_collection_type
+
+  implicit none
+
+  private
 
 !-------------------------------------------------------------------------------
 !> @brief Abstract ugrid file type
@@ -118,21 +121,24 @@ abstract interface
   !> @param[in,out] self                   The ugrid file strategy object.
   !> @param[in]     mesh_name              Name of mesh to read
   !> @param[out]    mesh_class             Primitive class of mesh.
-  !> @param[out]    generator_inputs       Inputs used to create this mesh
-  !>                                       from the mesh_generator
+  !> @param[out]    constructor_inputs     Inputs to the ugrid_generator used to
+  !>                                       create the mesh
   !> @param[out]    node_coordinates       Node coordinates
   !> @param[out]    face_node_connectivity Nodes around each face
   !> @param[out]    edge_node_connectivity Nodes defining each edge
   !> @param[out]    face_edge_connectivity Edges bounding each face
   !> @param[out]    face_face_connectivity Faces adjacent to each face.
+  !> @param[out]    num_targets            Number of mesh maps from mesh
+  !> @param[out]    target_mesh_names      Mesh(es) that this mesh has maps for
   !-----------------------------------------------------------------------------
 
-  subroutine read_mesh_interface( self, mesh_name, mesh_class,        &
-                                  generator_inputs, node_coordinates, &
-                                  face_node_connectivity,             &
-                                  edge_node_connectivity,             &
-                                  face_edge_connectivity,             &
-                                  face_face_connectivity )
+  subroutine read_mesh_interface( self, mesh_name, mesh_class,          &
+                                  constructor_inputs, node_coordinates, &
+                                  face_node_connectivity,               &
+                                  edge_node_connectivity,               &
+                                  face_edge_connectivity,               &
+                                  face_face_connectivity,               &
+                                  num_targets, target_mesh_names )
 
     import :: ugrid_file_type, i_def, r_def, str_def, str_long
 
@@ -141,13 +147,15 @@ abstract interface
 
     character(str_def),  intent(in)  :: mesh_name
     character(str_def),  intent(out) :: mesh_class
-    character(str_long), intent(out) :: generator_inputs
+    character(str_long), intent(out) :: constructor_inputs
 
     real(r_def),        intent(out) :: node_coordinates(:,:)
     integer(i_def),     intent(out) :: face_node_connectivity(:,:)
     integer(i_def),     intent(out) :: edge_node_connectivity(:,:)
     integer(i_def),     intent(out) :: face_edge_connectivity(:,:)
     integer(i_def),     intent(out) :: face_face_connectivity(:,:)
+    integer(i_def),     intent(out) :: num_targets
+    character(str_def), intent(out), allocatable :: target_mesh_names(:)
 
   end subroutine read_mesh_interface
 
@@ -157,7 +165,7 @@ abstract interface
   !> @param[inout]   self                    The ugrid file strategy object.
   !> @param[in]      mesh_name               Name of this mesh instance
   !> @param[in]      mesh_class              Primitive class of mesh
-  !> @param[in]      generator_inputs        Inputs used to generate mesh
+  !> @param[in]      constructor_inputs      Inputs used to generate mesh
   !> @param[in]      num_nodes               Number of nodes
   !> @param[in]      num_edges               Number of edges
   !> @param[in]      num_faces               Number of faces
@@ -166,25 +174,32 @@ abstract interface
   !> @param[in]      edge_node_connectivity  Nodes defining each edge
   !> @param[in]      face_edge_connectivity  Edges bounding each face
   !> @param[in]      face_face_connectivity  Faces adjacent to each face.
+  !> @param[in]      num_targets             Number of mesh maps from mesh
+  !> @param[in]      target_mesh_names       Mesh(es) that this mesh has maps for
+  !> @param[in]      target_mesh_maps        Mesh maps from this mesh to target mesh(es)
   !-----------------------------------------------------------------------------
 
   subroutine write_mesh_interface( self, mesh_name, mesh_class,     &
-                                   generator_inputs,                &
+                                   constructor_inputs,              &
                                    num_nodes, num_edges, num_faces, &
                                    node_coordinates,                &
                                    face_node_connectivity,          &
                                    edge_node_connectivity,          &
                                    face_edge_connectivity,          &
-                                   face_face_connectivity )
+                                   face_face_connectivity,          &
+                                   num_targets,                     &
+                                   target_mesh_names,               &
+                                   target_mesh_maps )
 
-    import :: ugrid_file_type, i_def, r_def, str_def, str_long
+    import :: ugrid_file_type, i_def, r_def, str_def, str_long, &
+              global_mesh_map_collection_type
 
     ! Arguments
     class(ugrid_file_type), intent(inout) :: self
 
     character(str_def),  intent(in) :: mesh_name
     character(str_def),  intent(in) :: mesh_class
-    character(str_long), intent(in) :: generator_inputs
+    character(str_long), intent(in) :: constructor_inputs
     integer(i_def),      intent(in) :: num_nodes
     integer(i_def),      intent(in) :: num_edges
     integer(i_def),      intent(in) :: num_faces
@@ -193,6 +208,10 @@ abstract interface
     integer(i_def),      intent(in) :: edge_node_connectivity(:,:)
     integer(i_def),      intent(in) :: face_edge_connectivity(:,:)
     integer(i_def),      intent(in) :: face_face_connectivity(:,:)
+    integer(i_def),      intent(in) :: num_targets
+    character(str_def),  intent(in), allocatable :: target_mesh_names(:)
+    type(global_mesh_map_collection_type), pointer, &
+                         intent(in) :: target_mesh_maps
 
   end subroutine write_mesh_interface
 

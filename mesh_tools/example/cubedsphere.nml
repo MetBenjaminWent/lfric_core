@@ -1,7 +1,7 @@
 &cubedsphere_mesh_generator
-  edge_cells    = 12, 36
-  mesh_filename = 'mesh_C12.nc'
-  mesh_names    = 'dynamics', 'physics'
-  nmeshes       = 2
+  mesh_filename = 'mesh_C24.nc'
+  nmeshes       = 5
+  mesh_names    = 'physics', 'dynamics', 'multigrid_l1', 'multigrid_l2', 'multigrid_l3'
+  edge_cells    = 72, 24, 12, 6, 3
   smooth_passes = 0
 /

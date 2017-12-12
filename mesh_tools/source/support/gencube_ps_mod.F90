@@ -59,7 +59,7 @@ module gencube_ps_mod
 
     character(str_def)          :: mesh_name
     character(str_def)          :: mesh_class
-    character(str_long)         :: generator_inputs
+    character(str_long)         :: constructor_inputs
     integer(i_def)              :: edge_cells
     integer(i_def)              :: nsmooth
     integer(i_def)              :: npanels
@@ -107,9 +107,10 @@ contains
 !>                               Each panel will contain edge_cells*edge_cells faces.
 !> @param[in] nsmooth            Number of smoothing passes to be performed on mesh nodes.
 !>                               Each panel will contain edge_cells*edge_cells faces.
-!> @param[in] target_mesh_names  [optional] Names of meshes to map to.
-!> @param[in] target_edge_cells  [optional] Number of cells per panel edge of the
-!>                               meshes to map to.
+!> @param[in, optional] target_mesh_names 
+!>                               Names of meshes to map to.
+!> @param[in, optional] target_edge_cells 
+!>                               Number of cells per panel edge of the meshes to map to.
 !>
 !> @return    self               Instance of gencube_ps_type
 !-------------------------------------------------------------------------------
@@ -130,6 +131,9 @@ function gencube_ps_constructor( mesh_name, edge_cells, nsmooth,        &
 
   integer(i_def) :: i, remainder
 
+  character(str_long) :: target_mesh_names_str
+  character(str_long) :: target_edge_cells_str
+
   if (edge_cells < 3) then
     write(log_scratch_space,'(A,I0,A)')               &
         ' Invalid argument [edge_cells:', edge_cells, &
@@ -143,6 +147,10 @@ function gencube_ps_constructor( mesh_name, edge_cells, nsmooth,        &
   self%nsmooth    = nsmooth
   self%npanels    = NPANELS
   self%nmaps      = 0
+
+  write(self%constructor_inputs,'(2(A,I0))')     &
+      'edge_cells=',    self%edge_cells,  ';' // &
+      'smooth_passes=', self%nsmooth
 
   if ( present(target_edge_cells) .and. &
        present(target_mesh_names) ) then
@@ -182,13 +190,34 @@ function gencube_ps_constructor( mesh_name, edge_cells, nsmooth,        &
 
       end do
 
+      write(target_mesh_names_str, '(A)') "'"//trim(adjustl(target_mesh_names(1)))//"'"
+      write(target_edge_cells_str,'(I0)') target_edge_cells(1)
+
+      if (size(target_mesh_names) > 1) then
+        do i=2, self%nmaps
+          write(target_mesh_names_str,'(A)')                   &
+               trim(adjustl(target_mesh_names_str)) // ",'" // &
+               trim(adjustl(target_mesh_names(i)))  // "'"
+          write(target_edge_cells_str,'(A,I0)')                &
+               trim(adjustl(target_edge_cells_str)) // ',',    &
+               target_edge_cells(i)
+
+        end do
+      end if
+
+      write(target_mesh_names_str,'(A)')  &
+          'target_mesh_names=['//trim(adjustl(target_mesh_names_str))//']'
+      write(target_edge_cells_str,'(A)')  &
+          'target_edge_cells=['//trim(adjustl(target_edge_cells_str))//']'
+
+      write(self%constructor_inputs,'(A)')          &
+          trim(self%constructor_inputs) // ';' //   &
+          trim(target_mesh_names_str)   // ';' //   &
+          trim(target_edge_cells_str)
+
     end if
+
   end if
-
-
-  write(self%generator_inputs,'(2(A,I0))')       &
-      'edge_cells=',    self%edge_cells,  ';' // &
-      'smooth_passes=', self%nsmooth
 
   return
 end function gencube_ps_constructor
@@ -1323,33 +1352,33 @@ end subroutine smooth
 !-----------------------------------------------------------------------------
 !> @brief Returns mesh metadata information.
 !>
-!> @param[in]             self              The generator strategy object.
-!> @param[out, optional]  mesh_name         Name of mesh instance to generate
-!> @param[out, optional]  mesh_class        Primitive shape, i.e. sphere, plane
-!> @param[out, optional]  npanels           Number of panels use to describe mesh
-!> @param[out, optional]  edge_cells_x      Number of panel edge cells (x-axis).
-!> @param[out, optional]  edge_cells_y      Number of panel edge cells (y-axis).
-!> @param[out, optional]  generator_inputs  Inputs used to create this mesh from
-!>                                          the mesh_generator
-!> @param[out, optional]  nmaps             Number of maps to create with this mesh
-!>                                          as source mesh
-!> @param[out, optional]  maps_mesh_names   Mesh names of the target meshes that
-!>                                          this mesh has maps for.
-!> @param[out, optional]  maps_edge_cells_x Number of panel edge cells (x-axis) of
-!>                                          target mesh(es) to create map(s) for.
-!> @param[out, optional]  maps_edge_cells_y Number of panel edge cells (y-axis) of
-!>                                          target mesh(es) to create map(s) for.
+!> @param[in]             self               The generator strategy object.
+!> @param[out, optional]  mesh_name          Name of mesh instance to generate
+!> @param[out, optional]  mesh_class         Primitive shape, i.e. sphere, plane
+!> @param[out, optional]  npanels            Number of panels use to describe mesh
+!> @param[out, optional]  edge_cells_x       Number of panel edge cells (x-axis).
+!> @param[out, optional]  edge_cells_y       Number of panel edge cells (y-axis).
+!> @param[out, optional]  constructor_inputs Inputs used to create this mesh from
+!>                                           the this ugrid_generator_type
+!> @param[out, optional]  nmaps              Number of maps to create with this mesh
+!>                                           as source mesh
+!> @param[out, optional]  maps_mesh_names    Mesh names of the target meshes that
+!>                                           this mesh has maps for.
+!> @param[out, optional]  maps_edge_cells_x  Number of panel edge cells (x-axis) of
+!>                                           target mesh(es) to create map(s) for.
+!> @param[out, optional]  maps_edge_cells_y  Number of panel edge cells (y-axis) of
+!>                                           target mesh(es) to create map(s) for.
 !-----------------------------------------------------------------------------
-subroutine get_metadata( self,              &
-                         mesh_name,         &
-                         mesh_class,        &
-                         npanels,           &
-                         edge_cells_x,      &
-                         edge_cells_y,      &
-                         generator_inputs,  &
-                         nmaps,             &
-                         maps_mesh_names,   &
-                         maps_edge_cells_x, &
+subroutine get_metadata( self,               &
+                         mesh_name,          &
+                         mesh_class,         &
+                         npanels,            &
+                         edge_cells_x,       &
+                         edge_cells_y,       &
+                         constructor_inputs, &
+                         nmaps,              &
+                         maps_mesh_names,    &
+                         maps_edge_cells_x,  &
                          maps_edge_cells_y )
 
   implicit none
@@ -1357,7 +1386,7 @@ subroutine get_metadata( self,              &
   class(gencube_ps_type), intent(in)  :: self
   character(str_def), optional, intent(out) :: mesh_name
   character(str_def), optional, intent(out) :: mesh_class
-  character(str_long),optional, intent(out) :: generator_inputs
+  character(str_long),optional, intent(out) :: constructor_inputs
 
   integer(i_def),   optional,  intent(out) :: npanels
   integer(i_def),   optional,  intent(out) :: edge_cells_x
@@ -1374,7 +1403,7 @@ subroutine get_metadata( self,              &
   if (present(edge_cells_x)) edge_cells_x = self%edge_cells
   if (present(edge_cells_y)) edge_cells_y = self%edge_cells
 
-  if (present(generator_inputs)) generator_inputs = trim(self%generator_inputs)
+  if (present(constructor_inputs)) constructor_inputs = trim(self%constructor_inputs)
   if (present(nmaps)) nmaps = self%nmaps
 
   if (self%nmaps > 0) then

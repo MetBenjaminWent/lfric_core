@@ -163,19 +163,19 @@ contains
                                edge_cells = this%fine_ncells, &
                                nsmooth    = this%nsmooth )
     mesh_name = 'coarse_plane'
-    this%coarse_plane  = genbiperiodic_type                       &
-                             ( mesh_name  = mesh_name,            &
-                               nx         = this%coarse_ncells_x, &
-                               ny         = this%coarse_ncells_y, &
-                               domain_x   = this%domain_x,        &
-                               domain_y   = this%domain_y )
+    this%coarse_plane  = genbiperiodic_type                         &
+                             ( mesh_name    = mesh_name,            &
+                               edge_cells_x = this%coarse_ncells_x, &
+                               edge_cells_y = this%coarse_ncells_y, &
+                               domain_x     = this%domain_x,        &
+                               domain_y     = this%domain_y )
     mesh_name = 'fine_plane'
-    this%fine_plane    = genbiperiodic_type                     &
-                             ( mesh_name  = mesh_name,          &
-                               nx         = this%fine_ncells_x, &
-                               ny         = this%fine_ncells_y, &
-                               domain_x   = this%domain_x,      &
-                               domain_y   = this%domain_y )
+    this%fine_plane    = genbiperiodic_type                       &
+                             ( mesh_name    = mesh_name,          &
+                               edge_cells_x = this%fine_ncells_x, &
+                               edge_cells_y = this%fine_ncells_y, &
+                               domain_x     = this%domain_x,      &
+                               domain_y     = this%domain_y )
     return
   end subroutine setUp
 

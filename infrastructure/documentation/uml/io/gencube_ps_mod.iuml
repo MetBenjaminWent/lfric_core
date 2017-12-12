@@ -5,11 +5,11 @@
 class gencube_ps_mod::gencube_ps_type {
   -mesh_name: string
   -mesh_class: string
-  -generator_inputs: string
-  -npanels: integer
-  -nmaps: integer
+  -constructor_inputs: string
   -edge_cells: integer
   -nsmooth: integer
+  -npanels: integer
+  -nmaps: integer
 
   -target_mesh_names: string[:] <<allocatable>>
   -target_edge_cells: integer[:] <<allocatable>>

@@ -10,6 +10,8 @@ module ncdf_quad_mod
 
 use constants_mod,  only : r_def, i_def, l_def, str_def, str_long,             &
                            str_max_filename
+use global_mesh_map_collection_mod, only: global_mesh_map_collection_type
+use global_mesh_map_mod,            only: global_mesh_map_type
 use ugrid_file_mod, only : ugrid_file_type
 use netcdf,         only : nf90_max_name, nf90_open, nf90_write, nf90_noerr,   &
                            nf90_strerror, nf90_put_var, nf90_get_var,          &
@@ -39,6 +41,7 @@ integer(i_def), parameter :: MESH_FACE_NODES_RANK = 2  !< Rank of face-node conn
 integer(i_def), parameter :: MESH_EDGE_NODES_RANK = 2  !< Rank of edge-node connectivity arrays
 integer(i_def), parameter :: MESH_FACE_EDGES_RANK = 2  !< Rank of face-edge connectivity arrays
 integer(i_def), parameter :: MESH_FACE_LINKS_RANK = 2  !< Rank of face-face connectivity arrays
+integer(i_def), parameter :: MESH_MESH_LINKS_RANK = 2  !< Rank of mesh-mesh connectivity arrays
 integer(i_def), parameter :: MESH_NODE_X_RANK     = 1  !< Rank of node longitude coordinate array
 integer(i_def), parameter :: MESH_NODE_Y_RANK     = 1  !< Rank of node latitude  coordinate array
 
@@ -58,17 +61,26 @@ type, public, extends(ugrid_file_type) :: ncdf_quad_type
   character(str_def)          :: mesh_class !< Primitive class of mesh,
                                             !< i.e. sphere, plane
 
-  character(str_long) :: generator_inputs !< Inputs to generator for this mesh
+  character(str_long) :: constructor_inputs !< Inputs to ugrid_generator for this mesh
+
+  character(nf90_max_name), allocatable :: target_mesh_names(:)
+
+  type(global_mesh_map_collection_type), allocatable :: target_mesh_maps
 
   ! Dimension values
   integer(i_def) :: nmesh_nodes          !< Number of nodes
   integer(i_def) :: nmesh_edges          !< Number of edges
   integer(i_def) :: nmesh_faces          !< Number of faces
+  integer(i_def) :: nmesh_targets        !< Number of mesh(es) to map to
+
 
   ! Dimension ids
   integer(i_def) :: nmesh_nodes_dim_id   !< NetCDF-assigned ID for number of nodes
   integer(i_def) :: nmesh_edges_dim_id   !< NetCDF-assigned ID for number of edges
   integer(i_def) :: nmesh_faces_dim_id   !< NetCDF-assigned ID for number of faces
+
+  integer(i_def), allocatable :: ntargets_per_source_dim_id(:)
+                                         !< NetCDF-assigned ID for number of mesh targets
   integer(i_def) :: two_dim_id           !< NetCDF-assigned ID for constant two
   integer(i_def) :: four_dim_id          !< NetCDF-assigned ID for constant four
 
@@ -78,8 +90,11 @@ type, public, extends(ugrid_file_type) :: ncdf_quad_type
   integer(i_def) :: mesh_face_nodes_id   !< NetCDF-assigned ID for the face-node connectivity
   integer(i_def) :: mesh_face_edges_id   !< NetCDF-assigned ID for the face-edge connectivity
   integer(i_def) :: mesh_face_links_id   !< NetCDF-assigned ID for the face-face connectivity
-  integer(i_def) :: mesh_node_x_id       !< NetCDF-assigned ID for node longitude coordinates
-  integer(i_def) :: mesh_node_y_id       !< NetCDF-assigned ID for node latitude  coordinates
+  integer(i_def) :: mesh_node_x_id       !< NetCDF-assigned ID for node x-coordinates
+  integer(i_def) :: mesh_node_y_id       !< NetCDF-assigned ID for node y-coordinates
+
+  integer(i_def), allocatable :: mesh_mesh_links_id(:)
+                                         !< NetCDF-assigned ID for the mesh-mesh connectivity
 
 contains
 
@@ -207,11 +222,14 @@ subroutine define_dimensions(self)
   class(ncdf_quad_type), intent(inout) :: self
 
   ! Internal variables
-  integer(i_def) :: ierr
+  integer(i_def) :: ierr, i, source_id
 
   character(str_long) :: routine
   character(str_long) :: cmess
   character(str_long) :: dim_name
+  character(str_long) :: target_mesh_name
+
+  type(global_mesh_map_type), pointer :: global_mesh_map => null()
 
   routine = 'define_dimensions'
   cmess = ''
@@ -253,6 +271,27 @@ subroutine define_dimensions(self)
     call check_err(ierr,routine, cmess)
   end if
 
+
+  ! Define dimensions required for each of the cell maps
+  ! n<target mesh name> cells per <source mesh name> cell
+  source_id = 1
+  do i=1, self%nmesh_targets
+
+    nullify(global_mesh_map)
+    target_mesh_name = self%target_mesh_names(i)
+    dim_name = 'n'//trim(target_mesh_name)// &
+               '_cells_per_'//trim(self%mesh_name)//'_cell'
+    cmess = 'Defining '//trim(dim_name)
+
+    global_mesh_map => self%target_mesh_maps%get_global_mesh_map(source_id,i+1)
+
+    ierr = nf90_def_dim( self%ncid, trim(dim_name),                            &
+                         global_mesh_map%get_ntarget_cells_per_source_cell(),  &
+                         self%ntargets_per_source_dim_id(i) )
+
+    call check_err(ierr,routine, cmess)
+  end do
+
   return
 end subroutine define_dimensions
 
@@ -274,7 +313,7 @@ subroutine define_variables(self)
   class(ncdf_quad_type), intent(inout) :: self
 
   ! Internal variables
-  integer(i_def) :: ierr
+  integer(i_def) :: ierr, i
   integer(i_def) :: zero_sized(0)
 
   ! Variable shapes
@@ -282,6 +321,7 @@ subroutine define_variables(self)
   integer(i_def) :: mesh_edge_nodes_dims(MESH_EDGE_NODES_RANK)
   integer(i_def) :: mesh_face_edges_dims(MESH_FACE_EDGES_RANK)
   integer(i_def) :: mesh_face_links_dims(MESH_FACE_LINKS_RANK)
+  integer(i_def) :: mesh_mesh_links_dims(MESH_MESH_LINKS_RANK)
   integer(i_def) :: mesh_node_x_dims(MESH_NODE_X_RANK)
   integer(i_def) :: mesh_node_y_dims(MESH_NODE_Y_RANK)
 
@@ -351,6 +391,22 @@ subroutine define_variables(self)
                        self%mesh_node_y_id )
   call check_err(ierr, routine, cmess)
 
+  ! Define variables which this mesh maps to
+  do i=1, self%nmesh_targets
+
+    var_name=trim(self%mesh_name)//'_'//trim(self%target_mesh_names(i))//'_map'
+    cmess = 'Defining '//trim(var_name)
+
+    mesh_mesh_links_dims(1) = self%ntargets_per_source_dim_id(i)
+    mesh_mesh_links_dims(2) = self%nmesh_faces_dim_id
+
+    ierr = nf90_def_var( self%ncid, trim(var_name),      &
+                         nf90_int, mesh_mesh_links_dims, &
+                         self%mesh_mesh_links_id(i) )
+
+    call check_err(ierr,routine, cmess)
+  end do
+
   return
 end subroutine define_variables
 
@@ -370,7 +426,7 @@ subroutine assign_attributes(self)
   class(ncdf_quad_type), intent(in) :: self
 
   ! Internal variables
-  integer(i_def) :: ierr, id
+  integer(i_def) :: ierr, id, i
 
   character(str_def)  :: std_x_name
   character(str_def)  :: std_y_name
@@ -381,15 +437,24 @@ subroutine assign_attributes(self)
   character(str_long) :: routine
   character(str_long) :: cmess
 
-  character(nf90_max_name) :: var_name
+  character(str_long) :: target_mesh_names_str
   character(str_long) :: attname
+
+  character(nf90_max_name) :: var_name
+  character(nf90_max_name) :: source_mesh_name
+  character(nf90_max_name) :: target_mesh_name
 
   routine = 'assign_attributes'
   cmess = ''
 
+  target_mesh_names_str = ''
 
+  !===================================================================
+  ! 1.0 Add attributes for mesh topology variable
+  !===================================================================
   id = self%mesh_id
   ierr = nf90_inquire_variable( ncid=self%ncid, varid=id, name=var_name )
+  write(cmess,'(A,I0)') 'Inquiring name of variable, id:',id
   call check_err(ierr, routine, cmess)
 
   !===================================================================
@@ -399,7 +464,6 @@ subroutine assign_attributes(self)
   ierr = nf90_put_att( self%ncid, id, trim(attname), 'mesh_topology')
   call check_err(ierr, routine, cmess)
 
-
   attname = 'mesh_class'
   cmess   = 'Adding attribute "'//trim(attname)// &
             '" to variable "'//trim(var_name)//'"'
@@ -407,13 +471,33 @@ subroutine assign_attributes(self)
                        trim(self%mesh_class))
   call check_err(ierr, routine, cmess)
 
-  attname = 'generator_inputs'
+  attname = 'constructor_inputs'
   cmess   = 'Adding attribute "'//trim(attname)// &
             '" to variable "'//trim(var_name)//'"'
   ierr = nf90_put_att( self%ncid, id, trim(attname), &
-                       trim(self%generator_inputs) )
-
+                       trim(self%constructor_inputs) )
   call check_err(ierr, routine, cmess)
+
+  attname = 'n_mesh_maps'
+  cmess   = 'Adding attribute "'//trim(attname)// &
+            '" to variable "'//trim(var_name)//'"'
+  ierr = nf90_put_att( self%ncid, id, trim(attname), &
+                       size(self%target_mesh_names) )
+  call check_err(ierr, routine, cmess)
+
+  if (allocated(self%target_mesh_names)) then
+    attname = 'maps_to'
+    cmess   = 'Adding attribute "'//trim(attname)// &
+              '" to variable "'//trim(var_name)//'"'
+    do i=1, size(self%target_mesh_names)
+      write(target_mesh_names_str,'(A)')               &
+           trim(adjustl(target_mesh_names_str))//' '// &
+           trim(adjustl(self%target_mesh_names(i)))
+    end do
+    ierr = nf90_put_att( self%ncid, id, trim(attname), &
+                         trim(adjustl(target_mesh_names_str)) )
+    call check_err(ierr, routine, cmess)
+  end if
 
   attname = 'long_name'
   cmess   = 'Adding attribute "'//trim(attname)// &
@@ -465,9 +549,12 @@ subroutine assign_attributes(self)
   call check_err(ierr, routine, cmess)
 
 
-
+  !===================================================================
+  ! 2.0 Add attributes for mesh face nodes variable
+  !===================================================================
   id = self%mesh_face_nodes_id
   ierr = nf90_inquire_variable( ncid=self%ncid, varid=id, name=var_name )
+  write(cmess,'(A,I0)') 'Inquiring name of variable, id:',id
   call check_err(ierr, routine, cmess)
   !===================================================================
 
@@ -492,9 +579,12 @@ subroutine assign_attributes(self)
   call check_err(ierr, routine, cmess)
 
 
-
+  !===================================================================
+  ! 3.0 Add attributes for mesh edge nodes variable
+  !===================================================================
   id = self%mesh_edge_nodes_id
   ierr = nf90_inquire_variable( ncid=self%ncid, varid=id, name=var_name )
+  write(cmess,'(A,I0)') 'Inquiring name of variable, id:',id
   call check_err(ierr, routine, cmess)
   !===================================================================
   attname = 'cf_role'
@@ -518,9 +608,12 @@ subroutine assign_attributes(self)
   call check_err(ierr, routine, cmess)
 
 
-
+  !===================================================================
+  ! 4.0 Add attributes for mesh face edges variable
+  !===================================================================
   id = self%mesh_face_edges_id
   ierr = nf90_inquire_variable( ncid=self%ncid, varid=id, name=var_name )
+  write(cmess,'(A,I0)') 'Inquiring name of variable, id:',id
   call check_err(ierr, routine, cmess)
   !===================================================================
   attname = 'cf_role'
@@ -544,9 +637,12 @@ subroutine assign_attributes(self)
   call check_err(ierr, routine, cmess)
 
 
-
+  !===================================================================
+  ! 5.0 Add attributes for mesh face links variable
+  !===================================================================
   id   = self%mesh_face_links_id
   ierr = nf90_inquire_variable( ncid=self%ncid, varid=id, name=var_name )
+  write(cmess,'(A,I0)') 'Inquiring name of variable, id:',id
   call check_err(ierr, routine, cmess)
   !===================================================================
   attname = 'cf_role'
@@ -582,7 +678,9 @@ subroutine assign_attributes(self)
   call check_err(ierr, routine, cmess)
 
 
-
+  !===================================================================
+  ! 6.0 Add attributes for mesh node coordinate variables
+  !===================================================================
   select case (trim(self%mesh_class))
   case ('sphere')
     std_x_name  = 'longitude'
@@ -598,10 +696,9 @@ subroutine assign_attributes(self)
     coord_units = 'm'
   end select
 
-
-
   id   = self%mesh_node_x_id
   ierr = nf90_inquire_variable( ncid=self%ncid, varid=id, name=var_name )
+  write(cmess,'(A,I0)') 'Inquiring name of variable, id:',id
   call check_err(ierr, routine, cmess)
   !===================================================================
   attname = 'standard_name'
@@ -626,6 +723,7 @@ subroutine assign_attributes(self)
 
   id = self%mesh_node_y_id
   ierr = nf90_inquire_variable( ncid=self%ncid, varid=id, name=var_name )
+  write(cmess,'(A,I0)') 'Inquiring name of variable, id:',id
   call check_err(ierr, routine, cmess)
   !===================================================================
   attname = 'standard_name'
@@ -646,6 +744,46 @@ subroutine assign_attributes(self)
   ierr = nf90_put_att( self%ncid, id, trim(attname), coord_units )
   call check_err(ierr, routine, cmess)
 
+  !===================================================================
+  ! 7.0 Add attributes for mesh mesh link variables
+  !===================================================================
+  if (allocated(self%mesh_mesh_links_id)) then
+
+    do i=1, size(self%mesh_mesh_links_id)
+
+      id      = self%mesh_mesh_links_id(i)
+      ierr = nf90_inquire_variable( ncid=self%ncid, varid=id, name=var_name )
+      write(cmess,'(A,I0)') 'Inquiring name of variable, id:',id
+      call check_err(ierr, routine, cmess)
+      source_mesh_name = var_name(1:index(var_name,'_')-1)
+      target_mesh_name = var_name(index(var_name,'_')+1:index(var_name,'_',back=.true.)-1)
+
+
+      attname = 'cf_role'
+      cmess   = 'Adding attribute "'//trim(attname)// &
+                '" to variable "'//trim(var_name)//'"'
+      ierr = nf90_put_att( self%ncid, id, trim(attname), &
+                           'mesh_mesh_connectivity' )
+      call check_err(ierr, routine, cmess)
+
+      attname = 'long_name'
+      cmess   = 'Adding attribute "'//trim(attname)// &
+                '" to variable "'//trim(var_name)//'"'
+      ierr = nf90_put_att( self%ncid, id, trim(attname),                  &
+                           'Maps source mesh('//trim(source_mesh_name)//  &
+                           ') cell to set of cells on target mesh('//     &
+                           trim(target_mesh_name)//').' )
+      call check_err(ierr, routine, cmess)
+
+      attname = 'start_index'
+      cmess   = 'Adding attribute "'//trim(attname)// &
+                '" to variable "'//trim(var_name)//'"'
+      ierr = nf90_put_att( self%ncid, id, trim(attname), [1] )
+      call check_err(ierr, routine, cmess)
+
+    end do
+
+  end if
 
   return
 end subroutine assign_attributes
@@ -927,19 +1065,23 @@ end subroutine get_dimensions
 !>
 !>  @param[in,out]  self                     The NetCDF file object.
 !>  @param[in]      mesh_name                Name of the mesh topology
-!>  @param[in]      mesh_class               Primitive class of mesh
-!>  @param[in]      generator_inputs         Inputs used to generate mesh
+!>  @param[out]     mesh_class               Primitive class of mesh
+!>  @param[out]     constructor_inputs       Inputs to the ugrid_generator to
+!>                                           generate mesh
 !>  @param[out]     node_coordinates         long/lat coordinates of each node.
 !>  @param[out]     face_node_connectivity   Nodes adjoining each face.
 !>  @param[out]     edge_node_connectivity   Nodes adjoining each edge.
 !>  @param[out]     face_edge_connectivity   Edges adjoining each face.
 !>  @param[out]     face_face_connectivity   Faces adjoining each face (links).
+!>  @param[out]     num_targets              Number of mesh maps from mesh
+!>  @param[out]     target_mesh_names        Mesh(es) that this mesh has maps for
 !-------------------------------------------------------------------------------
 
-subroutine read_mesh( self, mesh_name, mesh_class, generator_inputs,  &
+subroutine read_mesh( self, mesh_name, mesh_class, constructor_inputs,&
                       node_coordinates,                               &
                       face_node_connectivity, edge_node_connectivity, &
-                      face_edge_connectivity, face_face_connectivity )
+                      face_edge_connectivity, face_face_connectivity, &
+                      num_targets, target_mesh_names )
   implicit none
 
   ! Arguments
@@ -947,32 +1089,51 @@ subroutine read_mesh( self, mesh_name, mesh_class, generator_inputs,  &
 
   character(str_def),  intent(in)  :: mesh_name
   character(str_def),  intent(out) :: mesh_class
-  character(str_long), intent(out) :: generator_inputs
+  character(str_long), intent(out) :: constructor_inputs
   real(r_def),         intent(out) :: node_coordinates(:,:)
   integer(i_def),      intent(out) :: face_node_connectivity(:,:)
   integer(i_def),      intent(out) :: edge_node_connectivity(:,:)
   integer(i_def),      intent(out) :: face_edge_connectivity(:,:)
   integer(i_def),      intent(out) :: face_face_connectivity(:,:)
+  integer(i_def),      intent(out) :: num_targets
+  character(str_def),  intent(out), allocatable :: target_mesh_names(:)
 
   ! Internal variables
-  integer(i_def) :: ierr
+  integer(i_def) :: ierr, upper_bound, i
 
   character(str_long) :: routine
   character(str_long) :: cmess
+  character(str_long) :: target_mesh_names_str
 
   call inquire_ids(self, mesh_name)
 
   routine = 'read_mesh'
   cmess   = ''
 
-
   ! Mesh class
   ierr = nf90_get_att( self%ncid, self%mesh_id, &
                        'mesh_class', mesh_class )
 
-  ! Generator inputs
+  ! Ugrid mesh constructor inputs
   ierr = nf90_get_att( self%ncid, self%mesh_id, &
-                       'generator_inputs', generator_inputs )
+                       'constructor_inputs', constructor_inputs )
+
+  ! Number of mesh maps
+  ierr = nf90_get_att( self%ncid, self%mesh_id, &
+                       'n_mesh_maps', num_targets )
+
+  ! Target mesh maps
+  ierr = nf90_get_att( self%ncid, self%mesh_id, &
+                       'maps_to', target_mesh_names_str )
+
+  allocate(target_mesh_names(num_targets))
+  do i =1, num_targets
+    upper_bound=index(target_mesh_names_str,' ')
+    target_mesh_names(i) = trim(target_mesh_names_str(1:upper_bound))
+    target_mesh_names_str(1:upper_bound) = ' '
+    target_mesh_names_str = trim(adjustl(target_mesh_names_str))
+  end do
+
 
   ! Node coordinates
   ierr = nf90_get_var( self%ncid, self%mesh_node_x_id, &
@@ -1022,8 +1183,8 @@ end subroutine read_mesh
 !>  @param[in,out]  self                     The NetCDF file object.
 !>  @param[in]      mesh_name                Name of the mesh topology.
 !>  @param[in]      mesh_class               Primitive class of mesh.
-!>  @param[in]      generator_inputs         Inputs used to create this mesh
-!>                                           from the mesh_generator
+!>  @param[in]      constructor_inputs       Inputs used to create this mesh
+!>                                           from the ugrid_generator
 !>  @param[in]      num_nodes                The number of nodes on the mesh.
 !>  @param[in]      num_edges                The number of edges on the mesh.
 !>  @param[in]      num_faces                The number of faces on the mesh.
@@ -1032,12 +1193,16 @@ end subroutine read_mesh
 !>  @param[in]      edge_node_connectivity   Nodes adjoining each edge.
 !>  @param[in]      face_edge_connectivity   Edges adjoining each face.
 !>  @param[in]      face_face_connectivity   Faces adjoining each face (links).
+!>  @param[in]      num_targets              Number of mesh maps from mesh
+!>  @param[in]      target_mesh_names        Mesh(es) that this mesh has maps for
+!>  @param[in]      target_mesh_maps         Mesh maps from this mesh to target mesh(es)
 !-------------------------------------------------------------------------------
 
-subroutine write_mesh( self, mesh_name, mesh_class, generator_inputs,     &
+subroutine write_mesh( self, mesh_name, mesh_class, constructor_inputs,   &
                        num_nodes, num_edges, num_faces, node_coordinates, &
                        face_node_connectivity, edge_node_connectivity,    &
-                       face_edge_connectivity, face_face_connectivity )
+                       face_edge_connectivity, face_face_connectivity,    &
+                       num_targets, target_mesh_names, target_mesh_maps )
   implicit none
 
   ! Arguments
@@ -1045,7 +1210,7 @@ subroutine write_mesh( self, mesh_name, mesh_class, generator_inputs,     &
 
   character(str_def),  intent(in) :: mesh_name
   character(str_def),  intent(in) :: mesh_class
-  character(str_long), intent(in) :: generator_inputs
+  character(str_long), intent(in) :: constructor_inputs
   integer(i_def),      intent(in) :: num_nodes
   integer(i_def),      intent(in) :: num_edges
   integer(i_def),      intent(in) :: num_faces
@@ -1054,24 +1219,49 @@ subroutine write_mesh( self, mesh_name, mesh_class, generator_inputs,     &
   integer(i_def),      intent(in) :: edge_node_connectivity(:,:)
   integer(i_def),      intent(in) :: face_edge_connectivity(:,:)
   integer(i_def),      intent(in) :: face_face_connectivity(:,:)
+  integer(i_def),      intent(in) :: num_targets
+  character(str_def),  intent(in), allocatable :: target_mesh_names(:)
+  type(global_mesh_map_collection_type), pointer, &
+                       intent(in) :: target_mesh_maps
+
+
 
   ! Internal variables
-  integer(i_def) :: ierr
+  integer(i_def)      :: ierr, i, ratio,cell
   character(str_long) :: routine
   character(str_long) :: cmess
 
+  integer(i_def), allocatable :: cell_map(:,:), tmp_cell_map(:,:)
+
+  type(global_mesh_map_type), pointer :: mesh_map => null()
 
   routine = 'write_mesh'
   cmess   = ''
 
   self%mesh_name        = mesh_name
   self%mesh_class       = mesh_class
-  self%generator_inputs = generator_inputs
+  self%constructor_inputs = constructor_inputs
 
-  self%nmesh_nodes = num_nodes
-  self%nmesh_edges = num_edges
-  self%nmesh_faces = num_faces
+  self%nmesh_nodes   = num_nodes
+  self%nmesh_edges   = num_edges
+  self%nmesh_faces   = num_faces
 
+  self%nmesh_targets = num_targets
+
+  if ( self%nmesh_targets >0 ) then
+
+    allocate(self%ntargets_per_source_dim_id(self%nmesh_targets))
+    allocate(self%mesh_mesh_links_id(self%nmesh_targets))
+
+    allocate(self%target_mesh_maps, source=global_mesh_map_collection_type())
+    self%target_mesh_maps = target_mesh_maps
+
+    allocate(self%target_mesh_names(self%nmesh_targets))
+    do i=1, self%nmesh_targets
+      self%target_mesh_names(i) = trim(target_mesh_names(i))
+    end do
+
+  end if
 
   ! Set up NetCDF header
   call define_dimensions (self)
@@ -1110,6 +1300,23 @@ subroutine write_mesh( self, mesh_name, mesh_class, generator_inputs,     &
   ierr = nf90_put_var( self%ncid, self%mesh_face_links_id, &
                        face_face_connectivity(:,:) )
   call check_err(ierr, routine, cmess)
+
+  ! Mesh_Mesh connectivity
+  do i=1, num_targets
+    nullify(mesh_map)
+    mesh_map => self%target_mesh_maps%get_global_mesh_map(1,i+1)
+    ratio = mesh_map%get_ntarget_cells_per_source_cell()
+    allocate(cell_map(ratio, self%nmesh_faces))
+    allocate(tmp_cell_map(ratio, 1))
+    do cell=1, self%nmesh_faces
+      call mesh_map%get_cell_map([cell], tmp_cell_map)
+      cell_map(:,cell) = tmp_cell_map(:,1)
+    end do
+    ierr = nf90_put_var( self%ncid, self%mesh_mesh_links_id(i), cell_map(:,:) )
+    deallocate(cell_map)
+    deallocate(tmp_cell_map)
+    call check_err(ierr, routine, cmess)
+  end do
 
   return
 end subroutine write_mesh
@@ -1160,8 +1367,8 @@ end function is_mesh_present
 !>  @param[in,out]  self                     The NetCDF file object.
 !>  @param[in]      mesh_name                Name of the mesh topology
 !>  @param[in]      mesh_class               Primitive class of mesh.
-!>  @param[in]      generator_inputs         Inputs used to create this mesh
-!>                                           from the mesh_generator
+!>  @param[in]      constructor_inputs       Inputs used to create this mesh
+!>                                           from the ugrid_generator
 !>  @param[in]      num_nodes                The number of nodes on the mesh.
 !>  @param[in]      num_edges                The number of edges on the mesh.
 !>  @param[in]      num_faces                The number of faces on the mesh.
@@ -1170,18 +1377,22 @@ end function is_mesh_present
 !>  @param[in]      edge_node_connectivity   Nodes adjoining each edge.
 !>  @param[in]      face_edge_connectivity   Edges adjoining each face.
 !>  @param[in]      face_face_connectivity   Faces adjoining each face (links).
+!>  @param[in]      num_targets              Number of mesh maps from mesh
+!>  @param[in]      target_mesh_names        Mesh(es) that this mesh has maps for
+!>  @param[in]      target_mesh_maps         Mesh maps from this mesh to target mesh(es)
 !-------------------------------------------------------------------------------
-subroutine append_mesh( self, mesh_name, mesh_class, generator_inputs,     &
+subroutine append_mesh( self, mesh_name, mesh_class, constructor_inputs,   &
                         num_nodes, num_edges, num_faces, node_coordinates, &
                         face_node_connectivity, edge_node_connectivity,    &
-                        face_edge_connectivity, face_face_connectivity)
+                        face_edge_connectivity, face_face_connectivity,    &
+                        num_targets, target_mesh_names, target_mesh_maps )
   implicit none
 
   ! Arguments
   class(ncdf_quad_type), intent(inout) :: self
   character(str_def),    intent(in)    :: mesh_class
   character(str_def),    intent(in)    :: mesh_name
-  character(str_long),   intent(in)    :: generator_inputs
+  character(str_long),   intent(in)    :: constructor_inputs
   integer(i_def),        intent(in)    :: num_nodes
   integer(i_def),        intent(in)    :: num_edges
   integer(i_def),        intent(in)    :: num_faces
@@ -1190,14 +1401,16 @@ subroutine append_mesh( self, mesh_name, mesh_class, generator_inputs,     &
   integer(i_def),        intent(in)    :: edge_node_connectivity(:,:)
   integer(i_def),        intent(in)    :: face_edge_connectivity(:,:)
   integer(i_def),        intent(in)    :: face_face_connectivity(:,:)
+  integer(i_def),        intent(in)    :: num_targets
+  character(str_def),    intent(in), allocatable :: target_mesh_names(:)
+  type(global_mesh_map_collection_type), pointer, &
+                         intent(in)    :: target_mesh_maps
 
   ! Internal variables
-  integer(i_def) :: ierr
-
+  integer(i_def)      :: ierr
   character(str_long) :: routine
   character(str_long) :: cmess
-
-  logical(l_def) :: mesh_present
+  logical(l_def)      :: mesh_present
 
   routine='append_mesh'
   cmess=''
@@ -1217,7 +1430,7 @@ subroutine append_mesh( self, mesh_name, mesh_class, generator_inputs,     &
   call self%write_mesh(                                &
       mesh_name  = mesh_name,                          &
       mesh_class = mesh_class,                         &
-      generator_inputs = generator_inputs,             &
+      constructor_inputs = constructor_inputs,         &
       num_nodes  = num_nodes,                          &
       num_edges  = num_edges,                          &
       num_faces  = num_faces,                          &
@@ -1225,8 +1438,10 @@ subroutine append_mesh( self, mesh_name, mesh_class, generator_inputs,     &
       face_node_connectivity = face_node_connectivity, &
       edge_node_connectivity = edge_node_connectivity, &
       face_edge_connectivity = face_edge_connectivity, &
-      face_face_connectivity = face_face_connectivity )
-
+      face_face_connectivity = face_face_connectivity, &
+      num_targets       = num_targets,                 &
+      target_mesh_names = target_mesh_names,           &
+      target_mesh_maps  = target_mesh_maps )
   return
 end subroutine append_mesh
 

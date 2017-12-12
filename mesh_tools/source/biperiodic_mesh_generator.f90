@@ -256,8 +256,8 @@ program biperiodic_mesh_generator
       call log_event( trim(log_scratch_space), LOG_LEVEL_INFO)
 
       bpgen(i) = genbiperiodic_type( mesh_name=unique_mesh_names(i),                 & 
-                                     nx=unique_edge_cells_x(i),                      &
-                                     ny=unique_edge_cells_y(i),                      &
+                                     edge_cells_x=unique_edge_cells_x(i),            &
+                                     edge_cells_y=unique_edge_cells_y(i),            &
                                      target_mesh_names=unique_target_mesh_names,     &
                                      target_edge_cells_x=unique_target_edge_cells_x, &
                                      target_edge_cells_y=unique_target_edge_cells_y, &
@@ -271,10 +271,10 @@ program biperiodic_mesh_generator
 
       ! Only 1 mesh requested, so it must be the prime mesh
       ! and so no optional target_ndivs required
-      bpgen(i) = genbiperiodic_type( mesh_name=unique_mesh_names(i), & 
-                                     nx=unique_edge_cells_x(i),      &
-                                     ny=unique_edge_cells_y(i),      &
-                                     domain_x=domain_x,              &
+      bpgen(i) = genbiperiodic_type( mesh_name=unique_mesh_names(i),      & 
+                                     edge_cells_x=unique_edge_cells_x(i), &
+                                     edge_cells_y=unique_edge_cells_y(i), &
+                                     domain_x=domain_x,                   &
                                      domain_y=domain_y )
 
 
@@ -294,8 +294,8 @@ program biperiodic_mesh_generator
 
   if (allocated(target_mesh_names)) deallocate(target_mesh_names)
 
-
   call log_event( "...generation complete.", LOG_LEVEL_INFO )
+
 
   !===================================================================
   ! 8.0 Now the write out mesh to the NetCDF file
@@ -313,9 +313,10 @@ program biperiodic_mesh_generator
     end if
 
     inquire(file=mesh_filename, size=fsize)
-    write( log_scratch_space, '(A,I0,A)')                          &
-        'Writing ugrid mesh to ' // trim(adjustl(mesh_filename))// &
-        ' - ', fsize, ' bytes written.'
+    write( log_scratch_space, '(A,I0,A)')                 &
+        'Adding mesh (' // trim(unique_mesh_names(i)) //  &
+        ') to ' // trim(adjustl(mesh_filename)) // ' - ', &
+        fsize, ' bytes written.'
 
     call log_event( log_scratch_space, LOG_LEVEL_INFO )
     if (allocated(ugrid_file)) deallocate(ugrid_file)

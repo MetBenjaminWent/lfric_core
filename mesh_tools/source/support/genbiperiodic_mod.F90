@@ -45,9 +45,9 @@ module genbiperiodic_mod
 
     character(str_def)          :: mesh_name
     character(str_def)          :: mesh_class
-    character(str_long)         :: generator_inputs
-    integer(i_def)              :: nx, ny
+    character(str_long)         :: constructor_inputs
     real(r_def)                 :: dx, dy
+    integer(i_def)              :: edge_cells_x, edge_cells_y
     integer(i_def)              :: npanels
     integer(i_def)              :: nmaps
 
@@ -56,11 +56,11 @@ module genbiperiodic_mod
     integer(i_def),     allocatable :: target_edge_cells_y(:)
     type(global_mesh_map_collection_type), allocatable :: global_mesh_maps
 
-    integer(i_def), allocatable :: cell_next(:,:)     ! (4, nx*ny)
-    integer(i_def), allocatable :: verts_on_cell(:,:) ! (4, nx*ny)
-    integer(i_def), allocatable :: edges_on_cell(:,:) ! (4, nx*ny)
-    integer(i_def), allocatable :: verts_on_edge(:,:) ! (2, nx*ny)
-    real(r_def),    allocatable :: vert_coords(:,:)   ! (2, nx*ny)
+    integer(i_def), allocatable :: cell_next(:,:)     ! (4, edge_cells_x*edge_cells_y)
+    integer(i_def), allocatable :: verts_on_cell(:,:) ! (4, edge_cells_x*edge_cells_y)
+    integer(i_def), allocatable :: edges_on_cell(:,:) ! (4, edge_cells_x*edge_cells_y)
+    integer(i_def), allocatable :: verts_on_edge(:,:) ! (2, edge_cells_x*edge_cells_y)
+    real(r_def),    allocatable :: vert_coords(:,:)   ! (2, edge_cells_x*edge_cells_y)
   contains
     procedure :: calc_adjacency
     procedure :: calc_face_to_vert
@@ -89,25 +89,33 @@ contains
 !> @details Accepts mesh dimension and optional domain size arguments
 !>          for initialisation.
 !>
-!> @param[in] mesh_name  Name of this mesh topology
-!> @param[in] nx         Number of faces in biperiodic mesh x axis
-!> @param[in] ny         Number of faces in biperiodic mesh y axis
-!> @param[in] domain_x   Optional: Domain size in x-axis
-!> @param[in] domain_y   Optional: Domain size in y-axis
-!>
-!> @return    self       Instance of genbiperiodic_type
+!> @param[in] mesh_name       Name of this mesh topology
+!> @param[in] edge_cells_x    Number of cells in biperiodic mesh x axis
+!> @param[in] edge_cells_y    Number of cells in biperiodic mesh y axis
+!> @param[in] domain_x        Domain size in x-axis
+!> @param[in] domain_y        Domain size in y-axis
+!> @param[in, optional] target_mesh_names    
+!>                            Names of mesh(es) to map to
+!> @param[in, optional] target_edge_cells_x
+!>                            Number of cells in x axis of
+!>                            target mesh(es) to map to
+!> @param[in, optional] target_edge_cells_y
+!>                            Number of cells in y axis of
+!>                            target mesh(es) to map to
+!> @return    self  Instance of genbiperiodic_type
 !-------------------------------------------------------------------------------
-function genbiperiodic_constructor( mesh_name, nx, ny,    &
-                                    domain_x, domain_y,   &
-                                    target_mesh_names,    &
-                                    target_edge_cells_x,  &
-                                    target_edge_cells_y ) &
+function genbiperiodic_constructor( mesh_name,                  &
+                                    edge_cells_x, edge_cells_y, &
+                                    domain_x, domain_y,         &
+                                    target_mesh_names,          &
+                                    target_edge_cells_x,        &
+                                    target_edge_cells_y )       &
                             result( self )
 
   implicit none
 
   character(len=*), intent(in) :: mesh_name
-  integer(i_def),   intent(in) :: nx, ny
+  integer(i_def),   intent(in) :: edge_cells_x, edge_cells_y
   real(r_def),      intent(in) :: domain_x, domain_y
   character(str_def), optional, intent(in) :: target_mesh_names(:)
   integer(i_def),     optional, intent(in) :: target_edge_cells_x(:)
@@ -119,41 +127,44 @@ function genbiperiodic_constructor( mesh_name, nx, ny,    &
   character(str_def)         :: rchar1
   character(str_def)         :: rchar2
 
+  character(str_long) :: target_mesh_names_str
+  character(str_long) :: target_edge_cells_x_str
+  character(str_long) :: target_edge_cells_y_str
+
   integer(i_def) ::i
 
   integer(i_def) :: remainder=0
 
-  if (nx < 2 .or. ny < 2) then
+  if (edge_cells_x < 2 .or. edge_cells_y < 2) then
     call log_event( PREFIX//"Invalid dimension argument.", LOG_LEVEL_ERROR )
   end if
 
-  self%mesh_name  = trim(mesh_name)
-  self%mesh_class = trim(MESH_CLASS)
-  self%nx         = nx
-  self%ny         = ny
-  self%npanels    = NPANELS
-  self%nmaps      = 0
+  self%mesh_name    = trim(mesh_name)
+  self%mesh_class   = trim(MESH_CLASS)
+  self%edge_cells_x = edge_cells_x
+  self%edge_cells_y = edge_cells_y
+  self%npanels      = NPANELS
+  self%nmaps        = 0
 
-
-  if (domain_x < 0.0_r_def)                                                       &
+  if (domain_x < 0.0_r_def)                                               &
       call log_event( PREFIX//" x-domain argument must be non-negative.", &
                       LOG_LEVEL_ERROR )
 
-  if (domain_y < 0.0_r_def)                                                       &
+  if (domain_y < 0.0_r_def)                                               &
       call log_event( PREFIX//" y-domain argument must be non-negative.", &
                       LOG_LEVEL_ERROR )
 
-  self%dx = domain_x / self%nx
-  self%dy = domain_y / self%ny
+  self%dx = domain_x / self%edge_cells_x
+  self%dy = domain_y / self%edge_cells_y
 
 
   write(rchar1,'(F10.2)') domain_x
   write(rchar2,'(F10.2)') domain_y
-  write(self%generator_inputs,'(2(A,I0),2(A))') &
-      'edge_cells_x=', self%nx,                 &
-      ';edge_cells_y=', self%ny,                &
-      ';domain_x='//trim(adjustl(rchar1))//     &
-      ';domain_y='//trim(adjustl(rchar2))
+  write(self%constructor_inputs,'(2(A,I0),(A))')  &
+      'edge_cells_x=', self%edge_cells_x,  ';' // &
+      'edge_cells_y=', self%edge_cells_y,  ';' // &
+      'domain_x='//trim(adjustl(rchar1))// ';' // &
+      'domain_y='//trim(adjustl(rchar2))
 
 
   if ( present(target_edge_cells_x) .and. &
@@ -176,26 +187,26 @@ function genbiperiodic_constructor( mesh_name, nx, ny,    &
       do i=1, self%nmaps
 
         ! Check that mesh is not being mapped to itself
-        if (self%nx == target_edge_cells_x(i) .and. &
-            self%ny == target_edge_cells_y(i)) then
+        if (self%edge_cells_x == target_edge_cells_x(i) .and. &
+            self%edge_cells_y == target_edge_cells_y(i)) then
           write(log_scratch_space, '(A)') &
                'Invalid target while attempting to map mesh to itself'
           call log_event( trim(log_scratch_space), LOG_LEVEL_ERROR )
         end if
 
         ! for x-axis
-        if (target_edge_cells_x(i) < self%nx) then
-          remainder = mod(self%nx, target_edge_cells_x(i))
+        if (target_edge_cells_x(i) < self%edge_cells_x) then
+          remainder = mod(self%edge_cells_x, target_edge_cells_x(i))
           write(log_scratch_space,'(2(A,I0),A)')           &
-               'Target edge_cells[',target_edge_cells_x(i),  &
-               '] must be a factor of source edge_cells[', &
-               self%nx, ']'
-        else if (target_edge_cells_x(i) > self%nx) then
-          remainder = mod(target_edge_cells_x(i), self%nx)
+              'Target edge_cells[',target_edge_cells_x(i), &
+              '] must be a factor of source edge_cells[',  &
+               self%edge_cells_x, ']'
+        else if (target_edge_cells_x(i) > self%edge_cells_x) then
+          remainder = mod(target_edge_cells_x(i), self%edge_cells_x)
           write(log_scratch_space,'(2(A,I0),A)')           &
-               'Source edge_cells[',target_edge_cells_x(i),  &
-               '] must be a factor of target edge_cells[', &
-               self%nx, ']'
+              'Source edge_cells[',target_edge_cells_x(i), &
+              '] must be a factor of target edge_cells[',  &
+               self%edge_cells_x, ']'
         end if
 
         if (remainder == 0) then
@@ -205,18 +216,18 @@ function genbiperiodic_constructor( mesh_name, nx, ny,    &
         end if
 
         ! for y-axis
-        if (target_edge_cells_y(i) < self%ny) then
-          remainder = mod(self%ny, target_edge_cells_y(i))
+        if (target_edge_cells_y(i) < self%edge_cells_y) then
+          remainder = mod(self%edge_cells_y, target_edge_cells_y(i))
           write(log_scratch_space,'(2(A,I0),A)')             &
                'Target edge_cells[',target_edge_cells_y(i),  &
                '] must be a factor of source edge_cells[',   &
-               self%ny, ']'
-        else if (target_edge_cells_y(i) > self%ny) then
-          remainder = mod(target_edge_cells_y(i), self%ny)
+               self%edge_cells_y, ']'
+        else if (target_edge_cells_y(i) > self%edge_cells_y) then
+          remainder = mod(target_edge_cells_y(i), self%edge_cells_y)
           write(log_scratch_space,'(2(A,I0),A)')             &
                'Source edge_cells[',target_edge_cells_y(i),  &
                '] must be a factor of target edge_cells[',   &
-               self%ny, ']'
+               self%edge_cells_y, ']'
         end if
 
         if (remainder == 0) then
@@ -228,6 +239,37 @@ function genbiperiodic_constructor( mesh_name, nx, ny,    &
       end do
 
     end if
+
+    write(target_mesh_names_str, '(A)')   "'"//trim(adjustl(target_mesh_names(1)))//"'"
+    write(target_edge_cells_x_str,'(I0)') target_edge_cells_x(1)
+    write(target_edge_cells_y_str,'(I0)') target_edge_cells_y(1)
+    if (size(target_mesh_names) > 1) then
+      do i=2, self%nmaps
+        write(target_mesh_names_str,'(A)')                  & 
+            trim(adjustl(target_mesh_names_str)) // ",'" // &
+            trim(adjustl(target_mesh_names(i)))  // "'"
+        write(target_edge_cells_x_str,'(A,I0)')             &
+            trim(adjustl(target_edge_cells_x_str)) // ',',  &
+            target_edge_cells_x(i)
+        write(target_edge_cells_y_str,'(A,I0)')             &
+            trim(adjustl(target_edge_cells_y_str)) // ',',  &
+            target_edge_cells_y(i)
+      end do
+    end if
+
+    write(target_mesh_names_str,'(A)')    &
+        'target_mesh_names=['//trim(adjustl(target_mesh_names_str))//']'
+    write(target_edge_cells_x_str,'(A)')  &
+        'target_edge_cells_x=['//trim(adjustl(target_edge_cells_x_str))//']'
+    write(target_edge_cells_y_str,'(A)')  &
+        'target_edge_cells_y=['//trim(adjustl(target_edge_cells_y_str))//']'
+
+
+    write(self%constructor_inputs,'(A)')        &
+        trim(self%constructor_inputs) // ';' // &
+        trim(target_mesh_names_str)   // ';' // &
+        trim(target_edge_cells_x_str) // ';' // &
+        trim(target_edge_cells_y_str)
 
   end if
 
@@ -250,12 +292,12 @@ subroutine calc_adjacency(self, cell_next)
   class(genbiperiodic_type),   intent(in)  :: self
   integer(i_def), allocatable, intent(out) :: cell_next(:,:)
 
-  integer(i_def) :: nx, ny, ncells
+  integer(i_def) :: edge_cells_x, edge_cells_y, ncells
   integer(i_def) :: cell, astat
 
-  nx = self%nx
-  ny = self%ny
-  ncells = self%nx * self%ny
+  edge_cells_x = self%edge_cells_x
+  edge_cells_y = self%edge_cells_y
+  ncells = self%edge_cells_x * self%edge_cells_y
 
   allocate(cell_next(4, ncells), stat=astat)
 
@@ -266,25 +308,25 @@ subroutine calc_adjacency(self, cell_next)
   do cell=1, ncells
     ! Cell default values
     cell_next(W, cell) = cell-1
-    cell_next(S, cell) = cell+nx
+    cell_next(S, cell) = cell+edge_cells_x
     cell_next(E, cell) = cell+1
-    cell_next(N, cell) = cell-nx
+    cell_next(N, cell) = cell-edge_cells_x
 
     ! Top row
-    if (cell <= nx) then
-      cell_next(N, cell) = (ny-1)*nx + cell
+    if (cell <= edge_cells_x) then
+      cell_next(N, cell) = (edge_cells_y-1)*edge_cells_x + cell
     end if
     ! Bottom row
-    if (cell > ncells-nx) then
-      cell_next(S, cell) = cell - (ny-1)*nx
+    if (cell > ncells-edge_cells_x) then
+      cell_next(S, cell) = cell - (edge_cells_y-1)*edge_cells_x
     end if
     ! Left edge
-    if (mod(cell, nx) == 1) then
-      cell_next(W, cell) = cell + nx-1
+    if (mod(cell, edge_cells_x) == 1) then
+      cell_next(W, cell) = cell + edge_cells_x-1
     end if
     ! Right edge
-    if (mod(cell, nx) == 0) then
-      cell_next(E, cell) = cell - (nx-1)
+    if (mod(cell, edge_cells_x) == 0) then
+      cell_next(E, cell) = cell - (edge_cells_x-1)
     end if
   end do
 
@@ -306,12 +348,12 @@ subroutine calc_face_to_vert(self, verts_on_cell)
   class(genbiperiodic_type),   intent(in)  :: self
   integer(i_def), allocatable, intent(out) :: verts_on_cell(:,:)
 
-  integer(i_def) :: nx, ny, ncells
+  integer(i_def) :: edge_cells_x, edge_cells_y, ncells
   integer(i_def) :: y, vert, cell, nxf, astat
 
-  nx = self%nx
-  ny = self%ny
-  ncells = self%nx * self%ny
+  edge_cells_x = self%edge_cells_x
+  edge_cells_y = self%edge_cells_y
+  ncells = self%edge_cells_x * self%edge_cells_y
 
   cell = 1
   nxf  = 1
@@ -336,7 +378,7 @@ subroutine calc_face_to_vert(self, verts_on_cell)
   verts_on_cell(NE , self%cell_next(S, cell)) = verts_on_cell(SE, cell)
 
   ! First row
-  do cell = 2, nx-1
+  do cell = 2, edge_cells_x-1
     verts_on_cell(NE, cell) = nxf
     verts_on_cell(SE, cell) = nxf+1
     nxf = nxf + 2
@@ -351,9 +393,9 @@ subroutine calc_face_to_vert(self, verts_on_cell)
   end do
 
   ! Inner rows
-  do y = 1, ny-2
+  do y = 1, edge_cells_y-2
     ! First cell in row
-    cell = y*nx+1
+    cell = y*edge_cells_x+1
     verts_on_cell(SE, cell) = nxf
     verts_on_cell(SW, cell) = nxf+1
     nxf = nxf+2
@@ -363,7 +405,7 @@ subroutine calc_face_to_vert(self, verts_on_cell)
     verts_on_cell(NE , self%cell_next(S, cell)) = verts_on_cell(SE, cell)
 
     ! Remainder of row, every other cell
-    do cell = y*nx+3, (y+1)*nx-1, 2
+    do cell = y*edge_cells_x+3, (y+1)*edge_cells_x-1, 2
       verts_on_cell(SW, cell) = nxf
       verts_on_cell(SE, cell) = nxf+1
       nxf = nxf+2
@@ -372,9 +414,9 @@ subroutine calc_face_to_vert(self, verts_on_cell)
       verts_on_cell(NW, self%cell_next(S, cell)) = verts_on_cell(SW, cell)
       verts_on_cell(NE, self%cell_next(S, cell)) = verts_on_cell(SE, cell)
     end do
-    ! Special case at end of row for odd nx
-    if (mod(nx, 2) == 1) then
-      cell = (y+1)*nx
+    ! Special case at end of row for odd edge_cells_x
+    if (mod(edge_cells_x, 2) == 1) then
+      cell = (y+1)*edge_cells_x
       verts_on_cell(SW, cell) = nxf
       nxf = nxf+1
 
@@ -387,15 +429,15 @@ subroutine calc_face_to_vert(self, verts_on_cell)
   end do
 
   ! Right edge
-  do cell = nx, ncells, nx
+  do cell = edge_cells_x, ncells, edge_cells_x
     ! Copy from left edge
-    verts_on_cell(NE, cell) = verts_on_cell(NW, cell-nx+1)
-    verts_on_cell(SE, cell) = verts_on_cell(SW, cell-nx+1)
+    verts_on_cell(NE, cell) = verts_on_cell(NW, cell-edge_cells_x+1)
+    verts_on_cell(SE, cell) = verts_on_cell(SW, cell-edge_cells_x+1)
   end do
 
   ! Inner step 2 cells
-  do y = 1, ny-2
-    do cell = y*nx+2, (y+1)*nx, 2
+  do y = 1, edge_cells_y-2
+    do cell = y*edge_cells_x+2, (y+1)*edge_cells_x, 2
       verts_on_cell(NW, cell) = verts_on_cell(SW, self%cell_next(N, cell))
       verts_on_cell(NE, cell) = verts_on_cell(SE, self%cell_next(N, cell))
       verts_on_cell(SE, cell) = verts_on_cell(SW, self%cell_next(E, cell))
@@ -403,18 +445,18 @@ subroutine calc_face_to_vert(self, verts_on_cell)
     end do
   end do
 
-  ! Special case at end of row for odd nx
-  if (mod(nx, 2) == 1) then
-    do cell = 2*nx, ncells, nx
+  ! Special case at end of row for odd edge_cells_x
+  if (mod(edge_cells_x, 2) == 1) then
+    do cell = 2*edge_cells_x, ncells, edge_cells_x
       verts_on_cell(NW, cell) = verts_on_cell(SW, self%cell_next(N, cell))
     end do
   end if
 
   ! Last row
-  do cell = ncells-nx+1, ncells
+  do cell = ncells-edge_cells_x+1, ncells
     ! Copy from first row
-    verts_on_cell(SE, cell) = verts_on_cell(NE, cell-(ny-1)*nx)
-    verts_on_cell(SW, cell) = verts_on_cell(NW, cell-(ny-1)*nx)
+    verts_on_cell(SE, cell) = verts_on_cell(NE, cell-(edge_cells_y-1)*edge_cells_x)
+    verts_on_cell(SW, cell) = verts_on_cell(NW, cell-(edge_cells_y-1)*edge_cells_x)
 
     ! Copy from N
     verts_on_cell(NW, cell) = verts_on_cell(SW, self%cell_next(N, cell))
@@ -444,30 +486,30 @@ subroutine calc_edges(self, edges_on_cell, verts_on_edge)
   integer(i_def), allocatable, intent(out) :: edges_on_cell(:,:)
   integer(i_def), allocatable, intent(out) :: verts_on_edge(:,:)
 
-  integer(i_def) :: nx, ny, ncells
+  integer(i_def) :: edge_cells_x, edge_cells_y, ncells
   integer(i_def) :: cell, nxf, astat
 
-  nx = self%nx
-  ny = self%ny
-  ncells = self%nx * self%ny
+  edge_cells_x = self%edge_cells_x
+  edge_cells_y = self%edge_cells_y
+  ncells = self%edge_cells_x * self%edge_cells_y
 
   cell = 1
   nxf  = 1
 
-  allocate(edges_on_cell(4, nx*ny), stat=astat)
+  allocate(edges_on_cell(4, edge_cells_x*edge_cells_y), stat=astat)
 
   if (astat /= 0)                                                   &
       call log_event( PREFIX//"Failure to allocate edges_on_cell.", &
                       LOG_LEVEL_ERROR )
 
-  allocate(verts_on_edge(2, 2*nx*ny), stat=astat)
+  allocate(verts_on_edge(2, 2*edge_cells_x*edge_cells_y), stat=astat)
 
   if (astat /= 0)                                                   &
       call log_event( PREFIX//"Failure to allocate verts_on_edge.", &
                       LOG_LEVEL_ERROR )
 
   ! Top row
-  do cell = 1, nx
+  do cell = 1, edge_cells_x
     ! Top edge
     verts_on_edge(1, nxf) = self%verts_on_cell(NW, cell)
     verts_on_edge(2, nxf) = self%verts_on_cell(NE, cell)
@@ -484,7 +526,7 @@ subroutine calc_edges(self, edges_on_cell, verts_on_edge)
   end do
 
   ! Inner rows
-  do cell = nx+1, ncells-nx
+  do cell = edge_cells_x+1, ncells-edge_cells_x
     ! Right edge
     verts_on_edge(1, nxf) = self%verts_on_cell(NE, cell)
     verts_on_edge(2, nxf) = self%verts_on_cell(SE, cell)
@@ -497,7 +539,7 @@ subroutine calc_edges(self, edges_on_cell, verts_on_edge)
   end do
 
   ! Bottom row
-  do cell = ncells-nx+1, ncells
+  do cell = ncells-edge_cells_x+1, ncells
     ! Right edge
     verts_on_edge(1, nxf) = self%verts_on_cell(NE, cell)
     verts_on_edge(2, nxf) = self%verts_on_cell(SE, cell)
@@ -506,18 +548,18 @@ subroutine calc_edges(self, edges_on_cell, verts_on_edge)
   end do
 
   ! EoC Top row W copy
-  do cell = 1, nx
+  do cell = 1, edge_cells_x
     edges_on_cell(W, cell) = edges_on_cell(E, self%cell_next(W, cell))
   end do
 
   ! EoC Inner rows N & W copy
-  do cell = nx+1, ncells-nx
+  do cell = edge_cells_x+1, ncells-edge_cells_x
     edges_on_cell(N, cell) = edges_on_cell(S, self%cell_next(N, cell))
     edges_on_cell(W, cell) = edges_on_cell(E, self%cell_next(W, cell))
   end do
 
   ! EoC Bottom row N,S,W copy
-  do cell = ncells-nx+1, ncells
+  do cell = ncells-edge_cells_x+1, ncells
     edges_on_cell(N, cell) = edges_on_cell(S, self%cell_next(N, cell))
     edges_on_cell(S, cell) = edges_on_cell(N, self%cell_next(S, cell))
     edges_on_cell(W, cell) = edges_on_cell(E, self%cell_next(W, cell))
@@ -542,12 +584,12 @@ subroutine calc_coords(self, vert_coords)
   class(genbiperiodic_type), intent(in)  :: self
   real(r_def), allocatable,  intent(out) :: vert_coords(:,:)
 
-  integer(i_def) :: ncells, nx, ny
+  integer(i_def) :: ncells, edge_cells_x, edge_cells_y
   integer(i_def) :: cell, x, y, astat
 
-  nx = self%nx
-  ny = self%ny
-  ncells = nx*ny
+  edge_cells_x = self%edge_cells_x
+  edge_cells_y = self%edge_cells_y
+  ncells = edge_cells_x*edge_cells_y
 
   allocate(vert_coords(2, ncells), stat=astat)
 
@@ -556,12 +598,12 @@ subroutine calc_coords(self, vert_coords)
                       LOG_LEVEL_ERROR )
 
   do cell = 1, ncells
-    y = 1+(cell-1)/nx
-    x = cell-(y-1)*nx
+    y = 1+(cell-1)/edge_cells_x
+    x = cell-(y-1)*edge_cells_x
     ! x, E/W
-    vert_coords(1, self%verts_on_cell(SW, cell)) = real(x-1 - nx/2,r_def)*self%dx
+    vert_coords(1, self%verts_on_cell(SW, cell)) = real(x-1 - edge_cells_x/2)*self%dx
     ! y  N/S
-    vert_coords(2, self%verts_on_cell(SW, cell)) = real(ny/2 - (y-1),r_def)*self%dy
+    vert_coords(2, self%verts_on_cell(SW, cell)) = real(edge_cells_y/2 - (y-1))*self%dy
   end do
 
   return
@@ -594,9 +636,9 @@ subroutine get_dimensions( self,                                   &
   integer(i_def), intent(out) :: num_edges_per_face
   integer(i_def), intent(out) :: num_nodes_per_edge
 
-  num_nodes = self%nx*self%ny
-  num_edges = 2*self%nx*self%ny
-  num_faces = self%nx*self%ny
+  num_nodes = self%edge_cells_x*self%edge_cells_y
+  num_edges = 2*self%edge_cells_x*self%edge_cells_y
+  num_faces = self%edge_cells_x*self%edge_cells_y
 
   num_nodes_per_face = 4
   num_edges_per_face = 4
@@ -704,7 +746,7 @@ subroutine calc_global_mesh_maps(self)
   allocate( self%global_mesh_maps, source=global_mesh_map_collection_type())
 
   source_id  = 1
-  source_cpp = self%nx*self%ny
+  source_cpp = self%edge_cells_x*self%edge_cells_y
   source_ncells = source_cpp*self%npanels
 
   do i=1, size(self%target_mesh_names)
@@ -741,7 +783,7 @@ subroutine write_mesh(self)
 
   integer(i_def) :: i, cell, ncells
 
-  ncells = self%nx * self%ny
+  ncells = self%edge_cells_x * self%edge_cells_y
 
   write(stdout,*) "cell_next"
   do cell=1, ncells
@@ -778,33 +820,33 @@ end subroutine write_mesh
 !-----------------------------------------------------------------------------
 !> @brief Returns mesh metadata information.
 !>
-!> @param[in]             self              The generator strategy object.
-!> @param[out, optional]  mesh_name         Name of mesh instance to generate
-!> @param[out, optional]  mesh_class        Primitive shape, i.e. sphere, plane
-!> @param[out, optional]  npanels           Number of panels use to describe mesh
-!> @param[out, optional]  edge_cells_x      Number of panel edge cells (x-axis).
-!> @param[out, optional]  edge_cells_y      Number of panel edge cells (y-axis).
-!> @param[out, optional]  generator_inputs  Inputs used to create this mesh from
-!>                                          the mesh_generator
-!> @param[out, optional]  nmaps             Number of maps to create with this mesh
-!>                                          as source mesh
-!> @param[out, optional]  maps_mesh_names   Mesh names of the target meshes that
-!>                                          this mesh has maps for.
-!> @param[out, optional]  maps_edge_cells_x Number of panel edge cells (x-axis) of
-!>                                          target mesh(es) to create map(s) for.
-!> @param[out, optional]  maps_edge_cells_y Number of panel edge cells (y-axis) of
-!>                                          target mesh(es) to create map(s) for.
+!> @param[in]             self               The generator strategy object.
+!> @param[out, optional]  mesh_name          Name of mesh instance to generate
+!> @param[out, optional]  mesh_class         Primitive shape, i.e. sphere, plane
+!> @param[out, optional]  npanels            Number of panels use to describe mesh
+!> @param[out, optional]  edge_cells_x       Number of panel edge cells (x-axis).
+!> @param[out, optional]  edge_cells_y       Number of panel edge cells (y-axis).
+!> @param[out, optional]  constructor_inputs Inputs used to create this mesh from
+!>                                           the this ugrid_generator_type
+!> @param[out, optional]  nmaps              Number of maps to create with this mesh
+!>                                           as source mesh
+!> @param[out, optional]  maps_mesh_names    Mesh names of the target meshes that
+!>                                           this mesh has maps for.
+!> @param[out, optional]  maps_edge_cells_x  Number of panel edge cells (x-axis) of
+!>                                           target mesh(es) to create map(s) for.
+!> @param[out, optional]  maps_edge_cells_y  Number of panel edge cells (y-axis) of
+!>                                           target mesh(es) to create map(s) for.
 !-----------------------------------------------------------------------------
-subroutine get_metadata( self,              &
-                         mesh_name,         &
-                         mesh_class,        &
-                         npanels,           &
-                         edge_cells_x,      &
-                         edge_cells_y,      &
-                         generator_inputs,  &
-                         nmaps,             &
-                         maps_mesh_names,   &
-                         maps_edge_cells_x, &
+subroutine get_metadata( self,               &
+                         mesh_name,          &
+                         mesh_class,         &
+                         npanels,            &
+                         edge_cells_x,       &
+                         edge_cells_y,       &
+                         constructor_inputs, &
+                         nmaps,              &
+                         maps_mesh_names,    &
+                         maps_edge_cells_x,  &
                          maps_edge_cells_y )
   implicit none
 
@@ -815,19 +857,19 @@ subroutine get_metadata( self,              &
   integer(i_def),      optional, intent(out) :: edge_cells_x
   integer(i_def),      optional, intent(out) :: edge_cells_y
   integer(i_def),      optional, intent(out) :: nmaps
-  character(str_long), optional, intent(out) :: generator_inputs
+  character(str_long), optional, intent(out) :: constructor_inputs
 
   character(str_def), optional, allocatable, intent(out) :: maps_mesh_names(:)
   integer(i_def),     optional, allocatable, intent(out) :: maps_edge_cells_x(:)
   integer(i_def),     optional, allocatable, intent(out) :: maps_edge_cells_y(:)
 
-  if (present(mesh_name))         mesh_name         = self%mesh_name
-  if (present(mesh_class))        mesh_class        = self%mesh_class
-  if (present(npanels))           npanels           = self%npanels
-  if (present(edge_cells_x))      edge_cells_x      = self%nx
-  if (present(edge_cells_y))      edge_cells_y      = self%ny
-  if (present(generator_inputs))  generator_inputs  = trim(self%generator_inputs)
-  if (present(nmaps))             nmaps             = self%nmaps
+  if (present(mesh_name))          mesh_name          = self%mesh_name
+  if (present(mesh_class))         mesh_class         = self%mesh_class
+  if (present(npanels))            npanels            = self%npanels
+  if (present(edge_cells_x))       edge_cells_x       = self%edge_cells_x
+  if (present(edge_cells_y))       edge_cells_y       = self%edge_cells_y
+  if (present(constructor_inputs)) constructor_inputs = trim(self%constructor_inputs)
+  if (present(nmaps))              nmaps              = self%nmaps
 
   if (self%nmaps > 0) then
     if (present(maps_mesh_names))   maps_mesh_names   = self%target_mesh_names

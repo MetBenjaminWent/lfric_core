@@ -7,13 +7,13 @@ class genbiperiodic_mod::genbiperiodic_type {
 
   -mesh_name: string
   -mesh_class: string
-  -generator_inputs: string
-  -npanels: integer
-  -nmaps: integer
-  -nx: integer
-  -ny: integer
+  -constructor_inputs: string
   -dx: real
   -dy: real
+  -edge_cells_x: integer
+  -edge_cells_y: integer
+  -npanels: integer
+  -nmaps: integer
 
   -target_mesh_names: string[:] <<allocatable>>
   -target_edge_cells_x: integer[:] <<allocatable>>
@@ -26,7 +26,7 @@ class genbiperiodic_mod::genbiperiodic_type {
   -verts_on_edge: integer[::] <<allocatable>>
   -vert_coords: real[::] <<allocatable>>
 
-  +<<create>>genbiperiodic_constructor( <<in>> mesh_name: string, <<in>> nx: integer, <<in>> ny: integer, <<in>> domain_x: integer, <<in>> domain_y: integer, <<in>> target_mesh_names: string[:] <<optional>>, <<in>> target_edge_cells_x: integer[:] <<optional>>, <<in>> target_edge_cells_y: integer[:] <<optional>> ): genbiperiodic_type
+  +<<create>>genbiperiodic_constructor( <<in>> mesh_name: string, <<in>> edge_cells_x: integer, <<in>> edge_cells_y: integer, <<in>> domain_x: integer, <<in>> domain_y: integer, <<in>> target_mesh_names: string[:] <<optional>>, <<in>> target_edge_cells_x: integer[:] <<optional>>, <<in>> target_edge_cells_y: integer[:] <<optional>> ): genbiperiodic_type
 
   +calc_adjacency( <<out>> cell_next:integer[::] <<allocatable>> )
   +calc_face_to_vert( <<out>> verts_on_cell: integer[::] <<allocatable>> )

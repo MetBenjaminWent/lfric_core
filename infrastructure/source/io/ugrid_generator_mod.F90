@@ -63,26 +63,27 @@ abstract interface
   !-----------------------------------------------------------------------------
   !> @brief Interface: Returns mesh metadata information.
   !>
-  !> @param[in]             self              The generator strategy object.
-  !> @param[out, optional]  mesh_name         Name of mesh instance to generate
-  !> @param[out, optional]  mesh_class        Primitive shape, i.e. sphere, plane
-  !> @param[out, optional]  npanels           Number of panels use to describe mesh
-  !> @param[out, optional]  edge_cells_x      Number of panel edge cells (x-axis).
-  !> @param[out, optional]  edge_cells_y      Number of panel edge cells (y-axis).
-  !> @param[out, optional]  generator_inputs  Inputs used to create this mesh from
-  !>                                          the mesh_generator
-  !> @param[out, optional]  nmaps             Number of maps to create with this mesh
-  !>                                          as source mesh
-  !> @param[out, optional]  maps_mesh_names   Mesh names of the target meshes that
-  !>                                          this mesh has maps for.
-  !> @param[out, optional]  maps_edge_cells_x Number of panel edge cells (x-axis) of
-  !>                                          target mesh(es) to create map(s) for.
-  !> @param[out, optional]  maps_edge_cells_y Number of panel edge cells (y-axis) of
-  !>                                          target mesh(es) to create map(s) for.
+  !> @param[in]             self               The generator strategy object.
+  !> @param[out, optional]  mesh_name          Name of mesh instance to generate
+  !> @param[out, optional]  mesh_class         Primitive shape, i.e. sphere, plane
+  !> @param[out, optional]  npanels            Number of panels use to describe mesh
+  !> @param[out, optional]  edge_cells_x       Number of panel edge cells (x-axis).
+  !> @param[out, optional]  edge_cells_y       Number of panel edge cells (y-axis).
+  !> @param[out, optional]  constructor_inputs Inputs used to create this mesh from
+  !>                                           the this ugrid_generator_type
+  !> @param[out, optional]  nmaps              Number of maps to create with this mesh
+  !>                                           as source mesh
+  !> @param[out, optional]  maps_mesh_names    Mesh names of the target meshes that
+  !>                                           this mesh has maps for.
+  !> @param[out, optional]  maps_edge_cells_x  Number of panel edge cells (x-axis) of
+  !>                                           target mesh(es) to create map(s) for.
+  !> @param[out, optional]  maps_edge_cells_y  Number of panel edge cells (y-axis) of
+  !>                                           target mesh(es) to create map(s) for.
   !-----------------------------------------------------------------------------
-  subroutine get_metadata_interface ( self, mesh_name, mesh_class, npanels,     &
-                                      edge_cells_x, edge_cells_y,               &
-                                      generator_inputs, nmaps, maps_mesh_names, &
+  subroutine get_metadata_interface ( self, mesh_name, mesh_class, npanels, &
+                                      edge_cells_x, edge_cells_y,           &
+                                      constructor_inputs, nmaps,            &
+                                      maps_mesh_names,                      &
                                       maps_edge_cells_x, maps_edge_cells_y )
 
     import :: ugrid_generator_type, i_def, str_def, str_long
@@ -90,7 +91,7 @@ abstract interface
     class(ugrid_generator_type),  intent(in)  :: self
     character(str_def), optional, intent(out) :: mesh_name
     character(str_def), optional, intent(out) :: mesh_class
-    character(str_long),optional, intent(out) :: generator_inputs
+    character(str_long),optional, intent(out) :: constructor_inputs
     character(str_def), allocatable, &
                         optional, intent(out) :: maps_mesh_names(:)
 

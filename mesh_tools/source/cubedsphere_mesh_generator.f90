@@ -177,7 +177,9 @@ program cubedsphere_mesh_generator
   tmp_str1=''
   tmp_str2=''
   do i=1, nmeshes
-    write(tmp_str1,'(A,I0,A)')  trim(adjustl(mesh_names(i)))//'(',edge_cells(i),')'
+    write(tmp_str1,'(2(A,I0),A)')            &
+        trim(adjustl(mesh_names(i))) // '(', &
+        edge_cells(i), ',', edge_cells(i), ')'
     if (i==1) then
       tmp_str2 = trim(adjustl(tmp_str1))
     else 
@@ -272,9 +274,9 @@ program cubedsphere_mesh_generator
         end if
       end do
 
-      write(log_scratch_space,'(A,I0,A)') &
+      write(log_scratch_space,'(2(A,I0),A)')               &
           '  Creating Mesh: '// trim(unique_mesh_names(i)) &
-                             //'(',unique_edge_cells(i),')'
+                             //'(',unique_edge_cells(i),',',unique_edge_cells(i),')'
       call log_event( trim(log_scratch_space), LOG_LEVEL_INFO)
 
       write(log_scratch_space,'(A,I0)') '    Smoothing passes: ', nsmooth
@@ -305,12 +307,11 @@ program cubedsphere_mesh_generator
     if (allocated(target_mesh_names)) deallocate(target_mesh_names)
   end do
 
-  call log_event( "...generation complete.", LOG_LEVEL_INFO )
-
-  !===========================================================================
-
   if ( allocated(target_edge_cells) ) deallocate(target_edge_cells)
   if ( allocated(ncells)            ) deallocate(ncells)
+
+  call log_event( "...generation complete.", LOG_LEVEL_INFO )
+
 
   !===================================================================
   ! 9.0 Write out to ugrid file
@@ -327,10 +328,10 @@ program cubedsphere_mesh_generator
     end if
 
     inquire(file=trim(mesh_filename), size=fsize)
-    write( log_scratch_space, '(2(A,I0),A)')                    &
-        'Adding ugrid mesh (ndivs:', edge_cells(i),') to ' //   &
-        trim(adjustl(mesh_filename)) // ' - ', fsize,           &
-        ' bytes written.'
+    write( log_scratch_space, '(A,I0,A)')                 &
+        'Adding mesh (' // trim(unique_mesh_names(i)) //  &
+        ') to ' // trim(adjustl(mesh_filename)) // ' - ', &
+        fsize, ' bytes written.'
 
     call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
