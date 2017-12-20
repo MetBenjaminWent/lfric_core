@@ -35,7 +35,7 @@ export LDFLAGS := $(LDFLAGS) $(OPENMP_ARG)
 # Test
 #
 .PHONY: test-suite
-test-suite: SUITE_NAME   = $(notdir $(realpath $(shell pwd)/..))-umphysics
+test-suite: SUITE_NAME   = $(notdir $(realpath $(shell pwd)/..))-lfric_atm
 test-suite: SUITE_CONFIG = rose-stem
 test-suite: launch-test-suite
 	$(Q)echo > /dev/null
@@ -63,7 +63,9 @@ build: generate-psykal extract-gungho extract-um-physics
 	$(MAKE) -C $(LFRIC_INFRASTRUCTURE) extract WORKING_DIR=$(abspath $(WORKING_DIR))
 	$(MAKE) -C $(WORKING_DIR) -f $(LFRIC_BUILD)/analyse.mk
 	$(MAKE) -C $(WORKING_DIR) -f $(LFRIC_BUILD)/compile.mk \
-	                             BIN_DIR=$(BIN_DIR) PROGRAMS="$(PROGRAMS)"
+	                             BIN_DIR=$(BIN_DIR) \
+                                     PROGRAMS="$(PROGRAMS)" \
+                                     COMPILE_OPTIONS=$(abspath $(PROJECT_DIR)/build/compile_options.mk)
 
 .PHONY: generate-psykal
 generate-psykal: extract-gungho
@@ -90,6 +92,8 @@ extract-um-physics:
 	$(MAKE) -f $(LFRIC_BUILD)/extract.mk \
 	        SOURCE_DIR=$(ROOT_DIR)/um_physics/source \
 	        WORKING_DIR=$(abspath $(WORKING_DIR))
+	$(MAKE) -C $(ROOT_DIR)/um_physics -f $(LFRIC_BUILD)/psyclone.mk \
+	        SOURCE_DIR=source WORKING_DIR=$(abspath $(WORKING_DIR))
 	$(info Using UM target $(platform_config_dir))
 	# Retrieve and preprocess the UM, Jules and Socrates code
 	# The UM_ENV file contains the appropriate locations and UM side

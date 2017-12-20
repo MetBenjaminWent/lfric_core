@@ -27,6 +27,8 @@
 #                     to the compiler.
 # PROJECT_MAKE_DIR: Used to locate project specific targets modifiers and
 #                   such.
+# COMPILE_OPTIONS: Name of an optional file that can be included to list
+#                  project specific compile options
 #
 ##############################################################################
 
@@ -48,6 +50,7 @@ ALL_OBJECTS = $(foreach proj, $(shell echo $(PROGRAMS) | tr a-z A-Z), $($(proj)_
 
 ##############################################################################
 .PHONY: applications
+-include $(COMPILE_OPTIONS)
 applications: $(addprefix $(BIN_DIR)/,$(PROGRAMS))
 
 $(BIN_DIR)/%: %.x | $(BIN_DIR)

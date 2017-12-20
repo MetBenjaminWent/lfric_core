@@ -4,6 +4,6 @@
 # under which the code may be used.
 ##############################################################################
 
-$(info UM physics project specials)
+$(info UM physics specific compile options)
 
-export PRE_PROCESS_MACROS += UM_PHYSICS
+science/%.o science/%.mod: export FFLAGS := $(FFLAGS) $(FFLAGS_UM_PHYSICS)
