@@ -184,17 +184,14 @@ contains
     ! IO init
     !-------------------------------------------------------------------------
 
-    ! If using XIOS for diagnostic output or checkpointing, then set up
-    ! XIOS domain and context
-
-    if ( (write_xios_output) .or. (restart%use_xios()) ) then
+    ! If xios output then set up XIOS domain and context
+    if (write_xios_output) then
 
       dtime = int(dt)
 
       call xios_domain_init( xios_ctx,   &
                              comm,       &
                              dtime,      &
-                             restart,    &
                              mesh_id,    &
                              chi,        &
                              vm,         &
@@ -283,8 +280,8 @@ contains
 
     do timestep = restart%ts_start(),restart%ts_end()
 
-      ! Update XIOS calendar if we are using it for diagnostic output or checkpoint
-      if ( (write_xios_output) .or. (restart%use_xios()) ) then
+      ! Update XIOS calendar
+      if (write_xios_output) then
         call log_event( "Gungho: Updating XIOS timestep", LOG_LEVEL_INFO )
         call xios_update_calendar(timestep)
       end if
@@ -432,38 +429,43 @@ contains
     ! Write checksums to file
     call checksum_alg('gungho', rho, 'rho', theta, 'theta', u, 'u')
 
-    ! Write checkpoint files if required
-    if( restart%checkpoint() ) then 
+    ! Write checkpoint/restart files if required
+    if( restart%write_file() ) then
 
-       write(log_scratch_space,'(A,I6)') "Checkpointing rho at ts ",restart%ts_end() 
-       call log_event(log_scratch_space,LOG_LEVEL_INFO)
-       call rho%write_checkpoint("checkpoint_rho", trim(restart%endfname("rho")))
+      write(log_scratch_space,'(A,A)') "writing file:",  &
+                              trim(restart%endfname("rho"))
+      call log_event(log_scratch_space,LOG_LEVEL_INFO)
+      call rho%write_checkpoint(trim(restart%endfname("rho")))
 
-       write(log_scratch_space,'(A,I6)') "Checkpointing u at ts ",restart%ts_end() 
-       call log_event(log_scratch_space,LOG_LEVEL_INFO)
-       call u%write_checkpoint("checkpoint_u", trim(restart%endfname("u")))
+      write(log_scratch_space,'(A,A)') "writing file:",  &
+                              trim(restart%endfname("u"))
+      call log_event(log_scratch_space,LOG_LEVEL_INFO)
+      call u%write_checkpoint(trim(restart%endfname("u")))
 
-       write(log_scratch_space,'(A,I6)') "Checkpointing theta at ts ",restart%ts_end() 
-       call log_event(log_scratch_space,LOG_LEVEL_INFO)
-       call theta%write_checkpoint("checkpoint_theta", trim(restart%endfname("theta")))
+      write(log_scratch_space,'(A,A)') "writing file:",  &
+                              trim(restart%endfname("theta"))
+      call log_event(log_scratch_space,LOG_LEVEL_INFO)
+      call theta%write_checkpoint(trim(restart%endfname("theta")))
 
-       write(log_scratch_space,'(A,I6)') "Checkpointing exner at ts ",restart%ts_end() 
-       call log_event(log_scratch_space,LOG_LEVEL_INFO)
-       call exner%write_checkpoint("checkpoint_exner", trim(restart%endfname("exner")))
-  
-       write(log_scratch_space,'(A,I6)') "Checkpointing xi at ts ",restart%ts_end() 
-       call log_event(log_scratch_space,LOG_LEVEL_INFO)
-       call xi%write_checkpoint("checkpoint_xi", trim(restart%endfname("xi")))
+      write(log_scratch_space,'(A,A)') "writing file:",  &
+                              trim(restart%endfname("exner"))
+      call log_event(log_scratch_space,LOG_LEVEL_INFO)
+      call exner%write_checkpoint(trim(restart%endfname("exner")))
 
-       if (use_moisture)then
-         do i=1,nummr
-           write(name, '(A,I2.2)') 'mr_', i
-           write(log_scratch_space,'(A,A,A,I6)') "Checkpointing ",  trim(name), " at ts ",restart%ts_end() 
-           call log_event(log_scratch_space,LOG_LEVEL_INFO)
-           call mr(i)%write_checkpoint(name, trim(restart%endfname(name)))
-         end do
-       end if
+      write(log_scratch_space,'(A,A)') "writing file:",  &
+                              trim(restart%endfname("xi"))
+      call log_event(log_scratch_space,LOG_LEVEL_INFO)
+      call xi%write_checkpoint(trim(restart%endfname("xi")))
 
+      if (use_moisture)then
+        do i=1,nummr
+          write(name, '(A,I2.2)') 'mr_', i
+          write(log_scratch_space,'(A,A)') "writing file:",  &
+              trim(restart%endfname(name))
+          call log_event(log_scratch_space,LOG_LEVEL_INFO)
+          call mr(i)%write_checkpoint(trim(restart%endfname(name)))
+        end do
+      end if
     end if
 
     ! Call timestep finalizers
@@ -482,8 +484,8 @@ contains
     ! Driver layer finalise
     !-------------------------------------------------------------------------
 
-    ! Finalise XIOS context if we used it for diagnostic output or checkpointing
-    if ( (write_xios_output) .or. (restart%use_xios()) ) then
+    ! Finalise XIOS context if we used it for IO
+    if (write_xios_output) then
       call xios_context_finalize()
     end if
 

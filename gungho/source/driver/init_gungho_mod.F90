@@ -11,10 +11,7 @@
 module init_gungho_mod
 
   use constants_mod,                  only : i_def
-  use field_mod,                      only : field_type, &
-                                             write_interface, &
-                                             checkpoint_interface, &
-                                             restart_interface
+  use field_mod,                      only : field_type, write_interface
   use finite_element_config_mod,      only : element_order, wtheta_on
   use fs_continuity_mod,              only : W0, W1, W2, W3, Wtheta
   use function_space_collection_mod , only : function_space_collection
@@ -31,11 +28,8 @@ module init_gungho_mod
   use runtime_constants_mod,          only : create_runtime_constants
   use output_config_mod,              only : write_xios_output
   use io_mod,                         only : xios_write_field_node, &
-                                             xios_write_field_face, &
-                                             checkpoint_xios, &
-                                             checkpoint_netcdf, &
-                                             restart_netcdf, &
-                                             restart_xios
+                                             xios_write_field_face
+
 
   implicit none
 
@@ -68,9 +62,7 @@ contains
 
     integer(i_def)                           :: imr
 
-    procedure(write_interface), pointer      :: tmp_write_ptr
-    procedure(checkpoint_interface), pointer :: tmp_checkpoint_ptr
-    procedure(restart_interface), pointer    :: tmp_restart_ptr
+    procedure(write_interface), pointer      :: tmp_ptr
 
     call log_event( 'GungHo: initialisation...', LOG_LEVEL_INFO )
 
@@ -106,83 +98,33 @@ contains
       function_space_collection%get_fs(mesh_id, element_order, theta%which_function_space()) )
     end do
 
-    ! Set I/O behaviours for diagnostic output
-
     if (write_xios_output) then
        ! Fields that are output on the XIOS face domain
 
-       tmp_write_ptr => xios_write_field_face
+       tmp_ptr => xios_write_field_face
 
-       call xi%set_write_field_behaviour(tmp_write_ptr)
-       call u%set_write_field_behaviour(tmp_write_ptr)
-       call rho%set_write_field_behaviour(tmp_write_ptr)
-       call exner%set_write_field_behaviour(tmp_write_ptr)
+       call xi%set_write_field_behaviour(tmp_ptr)
+       call u%set_write_field_behaviour(tmp_ptr)
+       call rho%set_write_field_behaviour(tmp_ptr)
+       call exner%set_write_field_behaviour(tmp_ptr)
 
        ! Fields that are output on the XIOS node domain
 
        ! Theta is a special case as it can be on face (if function space is WTheta) 
        ! or node (if function space is W0)
        if (theta%which_function_space() == Wtheta) then
-
-          call theta%set_write_field_behaviour(tmp_write_ptr)
-
+          call theta%set_write_field_behaviour(tmp_ptr)
        else
-
-          tmp_write_ptr => xios_write_field_node
-
-          call theta%set_write_field_behaviour(tmp_write_ptr)
-
+          tmp_ptr => xios_write_field_node
+          call theta%set_write_field_behaviour(tmp_ptr)
        end if
 
        ! Moisture diagnostics use the same type of field write as Theta
-
-       call theta%get_write_field_behaviour(tmp_write_ptr)
-
+       call theta%get_write_field_behaviour(tmp_ptr)
        do imr = 1,nummr
-         call mr(imr)%set_write_field_behaviour(tmp_write_ptr)
+         call mr(imr)%set_write_field_behaviour(tmp_ptr)
        end do
-
     end if
-
-    ! Set I/O behaviours for checkpoint / restart
-
-    if (restart%use_xios()) then
-
-      ! Use XIOS for checkpoint / restart
-
-      tmp_checkpoint_ptr => checkpoint_xios
-      tmp_restart_ptr => restart_xios
-
-      call log_event( 'GungHo: Using XIOS for checkpointing...', LOG_LEVEL_INFO )
-
-    else
-
-      ! Use old checkpoint and restart methods
-
-      tmp_checkpoint_ptr => checkpoint_netcdf
-      tmp_restart_ptr => restart_netcdf
-
-      call log_event( 'GungHo: Using NetCDF for checkpointing...', LOG_LEVEL_INFO )
-
-
-    end if
-
-    call xi%set_checkpoint_behaviour(tmp_checkpoint_ptr)
-    call u%set_checkpoint_behaviour(tmp_checkpoint_ptr)
-    call rho%set_checkpoint_behaviour(tmp_checkpoint_ptr)
-    call theta%set_checkpoint_behaviour(tmp_checkpoint_ptr)
-    call exner%set_checkpoint_behaviour(tmp_checkpoint_ptr)
-
-    call xi%set_restart_behaviour(tmp_restart_ptr)
-    call u%set_restart_behaviour(tmp_restart_ptr)
-    call rho%set_restart_behaviour(tmp_restart_ptr)
-    call theta%set_restart_behaviour(tmp_restart_ptr)
-    call exner%set_restart_behaviour(tmp_restart_ptr)
-
-    do imr = 1,nummr
-      call mr(imr)%set_checkpoint_behaviour(tmp_checkpoint_ptr)
-      call mr(imr)%set_restart_behaviour(tmp_restart_ptr)
-    end do
 
     ! Create runtime_constants object. This in turn creates various things
     ! needed by the timestepping algorithms such as mass matrix operators, mass

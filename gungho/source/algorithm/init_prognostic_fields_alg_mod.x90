@@ -96,7 +96,7 @@ contains
 
     !=== Initialise global prognostic fields ==================================!
 
-    if (.not.restart%read_checkpoint()) then           ! No check point to start from
+    if (.not.restart%read_file()) then           ! No check point to start from
 
       call log_event( "Gungho: Initialising prognostic fields", LOG_LEVEL_INFO )
 
@@ -145,26 +145,40 @@ contains
 
     else                                   ! Recorded check point to start from
 
-      call log_event("Reading checkpoint file to restart rho",LOG_LEVEL_INFO)
-      call rho%read_restart("restart_rho", trim(restart%startfname("rho")))
+      write(log_scratch_space,'(A,A)') "Reading file:", &
+            trim(restart%startfname("rho"))
+      call log_event(log_scratch_space,LOG_LEVEL_INFO)
 
-      call log_event("Reading checkpoint file to restart u",LOG_LEVEL_INFO)
-      call u%read_restart("restart_u", trim(restart%startfname("u")))
+      call rho%read_restart(trim(restart%startfname("rho")))
 
-      call log_event("Reading checkpoint file to restart theta",LOG_LEVEL_INFO)
-      call theta%read_restart("restart_theta", trim(restart%startfname("theta")))
+      write(log_scratch_space,'(A,A)') "Reading file:", &
+            trim(restart%startfname("u"))
+      call log_event(log_scratch_space,LOG_LEVEL_INFO)
 
-      call log_event("Reading checkpoint file to restart exner",LOG_LEVEL_INFO)
-      call exner%read_restart("restart_exner", trim(restart%startfname("exner")))
+      call u%read_restart(trim(restart%startfname("u")))
 
-      call log_event("Reading checkpoint file to restart xi",LOG_LEVEL_INFO)
-      call xi%read_restart("restart_xi", trim(restart%startfname("xi")))
+      write(log_scratch_space,'(A,A)') "Reading file:", &
+            trim(restart%startfname("theta"))
+      call log_event(log_scratch_space,LOG_LEVEL_INFO)
+
+      call theta%read_restart(trim(restart%startfname("theta")))
+
+      write(log_scratch_space,'(A,A)') "Reading file:", &
+            trim(restart%startfname("exner"))
+      call log_event(log_scratch_space,LOG_LEVEL_INFO)
+
+      call exner%read_restart(trim(restart%startfname("exner")))
+
+      write(log_scratch_space,'(A,A)') "Reading file:", &
+            trim(restart%startfname("xi"))
+      call log_event(log_scratch_space,LOG_LEVEL_INFO)
+
+      call xi%read_restart(trim(restart%startfname("xi")))
 
       if (use_moisture)then
         do i=1,nummr
           write(name, '(A,I2.2)') 'mr_', i
-          write(log_scratch_space,'(A,A)') "Reading checkpoint file to restart ", trim(name)
-          call mr(i)%read_restart("restart_"//name,trim(restart%startfname(name)))
+          call mr(i)%read_restart(trim(restart%startfname(name)))
         end do
       end if
 

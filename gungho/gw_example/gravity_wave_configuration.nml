@@ -42,7 +42,7 @@
   diag_stem_name            = 'gravity_wave'
   write_xios_output         = .false.
   write_nodal_output        = .true.
-  diagnostic_frequency      =  10
+  diagnostic_frequency      = 10
   nodal_output_on_w3        = .true.
   subroutine_timers         = .true.
 /
@@ -58,7 +58,7 @@
 /
 
 &restart
-  filename = 'gravity_wave_restart.nml'
+  filename = 'dynamo_restart.nml'
 /
 
 &solver

@@ -4,5 +4,4 @@ timestep_start = 1
 timestep_end = 10
 checkpoint_write = .F
 restart_stem_name="restartDynamo"
-xios_checkpoint = .F
 /

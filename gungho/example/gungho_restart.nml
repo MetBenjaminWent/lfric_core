@@ -1,8 +1,0 @@
-&RESTART_NML
-checkpoint_read = .T
-timestep_start = 30004
-timestep_end = 30007
-checkpoint_write = .T
-restart_stem_name="restartDynamo"
-xios_checkpoint = .T
-/

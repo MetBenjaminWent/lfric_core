@@ -36,8 +36,7 @@ contains
     character(*), intent(in) :: filename
 
     character(*), parameter :: &
-                            required_configuration(9) = ['finite_element      ', &
-                                                         'restart             ', &
+                            required_configuration(8) = ['finite_element      ', &
                                                          'base_mesh           ', &
                                                          'multigrid           ', &
                                                          'planet              ', &

@@ -12,10 +12,7 @@ module init_gravity_wave_mod
 
   use assign_coordinate_field_mod,    only : assign_coordinate_field
   use constants_mod,                  only : i_def
-  use field_mod,                      only : field_type, &
-                                             write_interface, &
-                                             checkpoint_interface, &
-                                             restart_interface
+  use field_mod,                      only : field_type, write_interface
   use finite_element_config_mod,      only : element_order
 
   use fs_continuity_mod,              only : W0, W2, W3, Wtheta
@@ -31,11 +28,7 @@ module init_gravity_wave_mod
   use runtime_constants_mod,          only : create_runtime_constants
   use output_config_mod,              only : write_xios_output
   use io_mod,                         only : xios_write_field_face, &
-                                             xios_write_field_node, &
-                                             checkpoint_xios, &
-                                             checkpoint_netcdf, &
-                                             restart_netcdf, &
-                                             restart_xios
+                                             xios_write_field_node
 
   use function_space_mod,             only : function_space_type
   use function_space_collection_mod,  only : function_space_collection
@@ -64,10 +57,7 @@ module init_gravity_wave_mod
 
     integer(i_def) :: i
 
-    procedure(write_interface), pointer      :: tmp_write_ptr
-    procedure(checkpoint_interface), pointer :: tmp_checkpoint_ptr
-    procedure(restart_interface), pointer    :: tmp_restart_ptr
-
+    procedure(write_interface), pointer :: tmp_ptr
     type(function_space_type),  pointer :: function_space => null()
 
     call log_event( 'gravity wave: initialisation...', LOG_LEVEL_INFO )
@@ -119,56 +109,24 @@ module init_gravity_wave_mod
     pressure = field_type( vector_space = &
                        function_space_collection%get_fs(mesh_id, element_order, W3) )
 
-    ! Set I/O behaviours for diagnostic output
+    ! Set up fields with their IO behaviours (XIOS only at present)
 
     if (write_xios_output) then
 
-       ! Fields that are output on the XIOS face domain
+       tmp_ptr => xios_write_field_face
 
-       tmp_write_ptr => xios_write_field_face
-
-       call wind%set_write_field_behaviour(tmp_write_ptr)
-       call pressure%set_write_field_behaviour(tmp_write_ptr)
+       call wind%set_write_field_behaviour(tmp_ptr)
+       call pressure%set_write_field_behaviour(tmp_ptr)
 
        if (buoyancy_space == W0) then
-         tmp_write_ptr => xios_write_field_node
-         call buoyancy%set_write_field_behaviour(tmp_write_ptr)
+         tmp_ptr => xios_write_field_node
+         call buoyancy%set_write_field_behaviour(tmp_ptr)
        else
-         tmp_write_ptr => xios_write_field_face
-         call buoyancy%set_write_field_behaviour(tmp_write_ptr)
+         tmp_ptr => xios_write_field_face
+         call buoyancy%set_write_field_behaviour(tmp_ptr)
        end if
        
     end if
-
-    ! Set I/O behaviours for checkpoint / restart
-
-    if (restart%use_xios()) then
-
-      ! Use XIOS for checkpoint / restart
-
-      tmp_checkpoint_ptr => checkpoint_xios
-      tmp_restart_ptr => restart_xios
-
-      call log_event( 'GungHo: Using XIOS for checkpointing...', LOG_LEVEL_INFO )
-
-    else
-
-      ! Use old checkpoint and restart methods
-
-      tmp_checkpoint_ptr => checkpoint_netcdf
-      tmp_restart_ptr => restart_netcdf
-
-      call log_event( 'GungHo: Using NetCDF for checkpointing...', LOG_LEVEL_INFO )
-
-    end if
-
-    call wind%set_checkpoint_behaviour(tmp_checkpoint_ptr)
-    call pressure%set_checkpoint_behaviour(tmp_checkpoint_ptr)
-    call buoyancy%set_checkpoint_behaviour(tmp_checkpoint_ptr)
-
-    call wind%set_restart_behaviour(tmp_restart_ptr)
-    call pressure%set_restart_behaviour(tmp_restart_ptr)
-    call buoyancy%set_restart_behaviour(tmp_restart_ptr)
 
     ! Create runtime_constants object. This in turn creates various things
     ! needed by the timestepping algorithms such as mass matrix operators, mass

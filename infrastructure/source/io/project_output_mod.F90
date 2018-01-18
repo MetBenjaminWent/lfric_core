@@ -1,8 +1,9 @@
-!---------------------------------------------------------------
-! (C) Crown copyright 2017 Met Office. All rights reserved.
-! For further details please refer to the file COPYRIGHT.txt
-! which you should have received as part of this distribution.
-!---------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! (c) The copyright relating to this work is owned jointly by the Crown, 
+! Met Office and NERC 2014. 
+! However, it has been created with the help of the GungHo Consortium, 
+! whose members are identified at https://puma.nerc.ac.uk/trac/GungHo/wiki
+!-------------------------------------------------------------------------------
 
 !> A module to do a projection of a field from one function space to
 !> another for output

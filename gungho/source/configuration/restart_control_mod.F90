@@ -37,8 +37,6 @@ module restart_control_mod
      integer :: timestep_end 
      !> Whether to write a checkpoint
      logical :: checkpoint_write
-     !> Whether to use XIOS as checkpoint
-     logical :: xios_checkpoint
      !> A string of characters that will form the beginning of all
      !! checkpoint/restart files
      character(len=str_max_filename) :: restart_stem_name 
@@ -70,10 +68,6 @@ module restart_control_mod
      !>         timestep (ts).
      procedure :: ts_fname
 
-     !> @brief Gets stem of filename for restart files
-     !> @return Filename stem for restart files
-     procedure :: stem_fname
-
      !> @brief Gets the starting timestep.
      !> @return Timestep from which the run starts, read from a namelist.
      procedure :: ts_start
@@ -89,17 +83,12 @@ module restart_control_mod
      !> @brief Decides whether to read from a checkpoint.
      !> @return User-defined variable to decide whether the model state is read  
      !>         from a checkpoint file.
-     procedure :: read_checkpoint
+     procedure :: read_file
 
      !> @brief Decides whether to write to a checkpoint.
      !> @return User-defined variable to decide whether the model state will be 
      !>         written to a checkpoint file.
-     procedure :: checkpoint
-
-     !> @brief Decides whether to use XIOS to checkpoint
-     !> @return User-defined variable to decide whether XIOS will be used
-     !>         ro read/write checkpoint files.
-     procedure :: use_xios
+     procedure :: write_file
 
   end type restart_type
 
@@ -123,7 +112,7 @@ contains
     integer, intent(in) :: local_rank
     integer, intent(in) :: total_ranks
     type(restart_type)                          :: self
-    logical            :: checkpoint_read, checkpoint_write, xios_checkpoint
+    logical            :: checkpoint_read, checkpoint_write
     integer, parameter :: funit = 555
     integer, parameter :: timestep_limit  = 1000000
     integer            :: timestep_start
@@ -135,8 +124,7 @@ contains
 
     namelist /restart_nml/ checkpoint_read, timestep_start, & 
                            timestep_end, checkpoint_write,  &
-                           restart_stem_name, checkpoint_frequency, &
-                           xios_checkpoint
+                           restart_stem_name, checkpoint_frequency
 
     ! Open restart file
     open(funit,file=trim(fname),iostat=ierr,status='old',iomsg=ioerrmsg)
@@ -170,7 +158,6 @@ contains
     self%checkpoint_write = checkpoint_write
     self%restart_stem_name = restart_stem_name
     self%checkpoint_frequency = checkpoint_frequency
-    self%xios_checkpoint = xios_checkpoint
 
     ! Do some sanity checks 
     if(self%timestep_start > self%timestep_end) then
@@ -232,8 +219,8 @@ contains
     end if
 
     if(self%checkpoint_read) then
-       write(log_scratch_space,'(A,I6)') "Re-starting from previous checkpoint timestep ", &
-                                         (self%timestep_start - 1)
+       write(log_scratch_space,'(A,A)') "Re-starting Dynamo:", &
+            trim(self%startfname(""))
        call log_event(log_scratch_space,LOG_LEVEL_INFO)
     else 
        call log_event("Cold start, spinning up",LOG_LEVEL_INFO)
@@ -277,16 +264,6 @@ contains
 
   end function ts_fname
 
-  ! Gets the stem of filename for checkpoint / restart files
-  function stem_fname(self)
-
-    class(restart_type), intent(in) :: self
-    character(len=str_max_filename) :: stem_fname
-
-    stem_fname = self%restart_stem_name
-
-  end function stem_fname
-
   ! Gets the starting timestep of the run.
   function ts_start(self)
 
@@ -315,30 +292,21 @@ contains
   end function get_checkpoint_frequency
 
   ! Decides whether to read model state from a checkpoint.
-  function read_checkpoint(self) 
+  function read_file(self) 
 
     class(restart_type), intent(in) :: self
-    logical read_checkpoint
-    read_checkpoint = self%checkpoint_read
+    logical read_file
+    read_file = self%checkpoint_read
 
-  end function read_checkpoint
+  end function read_file
 
   ! Decides whether to write model state to a checkpoint.
-  function checkpoint(self) 
+  function write_file(self) 
 
     class(restart_type), intent(in) :: self
-    logical checkpoint
-    checkpoint = self%checkpoint_write
+    logical write_file
+    write_file = self%checkpoint_write
 
-  end function checkpoint
-
-  ! Decides whether to use XIOS for checkpointing
-  function use_xios(self) 
-
-    class(restart_type), intent(in) :: self
-    logical use_xios
-    use_xios = self%xios_checkpoint
-
-  end function use_xios
+  end function write_file
   
 end module restart_control_mod

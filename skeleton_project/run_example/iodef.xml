@@ -34,7 +34,7 @@
 
    <field_definition prec="8" >
      <!-- Main diagnostic group -->
-     <field_group id="diagnostic_fields" freq_op="1ts" enabled=".TRUE." operation="once" >   
+     <field_group freq_op="1ts" enabled=".TRUE." operation="once" >   
        <field id="skeleton_field" name="skeleton_field" long_name="skeleton_field" unit="1" grid_ref="half_level_face_grid" />
      </field_group>
 

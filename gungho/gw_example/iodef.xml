@@ -15,11 +15,6 @@
       <domain id="node" name="Mesh2d_node" nvertex="1"/>
       <domain id="face_half_levels" name="Mesh2d_half_levels" nvertex="4"/>
       <domain id="face_full_levels" name="Mesh2d_full_levels" nvertex="4"/>
-      <domain id="restart_100" name="restart_100" nvertex="1"/>
-      <domain id="restart_101" name="restart_101" nvertex="1"/>
-      <domain id="restart_102" name="restart_102" nvertex="1"/>
-      <domain id="restart_103" name="restart_103" nvertex="1"/>
-      <domain id="restart_104" name="restart_104" nvertex="1"/>
    </domain_definition>
    
    <grid_definition>
@@ -38,25 +33,17 @@
    </grid_definition>
 
    <field_definition prec="8" >
-   
-     <!-- Checkpoint group -->
-     <field_group id="checkpoint_fields" freq_op="1ts" operation="once"  enabled=".FALSE." >
-       <field id="checkpoint_pressure" name="pressure" long_name="air_pressure" standard_name="air_pressure" unit="Pa" domain_ref="restart_103" />
-       <field id="checkpoint_buoyancy" name="buoyancy" long_name="buoyancy" unit="kg m s-2" domain_ref="restart_104" />
-       <field id="checkpoint_wind" name="wind" long_name="wind" unit="m s-1" domain_ref="restart_102" />
-     </field_group>
-     
      <!-- Main diagnostic group -->
-     <field_group id="diagnostic_fields" freq_op="1ts" enabled=".TRUE." operation="instant" >   
+     <field_group freq_op="1ts" enabled=".TRUE." operation="instant" >   
        <field id="wind1" name="wind1" long_name="Wind1" unit="m s-1" grid_ref="half_level_face_grid" />
        <field id="wind2" name="wind2" long_name="Wind2" unit="m s-1" grid_ref="half_level_face_grid" />
        <field id="wind3" name="wind3" long_name="Wind3" unit="m s-1" grid_ref="half_level_face_grid" />
-       <field id="pressure" name="pressure" long_name="air_pressure" standard_name="air_pressure" unit="kg m-3" grid_ref="half_level_face_grid" />
+       <field id="pressure" name="pressure" long_name="air_pressure" standard_name="air_pressure" unit="Pa" grid_ref="half_level_face_grid" />
        <field id="buoyancy" name="buoyancy" long_name="buoyancy" unit="kg m s-2" grid_ref="full_level_face_grid" />
 
      </field_group>
       <!-- Initial conditions group -->
-     <field_group id="initial_fields" freq_op="1ts" enabled=".TRUE." operation="once" >
+     <field_group freq_op="1ts" enabled=".TRUE." operation="once" >
        <field id="init_wind1" name="wind1" long_name="Wind1" unit="m s-1" grid_ref="half_level_face_grid" />
        <field id="init_wind2" name="wind2" long_name="Wind2" unit="m s-1" grid_ref="half_level_face_grid" />
        <field id="init_wind3" name="wind3" long_name="Wind3" unit="m s-1" grid_ref="half_level_face_grid" />
@@ -69,26 +56,11 @@
    <file_definition 
       type="one_file" 
       par_access="collective"
-      time_counter="none">
-      
-      <!-- Checkpoint/ Restart group -->
-      
-      <!-- File definition for write -->
-      <file id="lfric_checkpoint" name="lfric_gw_checkpoint" convention="CF" enabled=".FALSE.">
-        <field field_ref="checkpoint_pressure"/>
-        <field field_ref="checkpoint_buoyancy"/>
-        <field field_ref="checkpoint_wind"/>
-      </file> 
-      
-       <!-- file definition for read -->
-      <file id="lfric_restart" name="lfric_gw_checkpoint" mode="read" output_freq="1ts" cyclic="true" enabled=".FALSE.">
-       <field id="restart_pressure" name="pressure" long_name="air_pressure" standard_name="air_pressure" unit="Pa" operation="instant" domain_ref="restart_103" />
-       <field id="restart_buoyancy" name="buoyancy" long_name="buoyancy" unit="kg m s-2" operation="instant" domain_ref="restart_104" />
-       <field id="restart_wind" name="wind" long_name="wind" unit="m s-1" operation="instant" domain_ref="restart_102" />
-      </file>
+      time_counter="none"
+      enabled=".TRUE.">
       
       
-      <file id="lfric_diag" name="lfric_gw_diag" output_freq="10ts" convention="UGRID" enabled=".TRUE.">
+      <file id="lfric_gw_diag" name="lfric_gw_diag" output_freq="10ts" convention="UGRID">
         <field field_ref="wind1"/>
         <field field_ref="wind2"/>
         <field field_ref="wind3"/>
@@ -96,7 +68,7 @@
         <field field_ref="buoyancy"/>
       </file> 
       
-      <file id="lfric_initial" name="lfric_gw_initial" output_freq="1ts" convention="UGRID" enabled=".TRUE.">
+      <file id="lfric_gw_initial" name="lfric_gw_initial" output_freq="1ts" convention="UGRID">
         <field field_ref="init_wind1"/>
         <field field_ref="init_wind2"/>
         <field field_ref="init_wind3"/>

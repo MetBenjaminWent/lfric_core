@@ -50,7 +50,6 @@ program gravity_wave
   use io_mod,                         only : output_nodal, &
                                              output_xios_nodal, &
                                              xios_domain_init
-  use timestepping_config_mod,        only : dt
 
   use xios
   use mpi
@@ -139,12 +138,12 @@ program gravity_wave
   ! IO init
   !-----------------------------------------------------------------------------
 
-  ! If using XIOS for diagnostic output or checkpointing, then set up XIOS domain and context
-  if ( (write_xios_output) .or. (restart%use_xios()) ) then
+  ! If xios output then set up XIOS domain and context
+  if (write_xios_output) then
 
     dtime = int(dt)
 
-    call xios_domain_init(xios_ctx, comm, dtime, restart, mesh_id, chi, vm, &
+    call xios_domain_init(xios_ctx, comm, dtime, mesh_id, chi, vm, &
                           local_rank, total_ranks)
 
   end if
@@ -196,8 +195,8 @@ program gravity_wave
   !-----------------------------------------------------------------------------
   do timestep = restart%ts_start(),restart%ts_end()
 
-    ! Update XIOS calendar if we are using it for diagnostic output or checkpoint
-    if ( (write_xios_output) .or. (restart%use_xios()) ) then
+    ! Update XIOS calendar
+    if (write_xios_output) then
       call log_event( "Gravity Wave: Updating XIOS timestep", LOG_LEVEL_INFO )
       call xios_update_calendar(timestep)
     end if
@@ -237,20 +236,6 @@ program gravity_wave
     end if
 
   end do
-
-  ! Write checkpoint/restart files if required
-  if( restart%checkpoint() ) then 
-    write(log_scratch_space,'(A,I6)') "Checkpointing pressure at timestep ", restart%ts_end()
-    call log_event(log_scratch_space,LOG_LEVEL_INFO)
-    call pressure%write_checkpoint('checkpoint_pressure',  trim(restart%endfname("pressure")))
-    write(log_scratch_space,'(A,I6)') "Checkpointing wind at timestep ", restart%ts_end()
-    call log_event(log_scratch_space,LOG_LEVEL_INFO)
-    call wind%write_checkpoint('checkpoint_wind',  trim(restart%endfname("wind")))
-    write(log_scratch_space,'(A,I6)') "Checkpointing buoyancy at timestep ", restart%ts_end()
-    call log_event(log_scratch_space,LOG_LEVEL_INFO)
-    call buoyancy%write_checkpoint('checkpoint_buoyancy',  trim(restart%endfname("buoyancy")))
-  end if
-
   !-----------------------------------------------------------------------------
   ! Model finalise
   !-----------------------------------------------------------------------------
@@ -268,8 +253,8 @@ program gravity_wave
   ! Driver layer finalise
   !-----------------------------------------------------------------------------
 
-  ! Finalise XIOS context if we used it for diagnostic output or checkpointing
-  if ( (write_xios_output) .or. (restart%use_xios()) ) then
+  ! Finalise XIOS context if we used it for IO
+  if (write_xios_output) then
     call xios_context_finalize()
   end if
 

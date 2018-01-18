@@ -54,8 +54,6 @@ module field_mod
     ! IO interface procedure pointers
 
     procedure(write_interface), nopass, pointer  :: write_field_method => null()
-    procedure(checkpoint_interface), nopass, pointer  :: checkpoint_method => null()
-    procedure(restart_interface), nopass, pointer  :: restart_method => null()
 
   contains
 
@@ -67,28 +65,21 @@ module field_mod
     procedure, public :: log_dofs
     procedure, public :: log_minmax
 
-    !> Function returns the enumerated integer for the functions_space on which
+    !> function returns the enumerated integer for the functions_space on which
     !! the field lives
     procedure, public :: which_function_space
 
-    !> Function returns the enumerated integer for the output function space
+    !> function returns the enumerated integer for the output function space
     procedure, public :: which_output_function_space
 
-    !> Function returns a pointer to the function space on which
+    !> function returns a pointer to the function space on which
     !! the field lives
     procedure, public :: get_function_space
 
     !> Setter for the field write method 
     procedure, public :: set_write_field_behaviour
-
     !> Getter for the field write method
     procedure         :: get_write_field_behaviour
-
-    !> Setter for the checkpoint method 
-    procedure, public :: set_checkpoint_behaviour
-
-    !> Setter for the restart method 
-    procedure, public :: set_restart_behaviour
 
     !> Routine to write field
     procedure         :: write_field
@@ -210,25 +201,9 @@ module field_mod
       type(field_proxy_type ), intent(in)  :: field_proxy
     end subroutine write_interface
 
-    subroutine checkpoint_interface(field_name, file_name, field_proxy)
-      import r_def, field_proxy_type
-      character(len=*),        intent(in)  :: field_name
-      character(len=*),        intent(in)  :: file_name              
-      type(field_proxy_type ), intent(in)  :: field_proxy
-    end subroutine checkpoint_interface
-
-    subroutine restart_interface(field_name, file_name, field_proxy)
-      import r_def, field_proxy_type
-      character(len=*),        intent(in)  :: field_name
-      character(len=*),        intent(in)  :: file_name              
-      type(field_proxy_type ), intent(inout)  :: field_proxy
-    end subroutine restart_interface
-
   end interface
 
  public :: write_interface
- public :: checkpoint_interface
- public :: restart_interface
 
 contains
 
@@ -374,8 +349,6 @@ contains
     dest%vspace => source%vspace
     dest%ospace = source%ospace
     dest%write_field_method => source%write_field_method
-    dest%checkpoint_method => source%checkpoint_method
-    dest%restart_method => source%restart_method
 
     allocate(global_dof_id(source%vspace%get_last_dof_halo()))
     call source%vspace%get_global_dof_id(global_dof_id)
@@ -444,25 +417,6 @@ contains
 
     return
   end subroutine get_write_field_behaviour
-
-  !> Setter for checkpoint behaviour
-  !>
-  !> @param [in] pointer to procedure implementing checkpoint method 
-  subroutine set_checkpoint_behaviour(self, checkpoint_behaviour)
-    class(field_type), intent(inout)                  :: self
-    procedure(checkpoint_interface), pointer, intent(in)   :: checkpoint_behaviour
-    self%checkpoint_method => checkpoint_behaviour
-  end subroutine set_checkpoint_behaviour
-
-  !> Setter for restart behaviour
-  !>
-  !> @param [in] pointer to procedure implementing restart method 
-  subroutine set_restart_behaviour(self, restart_behaviour)
-    class(field_type), intent(inout)                  :: self
-    procedure(restart_interface), pointer, intent(in)   :: restart_behaviour
-    self%restart_method => restart_behaviour
-  end subroutine set_restart_behaviour
-
 
   !---------------------------------------------------------------------------
   ! Contained functions/subroutines
@@ -652,63 +606,52 @@ contains
 
   !> Reads a restart file into the field
   !>
-  subroutine read_restart( self, field_name, file_name)
-    use log_mod,         only : log_event, &
-                                LOG_LEVEL_ERROR
+  subroutine read_restart( self, file_name)
+    use field_io_ncdf_mod,    only : field_io_ncdf_type
 
     implicit none
 
     class( field_type ),  target, intent( inout ) :: self
-    character(len=*),     intent(in)              :: field_name
-    character(len=*),     intent(in)              :: file_name
+    character(len=*),     intent(IN)              :: file_name
 
+    type(field_io_ncdf_type), allocatable :: ncdf_file
 
-    type( field_proxy_type )                      :: tmp_proxy
+    allocate(ncdf_file)
 
+    call ncdf_file%file_open( file_name )
 
-    if (associated(self%restart_method)) then
+    call ncdf_file%read_field_data ( self % data(:) )
 
-      tmp_proxy = self%get_proxy()
+    call ncdf_file%file_close()
 
-      call self%restart_method(trim(field_name), trim(file_name), tmp_proxy)
-
-      ! Set halos dirty here as for parallel read we only read in data for owned
-      ! dofs and the halos will not be set
-
-      self%halo_dirty(:) = 1
-
-    else
-
-      call log_event( 'Error trying to restart field '// trim(field_name) // &
-                      ', restart_method not set up', LOG_LEVEL_ERROR )
-    end if
+    deallocate(ncdf_file)
 
   end subroutine read_restart
 
-  !> Writes a checkpoint file
+  !> Writes a checkpoint netCDF file
   !>
-  subroutine write_checkpoint( self, field_name, file_name )
-    use log_mod,         only : log_event, &
-                                LOG_LEVEL_ERROR
-
+  subroutine write_checkpoint( self, file_name )
+    use field_io_ncdf_mod,    only : field_io_ncdf_type
 
     implicit none
 
     class( field_type ),  target, intent( inout ) :: self
-    character(len=*),     intent(in)              :: field_name
-    character(len=*),     intent(in)              :: file_name
+    character(len=*),     intent(IN)              :: file_name
 
-    if (associated(self%checkpoint_method)) then
+    type(field_io_ncdf_type), allocatable :: ncdf_file
 
-      call self%checkpoint_method(trim(field_name), trim(file_name), self%get_proxy())
+    allocate(ncdf_file)
 
-    else
+    call ncdf_file%file_new( file_name )
 
-      call log_event( 'Error trying to checkpoint field '// trim(field_name) // &
-                      ', checkpoint_method not set up', LOG_LEVEL_ERROR )
-    end if
+    call ncdf_file%write_field_data ( self % data(:) )
+
+    call ncdf_file%file_close()
+
+    deallocate(ncdf_file)
 
   end subroutine write_checkpoint
+
 
 
   !! Perform a blocking halo exchange operation on the field

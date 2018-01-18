@@ -31,8 +31,6 @@ program io_miniapp
                                              LOG_LEVEL_DEBUG,   &
                                              LOG_LEVEL_TRACE,   &
                                              log_scratch_space
-  use restart_config_mod,             only : restart_filename => filename
-  use restart_control_mod,            only : restart_type
   use derived_config_mod,             only : set_derived_config
   use io_mod,                         only : output_xios_nodal, &
                                              xios_domain_init
@@ -55,7 +53,6 @@ program io_miniapp
   character(len=*), parameter   :: xios_id   = "lfric_client"
   character(len=*), parameter   :: xios_ctx  = "io_mini"
 
-  type(restart_type) :: restart
 
   integer(i_def)     :: mesh_id, twod_mesh_id
 
@@ -100,7 +97,6 @@ program io_miniapp
   call set_derived_config( .true. )
   deallocate( filename )
 
-  restart = restart_type( restart_filename, local_rank, total_ranks )
 
   !-----------------------------------------------------------------------------
   ! Top-level init
@@ -130,7 +126,7 @@ program io_miniapp
 
   dtime = int(dt)
 
-  call xios_domain_init(xios_ctx, comm, dtime, restart, mesh_id, chi, vm, local_rank, total_ranks)
+  call xios_domain_init(xios_ctx, comm, dtime, mesh_id, chi, vm, local_rank, total_ranks)
 
   !-----------------------------------------------------------------------------
   ! Model init

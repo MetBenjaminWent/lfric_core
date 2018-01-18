@@ -18,11 +18,6 @@
       <domain id="node" name="Mesh2d_node" nvertex="1"/>
       <domain id="face_half_levels" name="Mesh2d_half_levels" nvertex="4"/>
       <domain id="face_full_levels" name="Mesh2d_full_levels" nvertex="4"/>
-      <domain id="restart_100" name="restart_100" nvertex="1"/>
-      <domain id="restart_101" name="restart_101" nvertex="1"/>
-      <domain id="restart_102" name="restart_102" nvertex="1"/>
-      <domain id="restart_103" name="restart_103" nvertex="1"/>
-      <domain id="restart_104" name="restart_104" nvertex="1"/>
    </domain_definition>
    
    <grid_definition>
@@ -41,23 +36,8 @@
    </grid_definition>
 
    <field_definition prec="8" >
-   
-     <!-- Checkpoint group -->
-     <field_group id="checkpoint_fields" freq_op="1ts" operation="once"  enabled=".FALSE." >
-       <field id="checkpoint_theta" name="theta" long_name="air_potential_temperature" standard_name="air_potential_temperature" unit="K" domain_ref="restart_104" />  
-       <field id="checkpoint_rho" name="rho" long_name="air_density" standard_name="air_density" unit="kg m-3" domain_ref="restart_103" />
-       <field id="checkpoint_exner" name="exner" long_name="exner_pressure" unit="1" domain_ref="restart_103" />
-       <field id="checkpoint_u" name="u" long_name="U" unit="m s-1" domain_ref="restart_102" />
-       <field id="checkpoint_xi" name="xi" long_name="Xi" unit="s-1" domain_ref="restart_101" />
-       <field id="checkpoint_m_v" name="m_v" long_name="m_v" unit="1" domain_ref="restart_104" />
-       <field id="checkpoint_m_c" name="m_c" long_name="m_c" unit="1" domain_ref="restart_104" />
-       <field id="checkpoint_m_r" name="m_r" long_name="m_r" unit="1" domain_ref="restart_104" />
-       <field id="checkpoint_m_nc" name="m_nc" long_name="m_nc" unit="1" domain_ref="restart_104" />
-       <field id="checkpoint_m_nr" name="m_nr" long_name="m_nr"  unit="1" domain_ref="restart_104" />   
-     </field_group>
-     
      <!-- Main diagnostic group -->
-     <field_group id="diagnostic_fields" freq_op="1ts" operation="instant" enabled=".TRUE." >
+     <field_group freq_op="1ts" enabled=".TRUE." operation="instant" >
        <field id="theta" name="theta" long_name="air_potential_temperature" standard_name="air_potential_temperature" unit="K" grid_ref="full_level_face_grid" />   
        <field id="m_v" name="m_v" long_name="m_v" unit="1" grid_ref="full_level_face_grid" />
        <field id="m_c" name="m_c" long_name="m_c" unit="1" grid_ref="full_level_face_grid" />
@@ -75,7 +55,7 @@
        <field id="exner" name="exner" long_name="exner_pressure" unit="1" grid_ref="half_level_face_grid" />
      </field_group>
       <!-- Initial conditions group -->
-     <field_group id="initial_fields" freq_op="1ts" operation="once" enabled=".TRUE." >
+     <field_group freq_op="1ts" enabled=".TRUE." operation="once" >
        <field id="init_theta" name="theta" long_name="air_potential_temperature" standard_name="air_potential_temperature" unit="K" grid_ref="full_level_face_grid" />
        <field id="init_m_v" name="m_v" long_name="m_v" unit="1" grid_ref="full_level_face_grid" />
        <field id="init_m_c" name="m_c" long_name="m_c" unit="1" grid_ref="full_level_face_grid" />
@@ -99,40 +79,11 @@
    <file_definition 
       type="one_file" 
       par_access="collective"
-      time_counter="none">
-      
-      <!-- Checkpoint/ Restart group -->
-      
-      <!-- File definition for checkpoint write -->
-      <file id="lfric_checkpoint" name="lfric_checkpoint" output_freq="1ts" convention="CF" enabled=".FALSE.">
-        <field field_ref="checkpoint_theta"/>
-        <field field_ref="checkpoint_exner"/>
-        <field field_ref="checkpoint_rho"/>
-        <field field_ref="checkpoint_u"/>
-        <field field_ref="checkpoint_xi"/>
-        <field field_ref="checkpoint_m_v"/>
-        <field field_ref="checkpoint_m_c"/>
-        <field field_ref="checkpoint_m_r"/>
-        <field field_ref="checkpoint_m_nc"/>
-        <field field_ref="checkpoint_m_nr"/>
-      </file> 
-      
-       <!-- file definition for restart read -->
-      <file id="lfric_restart" name="lfric_checkpoint" mode="read" output_freq="1ts" cyclic="true" enabled=".FALSE.">
-       <field id="restart_theta" name="theta" long_name="air_potential_temperature" standard_name="air_potential_temperature" unit="K" operation="instant" domain_ref="restart_104" />  
-       <field id="restart_exner" name="exner" long_name="exner_pressure" unit="1" operation="instant" domain_ref="restart_103" />
-       <field id="restart_rho" name="rho" long_name="air_density" standard_name="air_density" unit="kg m-3" operation="instant" domain_ref="restart_103" />
-       <field id="restart_u" name="u" long_name="U" unit="m s-1" operation="instant" domain_ref="restart_102" />
-       <field id="restart_xi" name="xi" long_name="Xi" unit="s-1" operation="instant" domain_ref="restart_101" />
-       <field id="restart_m_v" name="m_v" long_name="m_v" unit="1" operation="instant" domain_ref="restart_104" />
-       <field id="restart_m_c" name="m_c" long_name="m_c" unit="1" operation="instant" domain_ref="restart_104" />
-       <field id="restart_m_r" name="m_r" long_name="m_r" unit="1" operation="instant" domain_ref="restart_104" />
-       <field id="restart_m_nc" name="m_nc" long_name="m_nc" unit="1" operation="instant" domain_ref="restart_104" />
-       <field id="restart_m_nr" name="m_nr" long_name="m_nr"  unit="1" operation="instant" domain_ref="restart_104" />   
-      </file>
+      time_counter="none"
+      enabled=".TRUE.">
       
       
-      <file id="lfric_diag" name="lfric_diag" output_freq="10ts" convention="UGRID" enabled=".TRUE.">
+      <file id="lfric_diag" name="lfric_diag" output_freq="10ts" convention="UGRID">
         <field field_ref="theta"/>
         <field field_ref="m_v"/>
         <field field_ref="m_c"/>
@@ -150,7 +101,7 @@
         <field field_ref="exner"/>
       </file> 
       
-      <file id="lfric_initial" name="lfric_initial" output_freq="1ts" convention="UGRID" enabled=".TRUE.">
+      <file id="lfric_initial" name="lfric_initial" output_freq="1ts" convention="UGRID">
         <field field_ref="init_theta"/>
         <field field_ref="init_m_v"/>
         <field field_ref="init_m_c"/>

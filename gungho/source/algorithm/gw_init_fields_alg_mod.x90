@@ -74,7 +74,7 @@ contains
 
     !=== Initialise global prognostic fields ==================================!
 
-    if (.not.restart%read_checkpoint()) then           ! No check point to start from
+    if (.not.restart%read_file()) then           ! No check point to start from
 
       call log_event( "Gravity waves: Initialising prognostic fields", LOG_LEVEL_INFO )
 
@@ -93,16 +93,25 @@ contains
 
     else                                   ! Recorded check point to start from
 
-      call log_event("Reading checkpoint file to restart pressure",LOG_LEVEL_INFO)
-      call pressure%read_restart("restart_pressure", trim(restart%startfname("pressure")))
+      write(log_scratch_space,'(A,A)') "Reading file:", &
+            trim(restart%startfname("pressure"))
+      call log_event(log_scratch_space,LOG_LEVEL_INFO)
 
-      call log_event("Reading checkpoint file to restart wind",LOG_LEVEL_INFO)
-      call wind%read_restart("restart_wind", trim(restart%startfname("wind")))
+      call pressure%read_restart(trim(restart%startfname("pressure")))
 
-      call log_event("Reading checkpoint file to restart buoyancy",LOG_LEVEL_INFO)
-      call buoyancy%read_restart("restart_buoyancy", trim(restart%startfname("buoyancy")))
+      write(log_scratch_space,'(A,A)') "Reading file:", &
+            trim(restart%startfname("wind"))
+      call log_event(log_scratch_space,LOG_LEVEL_INFO)
 
-      call log_event( "Gravity wave: Read prognostic fields from checkpoint files", LOG_LEVEL_INFO )
+      call wind%read_restart(trim(restart%startfname("wind")))
+
+      write(log_scratch_space,'(A,A)') "Reading file:", &
+            trim(restart%startfname("buoyancy"))
+      call log_event(log_scratch_space,LOG_LEVEL_INFO)
+
+      call buoyancy%read_restart(trim(restart%startfname("buoyancy")))
+
+      call log_event( "Gravity wave: Read prognostic fields from files", LOG_LEVEL_INFO )
 
     end if
 

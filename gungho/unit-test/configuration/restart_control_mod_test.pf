@@ -97,8 +97,8 @@ contains
     @assertEqual(restart%ts_start(),ts_start)
     @assertEqual(restart%ts_end(),ts_end)
     @assertEqual(restart%get_checkpoint_frequency(),df)
-    @assertTrue(restart%read_checkpoint().eqv.ck_r)
-    @assertTrue(restart%checkpoint().eqv.ck_w)
+    @assertTrue(restart%read_file().eqv.ck_r)
+    @assertTrue(restart%write_file().eqv.ck_w)
 
     write(tname,'(A,A,A,A,I6.6)') "hswarez_100day","_", &
          "rho","_T",ts_start-1
