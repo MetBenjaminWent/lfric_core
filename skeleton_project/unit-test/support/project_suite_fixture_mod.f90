@@ -6,9 +6,10 @@
 
 !> Set up and tear down for whole-suite fixtures.
 !>
-module skeleton_suite_fixture_mod
+module project_suite_fixture_mod
 
   use ESMF
+  use constants_mod, only: str_def, i_def
 
   implicit none
   private
@@ -35,10 +36,19 @@ contains
 
     implicit none
 
-    integer :: rc
+    integer(i_def)     :: rc
+    character(str_def) :: project_name
+
+    CALL get_environment_variable("PROJECT_NAME", project_name, status=rc)
+
+    if (rc <= 0) then
+      project_name = trim(project_name)//'-'
+    else
+      project_name = ''
+    end if
 
     call ESMF_Initialize( vm=vm, &
-                          defaultlogfilename="dynamo.Log", &
+                          defaultlogfilename=trim(project_name)//"pfunit.log", &
                           logkindflag=ESMF_LOGKIND_MULTI, &
                           rc=rc )
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize( endflag=ESMF_END_ABORT )
@@ -52,7 +62,7 @@ contains
 
     implicit none
 
-    integer :: rc
+    integer(i_def) :: rc
 
     ! MPI must be kept open so that subsequent finalisation can close it.
     !
@@ -60,4 +70,4 @@ contains
 
   end subroutine tear_down_suite
 
-end module skeleton_suite_fixture_mod
+end module project_suite_fixture_mod

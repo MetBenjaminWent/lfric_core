@@ -4,12 +4,12 @@
 ! under which the code may be used.
 !-----------------------------------------------------------------------------
 
-!> @brief init functionality for the miniapp skeleton
+!> @brief Initialisation functionality for the skeleton miniapp
 
 !> @details Handles init of prognostic fields and through the call to 
-!>          runtime_csontants the coordinate fields and fem operators
+!>          runtime_contants the coordinate fields and fem operators
 
-module init_miniapp_skeleton_mod
+module init_skeleton_mod
 
   use constants_mod,                  only : i_def
   use field_mod,                      only : field_type, write_interface
@@ -27,7 +27,7 @@ module init_miniapp_skeleton_mod
 
   contains
 
-  subroutine init_miniapp_skeleton(mesh_id, chi, field_1)
+  subroutine init_skeleton(mesh_id, chi, field_1)
 
     integer(i_def), intent(in)               :: mesh_id
     ! Prognostic fields
@@ -37,7 +37,7 @@ module init_miniapp_skeleton_mod
 
     procedure(write_interface), pointer      :: tmp_ptr
 
-    call log_event( 'miniapp skeleton: initialisation...', LOG_LEVEL_INFO )
+    call log_event( 'skeleton: Initialising miniapp ...', LOG_LEVEL_INFO )
 
 
     ! Create prognostic fields
@@ -60,8 +60,8 @@ module init_miniapp_skeleton_mod
     ! matrix diagonal fields and the geopotential field
     call create_runtime_constants(mesh_id, chi)
 
-    call log_event( 'miniapp skeleton initialised', LOG_LEVEL_INFO )
+    call log_event( 'skeleton: Miniapp initialised', LOG_LEVEL_INFO )
 
-  end subroutine init_miniapp_skeleton
+  end subroutine init_skeleton
 
-end module init_miniapp_skeleton_mod
+end module init_skeleton_mod

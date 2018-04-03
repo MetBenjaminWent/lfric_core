@@ -48,7 +48,7 @@ $(OPTIMISATION_PATH)/global.py:
 
 else
 $(WORKING_DIR)/%_psy.f90: $(WORKING_DIR)/%.x90 | $(KERNEL_SOURCE)
-	$(call MESSAGE,Full psyclone,$<)
+	$(call MESSAGE,Full psyclone,$(subst $(PWD)/,,$<))
 	$(Q)psyclone -api dynamo0.3 -l -d $(WORKING_DIR) \
 	             -opsy $@ -oalg $(WORKING_DIR)/$*.f90 $<
 endif

@@ -5,7 +5,7 @@
 !-----------------------------------------------------------------------------
 
 !>@brief Barebones algorithm to help the development of miniapps
-module miniapp_skeleton_alg_mod
+module skeleton_alg_mod
 
   use constants_mod,                  only: i_def,r_def
   use log_mod,                        only: log_event,         &
@@ -22,13 +22,13 @@ module miniapp_skeleton_alg_mod
 
   private
 
-  public :: miniapp_skeleton_alg
+  public :: skeleton_alg
 
 contains
 
   !> @details An algorithm for developing miniapps
   !> @param[inout] field_1  A prognostic field object
-  subroutine miniapp_skeleton_alg(field_1)
+  subroutine skeleton_alg(field_1)
 
     implicit none
 
@@ -42,7 +42,7 @@ contains
     integer(i_def)                      :: mesh_id
     type( operator_type ), pointer      :: divergence => null()
     
-    call log_event( "miniapp skeleton: running algorithm", LOG_LEVEL_INFO )
+    call log_event( "skeleton: Running algorithm", LOG_LEVEL_INFO )
 
     ! Create a new field on the W2 function space
     mesh_id = field_1%get_mesh_id()
@@ -60,8 +60,8 @@ contains
     ! printing the min/max values in field_1
     call field_1%log_minmax(LOG_LEVEL_INFO,'field_1')
   
-    call log_event( "miniapp skeleton: finished algorithm", LOG_LEVEL_INFO )
+    call log_event( "skeleton: finished algorithm", LOG_LEVEL_INFO )
 
-  end subroutine miniapp_skeleton_alg
+  end subroutine skeleton_alg
 
-end module miniapp_skeleton_alg_mod
+end module skeleton_alg_mod

@@ -7,19 +7,19 @@
 !>
 !> This is a temporary solution until we have a proper driver layer.
 !>
-module skeleton_miniapp_driver_mod
+module skeleton_driver_mod
 
   use constants_mod,                  only : i_def
   use cli_mod,                        only : get_initial_filename
-  use miniapp_skeleton_mod,           only : load_configuration
+  use skeleton_mod,                   only : load_configuration
   use init_mesh_mod,                  only : init_mesh
   use init_fem_mod,                   only : init_fem
-  use init_miniapp_skeleton_mod,      only : init_miniapp_skeleton
+  use init_skeleton_mod,              only : init_skeleton
   use ESMF
   use global_mesh_collection_mod,     only : global_mesh_collection, &
                                              global_mesh_collection_type
   use field_mod,                      only : field_type
-  use miniapp_skeleton_alg_mod,       only : miniapp_skeleton_alg
+  use skeleton_alg_mod,               only : skeleton_alg
   use derived_config_mod,             only : set_derived_config
   use log_mod,                        only : log_event,         &
                                              log_set_level,     &
@@ -66,7 +66,7 @@ contains
     character(:), intent(in), allocatable :: filename
 
     character(len=*), parameter   :: xios_id   = "lfric_client"
-    character(len=*), parameter   :: xios_ctx  = "skeleton_mini"
+    character(len=*), parameter   :: xios_ctx  = "skeleton"
 
     type(ESMF_VM) :: vm
 
@@ -74,7 +74,7 @@ contains
     integer(i_def) :: total_ranks, local_rank
     integer(i_def) :: petCount, localPET, ierr
     integer(i_def) :: comm = -999
-    integer(i_def) :: timestep, ts_init, dtime
+    integer(i_def) :: dtime
 
     ! Initialise MPI
 
@@ -87,7 +87,7 @@ contains
     ! Initialise ESMF using mpi communicator initialised by XIOS
     ! and get the rank information from the virtual machine
     call ESMF_Initialize(vm=vm, &
-                        defaultlogfilename="miniapp_skeleton.Log", &
+                        defaultlogfilename="skeleton.Log", &
                         logkindflag=ESMF_LOGKIND_MULTI, &
                         mpiCommunicator=comm, &
                         rc=rc)
@@ -105,8 +105,7 @@ contains
 
     ! Currently log_event can only use ESMF so it cannot be used before ESMF
     ! is initialised.
-    call log_event( 'skeleton miniapp running...', LOG_LEVEL_INFO )
-
+    call log_event( 'skeleton: Running miniapp ...', LOG_LEVEL_INFO )
 
     call load_configuration( filename )
     call set_derived_config( .true. )
@@ -162,7 +161,7 @@ contains
 
 
     ! Create and initialise prognostic fields
-    call init_miniapp_skeleton(mesh_id, chi, field_1)
+    call init_skeleton(mesh_id, chi, field_1)
 
   end subroutine initialise
 
@@ -174,11 +173,11 @@ contains
     implicit none
 
     ! Call an algorithm
-    call miniapp_skeleton_alg(field_1)
+    call skeleton_alg(field_1)
   
 
     ! Write out output file
-    call log_event("skeleton miniapp: writing diagnostic output", LOG_LEVEL_INFO)
+    call log_event("skeleton: Writing diagnostic output", LOG_LEVEL_INFO)
 
     ! Original nodal output
     if ( write_nodal_output)  then
@@ -207,9 +206,9 @@ contains
     !-----------------------------------------------------------------------------
 
     ! Write checksums to file
-    call checksum_alg('miniapp_skeleton', field_1, 'skeleton_field_1')
+    call checksum_alg('skeleton', field_1, 'skeleton_field_1')
 
-    call log_event( 'Skeleton miniapp completed', LOG_LEVEL_INFO )
+    call log_event( 'skeleton: Miniapp completed', LOG_LEVEL_INFO )
 
     !-------------------------------------------------------------------------
     ! Driver layer finalise
@@ -231,4 +230,4 @@ contains
 
   end subroutine finalise
 
-end module skeleton_miniapp_driver_mod
+end module skeleton_driver_mod

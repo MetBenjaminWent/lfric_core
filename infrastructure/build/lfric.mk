@@ -51,6 +51,7 @@ endif
 # Default variables...
 #
 export WORKING_DIR ?= working
+export PWD ?= $(shell pwd)
 
 # Make the build system available...
 #

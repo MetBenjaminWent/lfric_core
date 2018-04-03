@@ -1,0 +1,20 @@
+#!jinja2
+{%- set projectName = 'skeleton' %}
+{%- set projectDir  = 'skeleton_project' %}
+{%- set miniappFlag = False %}
+
+{%- set application_configurations = { 'skeleton' : ['default'] } %}
+
+{%- set canned_configurations  = ['skeleton'] %}
+
+{%- set groups = {
+'developer': [
+    'canned_test(skeleton)',
+    'run_application( skeleton, default, resolutions=[("C24",)] )',
+    'check_compilers( skeleton, default, fast-debug, resolutions=[("C12",)])',
+    'godliness',
+    'cleanliness'],
+'nightly': [
+    'cleanliness'] } %}
+
+#########################################################################################

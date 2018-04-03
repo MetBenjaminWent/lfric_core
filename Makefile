@@ -15,7 +15,8 @@
 # Operate only on this list of sub-projects. May be overridden from the
 # terminal.
 #
-OPERATE_ON ?= infrastructure mesh_tools gungho lfric_atm miniapps/gravity_wave
+OPERATE_ON ?= infrastructure mesh_tools gungho lfric_atm skeleton_project \
+              miniapps/gravity_wave
 
 ##############################################################################
 # Perform default action on each sub-project in OPERATE_ON list.

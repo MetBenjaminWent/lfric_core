@@ -4,16 +4,16 @@
 ! under which the code may be used.
 !-----------------------------------------------------------------------------
 
-!> @page miniapp skeleton Program
+!> @page Miniapp skeleton program
 
 !> @brief Main program used to illustrate how to write LFRic miniapps.
 
 !> @details Calls init, run and finalise routines from a driver module
 
-program miniapp_skeleton
+program skeleton
 
-  use cli_mod,                     only : get_initial_filename
-  use skeleton_miniapp_driver_mod, only : initialise, run, finalise
+  use cli_mod,             only : get_initial_filename
+  use skeleton_driver_mod, only : initialise, run, finalise
 
   implicit none
 
@@ -27,4 +27,4 @@ program miniapp_skeleton
 
   call finalise()
 
-end program miniapp_skeleton
+end program skeleton

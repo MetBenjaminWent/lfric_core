@@ -4,12 +4,12 @@
 ! under which the code may be used.
 !-----------------------------------------------------------------------------
 
-!> Miniapp skeleton program support functions.
+!> Skeleton miniapp program support functions.
 !>
 !> Originally these were "block" constructs within the program but neither
 !> GNU or Intel Fortran where properly able to cope with that.
 !>
-module miniapp_skeleton_mod
+module skeleton_mod
 
   use log_mod, only : log_event,         &
                       log_scratch_space, &
@@ -35,14 +35,16 @@ contains
 
     character(*), intent(in) :: filename
 
-    character(*), parameter :: &
-                            required_configuration(7) = ['finite_element      ', &
-                                                         'base_mesh           ', &
-                                                         'multigrid           ', &
-                                                         'planet              ', &
-                                                         'extrusion           ', &
-                                                         'output              ', &
-                                                         'domain_size         ']
+    character(*), parameter ::                          &
+        required_configuration(9) = [ 'base_mesh     ', &
+                                      'domain_size   ', &
+                                      'extrusion     ', &
+                                      'finite_element', &
+                                      'multigrid     ', &
+                                      'output        ', &
+                                      'partitioning  ', &
+                                      'planet        ', &
+                                      'restart       ']
 
     logical              :: okay
     logical, allocatable :: success_map(:)
@@ -68,4 +70,4 @@ contains
 
   end subroutine load_configuration
 
-end module miniapp_skeleton_mod
+end module skeleton_mod
