@@ -96,7 +96,7 @@ export F_MOD_DESTINATION_ARG OPENMP_ARG
 FFLAGS += $(FFLAGS_COMPILER)
 export FFLAGS
 
-# As both ESMF and XIOS are written in C++ we have to concern ourselves with
+# As XIOS is written in C++ we have to concern ourselves with
 # compilers for that as well.
 #
 # We assume GCC is in use unless the CXX environment variable is set.

@@ -22,7 +22,6 @@ module gungho_driver_mod
                                          hydbal_diagnostic_alg
   use ESMF
   use yaxt,                       only : xt_initialize, xt_finalize
-  use mpi_mod,                    only : store_comm
   use field_mod,                  only : field_type
   use formulation_config_mod,     only : transport_only, &
                                          use_moisture,   &
@@ -45,13 +44,13 @@ module gungho_driver_mod
   use log_mod,                    only : log_event,         &
                                          log_set_level,     &
                                          log_scratch_space, &
+                                         log_set_parallel_logging, &
                                          LOG_LEVEL_ERROR,   &
                                          LOG_LEVEL_INFO,    &
                                          LOG_LEVEL_DEBUG,   &
                                          LOG_LEVEL_TRACE
   use mesh_collection_mod,        only : mesh_collection
   use mod_wait
-  use mpi
   use minmax_tseries_mod,         only : minmax_tseries, &
                                          minmax_tseries_init, &
                                          minmax_tseries_final
@@ -83,7 +82,10 @@ module gungho_driver_mod
                                          transport_scheme_yz_bip_cosmic, &
                                          transport_scheme_horz_cosmic
   use xios
-  use count_mod,                  only: count_type, halo_calls
+  use count_mod,                  only : count_type, halo_calls
+  use mpi_mod,                    only : initialise_comm, store_comm, &
+                                         finalise_comm, &
+                                         get_comm_size, get_comm_rank
 
   implicit none
 
@@ -135,17 +137,18 @@ contains
 
     integer(i_def) :: rc
     integer(i_def) :: total_ranks, local_rank
-    integer(i_def) :: petCount, localPET, ierr
     integer(i_def) :: comm = -999
     integer(i_def) :: timestep, ts_init, dtime
 
-    ! Initialise MPI
-
-    call mpi_init(ierr)
+    ! Initialse mpi and create the default communicator: mpi_comm_world
+    call initialise_comm(comm)
 
     ! Initialise XIOS and get back the split mpi communicator
     call init_wait()
     call xios_initialize(xios_id, return_comm = comm)
+
+    ! Save lfric's part of the split communicator for later use
+    call store_comm(comm)
 
     ! Initialise YAXT
     call xt_initialize(comm)
@@ -157,20 +160,13 @@ contains
                         logkindflag=ESMF_LOGKIND_MULTI, &
                         mpiCommunicator=comm, &
                         rc=rc)
+    if(get_comm_size() > 1) call log_set_parallel_logging(.true.)
 
     if (rc /= ESMF_SUCCESS) call log_event( 'Failed to initialise ESMF.', &
                                             LOG_LEVEL_ERROR )
 
-    call ESMF_VMGet(vm, localPet=localPET, petCount=petCount, rc=rc)
-    if (rc /= ESMF_SUCCESS) &
-      call log_event( 'Failed to get the ESMF virtual machine.', &
-                      LOG_LEVEL_ERROR )
-
-    total_ranks = petCount
-    local_rank  = localPET
-
-    !Store the MPI communicator for later use
-    call store_comm(comm)
+    total_ranks = get_comm_size()
+    local_rank  = get_comm_rank()
 
     ! Currently log_event can only use ESMF so it cannot be used before ESMF
     ! is initialised.
@@ -225,10 +221,7 @@ contains
                              dtime,      &
                              restart,    &
                              mesh_id,    &
-                             chi,        &
-                             vm,         &
-                             local_rank, &
-                             total_ranks )
+                             chi)
 
     end if
 
@@ -586,8 +579,8 @@ contains
     ! Finalise YAXT
     call xt_finalize()
 
-    ! Finalise mpi
-    call mpi_finalize(ierr)
+    ! Finalise mpi and release the communicator
+    call finalise_comm()
 
   end subroutine finalise
 

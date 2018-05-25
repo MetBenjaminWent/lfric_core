@@ -12,7 +12,7 @@ module multiplicity_kernel_mod_test
   use mesh_collection_mod,           only : mesh_collection_type, &
                                             mesh_collection
   use yaxt,                          only : xt_initialize, xt_finalize
-  use mpi_mod,                       only : store_comm
+  use mpi_mod,                       only : store_comm, clear_comm
   use pFUnit_Mod
 
   implicit none 
@@ -65,6 +65,8 @@ contains
 
     ! Finalise YAXT
     call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
 
   end subroutine tearDown
 

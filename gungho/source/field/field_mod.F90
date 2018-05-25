@@ -824,16 +824,20 @@ contains
 
     class(field_proxy_type), intent(in) :: self
 
+    real(r_def) :: l_sum
     real(r_def) :: answer
 
-    integer(i_def) :: rc
+    integer(i_def) :: i
 
     if( self%vspace%is_comms_fs() ) then
 
-      call global_sum( self%data, &
-                       answer, &
-                       self%vspace%get_last_dof_owned(), &
-                       rc )
+      ! Generate local sum
+      l_sum = 0.0
+      do i = 1, self%vspace%get_last_dof_owned()
+        l_sum = l_sum + self%data(i)
+      end do
+
+      call global_sum( l_sum, answer )
     end if
   end function get_sum
 
@@ -846,16 +850,20 @@ contains
 
     class(field_proxy_type), intent(in) :: self
 
+    real(r_def) :: l_min
     real(r_def) :: answer
 
-    integer(i_def) :: rc
+    integer(i_def) :: i
 
     if( self%vspace%is_comms_fs() ) then
 
-      call global_min( self%data, &
-                       answer, &
-                       self%vspace%get_last_dof_owned(), &
-                       rc )
+      ! Generate local min
+      l_min = self%data(1)
+      do i = 2, self%vspace%get_last_dof_owned()
+        if( self%data(i) < l_min ) l_min = self%data(i)
+      end do
+
+      call global_min( l_min, answer )
     end if
 
   end function get_min
@@ -869,16 +877,20 @@ contains
 
     class(field_proxy_type), intent(in) :: self
 
+    real(r_def) :: l_max
     real(r_def) :: answer
 
-    integer(i_def) :: rc
+    integer(i_def) :: i
 
     if( self%vspace%is_comms_fs() ) then
 
-      call global_max( self%data, &
-                       answer, &
-                       self%vspace%get_last_dof_owned(), &
-                       rc )
+      ! Generate local max
+      l_max = self%data(1)
+      do i = 2, self%vspace%get_last_dof_owned()
+        if( self%data(i) > l_max ) l_max = self%data(i)
+      end do
+
+      call global_max( l_max, answer )
     end if
 
   end function get_max

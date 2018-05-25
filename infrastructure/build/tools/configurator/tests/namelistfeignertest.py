@@ -31,7 +31,7 @@ module empty_mod
 
   use constants_mod, only : i_native
   use log_mod,       only : log_scratch_space, log_event, LOG_LEVEL_ERROR
-  use ESMF,          only : ESMF_VM, ESMF_VMGetCurrent, ESMF_VMGet, ESMF_SUCCESS
+  use mpi_mod,       only : get_comm_rank
 
   implicit none
 
@@ -39,7 +39,6 @@ module empty_mod
   public :: 
 
   integer(i_native) :: local_rank = -1
-  type(ESMF_VM)     :: vm
   integer(i_native), parameter :: temporary_unit = 3
 
 contains
@@ -68,7 +67,7 @@ module simple_mod
 
   use constants_mod, only : i_def, i_native, l_def, r_double, str_def
   use log_mod,       only : log_scratch_space, log_event, LOG_LEVEL_ERROR
-  use ESMF,          only : ESMF_VM, ESMF_VMGetCurrent, ESMF_VMGet, ESMF_SUCCESS
+  use mpi_mod,       only : get_comm_rank
 
   implicit none
 
@@ -76,7 +75,6 @@ module simple_mod
   public :: feign_simple_config
 
   integer(i_native) :: local_rank = -1
-  type(ESMF_VM)     :: vm
   integer(i_native), parameter :: temporary_unit = 3
 
 contains
@@ -99,19 +97,7 @@ contains
     integer(i_native) :: condition
 
     if (local_rank == -1) then
-      call ESMF_VMGetCurrent( vm=vm, rc=condition )
-      if (condition /= ESMF_SUCCESS) then
-        write(log_scratch_space, "(A)") &
-            "Failed to get VM when trying to feign feign_simple_config"
-        call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-      end if
-
-      call ESMF_VMGet( vm, localPet=local_rank, rc=condition )
-      if (condition /= ESMF_SUCCESS) then
-        write(log_scratch_space, "(A)") &
-            "Failed to query VM when trying to feign feign_simple_config"
-        call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-      end if
+      local_rank = get_comm_rank()
     end if
 
     open( temporary_unit, status='scratch', action='readwrite', &
@@ -129,7 +115,7 @@ contains
     write( temporary_unit, '("/")' )
 
     rewind(temporary_unit)
-    call read_simple_namelist( temporary_unit, vm, local_rank )
+    call read_simple_namelist( temporary_unit, local_rank )
 
     close(temporary_unit, iostat=condition )
     if (condition /= 0) stop 'feign_simple_config: Unable to close temporary file'
@@ -168,7 +154,7 @@ module enumeration_mod
 
   use constants_mod, only : i_native
   use log_mod,       only : log_scratch_space, log_event, LOG_LEVEL_ERROR
-  use ESMF,          only : ESMF_VM, ESMF_VMGetCurrent, ESMF_VMGet, ESMF_SUCCESS
+  use mpi_mod,       only : get_comm_rank
 
   implicit none
 
@@ -176,7 +162,6 @@ module enumeration_mod
   public :: feign_enum_config
 
   integer(i_native) :: local_rank = -1
-  type(ESMF_VM)     :: vm
   integer(i_native), parameter :: temporary_unit = 3
 
 contains
@@ -195,19 +180,7 @@ contains
     integer(i_native) :: condition
 
     if (local_rank == -1) then
-      call ESMF_VMGetCurrent( vm=vm, rc=condition )
-      if (condition /= ESMF_SUCCESS) then
-        write(log_scratch_space, "(A)") &
-            "Failed to get VM when trying to feign feign_enum_config"
-        call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-      end if
-
-      call ESMF_VMGet( vm, localPet=local_rank, rc=condition )
-      if (condition /= ESMF_SUCCESS) then
-        write(log_scratch_space, "(A)") &
-            "Failed to query VM when trying to feign feign_enum_config"
-        call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-      end if
+      local_rank = get_comm_rank()
     end if
 
     open( temporary_unit, status='scratch', action='readwrite', &
@@ -222,7 +195,7 @@ contains
     write( temporary_unit, '("/")' )
 
     rewind(temporary_unit)
-    call read_enum_namelist( temporary_unit, vm, local_rank )
+    call read_enum_namelist( temporary_unit, local_rank )
 
     close(temporary_unit, iostat=condition )
     if (condition /= 0) stop 'feign_enum_config: Unable to close temporary file'
@@ -258,7 +231,7 @@ module computed_mod
 
   use constants_mod, only : i_def, i_native
   use log_mod,       only : log_scratch_space, log_event, LOG_LEVEL_ERROR
-  use ESMF,          only : ESMF_VM, ESMF_VMGetCurrent, ESMF_VMGet, ESMF_SUCCESS
+  use mpi_mod,       only : get_comm_rank
 
   implicit none
 
@@ -266,7 +239,6 @@ module computed_mod
   public :: feign_computed_config
 
   integer(i_native) :: local_rank = -1
-  type(ESMF_VM)     :: vm
   integer(i_native), parameter :: temporary_unit = 3
 
 contains
@@ -285,19 +257,7 @@ contains
     integer(i_native) :: condition
 
     if (local_rank == -1) then
-      call ESMF_VMGetCurrent( vm=vm, rc=condition )
-      if (condition /= ESMF_SUCCESS) then
-        write(log_scratch_space, "(A)") &
-            "Failed to get VM when trying to feign feign_computed_config"
-        call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-      end if
-
-      call ESMF_VMGet( vm, localPet=local_rank, rc=condition )
-      if (condition /= ESMF_SUCCESS) then
-        write(log_scratch_space, "(A)") &
-            "Failed to query VM when trying to feign feign_computed_config"
-        call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-      end if
+      local_rank = get_comm_rank()
     end if
 
     open( temporary_unit, status='scratch', action='readwrite', &
@@ -313,7 +273,7 @@ contains
     write( temporary_unit, '("/")' )
 
     rewind(temporary_unit)
-    call read_computed_namelist( temporary_unit, vm, local_rank )
+    call read_computed_namelist( temporary_unit, local_rank )
 
     close(temporary_unit, iostat=condition )
     if (condition /= 0) stop 'feign_computed_config: Unable to close temporary file'
@@ -351,7 +311,7 @@ module everything_mod
 
   use constants_mod, only : i_native, l_def, r_def, str_max_filename
   use log_mod,       only : log_scratch_space, log_event, LOG_LEVEL_ERROR
-  use ESMF,          only : ESMF_VM, ESMF_VMGetCurrent, ESMF_VMGet, ESMF_SUCCESS
+  use mpi_mod,       only : get_comm_rank
 
   implicit none
 
@@ -359,7 +319,6 @@ module everything_mod
   public :: feign_everything_config
 
   integer(i_native) :: local_rank = -1
-  type(ESMF_VM)     :: vm
   integer(i_native), parameter :: temporary_unit = 3
 
 contains
@@ -386,19 +345,7 @@ contains
     integer(i_native) :: condition
 
     if (local_rank == -1) then
-      call ESMF_VMGetCurrent( vm=vm, rc=condition )
-      if (condition /= ESMF_SUCCESS) then
-        write(log_scratch_space, "(A)") &
-            "Failed to get VM when trying to feign feign_everything_config"
-        call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-      end if
-
-      call ESMF_VMGet( vm, localPet=local_rank, rc=condition )
-      if (condition /= ESMF_SUCCESS) then
-        write(log_scratch_space, "(A)") &
-            "Failed to query VM when trying to feign feign_everything_config"
-        call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-      end if
+      local_rank = get_comm_rank()
     end if
 
     open( temporary_unit, status='scratch', action='readwrite', &
@@ -417,7 +364,7 @@ contains
     write( temporary_unit, '("/")' )
 
     rewind(temporary_unit)
-    call read_everything_namelist( temporary_unit, vm, local_rank )
+    call read_everything_namelist( temporary_unit, local_rank )
 
     close(temporary_unit, iostat=condition )
     if (condition /= 0) stop 'feign_everything_config: Unable to close temporary file'
@@ -460,7 +407,7 @@ module multifile_mod
 
   use constants_mod, only : i_native, l_def, r_def, str_max_filename
   use log_mod,       only : log_scratch_space, log_event, LOG_LEVEL_ERROR
-  use ESMF,          only : ESMF_VM, ESMF_VMGetCurrent, ESMF_VMGet, ESMF_SUCCESS
+  use mpi_mod,       only : get_comm_rank
 
   implicit none
 
@@ -469,7 +416,6 @@ module multifile_mod
             feign_second_config
 
   integer(i_native) :: local_rank = -1
-  type(ESMF_VM)     :: vm
   integer(i_native), parameter :: temporary_unit = 3
 
 contains
@@ -492,19 +438,7 @@ contains
     integer(i_native) :: condition
 
     if (local_rank == -1) then
-      call ESMF_VMGetCurrent( vm=vm, rc=condition )
-      if (condition /= ESMF_SUCCESS) then
-        write(log_scratch_space, "(A)") &
-            "Failed to get VM when trying to feign feign_first_config"
-        call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-      end if
-
-      call ESMF_VMGet( vm, localPet=local_rank, rc=condition )
-      if (condition /= ESMF_SUCCESS) then
-        write(log_scratch_space, "(A)") &
-            "Failed to query VM when trying to feign feign_first_config"
-        call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-      end if
+      local_rank = get_comm_rank()
     end if
 
     open( temporary_unit, status='scratch', action='readwrite', &
@@ -521,7 +455,7 @@ contains
     write( temporary_unit, '("/")' )
 
     rewind(temporary_unit)
-    call read_first_namelist( temporary_unit, vm, local_rank )
+    call read_first_namelist( temporary_unit, local_rank )
 
     close(temporary_unit, iostat=condition )
     if (condition /= 0) stop 'feign_first_config: Unable to close temporary file'
@@ -546,19 +480,7 @@ contains
     integer(i_native) :: condition
 
     if (local_rank == -1) then
-      call ESMF_VMGetCurrent( vm=vm, rc=condition )
-      if (condition /= ESMF_SUCCESS) then
-        write(log_scratch_space, "(A)") &
-            "Failed to get VM when trying to feign feign_second_config"
-        call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-      end if
-
-      call ESMF_VMGet( vm, localPet=local_rank, rc=condition )
-      if (condition /= ESMF_SUCCESS) then
-        write(log_scratch_space, "(A)") &
-            "Failed to query VM when trying to feign feign_second_config"
-        call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-      end if
+      local_rank = get_comm_rank()
     end if
 
     open( temporary_unit, status='scratch', action='readwrite', &
@@ -575,7 +497,7 @@ contains
     write( temporary_unit, '("/")' )
 
     rewind(temporary_unit)
-    call read_second_namelist( temporary_unit, vm, local_rank )
+    call read_second_namelist( temporary_unit, local_rank )
 
     close(temporary_unit, iostat=condition )
     if (condition /= 0) stop 'feign_second_config: Unable to close temporary file'

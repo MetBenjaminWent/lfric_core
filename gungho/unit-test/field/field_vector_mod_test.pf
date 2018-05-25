@@ -16,7 +16,7 @@ module field_vector_mod_test
                                              mesh_collection
   use fs_continuity_mod,              only : W0, W2, W3
   use yaxt,                           only : xt_initialize, xt_finalize
-  use mpi_mod,                        only : store_comm
+  use mpi_mod,                        only : store_comm, clear_comm
   use pFUnit_Mod
 
   implicit none
@@ -70,6 +70,8 @@ contains
 
     ! Finalise YAXT
     call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
 
   end subroutine tearDown
 

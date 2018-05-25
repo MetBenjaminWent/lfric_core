@@ -113,7 +113,7 @@ contains
 
     write(log_scratch_space,'(A,A)') &
           "calc_domain_size_horizontal: Calculated horizontal domain size."
-    call log_event(log_scratch_space, LOG_LEVEL_INFO)
+    call log_event(log_scratch_space, LOG_LEVEL_DEBUG)
     write(log_scratch_space,'(A,ES15.3E3)') "domain_length = ", domain_length
     call log_event(log_scratch_space, LOG_LEVEL_DEBUG)
     write(log_scratch_space,'(A,ES15.3E3)') "domain_width  = ", domain_width

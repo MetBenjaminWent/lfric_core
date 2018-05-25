@@ -14,7 +14,6 @@
 module scalar_mod
 
   use constants_mod,      only: r_def, i_def
-  use ESMF
 
   implicit none
 
@@ -49,7 +48,7 @@ module scalar_mod
     !> Wait (i.e. block) until all current non-blocking reductions
     !> (sum, max, min) are complete.
     !>
-    !> ESMF have only implemented blocking reductions, so this
+    !> Currently only have blocking reductions, so this
     !> subroutine currently returns without waiting.
     procedure reduction_finish
 
@@ -83,82 +82,60 @@ contains
 
   !! Start performing a global sum operation on a scalar
   !!
-  function get_sum(self) result (global_sum)
+  function get_sum(self) result (g_sum)
+
+    use mpi_mod, only: global_sum
+    implicit none
+
     class(scalar_type), intent(in) :: self
 
-    real(r_def) :: global_sum
+    real(r_def) :: g_sum
 
-    type(ESMF_VM) :: vm
-    integer(i_def) :: rc
+    call global_sum( self%value, g_sum )
 
-    call ESMF_VMGetCurrent(vm=vm, rc=rc)
-! Currently ESMF has only implemented blocking reductions. Using anything
-! other than ESMF_SYNC_BLOCKING for syncflag results in an error
-    call ESMF_VMAllFullReduce(vm, &
-                              [self%value], &
-                              global_sum, &
-                              1, &
-                              ESMF_REDUCE_SUM, &
-                              syncflag = ESMF_SYNC_BLOCKING, &
-                              rc=rc)
   end function get_sum
 
   !! Start the calculation of the global minimum of a scalar
   !!
-  function get_min(self) result (global_min)
+  function get_min(self) result (g_min)
+
+    use mpi_mod, only: global_min
+    implicit none
+
     class(scalar_type), intent(in) :: self
 
-    real(r_def) :: global_min
+    real(r_def) :: g_min
 
-    type(ESMF_VM) :: vm
-    integer(i_def) :: rc
+    call global_min( self%value, g_min )
 
-    call ESMF_VMGetCurrent(vm=vm, rc=rc)
-! Currently ESMF has only implemented blocking reductions. Using anything
-! other than ESMF_SYNC_BLOCKING for syncflag results in an error
-    call ESMF_VMAllFullReduce(vm, &
-                              [self%value], &
-                              global_min, &
-                              1, &
-                              ESMF_REDUCE_MIN, &
-                              syncflag = ESMF_SYNC_BLOCKING, &
-                              rc=rc)
   end function get_min
 
   !! Start the calculation of the global maximum of a scalar
   !!
-  function get_max(self) result (global_max)
+  function get_max(self) result (g_max)
+
+    use mpi_mod, only: global_max
+    implicit none
 
     class(scalar_type), intent(in) :: self
 
-    real(r_def) :: global_max
+    real(r_def) :: g_max
 
-    type(ESMF_VM) :: vm
-    integer(i_def) :: rc
+    call global_max( self%value, g_max )
 
-    call ESMF_VMGetCurrent(vm=vm, rc=rc)
-! Currently ESMF has only implemented blocking reductions. Using anything
-! other than ESMF_SYNC_BLOCKING for syncflag results in an error
-    call ESMF_VMAllFullReduce(vm, &
-                              [self%value], &
-                              global_max, &
-                              1, &
-                              ESMF_REDUCE_MAX, &
-                              syncflag = ESMF_SYNC_BLOCKING, &
-                              rc=rc)
   end function get_max
 
   !! Wait for any current (non-blocking) reductions (sum, max, min) to complete
   !!
-  !! Currently, ESMF has only implemented blocking reductions, so there is
+  !! Currently, we only have blocking reductions, so there is
   !! no need to ever call this subroutine. It is left in here to complete the
   !! API so when non-blocking reductions are implemented, we can support them
   subroutine reduction_finish(self)
 
+    implicit none
+
     class(scalar_type), intent(in) :: self
 
-    type(ESMF_VM)  :: vm
-    integer(i_def) :: rc
     real(r_def)    ::  value_tmp
 
     value_tmp=self%value            ! reduction_finish currently does nothing.
@@ -166,9 +143,6 @@ contains
                                     ! to a type-bound subroutine is not used -
                                     ! so the compilers complain -  have to use
                                     ! it for something harmless.
-
-    call ESMF_VMGetCurrent(vm=vm, rc=rc)
-    call ESMF_VMCommWaitAll(vm=vm, rc=rc)
 
   end subroutine reduction_finish
 

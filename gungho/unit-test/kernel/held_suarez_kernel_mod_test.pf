@@ -23,7 +23,7 @@ module held_suarez_kernel_mod_test
   use quadrature_rule_gaussian_mod,  only: quadrature_rule_gaussian_type
   use coord_transform_mod,           only: llr2xyz
   use yaxt,                          only : xt_initialize, xt_finalize
-  use mpi_mod,                       only : store_comm
+  use mpi_mod,                       only : store_comm, clear_comm
 
   implicit none
 
@@ -180,6 +180,8 @@ contains
 
     ! Finalise YAXT
     call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
 
   end subroutine tearDown
 

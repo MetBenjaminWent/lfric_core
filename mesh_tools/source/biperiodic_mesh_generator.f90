@@ -24,6 +24,7 @@ program biperiodic_mesh_generator
   use cli_mod,           only: get_initial_filename
   use constants_mod,     only: i_def, str_def, str_long, l_def, imdi
   use ESMF
+  use mpi_mod,           only: initialise_comm, store_comm, finalise_comm
   use genbiperiodic_mod, only: genbiperiodic_type
   use io_utility_mod,    only: open_file, close_file
   use log_mod,           only: log_scratch_space, log_event, log_set_level, &
@@ -37,7 +38,7 @@ program biperiodic_mesh_generator
   implicit none
 
   type(ESMF_VM)  :: vm
-  integer(i_def) :: rc
+  integer(i_def) :: comm, rc
 
   character(:), allocatable :: filename
   integer(i_def)            :: namelist_unit
@@ -83,9 +84,12 @@ program biperiodic_mesh_generator
   !===================================================================
   ! 2.0 Start up ESMF
   !===================================================================
+  call initialise_comm(comm)
+  call store_comm(comm)
   call ESMF_Initialize( vm=vm, rc=rc,                    &
                         logkindflag=ESMF_LOGKIND_SINGLE, &
-                        defaultlogfilename="biperiodic.log" )
+                        defaultlogfilename="biperiodic.log", &
+                        mpiCommunicator=comm )
   if (rc /= ESMF_SUCCESS) call log_event( 'Failed to initialise ESMF.', &
                                           LOG_LEVEL_ERROR )
 
@@ -94,7 +98,7 @@ program biperiodic_mesh_generator
   !===================================================================
   call get_initial_filename( filename )
   namelist_unit = open_file( filename )
-  call read_biperiodic_mesh_generator_namelist( namelist_unit, vm, 0 )
+  call read_biperiodic_mesh_generator_namelist( namelist_unit, 0 )
   call postprocess_biperiodic_mesh_generator_namelist( )
   call close_file( namelist_unit )
   deallocate( filename )
@@ -323,7 +327,8 @@ program biperiodic_mesh_generator
 
   end do
 
-  call ESMF_Finalize(rc=rc)
+  call ESMF_Finalize(endflag=ESMF_END_KEEPMPI,rc=rc)
+  call finalise_comm()
 
   if ( allocated( bpgen ) ) deallocate (bpgen)
 

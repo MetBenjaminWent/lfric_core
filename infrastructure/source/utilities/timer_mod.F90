@@ -84,7 +84,7 @@ contains
 !=============================================================================!
    !> @brief write out timer information to file
    subroutine output_timer()
-     use ESMF
+     use mpi_mod,    only: get_comm_rank
      use log_mod,    only: log_event,         &
                            LOG_LEVEL_ERROR,   &
                            LOG_LEVEL_INFO,    &
@@ -95,8 +95,6 @@ contains
      real(r_def)       :: pc_time
      type(scalar_type) :: time
      integer(i_def)    :: stat
-     type(ESMF_VM)     :: vm
-     integer(i_def)    :: rc, petCount, localPET
 
      ! check all timers are closed
      do k = 1, num_tim_in_use
@@ -108,14 +106,11 @@ contains
        end if
      end do
 
-     call ESMF_VMGetCurrent(vm=vm, rc=rc)
-     call ESMF_VMGET(vm, localPet=localPET, petCount=petCount, rc=rc)
-
      do k = 1, num_tim_in_use
        time = scalar_type(tot_time(k))
        tot_time(k) = time%get_sum()
      end do
-     if ( localPet == 0 ) then
+     if ( get_comm_rank() == 0 ) then
        open( 9, file='timer.txt', status="replace", iostat=stat)
        if (stat /= 0) then
          call log_event( "Unable to open timer file", LOG_LEVEL_ERROR )

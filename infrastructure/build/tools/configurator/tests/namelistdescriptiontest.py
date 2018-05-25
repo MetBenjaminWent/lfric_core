@@ -53,7 +53,8 @@ module test_config_mod
                             str_def, &
                             str_max_filename
   use log_mod,       only : log_event, log_scratch_space, LOG_LEVEL_ERROR
-  use ESMF,          only : ESMF_VM, ESMF_VMBroadcast, ESMF_SUCCESS
+  use mpi_mod,       only : broadcast
+  use mpi,           only : MPI_SUCCESS
 
   implicit none
 
@@ -161,27 +162,24 @@ contains
   !> An error is reported if the namelist could not be read.
   !>
   !> @param [in] file_unit Unit number of the file to read from.
-  !> @param [in] vm ESMF VM object of current run.
-  !> @param [in] local_rank Rank of current ESMF process.
+  !> @param [in] local_rank Rank of current process.
   !>
-  subroutine read_test_namelist( file_unit, vm, local_rank )
+  subroutine read_test_namelist( file_unit, local_rank )
     implicit none
     integer(i_native), intent(in) :: file_unit
-    type(ESMF_VM),     intent(in) :: vm
     integer(i_native), intent(in) :: local_rank
-    call read_namelist( file_unit, vm, local_rank, enum )
+    call read_namelist( file_unit, local_rank, enum )
   end subroutine read_test_namelist
 
   ! Reads the namelist file.
   !
-  subroutine read_namelist( file_unit, vm, local_rank, dummy_enum )
+  subroutine read_namelist( file_unit, local_rank, dummy_enum )
 
     use constants_mod, only : imdi, rmdi
 
     implicit none
 
     integer(i_native), intent(in) :: file_unit
-    type(ESMF_VM),     intent(in) :: vm
     integer(i_native), intent(in) :: local_rank
     integer(i_native), intent(out) :: dummy_enum
 
@@ -253,66 +251,16 @@ contains
     buffer_real_r_def(1) = vreal
     buffer_character_str_def(1) = vstr
 
-    call ESMF_VMBroadcast( vm, buffer_character_str_def, 2*str_def, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'buffer_character_str_def'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
-    call ESMF_VMBroadcast( vm, buffer_character_str_max_filename, 1*str_max_filename, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'buffer_character_str_max_filename'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
-    call ESMF_VMBroadcast( vm, buffer_integer_i_def, 2, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'buffer_integer_i_def'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
-    call ESMF_VMBroadcast( vm, buffer_integer_i_long, 1, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'buffer_integer_i_long'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
-    call ESMF_VMBroadcast( vm, buffer_integer_i_native, 1, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'buffer_integer_i_native'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
-    call ESMF_VMBroadcast( vm, buffer_integer_i_short, 1, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'buffer_integer_i_short'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
-    call ESMF_VMBroadcast( vm, buffer_logical_l_def, 1, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'buffer_logical_l_def'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
-    call ESMF_VMBroadcast( vm, buffer_real_r_def, 2, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'buffer_real_r_def'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
-    call ESMF_VMBroadcast( vm, buffer_real_r_double, 1, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'buffer_real_r_double'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
-    call ESMF_VMBroadcast( vm, buffer_real_r_single, 1, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'buffer_real_r_single'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
+    call broadcast( buffer_character_str_def, 2*str_def, 0 )
+    call broadcast( buffer_character_str_max_filename, 1*str_max_filename, 0 )
+    call broadcast( buffer_integer_i_def, 2, 0 )
+    call broadcast( buffer_integer_i_long, 1, 0 )
+    call broadcast( buffer_integer_i_native, 1, 0 )
+    call broadcast( buffer_integer_i_short, 1, 0 )
+    call broadcast( buffer_logical_l_def, 1, 0 )
+    call broadcast( buffer_real_r_def, 2, 0 )
+    call broadcast( buffer_real_r_double, 1, 0 )
+    call broadcast( buffer_real_r_single, 1, 0 )
 
     dint = buffer_integer_i_def(2)
     dlog = buffer_logical_l_def(1) /= 0
@@ -423,7 +371,8 @@ module test_config_mod
   use constants_mod, only : i_def, &
                             i_native
   use log_mod,       only : log_event, log_scratch_space, LOG_LEVEL_ERROR
-  use ESMF,          only : ESMF_VM, ESMF_VMBroadcast, ESMF_SUCCESS
+  use mpi_mod,       only : broadcast
+  use mpi,           only : MPI_SUCCESS
 
   implicit none
 
@@ -442,27 +391,24 @@ contains
   !> An error is reported if the namelist could not be read.
   !>
   !> @param [in] file_unit Unit number of the file to read from.
-  !> @param [in] vm ESMF VM object of current run.
-  !> @param [in] local_rank Rank of current ESMF process.
+  !> @param [in] local_rank Rank of current process.
   !>
-  subroutine read_test_namelist( file_unit, vm, local_rank )
+  subroutine read_test_namelist( file_unit, local_rank )
     implicit none
     integer(i_native), intent(in) :: file_unit
-    type(ESMF_VM),     intent(in) :: vm
     integer(i_native), intent(in) :: local_rank
-    call read_namelist( file_unit, vm, local_rank )
+    call read_namelist( file_unit, local_rank )
   end subroutine read_test_namelist
 
   ! Reads the namelist file.
   !
-  subroutine read_namelist( file_unit, vm, local_rank )
+  subroutine read_namelist( file_unit, local_rank )
 
     use constants_mod, only : imdi, rmdi
 
     implicit none
 
     integer(i_native), intent(in) :: file_unit
-    type(ESMF_VM),     intent(in) :: vm
     integer(i_native), intent(in) :: local_rank
 
     integer(i_def) :: buffer_integer_i_def(1)
@@ -484,12 +430,7 @@ contains
 
     buffer_integer_i_def(1) = foo
 
-    call ESMF_VMBroadcast( vm, buffer_integer_i_def, 1, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'buffer_integer_i_def'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
+    call broadcast( buffer_integer_i_def, 1, 0 )
 
     foo = buffer_integer_i_def(1)
 
@@ -565,7 +506,8 @@ module test_config_mod
                             i_native, &
                             r_def
   use log_mod,       only : log_event, log_scratch_space, LOG_LEVEL_ERROR
-  use ESMF,          only : ESMF_VM, ESMF_VMBroadcast, ESMF_SUCCESS
+  use mpi_mod,       only : broadcast
+  use mpi,           only : MPI_SUCCESS
 
   implicit none
 
@@ -585,27 +527,24 @@ contains
   !> An error is reported if the namelist could not be read.
   !>
   !> @param [in] file_unit Unit number of the file to read from.
-  !> @param [in] vm ESMF VM object of current run.
-  !> @param [in] local_rank Rank of current ESMF process.
+  !> @param [in] local_rank Rank of current process.
   !>
-  subroutine read_test_namelist( file_unit, vm, local_rank )
+  subroutine read_test_namelist( file_unit, local_rank )
     implicit none
     integer(i_native), intent(in) :: file_unit
-    type(ESMF_VM),     intent(in) :: vm
     integer(i_native), intent(in) :: local_rank
-    call read_namelist( file_unit, vm, local_rank )
+    call read_namelist( file_unit, local_rank )
   end subroutine read_test_namelist
 
   ! Reads the namelist file.
   !
-  subroutine read_namelist( file_unit, vm, local_rank )
+  subroutine read_namelist( file_unit, local_rank )
 
     use constants_mod, only : imdi, rmdi
 
     implicit none
 
     integer(i_native), intent(in) :: file_unit
-    type(ESMF_VM),     intent(in) :: vm
     integer(i_native), intent(in) :: local_rank
 
     integer(i_def) :: buffer_integer_i_def(1)
@@ -631,18 +570,8 @@ contains
     buffer_real_r_def(1) = bar
     buffer_integer_i_def(1) = foo
 
-    call ESMF_VMBroadcast( vm, buffer_integer_i_def, 1, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'buffer_integer_i_def'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
-    call ESMF_VMBroadcast( vm, buffer_real_r_def, 1, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'buffer_real_r_def'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
+    call broadcast( buffer_integer_i_def, 1, 0 )
+    call broadcast( buffer_real_r_def, 1, 0 )
 
     bar = buffer_real_r_def(1)
     foo = buffer_integer_i_def(1)
@@ -736,7 +665,8 @@ module enum_config_mod
   use constants_mod, only : i_native, &
                             str_def
   use log_mod,       only : log_event, log_scratch_space, LOG_LEVEL_ERROR
-  use ESMF,          only : ESMF_VM, ESMF_VMBroadcast, ESMF_SUCCESS
+  use mpi_mod,       only : broadcast
+  use mpi,           only : MPI_SUCCESS
 
   implicit none
 
@@ -832,27 +762,24 @@ contains
   !> An error is reported if the namelist could not be read.
   !>
   !> @param [in] file_unit Unit number of the file to read from.
-  !> @param [in] vm ESMF VM object of current run.
-  !> @param [in] local_rank Rank of current ESMF process.
+  !> @param [in] local_rank Rank of current process.
   !>
-  subroutine read_enum_namelist( file_unit, vm, local_rank )
+  subroutine read_enum_namelist( file_unit, local_rank )
     implicit none
     integer(i_native), intent(in) :: file_unit
-    type(ESMF_VM),     intent(in) :: vm
     integer(i_native), intent(in) :: local_rank
-    call read_namelist( file_unit, vm, local_rank, value )
+    call read_namelist( file_unit, local_rank, value )
   end subroutine read_enum_namelist
 
   ! Reads the namelist file.
   !
-  subroutine read_namelist( file_unit, vm, local_rank, dummy_value )
+  subroutine read_namelist( file_unit, local_rank, dummy_value )
 
     use constants_mod, only : imdi, rmdi
 
     implicit none
 
     integer(i_native), intent(in) :: file_unit
-    type(ESMF_VM),     intent(in) :: vm
     integer(i_native), intent(in) :: local_rank
     integer(i_native), intent(out) :: dummy_value
 
@@ -879,12 +806,7 @@ contains
 
     buffer_integer_i_native(1) = dummy_value
 
-    call ESMF_VMBroadcast( vm, buffer_integer_i_native, 1, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'buffer_integer_i_native'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
+    call broadcast( buffer_integer_i_native, 1, 0 )
 
     dummy_value = buffer_integer_i_native(1)
 
@@ -973,7 +895,8 @@ module twoenum_config_mod
   use constants_mod, only : i_native, &
                             str_def
   use log_mod,       only : log_event, log_scratch_space, LOG_LEVEL_ERROR
-  use ESMF,          only : ESMF_VM, ESMF_VMBroadcast, ESMF_SUCCESS
+  use mpi_mod,       only : broadcast
+  use mpi,           only : MPI_SUCCESS
 
   implicit none
 
@@ -1144,27 +1067,24 @@ contains
   !> An error is reported if the namelist could not be read.
   !>
   !> @param [in] file_unit Unit number of the file to read from.
-  !> @param [in] vm ESMF VM object of current run.
-  !> @param [in] local_rank Rank of current ESMF process.
+  !> @param [in] local_rank Rank of current process.
   !>
-  subroutine read_twoenum_namelist( file_unit, vm, local_rank )
+  subroutine read_twoenum_namelist( file_unit, local_rank )
     implicit none
     integer(i_native), intent(in) :: file_unit
-    type(ESMF_VM),     intent(in) :: vm
     integer(i_native), intent(in) :: local_rank
-    call read_namelist( file_unit, vm, local_rank, first, second )
+    call read_namelist( file_unit, local_rank, first, second )
   end subroutine read_twoenum_namelist
 
   ! Reads the namelist file.
   !
-  subroutine read_namelist( file_unit, vm, local_rank, dummy_first, dummy_second )
+  subroutine read_namelist( file_unit, local_rank, dummy_first, dummy_second )
 
     use constants_mod, only : imdi, rmdi
 
     implicit none
 
     integer(i_native), intent(in) :: file_unit
-    type(ESMF_VM),     intent(in) :: vm
     integer(i_native), intent(in) :: local_rank
     integer(i_native), intent(out) :: dummy_first
     integer(i_native), intent(out) :: dummy_second
@@ -1197,12 +1117,7 @@ contains
     buffer_integer_i_native(1) = dummy_first
     buffer_integer_i_native(2) = dummy_second
 
-    call ESMF_VMBroadcast( vm, buffer_integer_i_native, 2, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'buffer_integer_i_native'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
+    call broadcast( buffer_integer_i_native, 2, 0 )
 
     dummy_first = buffer_integer_i_native(1)
     dummy_second = buffer_integer_i_native(2)
@@ -1292,7 +1207,8 @@ module teapot_config_mod
   use constants_mod, only : i_native, &
                             r_def
   use log_mod,       only : log_event, log_scratch_space, LOG_LEVEL_ERROR
-  use ESMF,          only : ESMF_VM, ESMF_VMBroadcast, ESMF_SUCCESS
+  use mpi_mod,       only : broadcast
+  use mpi,           only : MPI_SUCCESS
 
   implicit none
 
@@ -1312,27 +1228,24 @@ contains
   !> An error is reported if the namelist could not be read.
   !>
   !> @param [in] file_unit Unit number of the file to read from.
-  !> @param [in] vm ESMF VM object of current run.
-  !> @param [in] local_rank Rank of current ESMF process.
+  !> @param [in] local_rank Rank of current process.
   !>
-  subroutine read_teapot_namelist( file_unit, vm, local_rank )
+  subroutine read_teapot_namelist( file_unit, local_rank )
     implicit none
     integer(i_native), intent(in) :: file_unit
-    type(ESMF_VM),     intent(in) :: vm
     integer(i_native), intent(in) :: local_rank
-    call read_namelist( file_unit, vm, local_rank )
+    call read_namelist( file_unit, local_rank )
   end subroutine read_teapot_namelist
 
   ! Reads the namelist file.
   !
-  subroutine read_namelist( file_unit, vm, local_rank )
+  subroutine read_namelist( file_unit, local_rank )
 
     use constants_mod, only : imdi, rmdi
 
     implicit none
 
     integer(i_native), intent(in) :: file_unit
-    type(ESMF_VM),     intent(in) :: vm
     integer(i_native), intent(in) :: local_rank
 
     real(r_def) :: buffer_real_r_def(1)
@@ -1355,12 +1268,7 @@ contains
 
     buffer_real_r_def(1) = foo
 
-    call ESMF_VMBroadcast( vm, buffer_real_r_def, 1, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'buffer_real_r_def'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
+    call broadcast( buffer_real_r_def, 1, 0 )
 
     foo = buffer_real_r_def(1)
 
@@ -1448,7 +1356,8 @@ module cheese_config_mod
   use constants_mod, only : i_native, &
                             r_def
   use log_mod,       only : log_event, log_scratch_space, LOG_LEVEL_ERROR
-  use ESMF,          only : ESMF_VM, ESMF_VMBroadcast, ESMF_SUCCESS
+  use mpi_mod,       only : broadcast
+  use mpi,           only : MPI_SUCCESS
 
   implicit none
 
@@ -1468,27 +1377,24 @@ contains
   !> An error is reported if the namelist could not be read.
   !>
   !> @param [in] file_unit Unit number of the file to read from.
-  !> @param [in] vm ESMF VM object of current run.
-  !> @param [in] local_rank Rank of current ESMF process.
+  !> @param [in] local_rank Rank of current process.
   !>
-  subroutine read_cheese_namelist( file_unit, vm, local_rank )
+  subroutine read_cheese_namelist( file_unit, local_rank )
     implicit none
     integer(i_native), intent(in) :: file_unit
-    type(ESMF_VM),     intent(in) :: vm
     integer(i_native), intent(in) :: local_rank
-    call read_namelist( file_unit, vm, local_rank )
+    call read_namelist( file_unit, local_rank )
   end subroutine read_cheese_namelist
 
   ! Reads the namelist file.
   !
-  subroutine read_namelist( file_unit, vm, local_rank )
+  subroutine read_namelist( file_unit, local_rank )
 
     use constants_mod, only : fudge, imdi, rmdi
 
     implicit none
 
     integer(i_native), intent(in) :: file_unit
-    type(ESMF_VM),     intent(in) :: vm
     integer(i_native), intent(in) :: local_rank
 
     real(r_def) :: buffer_real_r_def(1)
@@ -1511,12 +1417,7 @@ contains
 
     buffer_real_r_def(1) = fred
 
-    call ESMF_VMBroadcast( vm, buffer_real_r_def, 1, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'buffer_real_r_def'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
+    call broadcast( buffer_real_r_def, 1, 0 )
 
     fred = buffer_real_r_def(1)
 
@@ -1607,7 +1508,8 @@ module aerial_config_mod
                             r_def, &
                             str_def
   use log_mod,       only : log_event, log_scratch_space, LOG_LEVEL_ERROR
-  use ESMF,          only : ESMF_VM, ESMF_VMBroadcast, ESMF_SUCCESS
+  use mpi_mod,       only : broadcast
+  use mpi,           only : MPI_SUCCESS
 
   implicit none
 
@@ -1632,27 +1534,24 @@ contains
   !> An error is reported if the namelist could not be read.
   !>
   !> @param [in] file_unit Unit number of the file to read from.
-  !> @param [in] vm ESMF VM object of current run.
-  !> @param [in] local_rank Rank of current ESMF process.
+  !> @param [in] local_rank Rank of current process.
   !>
-  subroutine read_aerial_namelist( file_unit, vm, local_rank )
+  subroutine read_aerial_namelist( file_unit, local_rank )
     implicit none
     integer(i_native), intent(in) :: file_unit
-    type(ESMF_VM),     intent(in) :: vm
     integer(i_native), intent(in) :: local_rank
-    call read_namelist( file_unit, vm, local_rank )
+    call read_namelist( file_unit, local_rank )
   end subroutine read_aerial_namelist
 
   ! Reads the namelist file.
   !
-  subroutine read_namelist( file_unit, vm, local_rank )
+  subroutine read_namelist( file_unit, local_rank )
 
     use constants_mod, only : imdi, rmdi
 
     implicit none
 
     integer(i_native), intent(in) :: file_unit
-    type(ESMF_VM),     intent(in) :: vm
     integer(i_native), intent(in) :: local_rank
 
     integer(i_native) :: buffer_integer_i_native(1)
@@ -1701,41 +1600,16 @@ contains
 
     buffer_integer_i_native(1) = lsize
 
-    call ESMF_VMBroadcast( vm, buffer_integer_i_native, 1, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'buffer_integer_i_native'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
+    call broadcast( buffer_integer_i_native, 1, 0 )
 
     lsize = buffer_integer_i_native(1)
 
 
 
-    call ESMF_VMBroadcast( vm, absolute, size(absolute, 1)*str_def, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'absolute'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
-    call ESMF_VMBroadcast( vm, inlist, size(inlist, 1), 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'inlist'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
-    call ESMF_VMBroadcast( vm, outlist, size(outlist, 1), 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'outlist'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
-    call ESMF_VMBroadcast( vm, unknown, size(unknown, 1), 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'unknown'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
+    call broadcast( absolute, size(absolute, 1)*str_def, 0 )
+    call broadcast( inlist, size(inlist, 1), 0 )
+    call broadcast( outlist, size(outlist, 1), 0 )
+    call broadcast( unknown, size(unknown, 1), 0 )
 
     namelist_loaded = .true.
 

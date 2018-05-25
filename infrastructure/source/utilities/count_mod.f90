@@ -109,7 +109,7 @@ contains
   !> @param in opt_unit (optional) optional unit number to which the output
   !>                               should be written
   subroutine output_counters(self, opt_unit)
-    use ESMF
+    use mpi_mod, only: get_comm_rank
     use log_mod,    only: log_event,         &
                           LOG_LEVEL_ERROR,   &
                           LOG_LEVEL_WARNING,    &
@@ -120,8 +120,6 @@ contains
     integer(i_native), optional, intent(in)    :: opt_unit
 
     integer(i_native)    :: k, unit_no, stat
-    type(ESMF_VM)     :: vm
-    integer(i_def)    :: rc, petCount, localPET
 
     ! check all timers are closed
     do k = 1, self%num_counters_in_use
@@ -133,10 +131,7 @@ contains
       end if
     end do
 
-    call ESMF_VMGetCurrent(vm=vm, rc=rc)
-    call ESMF_VMGET(vm, localPet=localPET, petCount=petCount, rc=rc)
-
-    if ( localPet == 0 ) then
+    if ( get_comm_rank() == 0 ) then
       if(present(opt_unit)) then
         unit_no=opt_unit
       else

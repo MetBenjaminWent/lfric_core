@@ -10,6 +10,7 @@
 module count_mod_test
 
   use pFUnit_Mod
+  use mpi_mod, only : store_comm
   use constants_mod, only: i_def
 
   implicit none
@@ -21,7 +22,7 @@ module count_mod_test
   integer(i_def), parameter :: COUNTER_UNIT  = 12
 
   @TestCase
-  type, extends(TestCase), public :: counter_test_type
+  type, extends(MPITestCase), public :: counter_test_type
     private
   contains
     procedure setUp
@@ -36,6 +37,9 @@ contains
     class(counter_test_type), intent(inout) :: this
 
     integer(i_def) :: condition
+
+    !Store the MPI communicator for later use
+    call store_comm(this%getMpiCommunicator())
 
     open( COUNTER_UNIT, status='scratch', action='readwrite', &
           iostat=condition )
@@ -56,7 +60,7 @@ contains
   end subroutine tearDown
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  @test
+  @Test( npes=[1] )
   subroutine test_counter(this)
 
     use count_mod, only: count_type, halo_calls

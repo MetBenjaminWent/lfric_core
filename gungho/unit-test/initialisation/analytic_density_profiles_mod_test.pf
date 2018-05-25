@@ -9,6 +9,8 @@
 module analytic_density_profiles_mod_test
 
   use constants_mod, only : r_def
+  use yaxt,          only : xt_initialize, xt_finalize
+  use mpi_mod,       only : store_comm, clear_comm
   use pFUnit_Mod
 
   implicit none
@@ -17,10 +19,11 @@ module analytic_density_profiles_mod_test
   public :: analytic_density_profiles_test_type, vortex_field_test, yz_cosine_hill_test
 
   @TestCase
-  type, extends(TestCase) :: analytic_density_profiles_test_type
+  type, extends(MPITestCase) :: analytic_density_profiles_test_type
     private
   contains
     procedure setUp
+    procedure tearDown
     procedure vortex_field_test
     procedure yz_cosine_hill_test
   end type analytic_density_profiles_test_type
@@ -35,6 +38,11 @@ contains
 
     class(analytic_density_profiles_test_type), intent(inout) :: this
 
+    ! Initialise YAXT
+    call xt_initialize(this%getMpiCommunicator())
+    !Store the MPI communicator for later use
+    call store_comm(this%getMpiCommunicator())
+
     call feign_initial_density_config( tracer_background=0.0_r_def,     &
                                        tracer_max=1.0_r_def,            &
                                        r1=1.0_r_def, x1=2.0_r_def,      &
@@ -45,7 +53,20 @@ contains
 
   end subroutine setUp
 
-  @test
+  subroutine tearDown( this )
+
+    implicit none
+
+    class(analytic_density_profiles_test_type), intent(inout) :: this
+
+    ! Finalise YAXT
+    call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
+
+  end subroutine tearDown
+
+  @Test( npes=[1] )
   subroutine vortex_field_test( this )
 
     use constants_mod,              only: PI
@@ -74,7 +95,7 @@ contains
   end subroutine vortex_field_test
 
 
-  @test
+  @Test( npes=[1] )
   subroutine yz_cosine_hill_test( this )
 
     use analytic_density_profiles_mod, only : analytic_density

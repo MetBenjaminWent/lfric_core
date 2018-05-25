@@ -8,6 +8,8 @@
 module reference_profile_mod_test
 
   use constants_mod, only : r_def
+  use yaxt, only : xt_initialize, xt_finalize
+  use mpi_mod, only : store_comm, clear_comm
   use pFUnit_Mod
 
   implicit none
@@ -16,10 +18,11 @@ module reference_profile_mod_test
   public :: reference_profile_test_type, test_all
 
   @TestCase
-  type, extends(TestCase) :: reference_profile_test_type
+  type, extends(MPITestCase) :: reference_profile_test_type
     private
   contains
     procedure setUp
+    procedure tearDown
     procedure test_all
   end type reference_profile_test_type
 
@@ -51,6 +54,11 @@ contains
 
     class(reference_profile_test_type), intent(inout) :: this
 
+    ! Initialise YAXT
+    call xt_initialize(this%getMpiCommunicator())
+    !Store the MPI communicator for later use
+    call store_comm(this%getMpiCommunicator())
+
     call feign_base_mesh_config( filename='foo', prime_mesh_name='unit_test', &
                                  geometry=base_mesh_geometry_planar,          &
                                  partitioner=base_mesh_partitioner_planar,    &
@@ -70,8 +78,23 @@ contains
 
   end subroutine setUp
 
+
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  @test
+  subroutine tearDown( this )
+
+    implicit none
+
+    class(reference_profile_test_type), intent(inout) :: this
+
+    ! Finalise YAXT
+    call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
+
+  end subroutine tearDown
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  @Test( npes=[1] )
   subroutine test_all( this )
 
     use idealised_config_mod,  only : idealised_test_gravity_wave

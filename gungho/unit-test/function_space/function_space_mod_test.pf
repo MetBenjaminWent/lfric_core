@@ -20,7 +20,7 @@ module function_space_mod_test
   use quadrature_rule_gaussian_mod, only: quadrature_rule_gaussian_type
   use reference_element_mod, only : N, E, S, W
   use yaxt,                  only : xt_initialize, xt_finalize
-  use mpi_mod,               only : store_comm
+  use mpi_mod,               only : store_comm, clear_comm
 
   implicit none
 
@@ -176,6 +176,8 @@ contains
 
     ! Finalise YAXT
     call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
 
   end subroutine tearDown
 

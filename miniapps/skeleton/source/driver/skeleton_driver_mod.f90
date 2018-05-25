@@ -17,7 +17,6 @@ module skeleton_driver_mod
   use init_skeleton_mod,              only : init_skeleton
   use ESMF
   use yaxt,                           only : xt_initialize, xt_finalize
-  use mpi_mod,                        only : store_comm
   use global_mesh_collection_mod,     only : global_mesh_collection, &
                                              global_mesh_collection_type
   use field_mod,                      only : field_type
@@ -26,6 +25,7 @@ module skeleton_driver_mod
   use log_mod,                        only : log_event,         &
                                              log_set_level,     &
                                              log_scratch_space, &
+                                             log_set_parallel_logging, &
                                              LOG_LEVEL_ERROR,   &
                                              LOG_LEVEL_INFO
   use output_config_mod,              only : write_nodal_output, &
@@ -36,9 +36,11 @@ module skeleton_driver_mod
                                              output_xios_nodal, &
                                              xios_domain_init
   use checksum_alg_mod,               only : checksum_alg
+  use mpi_mod,                        only : initialise_comm, store_comm, &
+                                             finalise_comm, &
+                                             get_comm_size, get_comm_rank
 
   use xios
-  use mpi
   use mod_wait
 
   implicit none
@@ -78,38 +80,37 @@ contains
     integer(i_def) :: comm = -999
     integer(i_def) :: dtime
 
-    ! Initialise MPI
-
-    call mpi_init(ierr)
+    ! Initialse mpi and create the default communicator: mpi_comm_world
+    call initialise_comm(comm)
 
     ! Initialise XIOS and get back the split mpi communicator
     call init_wait()
     call xios_initialize(xios_id, return_comm = comm)
 
+    !Store the MPI communicator for later use
+    call store_comm(comm)
+
     ! Initialise YAXT
     call xt_initialize(comm)
 
     ! Initialise ESMF using mpi communicator initialised by XIOS
-    ! and get the rank information from the virtual machine
     call ESMF_Initialize(vm=vm, &
                         defaultlogfilename="skeleton.Log", &
                         logkindflag=ESMF_LOGKIND_MULTI, &
                         mpiCommunicator=comm, &
                         rc=rc)
+    if(get_comm_size() > 1) call log_set_parallel_logging(.true.)
 
     if (rc /= ESMF_SUCCESS) call log_event( 'Failed to initialise ESMF.', &
                                             LOG_LEVEL_ERROR )
 
-    call ESMF_VMGet(vm, localPet=localPET, petCount=petCount, rc=rc)
-    if (rc /= ESMF_SUCCESS) &
-      call log_event( 'Failed to get the ESMF virtual machine.', &
-                      LOG_LEVEL_ERROR )
-
-    total_ranks = petCount
-    local_rank  = localPET
-
     !Store the MPI communicator for later use
     call store_comm(comm)
+
+    ! and get the rank information from the virtual machine
+    total_ranks = get_comm_size()
+    local_rank  = get_comm_rank()
+
 
     ! Currently log_event can only use ESMF so it cannot be used before ESMF
     ! is initialised.
@@ -156,10 +157,7 @@ contains
                              dtime,      &
                              restart,    &
                              mesh_id,    &
-                             chi,        &
-                             vm,         &
-                             local_rank, &
-                             total_ranks )
+                             chi)
 
       ! Make sure XIOS calendar is set to timestep 1 as it starts there
       ! not timestep 0.
@@ -236,8 +234,8 @@ contains
     ! Finalise YAXT
     call xt_finalize()
 
-    ! Finalise mpi
-    call mpi_finalize(ierr)
+    ! Finalise mpi and release the communicator
+    call finalise_comm()
 
   end subroutine finalise
 

@@ -66,7 +66,6 @@ module field_vector_mod
      !> copy a vector of this type
      !> param[in] source, the vector to be copied
      ! copies a new field_vector when called on abstract type
-     ! workaround as use of ESMF is causing a memory issue which
      procedure, public  :: copy => field_vector_type_assign
 
 
@@ -249,8 +248,6 @@ contains
 
   subroutine duplicate_field_vector(self, vec)
     ! makes a new field_vector when called on abstract type
-    ! workaround as use of ESMF is causing a memory issue which
-    ! stops fortran allocate(this, source=that) from working
     class(field_vector_type),                 intent(in)    :: self
     class(abstract_vector_type), allocatable, intent(inout) :: vec
     integer :: pos, mesh_id, elem, fs_label, astat

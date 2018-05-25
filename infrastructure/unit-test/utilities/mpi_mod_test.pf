@@ -1,7 +1,7 @@
 !-----------------------------------------------------------------------------
-! (C) Crown copyright 2017 Met Office. All rights reserved.
-! For further details please refer to the file LICENCE which you should have
-! received as part of this distribution.
+! (C) Crown copyright 2018 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
 !-----------------------------------------------------------------------------
 !> @brief Test the functionality of mpi_mod
 !>
@@ -11,8 +11,9 @@ module mpi_mod_test
 
   use pFUnit_Mod
   use constants_mod, only: i_def, r_def
-  use mpi_mod, only: store_comm, &
+  use mpi_mod, only: store_comm, clear_comm, &
                      global_sum, global_max, global_min, &
+                     all_gather, broadcast, &
                      get_mpi_datatype
   use yaxt, only : xt_initialize, xt_finalize
 
@@ -38,8 +39,6 @@ contains
 
     class(mpi_mod_test_type), intent(inout) :: this
 
-    integer(i_def) :: ierr
-
     ! Initialise YAXT
     call xt_initialize(this%getMpiCommunicator())
     !Store the MPI communicator for later use
@@ -54,10 +53,10 @@ contains
 
     class(mpi_mod_test_type), intent(inout) :: this
 
-    integer(i_def) :: ierr
-
     ! Finalise YAXT
     call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
 
   end subroutine tearDown
 
@@ -72,17 +71,58 @@ contains
     class(mpi_mod_test_type), intent(inout) :: this
 
     real(r_def) :: l_array(3) = (/ 2.0_r_def, 3.0_r_def, 1.0_r_def /)
+    real(r_def) :: l_sum, l_min, l_max
     real(r_def) :: answer
-    integer(i_def) :: ierr, num_pes, mpi_datatype
+    real(r_def) :: r_buffer(1)
+    integer(i_def) :: l_array_i(3) = (/ 2_i_def, 3_i_def, 1_i_def /)
+    integer(i_def) :: i_buffer(1),i_buffer_ans(1)
+    integer(i_def) :: i, num_pes, mpi_datatype
+    integer(i_def) :: l_sum_i, answer_i
+    character(len=2) :: str_buffer(1)
 
-    call global_sum( l_array, answer, 3, ierr )
+    l_sum=0.0_r_def
+    do i=1,size(l_array)
+      l_sum = l_sum + l_array(i)
+    end do
+    call global_sum( l_sum, answer )
     @assertEqual( 6.0_r_def, answer, 1.0e-2_r_def )
 
-    call global_max( l_array, answer, 3, ierr )
+    l_sum_i=0_i_def
+    do i=1,size(l_array_i)
+      l_sum_i = l_sum_i + l_array_i(i)
+    end do
+    call global_sum( l_sum_i, answer_i )
+    @assertEqual( 6_i_def, answer_i )
+
+    l_max=l_array(1)
+    do i=2,size(l_array)
+      if(l_array(i) > l_max) l_max = l_array(i)
+    end do
+    call global_max( l_max, answer )
     @assertEqual( 3.0_r_def, answer, 1.0e-2_r_def )
 
-    call global_min( l_array, answer, 3, ierr )
+    l_min=l_array(1)
+    do i=2,size(l_array)
+      if(l_array(i) < l_min) l_min = l_array(i)
+    end do
+    call global_min( l_min, answer )
     @assertEqual( 1.0_r_def, answer, 1.0e-2_r_def )
+
+    i_buffer(1) = 7_i_def
+    call all_gather(i_buffer, i_buffer_ans, 1)
+    @assertEqual( 7_i_def, i_buffer_ans(1) )
+
+    i_buffer(1) = 9_i_def
+    call broadcast( i_buffer, 1, 0 )
+    @assertEqual( 9_i_def, i_buffer(1) )
+
+    r_buffer(1) = 11.0_r_def
+    call broadcast( r_buffer, 1, 0 )
+    @assertEqual( 11.0_r_def, r_buffer(1) )
+
+    str_buffer(1) = 'Hi'
+    call broadcast( str_buffer, len(str_buffer(1))*size(str_buffer), 0 )
+    @assertEqual( 'Hi', str_buffer(1) )
 
     mpi_datatype=get_mpi_datatype(i_def)
     @assertEqual( MPI_INTEGER, mpi_datatype )

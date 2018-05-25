@@ -1,17 +1,18 @@
 !-----------------------------------------------------------------------------
-! Copyright (c) 2017,  Met Office, on behalf of HMSO and Queen's Printer
-! For further details please refer to the file LICENCE.original which you
-! should have received as part of this distribution.
+! (C) Crown copyright 2018 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
 !-----------------------------------------------------------------------------
 !
 !> @brief Provides access to the MPI related functionality
 !>
-!> Provides access to global reduction functions and generation of the halo
-!> exchange redistribution object. In order for that functionality to work, the
-!> subroutine store_comm must first be called to store a valid MPI communicator.
+!> Provides access to global reduction functions, all_gather, broadcasts and
+!. generation of the halo exchange redistribution object. In order for that
+!> functionality to work, the subroutine store_comm must first be called to
+!> store a valid MPI communicator.
 !>
 module mpi_mod
-  use constants_mod, only : r_def, i_def, i_native, l_def, i_halo_index
+  use constants_mod, only : r_def, i_def, i_native, l_def, i_halo_index, str_def
   use mpi
   use yaxt,          only: xt_redist, xt_idxlist, xt_xmap, &
                            xt_idxvec_new, xt_xmap_dist_dir_new, &
@@ -21,22 +22,35 @@ module mpi_mod
   implicit none
 
   private
-  public initialise_comm, finalise_comm, store_comm,&
+  public initialise_comm, finalise_comm, store_comm, clear_comm, &
          global_sum, global_min, global_max, &
+         all_gather, broadcast, &
          generate_redistribution_map, &
-         get_mpi_datatype
+         get_mpi_datatype, &
+         get_comm_size, get_comm_rank
 
   ! The mpi communicator
-  integer(i_def), private :: comm
+  integer(i_def), private :: comm=-999, comm_size=-999, comm_rank=-999
   ! Flag marks whether an MPI communicator has been stored
   logical(l_def), private :: comm_set = .false.
+
+  ! Generic interface for specific broadcast functions
+  interface broadcast
+   module procedure broadcast_l_def, &
+                    broadcast_i_def, &
+                    broadcast_r_def, &
+                    broadcast_str
+  end interface
+
+  ! Generic interface for specific global_sum functions
+  interface global_sum
+   module procedure global_sum_i_def, &
+                    global_sum_r_def
+  end interface
 
 contains
 
   !> Initialises MPI and returns mpi_comm_world as the communicator 
-  !> as well as storing it in a private variable, ready for later use.
-  !> Note: Only to be used when XIOS isn't being used, Normally XIOS
-  !>       initialises MPI and returns a communicator.
   !>
   !> @param out_comm The MPI communicator.
   !>
@@ -49,21 +63,7 @@ contains
     if (ierr /= mpi_success) &
           call log_event('Unable to initialise MPI', LOG_LEVEL_ERROR )
     out_comm = mpi_comm_world
-    comm = out_comm
-    comm_set = .true.
   end subroutine initialise_comm
-
-  !> Finalises MPI 
-  !> Note: Only to be used when XIOS isn't being used.
-  !>
-  subroutine finalise_comm()
-    implicit none
-    integer(i_def) :: ierr
-
-    call mpi_finalize(ierr)
-    if (ierr /= mpi_success) &
-          call log_event('Unable to finalise MPI', LOG_LEVEL_ERROR )
-  end subroutine finalise_comm
 
   !> Stores the MPI communicator in a private variable, ready for later use.
   !>
@@ -72,75 +72,113 @@ contains
   subroutine store_comm(in_comm)
     implicit none
     integer(i_def), intent(in) :: in_comm
+    integer(i_def) :: ierr
 
     comm = in_comm
+    call mpi_comm_size(comm,comm_size,ierr)
+    call mpi_comm_rank(comm,comm_rank,ierr)
     comm_set = .true.
   end subroutine store_comm
 
-
-  !> Calculates the global sum of a collection of local arrays
+  !> Finalises MPI 
   !>
-  !> @param l_array The local arrays that are to be summed
-  !> @param g_sum The calculated global sum 
-  !> @param count The number of elements in the local array
-  !> @param err The return code
-  !>
-  subroutine global_sum(l_array, g_sum, count, err)
+  subroutine finalise_comm()
     implicit none
-    integer(i_def), intent(in) :: count
-    integer(i_def), intent(out) :: err
-    real(r_def), intent(in) :: l_array(count)
+    integer(i_def) :: ierr
+
+    call mpi_finalize(ierr)
+    if (ierr /= mpi_success) &
+          call log_event('Unable to finalise MPI', LOG_LEVEL_ERROR )
+    comm = -999
+    comm_size = -999
+    comm_rank = -999
+    comm_set = .false.
+  end subroutine finalise_comm
+
+  !> Clears the stored MPI communicator
+  !>
+  subroutine clear_comm()
+    implicit none
+    comm = -999
+    comm_size = -999
+    comm_rank = -999
+    comm_set = .false.
+  end subroutine clear_comm
+
+  !> Calculates the global sum of a collection of real local sums
+  !>
+  !> @param l_sum The sum of the reals on the local partition
+  !> @param g_sum The calculated global sum 
+  !>
+  subroutine global_sum_r_def(l_sum, g_sum)
+    implicit none
+    real(r_def), intent(in)  :: l_sum
     real(r_def), intent(out) :: g_sum
 
-    integer(i_def) :: i
-    real(r_def) :: l_sum
+    integer(i_def) :: err
 
     if(comm_set)then
-      ! Generate local sum
-      l_sum = 0.0
-      do i = 1, count
-        l_sum = l_sum + l_array(i)
-      end do
-
       ! Generate global sum
       call mpi_allreduce( l_sum, g_sum, 1, get_mpi_datatype(r_def), &
                           mpi_sum, comm, err )
+      if (err /= mpi_success) &
+        call log_event('Call to real global_sum failed with an MPI error.', &
+                       LOG_LEVEL_ERROR )
     else
       call log_event( &
       'Call to global_sum failed. Must call store_comm first',&
       LOG_LEVEL_ERROR )
     end if
 
-  end subroutine global_sum
+  end subroutine global_sum_r_def
 
-
-  !> Calculates the global minimum of a collection of local arrays
+  !> Calculates the global sum of a collection of real local sums
   !>
-  !> @param l_array The local arrays from which the minimum is to be found
-  !> @param g_min The calculated global minimum
-  !> @param count The number of elements in the local array
-  !> @param err The return code
+  !> @param l_sum The sum of the integers on the local partition
+  !> @param g_sum The calculated global sum 
   !>
-  subroutine global_min(l_array, g_min, count, err)
+  subroutine global_sum_i_def(l_sum, g_sum)
     implicit none
-    integer(i_def), intent(in) :: count
-    integer(i_def), intent(out) :: err
-    real(r_def), intent(in) :: l_array(count)
-    real(r_def), intent(out) :: g_min
+    integer(i_def), intent(in)  :: l_sum
+    integer(i_def), intent(out) :: g_sum
 
-    integer(i_def) :: i
-    real(r_def) :: l_min
+    integer(i_def):: err
 
     if(comm_set)then
-      ! Generate local min
-      l_min = l_array(1)
-      do i = 2, count
-        if( l_array(i) < l_min ) l_min = l_array(i)
-      end do
+      ! Generate global sum
+      call mpi_allreduce( l_sum, g_sum, 1, get_mpi_datatype(i_def), &
+                          mpi_sum, comm, err )
+      if (err /= mpi_success) &
+        call log_event('Call to integer global_sum failed with an MPI error.', &
+                       LOG_LEVEL_ERROR )
+    else
+      call log_event( &
+      'Call to global_sum failed. Must call store_comm first',&
+      LOG_LEVEL_ERROR )
+    end if
 
+  end subroutine global_sum_i_def
+
+
+  !> Calculates the global minimum of a collection of local minimums
+  !>
+  !> @param l_min The min on the local partition
+  !> @param g_min The calculated global minimum
+  !>
+  subroutine global_min(l_min, g_min)
+    implicit none
+    real(r_def), intent(in)  :: l_min
+    real(r_def), intent(out) :: g_min
+
+    integer(i_def)  :: err
+
+    if(comm_set)then
       ! Generate global min
       call mpi_allreduce( l_min, g_min, 1, get_mpi_datatype(r_def), &
                           mpi_min, comm, err )
+      if (err /= mpi_success) &
+        call log_event('Call to global_min failed with an MPI error.', &
+                       LOG_LEVEL_ERROR )
     else
       call log_event( &
       'Call to global_min failed. Must call store_comm first',&
@@ -150,33 +188,25 @@ contains
   end subroutine global_min
 
 
-  !> Calculates the global maximum of a collection of local arrays
+  !> Calculates the global maximum of a collection of local maximums
   !>
-  !> @param l_array The local arrays from which the maximum is to be found
+  !> @param l_min The max on the local partition
   !> @param g_max The calculated global maximum
-  !> @param count The number of elements in the local array
-  !> @param err The return code
   !>
-  subroutine global_max(l_array, g_max, count, err)
+  subroutine global_max(l_max, g_max)
     implicit none
-    integer(i_def), intent(in) :: count
-    integer(i_def), intent(out) :: err
-    real(r_def), intent(in) :: l_array(count)
+    real(r_def), intent(in)  :: l_max
     real(r_def), intent(out) :: g_max
 
-    integer(i_def) :: i
-    real(r_def) :: l_max
+    integer(i_def)  :: err
 
     if(comm_set)then
-      ! Generate local max
-      l_max = l_array(1)
-      do i = 2, count
-        if( l_array(i) > l_max ) l_max = l_array(i)
-      end do
-
       ! Generate global max
       call mpi_allreduce( l_max, g_max, 1, get_mpi_datatype(r_def), &
                           mpi_max, comm, err )
+      if (err /= mpi_success) &
+        call log_event('Call to global_max failed with an MPI error.', &
+                       LOG_LEVEL_ERROR )
     else
       call log_event( &
       'Call to global_max failed. Must call store_comm first',&
@@ -184,6 +214,140 @@ contains
     end if
 
   end subroutine global_max
+
+
+
+  !> Gather integer data from all MPI tasks into a single array in all MPI tasks
+  !> The data in send_buffer from the jth process is received by every
+  !> process and placed in the jth block of the buffer recv_buffer.
+  !>
+  !> @param send_buffer The buffer of data to be sent to all MPI tasks
+  !> @param recv_buffer The buffer into which the gathered data will be placed
+  !> @param count The number of items in send_buffer
+  subroutine all_gather(send_buffer, recv_buffer, count)
+    implicit none
+    integer(i_def), intent(in)  :: send_buffer(:)
+    integer(i_def), intent(out) :: recv_buffer(:)
+    integer(i_def), intent(in)  :: count
+
+    integer(i_def) :: err
+
+    if(comm_set)then
+      call mpi_allgather(send_buffer, count, get_mpi_datatype(i_def), &
+                         recv_buffer, count, get_mpi_datatype(i_def), &
+                         comm, err)
+      if (err /= mpi_success) &
+        call log_event('Call to all_gather failed with an MPI error.', &
+                       LOG_LEVEL_ERROR )
+    else
+      call log_event( &
+      'Call to all_gather failed. Must call store_comm first',&
+      LOG_LEVEL_ERROR )
+    end if
+  end subroutine all_gather
+
+
+
+  !> Broadcasts logical data from the root MPI task to all other MPI tasks
+  !>
+  !> @param buffer On the root MPI task, contains the data to broadcast,
+  !>               on other tasks the data from root task will be writen to here
+  !> @param count The number of items in buffer
+  !> @param root The MPI task from which data will be broadcast
+  subroutine broadcast_l_def(buffer, count, root)
+    logical(l_def), intent(inout) :: buffer(:)
+    integer(i_def), intent(in)    :: count
+    integer(i_def), intent(in)    :: root
+
+    integer(i_def) :: err
+
+    if(comm_set)then
+      call mpi_bcast( buffer, count, MPI_LOGICAL, root, comm, err )
+      if (err /= mpi_success) &
+        call log_event('Call to logical broadcast failed with an MPI error.', &
+                       LOG_LEVEL_ERROR )
+    else
+      call log_event( &
+      'Call to broadcast failed. Must call store_comm first',&
+      LOG_LEVEL_ERROR )
+    end if
+  end subroutine broadcast_l_def
+
+  !> Broadcasts integer data from the root MPI task to all other MPI tasks
+  !>
+  !> @param buffer On the root MPI task, contains the data to broadcast,
+  !>               on other tasks the data from root task will be writen to here
+  !> @param count The number of items in buffer
+  !> @param root The MPI task from which data will be broadcast
+  subroutine broadcast_i_def(buffer, count, root)
+    integer(i_def), intent(inout) :: buffer(:)
+    integer(i_def), intent(in)    :: count
+    integer(i_def), intent(in)    :: root
+
+    integer(i_def) :: err
+
+    if(comm_set)then
+      call mpi_bcast( buffer, count, get_mpi_datatype(i_def), root, comm, err )
+      if (err /= mpi_success) &
+        call log_event('Call to integer broadcast failed with an MPI error.', &
+                       LOG_LEVEL_ERROR )
+    else
+      call log_event( &
+      'Call to broadcast failed. Must call store_comm first',&
+      LOG_LEVEL_ERROR )
+    end if
+  end subroutine broadcast_i_def
+
+  !> Broadcasts real data from the root MPI task to all other MPI tasks
+  !>
+  !> @param buffer On the root MPI task, contains the data to broadcast,
+  !>               on other tasks the data from root task will be writen to here
+  !> @param count The number of items in buffer
+  !> @param root The MPI task from which data will be broadcast
+  subroutine broadcast_r_def(buffer, count, root)
+    real(r_def),    intent(inout) :: buffer(:)
+    integer(i_def), intent(in)    :: count
+    integer(i_def), intent(in)    :: root
+
+    integer(i_def) :: err
+
+    if(comm_set)then
+      call mpi_bcast( buffer, count, get_mpi_datatype(r_def), root, comm, err )
+      if (err /= mpi_success) &
+        call log_event('Call to real broadcast failed with an MPI error.', &
+                       LOG_LEVEL_ERROR )
+    else
+      call log_event( &
+      'Call to broadcast failed. Must call store_comm first',&
+      LOG_LEVEL_ERROR )
+    end if
+  end subroutine broadcast_r_def
+
+  !> Broadcasts character data from the root MPI task to all other MPI tasks
+  !>
+  !> @param buffer On the root MPI task, contains the data to broadcast,
+  !>               on other tasks the data from root task will be writen to here
+  !> @param count The number of items in buffer
+  !> @param root The MPI task from which data will be broadcast
+  subroutine broadcast_str(buffer, count, root)
+    character(len=*), intent(inout) :: buffer(:)
+    integer(i_def),   intent(in)    :: count
+    integer(i_def),   intent(in)    :: root
+
+    integer(i_def) :: err
+
+    if(comm_set)then
+      call mpi_bcast( buffer, count, MPI_CHARACTER, root, comm, err )
+      if (err /= mpi_success) &
+        call log_event('Call to string broadcast failed with an MPI error.', &
+                       LOG_LEVEL_ERROR )
+    else
+      call log_event( &
+      'Call to broadcast failed. Must call store_comm first',&
+      LOG_LEVEL_ERROR )
+    end if
+  end subroutine broadcast_str
+
 
 
   !> Generate the halo exchange redistribution object fo be used for future
@@ -266,5 +430,35 @@ contains
     end select
 
   end function get_mpi_datatype
+
+  !> Returns the number of MPI ranks in the communicator
+  !>
+  !> @return c_size The number of MPI ranks in the communicator
+  function get_comm_size() result(c_size)
+    implicit none
+    integer(i_def) :: c_size
+    if(comm_set)then
+      c_size = comm_size
+    else
+      call log_event( &
+      'Call to get_com_size failed. Must call store_comm first',&
+      LOG_LEVEL_ERROR )
+    end if
+  end function get_comm_size
+
+  !> Returns the number of the local MPI rank
+  !>
+  !> @return c_size The number of the local MPI rank
+  function get_comm_rank() result(c_rank)
+    implicit none
+    integer(i_def) :: c_rank
+    if(comm_set)then
+      c_rank = comm_rank
+    else
+      call log_event( &
+      'Call to get_com_rank failed. Must call store_comm first',&
+      LOG_LEVEL_ERROR )
+    end if
+  end function get_comm_rank
 
 end module mpi_mod

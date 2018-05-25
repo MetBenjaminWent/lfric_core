@@ -27,7 +27,7 @@ module mesh_mod_test
                                   partitioner_interface,            &
                                   partitioner_cubedsphere_serial
   use yaxt,                 only: xt_initialize, xt_finalize
-  use mpi_mod,              only: store_comm
+  use mpi_mod,              only: store_comm, clear_comm
 
   implicit none
 
@@ -211,6 +211,8 @@ contains
 
     ! Finalise YAXT
     call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
 
   end subroutine tearDown
 

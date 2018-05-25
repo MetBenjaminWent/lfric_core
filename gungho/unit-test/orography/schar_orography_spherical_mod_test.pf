@@ -17,7 +17,7 @@ module schar_orography_spherical_mod_test
                                          mesh_collection
   use analytic_orography_mod,     only : orography_profile
   use yaxt,                       only : xt_initialize, xt_finalize
-  use mpi_mod,                    only : store_comm
+  use mpi_mod,                    only : store_comm, clear_comm
 
   use pFUnit_Mod
 
@@ -141,6 +141,8 @@ contains
 
     ! Finalise YAXT
     call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
 
   end subroutine tearDown
 

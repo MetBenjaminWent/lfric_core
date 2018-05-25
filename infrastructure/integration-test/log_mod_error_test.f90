@@ -10,7 +10,10 @@ program log_mod_error_test
 
   use ESMF,            only : ESMF_Initialize, ESMF_Finalize
   use iso_fortran_env, only : error_unit
-  use log_mod,         only : log_event, LOG_LEVEL_ERROR
+  use mpi_mod,         only : store_comm, get_comm_size
+  use log_mod,         only : log_event, log_set_parallel_logging, &
+                              LOG_LEVEL_ERROR
+  use mpi,             only : MPI_COMM_WORLD
 
   integer :: condition
 
@@ -24,6 +27,8 @@ program log_mod_error_test
     write( error_unit, '("Failed to initialise ESMF: ", I0)') condition
     stop 1
   end if
+  call store_comm(MPI_COMM_WORLD)
+  if(get_comm_size() > 1) call log_set_parallel_logging(.true.)
 
   ! Everything else is here purely to support the testing of this line:
   !

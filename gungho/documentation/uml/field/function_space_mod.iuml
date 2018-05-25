@@ -9,14 +9,13 @@ class function_space_mod::function_space_type {
     -basis_x: real[:::] <<allocatable>>
     -dim_space: integer
     -dim_space_diff: integer
-    -distgrid: ESMF_DistGrid
     -dofmap_list: linked_list
     -dof_on_vert_boundary: integer[::]
     -element_order: integer
     -fs: integer
     -fs_order: integer
     -global_dof_id: integer[] <<allocatable>>
-    -haloHandle: ESMF_RouteHandle[] <<allocatable>>
+    -xt_redist: redist[] <<allocatable>>
     -last_dof_annexed: integer
     -last_dof_halo: integer[] <<allocatable>>
     -last_dof_owned: integer
@@ -48,11 +47,10 @@ class function_space_mod::function_space_type {
     +get_colours( <<out>>ncolours: integer, <<out>>ncells_per_colour: integer[] <<pointer>>, <<out>>colour_map: integer[::] <<pointer>> )
     +get_dim_space() : integer
     +get_dim_space_diff() : integer
-    +get_distgrid(): ESMF_DistGrid
     +get_element_order(): integer
     +get_fs_order() : integer
     +get_global_dof_id( <<inout>>global_dof_id: integer[] )
-    +get_haloHandle( <<in>>depth: integer ): ESMF_RouteHandle
+    +get_redist( <<in>>depth: integer ): xt_redist
     +get_last_dof_halo() : integer
     +get_last_dof_halo( <<in>>depth: integer ) : integer
     +get_last_dof_owned() : integer

@@ -11,7 +11,8 @@ module {{listname}}_config_mod
 
   use constants_mod, only : {{all_kinds | sort | join( ', &\n' + ' '*28 )}}
   use log_mod,       only : log_event, log_scratch_space, LOG_LEVEL_ERROR
-  use ESMF,          only : ESMF_VM, ESMF_VMBroadcast, ESMF_SUCCESS
+  use mpi_mod,       only : broadcast
+  use mpi,           only : MPI_SUCCESS
 
   implicit none
 
@@ -150,15 +151,13 @@ contains
   !> An error is reported if the namelist could not be read.
   !>
   !> @param [in] file_unit Unit number of the file to read from.
-  !> @param [in] vm ESMF VM object of current run.
-  !> @param [in] local_rank Rank of current ESMF process.
+  !> @param [in] local_rank Rank of current process.
   !>
-  subroutine read_{{listname}}_namelist( file_unit, vm, local_rank )
+  subroutine read_{{listname}}_namelist( file_unit, local_rank )
     implicit none
     integer(i_native), intent(in) :: file_unit
-    type(ESMF_VM),     intent(in) :: vm
     integer(i_native), intent(in) :: local_rank
-    call read_namelist( file_unit, vm, local_rank
+    call read_namelist( file_unit, local_rank
 {%- if enumerations -%}
     , {{enumerations | sort | join( ', ' )}}
 {%- endif %} )
@@ -166,7 +165,7 @@ contains
 
   ! Reads the namelist file.
   !
-  subroutine read_namelist( file_unit, vm, local_rank
+  subroutine read_namelist( file_unit, local_rank
 {%- if enumerations -%}
     , {{ enumerations | sort | decorate( 'dummy_' ) | join( ', ' ) }}
 {%- endif %} )
@@ -176,7 +175,6 @@ contains
     implicit none
 
     integer(i_native), intent(in) :: file_unit
-    type(ESMF_VM),     intent(in) :: vm
     integer(i_native), intent(in) :: local_rank
 {%- for name in enumerations | sort %}
     integer(i_native), intent(out) :: dummy_{{name}}
@@ -254,18 +252,13 @@ contains
 
 {%- for ftype, count in lonekindtally|dictsort %}
 {%-   if loop.first %}{{'\n'}}{%- endif %}
-    call ESMF_VMBroadcast( vm
-{{-   ', buffer_' + ftype.intrinsicType + '_' + ftype.kind }}
+    call broadcast(
+{{-   ' buffer_' + ftype.intrinsicType + '_' + ftype.kind }}
 {{-   ', '}}{{count}}
 {%-   if ftype.intrinsicType == 'character' %}
 {{-     '*' + ftype.kind }}
 {%-   endif %}
-{{-   ', 0, rc=condition )'}}
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast 'buffer_{{ftype.label()}}'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
+{{-   ', 0 )'}}
 {%- endfor %}
 
 {%- for name, index in lonekindindex|dictsort %}
@@ -287,16 +280,11 @@ contains
 
 {%- for name in arrays|sort %}
 {%-   if loop.first %}{{'\n'}}{% endif %}
-    call ESMF_VMBroadcast( vm, {{name}}, size({{name}}, 1)
+    call broadcast( {{name}}, size({{name}}, 1)
 {%-   if parameters[name].fortranType.intrinsicType == 'character' %}
 {{-   '*' + parameters[name].fortranType.kind }}
 {%-  endif %}
-{{-   ', 0, rc=condition )' }}
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast '{{name}}'"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
+{{-   ', 0 )' }}
 {%- endfor %}
 
     namelist_loaded = .true.

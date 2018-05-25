@@ -238,14 +238,14 @@ There are two critical variables: ``IGNORE_DEPENDENCIES`` and
 ``IGNORE_DEPENDENCIES`` is a space-separated list of modules which should be
 ignored by the dependency analyser when discovered in ``use`` statements. This
 prevents the dependency analysis trying to rebuild your library. For example,
-the infrastructure makes use of the ESMF library: the name to add would be
-"esmf" since we ``use esmf``.
+the infrastructure makes use of the YAXT library: the name to add would be
+"yaxt" since we ``use yaxt``.
 
 ``EXTERNAL_*_LIBRARIES`` is a space-separated list of library names to be passed
 to the linker using "little l" arguments. Libraries which are available as a
 ".so" file should be listed in ``EXTERNAL_DYNAMIC_LIBRARIES`` while those only
 available as a ".a" file are listed in ``EXTERNAL_STATIC_LIBRARIES``. Returning
-to the ESMF example, the library file is ``libesmf.so`` so the string ``esmf``
+to the YAXT example, the library file is ``libyaxt.so`` so the string ``yaxt``
 would be added to ``EXTERNAL_DYNAMIC_LIBRARIES``.
 
 In addition to adding knowledge of the library to the build system you have to

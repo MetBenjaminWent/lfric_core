@@ -16,7 +16,7 @@ module compute_dof_level_kernel_mod_test
   use mesh_mod,                      only : PLANE_BI_PERIODIC
   use pFUnit_Mod
   use yaxt,                          only : xt_initialize, xt_finalize
-  use mpi_mod,                       only : store_comm
+  use mpi_mod,                       only : store_comm, clear_comm
 
   implicit none
 
@@ -67,6 +67,8 @@ contains
 
     ! Finalise YAXT
     call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
 
   end subroutine tearDown
 

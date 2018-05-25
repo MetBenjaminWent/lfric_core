@@ -22,7 +22,7 @@ module mesh_map_mod_test
   use global_mesh_collection_mod, only: global_mesh_collection_type, &
                                         global_mesh_collection
   use yaxt,                 only: xt_initialize, xt_finalize
-  use mpi_mod,              only: store_comm
+  use mpi_mod,              only: store_comm, clear_comm
   use pFUnit_Mod
 
 
@@ -271,6 +271,8 @@ contains
 
     ! Finalise YAXT
     call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
 
   end subroutine tearDown
 

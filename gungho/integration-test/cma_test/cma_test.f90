@@ -32,15 +32,15 @@ program cma_test
   use derived_config_mod,             only : set_derived_config
   use ESMF,                           only : ESMF_Initialize,    &
                                              ESMF_Finalize,      &
-                                             ESMF_VMGet,         &
-                                             ESMF_VMAllReduce,   &
                                              ESMF_LOGKIND_MULTI, &
                                              ESMF_SUCCESS,       &
-                                             ESMF_REDUCE_SUM,    &
                                              ESMF_VM,            &
                                              ESMF_END_KEEPMPI
   use yaxt,                           only : xt_initialize, xt_finalize
-  use mpi_mod,                        only : initialise_comm, finalise_comm
+  use mpi_mod,                        only : initialise_comm, store_comm, &
+                                             finalise_comm, &
+                                             get_comm_size, get_comm_rank, &
+                                             global_sum
   use field_mod,                      only : field_type
   use finite_element_config_mod,      only : element_order
   use fs_continuity_mod,              only : W0,W1,W2,W3
@@ -51,6 +51,7 @@ program cma_test
   use init_mesh_mod,                  only : init_mesh
   use log_mod,                        only : log_event,         &
                                              log_scratch_space, &
+                                             log_set_parallel_logging, &
                                              LOG_LEVEL_ERROR,   &
                                              LOG_LEVEL_INFO
   use mesh_mod,                       only : mesh_type
@@ -63,7 +64,7 @@ program cma_test
 
   ! ESMF virtual machine
   type(ESMF_VM)       :: vm
-  ! ESMF error code
+  ! Error code
   integer(kind=i_def) :: rc
   ! Number of processes and local rank
   integer(kind=i_def) :: petCount, localPET
@@ -87,7 +88,7 @@ program cma_test
   ! Pointer to mesh
   type(mesh_type), pointer :: mesh
   ! Number of cells of 2d mesh (local and global), 
-  integer(kind=i_def), dimension(1) :: ncells_2d_local, ncells_2d
+  integer(kind=i_def) :: ncells_2d_local, ncells_2d
   ! Number of vertical layers
   integer(kind=i_def) :: nlayers
   ! vertical domain size
@@ -123,6 +124,9 @@ program cma_test
   ! Initialise MPI communicatios and get a valid communicator
   call initialise_comm(comm)
 
+  ! Save the communicator for later use
+  call store_comm(comm)
+
   ! Initialise YAXT
   call xt_initialize(comm)
 
@@ -133,19 +137,14 @@ program cma_test
                        logkindflag=ESMF_LOGKIND_MULTI, &
                        mpiCommunicator=comm, &
                        rc=rc)
+  if(get_comm_size() > 1) call log_set_parallel_logging(.true.)
   if (rc /= ESMF_SUCCESS) then
     call log_event( 'Failed to initialise ESMF.', &
                     LOG_LEVEL_ERROR )
   end if
 
-  call ESMF_VMGet(vm, localPet=localPET, petCount=petCount, rc=rc)
-  if (rc /= ESMF_SUCCESS) then
-    call log_event( 'Failed to get the ESMF virtual machine.', &
-                    LOG_LEVEL_ERROR )
-  end if
-
-  total_ranks = petCount
-  local_rank  = localPET
+  total_ranks = get_comm_size()
+  local_rank  = get_comm_rank()
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !
@@ -264,7 +263,7 @@ program cma_test
 
   ! Work out grid spacing, which should be of order 1
   mesh => mesh_collection%get_mesh( mesh_id )
-  ncells_2d_local(1) = mesh%get_ncells_2d()
+  ncells_2d_local = mesh%get_ncells_2d()
 
   ! Ensure that a spherical geometry is used (otherwise tests are too simple)
   if (geometry /= base_mesh_geometry_spherical) then
@@ -273,19 +272,14 @@ program cma_test
   end if
 
   ! Work out total number of cells
-  call ESMF_VMAllReduce(vm,                         &
-                        sendData=ncells_2d_local,   &
-                        recvData=ncells_2d,         &
-                        count=1,                    &
-                        reduceflag=ESMF_REDUCE_SUM, &
-                        rc=rc)
+  call global_sum(ncells_2d_local, ncells_2d)
 
   ! Check that the grid spacings are of order 1 (between 0.1 and 10).
   ! Otherwise the derivative and mass terms in the
   ! Helmholtz-operator are not well balanced and errors could go unnoticed
   nlayers = mesh%get_nlayers()
   domain_top = mesh%get_domain_top()
-  dx = sqrt(4.*pi/ncells_2d(1))*radius
+  dx = sqrt(4.*pi/ncells_2d)*radius
   dz = domain_top / nlayers
 
   if ( ( dx < 0.1_r_def) .or. ( dx > 10.0_r_def) ) then

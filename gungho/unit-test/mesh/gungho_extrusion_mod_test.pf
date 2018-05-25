@@ -12,6 +12,8 @@ module gungho_extrusion_mod_test
   use gungho_feign_config_mod, only : feign_base_mesh_config, &
                                       feign_extrusion_config, &
                                       feign_planet_config
+  use yaxt,                    only : xt_initialize, xt_finalize
+  use mpi_mod,                 only : store_comm, clear_comm
   use pFUnit_mod
 
   implicit none
@@ -20,10 +22,12 @@ module gungho_extrusion_mod_test
   public test_planar, test_spherical
 
   @TestCase
-  type, public, extends(TestCase) :: gungho_extrusion_test_type
+  type, public, extends(MPITestCase) :: gungho_extrusion_test_type
     private
   contains
     private
+    procedure, public  :: setUp
+    procedure, public  :: tearDown
     procedure, public  :: test_planar
     procedure, public  :: test_spherical
     procedure          :: identify_extrusion
@@ -32,7 +36,35 @@ module gungho_extrusion_mod_test
 contains
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  @test
+  subroutine setUp( this )
+
+    implicit none
+
+    class(gungho_extrusion_test_type), intent(inout) :: this
+
+    ! Initialise YAXT
+    call xt_initialize(this%getMpiCommunicator())
+    !Store the MPI communicator for later use
+    call store_comm(this%getMpiCommunicator())
+
+  end subroutine setUp
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine tearDown( this )
+
+    implicit none
+
+    class(gungho_extrusion_test_type), intent(inout) :: this
+
+    ! Finalise YAXT
+    call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
+
+  end subroutine tearDown
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  @Test( npes=[1] )
   subroutine test_planar( this )
 
     use base_mesh_config_mod, only : base_mesh_geometry_planar, &
@@ -72,7 +104,7 @@ contains
   end subroutine test_planar
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  @test
+  @Test( npes=[1] )
   subroutine test_spherical( this )
 
     use base_mesh_config_mod, only : base_mesh_geometry_spherical, &

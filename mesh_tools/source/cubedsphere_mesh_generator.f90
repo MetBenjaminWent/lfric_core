@@ -22,6 +22,7 @@ program cubedsphere_mesh_generator
                                edge_cells, smooth_passes, nmeshes, mesh_names,  &
                                mesh_filename
   use ESMF
+  use mpi_mod,           only: initialise_comm, store_comm, finalise_comm
   use gencube_ps_mod,    only: gencube_ps_type
   use io_utility_mod,    only: open_file, close_file
   use log_mod,           only: log_scratch_space, log_event, log_set_level, &
@@ -35,7 +36,7 @@ program cubedsphere_mesh_generator
   implicit none
 
   type(ESMF_VM)  :: vm
-  integer(i_def) :: rc
+  integer(i_def) :: comm, rc
 
   character(:), allocatable   :: filename
   integer(i_def)              :: namelist_unit
@@ -86,9 +87,12 @@ program cubedsphere_mesh_generator
   !===================================================================
   ! 2.0 Start up ESMF
   !===================================================================
+  call initialise_comm(comm)
+  call store_comm(comm)
   CALL ESMF_Initialize( vm=vm, rc=rc,                    &
                         logkindflag=ESMF_LOGKIND_SINGLE, &
-                        defaultlogfilename="cubedsphere.log" )
+                        defaultlogfilename="cubedsphere.log", &
+                        mpiCommunicator=comm )
   if (rc /= ESMF_SUCCESS) call log_event( 'Failed to initialise ESMF.', &
                                           LOG_LEVEL_ERROR )
 
@@ -97,7 +101,7 @@ program cubedsphere_mesh_generator
   !===================================================================
   call get_initial_filename( filename )
   namelist_unit = open_file( filename )
-  call read_cubedsphere_mesh_generator_namelist( namelist_unit, vm, 0 )
+  call read_cubedsphere_mesh_generator_namelist( namelist_unit, 0 )
   call postprocess_cubedsphere_mesh_generator_namelist()
   call close_file( namelist_unit )
   deallocate( filename )
@@ -339,7 +343,8 @@ program cubedsphere_mesh_generator
     if (allocated(ugrid_file)) deallocate(ugrid_file)
   end do
 
-  call ESMF_Finalize(rc=rc)
+  call ESMF_Finalize(endflag=ESMF_END_KEEPMPI,rc=rc)
+  call finalise_comm()
 
   if ( allocated( ncells ) )   deallocate (ncells)
   if ( allocated( cpp ) )      deallocate (cpp)

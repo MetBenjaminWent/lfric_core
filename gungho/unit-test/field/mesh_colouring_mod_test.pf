@@ -5,9 +5,6 @@
 !-----------------------------------------------------------------------------
 !> @brief Test suite to verify computation of colour map.
 !>
-!> @details Fixture provides ESMF init to allow creation of
-!> prerequistes to perform colouring.
-!>
 !-------------------------------------------------------------------------------
 module mesh_colouring_mod_test
 !-------------------------------------------------------------------------------
@@ -20,10 +17,9 @@ module mesh_colouring_mod_test
   use mesh_collection_mod,        only: mesh_collection_type,                  &
                                         mesh_collection
   use yaxt,                       only : xt_initialize, xt_finalize
-  use mpi_mod,                    only : store_comm
+  use mpi_mod,                    only : store_comm, clear_comm
 
   use pFUnit_Mod
-  use gungho_suite_fixture_mod,   only : get_esmf_handle
 
   implicit none
 
@@ -53,24 +49,15 @@ contains
 subroutine setUp(this)
 
   use finite_element_config_mod, only : finite_element_cellshape_quadrilateral
-  use ESMF
 
   implicit none
 
   class(compute_colours_test_type), intent(inout)  :: this
-  type(ESMF_VM)  :: vm
-  integer        :: rc, local_pet, pet_count
 
   ! Initialise YAXT
   call xt_initialize(this%getMpiCommunicator())
   !Store the MPI communicator for later use
   call store_comm(this%getMpiCommunicator())
-
-  call ESMF_VMGet(get_esmf_handle(),  &
-                  localPet=local_pet, &
-                  petCount=pet_count, &
-                  rc=rc)
-  if (rc  /=  ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   ! Create top level collections
   global_mesh_collection = global_mesh_collection_type()
@@ -98,6 +85,8 @@ subroutine tearDown(this)
 
   ! Finalise YAXT
   call xt_finalize()
+  ! Clear the stored MPI communicator
+  call clear_comm()
 
 end subroutine tearDown
 !-------------------------------------------------------------------------------

@@ -25,7 +25,10 @@ module log_mod
   implicit none
 
   private
-  public log_set_info_stream, log_set_alert_stream, log_set_level, log_level, log_event
+  public log_set_parallel_logging, &
+         log_set_info_stream, log_set_alert_stream, &
+         log_set_level, log_level, log_event
+         
 
   !> Named logging level.
   !>
@@ -55,7 +58,22 @@ module log_mod
   integer, private :: info_unit     = output_unit
   integer, private :: alert_unit    = error_unit
 
+  logical, private :: is_parallel     = .false.
+
 contains
+
+  !> Switches the logger between parallel and serial mode
+  !> @param is_parallel_logging Whether the logger should be
+  !>                            parallel (.true.) or serial (.false.)
+  subroutine log_set_parallel_logging(is_parallel_logging)
+
+    implicit none
+
+    logical, intent(in) :: is_parallel_logging
+
+    is_parallel = is_parallel_logging
+
+  end subroutine log_set_parallel_logging
 
   !> Set where information goes.
   !>
@@ -145,7 +163,6 @@ contains
     integer,       intent( in ) :: level
 
     type(ESMF_LogMsg_Flag) :: log_flag
-    type(ESMF_VM) :: vm
     integer :: rc
     integer :: total_ranks
 
@@ -181,9 +198,7 @@ contains
       end select
 
 
-      call ESMF_VMGetCurrent(vm=vm, rc=rc)
-      call ESMF_VMGet(vm=vm, petCount=total_ranks, rc=rc)
-      if(total_ranks > 1)then
+      if(is_parallel)then
         call ESMF_LogWrite(trim( message ), log_flag, rc=rc)
       else
         call date_and_time( date=date_string, time=time_string, zone=zone_string)

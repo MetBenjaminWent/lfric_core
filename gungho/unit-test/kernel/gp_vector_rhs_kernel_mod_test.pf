@@ -12,6 +12,8 @@ module gp_vector_rhs_kernel_mod_test
   use quadrature_xyoz_mod,               only: quadrature_xyoz_type, &
                                                quadrature_xyoz_proxy_type
   use quadrature_rule_gaussian_mod,      only: quadrature_rule_gaussian_type
+  use yaxt,                              only: xt_initialize, xt_finalize
+  use mpi_mod,                           only: store_comm, clear_comm
 
   implicit none
 
@@ -19,7 +21,7 @@ module gp_vector_rhs_kernel_mod_test
   public :: test_all
 
   @TestCase
-  type, extends(TestCase), public :: gp_vector_rhs_test_type
+  type, extends(MPITestCase), public :: gp_vector_rhs_test_type
     private
     real(r_def), allocatable :: basis(:,:,:,:),   &
                                 basis_f(:,:,:,:), &
@@ -52,6 +54,11 @@ contains
 
     integer(i_def) :: nqp_h, nqp_v
 
+    ! Initialise YAXT
+    call xt_initialize(this%getMpiCommunicator())
+    !Store the MPI communicator for later use
+    call store_comm(this%getMpiCommunicator())
+
     call feign_base_mesh_config( filename='foo', prime_mesh_name='unit_test', &
                                  geometry=base_mesh_geometry_planar,          &
                                  partitioner=base_mesh_partitioner_planar,    &
@@ -78,10 +85,15 @@ contains
 
     deallocate( this%basis_f, this%basis, this%diff_basis )
 
+    ! Finalise YAXT
+    call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
+
   end subroutine tearDown
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  @test
+  @Test( npes=[1] )
   subroutine test_all( this )
 
     use gp_vector_rhs_kernel_mod, only : gp_vector_rhs_code

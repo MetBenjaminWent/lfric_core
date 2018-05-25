@@ -41,7 +41,8 @@ module io_mod
 
   use psykal_lite_mod,               only: invoke_nodal_coordinates_kernel, &
                                            invoke_pointwise_convert_xyz2llr
-  use ESMF
+  use mpi_mod, only: get_comm_size, get_comm_rank, all_gather
+  use mpi, only: MPI_SUCCESS
   use xios
 
   implicit none
@@ -255,13 +256,9 @@ end subroutine output_xios_nodal
 !!  @param[in]      dtime         XIOS timestep interval
 !!  @param[in]      mesh_id       Mesh id
 !!  @param[in]      chi           Coordinate field
-!!  @param[in]      vm            ESMF vm
-!!  @param[in]      local_rank    Local rank
-!!  @param[in]      total_ranks   Total ranks
 !-------------------------------------------------------------------------------
 
-subroutine xios_domain_init(xios_ctx, mpi_comm, dtime, restart, mesh_id, chi, &
-                            vm, local_rank, total_ranks)
+subroutine xios_domain_init(xios_ctx, mpi_comm, dtime, restart, mesh_id, chi)
   implicit none
 
   ! Arguments
@@ -271,9 +268,6 @@ subroutine xios_domain_init(xios_ctx, mpi_comm, dtime, restart, mesh_id, chi, &
   type(restart_type), intent(in)       :: restart
   integer(i_def),      intent(in)      :: mesh_id
   type(field_type),    intent(in)      :: chi(:)
-  type(ESMF_VM),       intent(in)      :: vm
-  integer(i_def),      intent(in)      :: local_rank
-  integer(i_def),      intent(in)      :: total_ranks
 
 
   ! Local variables 
@@ -293,11 +287,11 @@ subroutine xios_domain_init(xios_ctx, mpi_comm, dtime, restart, mesh_id, chi, &
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!! Setup diagnostic domains !!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  call xios_diagnostic_domain_init(mesh_id, chi, vm, local_rank, total_ranks)
+  call xios_diagnostic_domain_init(mesh_id, chi)
 
   !!!!!!!!!!!!!!!!!!!!!! Setup checkpoint / restart domains !!!!!!!!!!!!!!!!!!!!!
 
-  call xios_restart_domain_init(mesh_id, chi, vm, local_rank, total_ranks)
+  call xios_restart_domain_init(mesh_id, chi)
 
   !!!!!!!!!!!!! Setup diagnostic output context information !!!!!!!!!!!!!!!!!!
 
@@ -389,25 +383,20 @@ end subroutine xios_domain_init
 !!
 !!  @param[in]      mesh_id       Mesh id
 !!  @param[in]      chi           Coordinate field
-!!  @param[in]      vm            ESMF vm
-!!  @param[in]      local_rank    Local rank
-!!  @param[in]      total_ranks   Total ranks
 !-------------------------------------------------------------------------------
 
-subroutine xios_diagnostic_domain_init(mesh_id, chi, vm, local_rank, total_ranks)
+subroutine xios_diagnostic_domain_init(mesh_id, chi)
+
   implicit none
 
   ! Arguments
 
   integer(i_def),            intent(in)      :: mesh_id
   type(field_type), intent(in)               :: chi(:)
-  type(ESMF_VM),             intent(in)      :: vm
-  integer(i_def),            intent(in)      :: local_rank
-  integer(i_def),            intent(in)      :: total_ranks
 
   ! Local variables 
 
-  integer(i_def)                       :: i, rc
+  integer(i_def)                       :: i, err
 
 
   ! Node domain (W0)
@@ -446,7 +435,7 @@ subroutine xios_diagnostic_domain_init(mesh_id, chi, vm, local_rank, total_ranks
 
   type(function_space_type), pointer :: output_field_fs   => null()
 
-  ! Variables for ESMF gather to determine global domain sizes
+  ! Variables for the gather to determine global domain sizes
   ! from the local partitioned ones
 
   integer(i_def)                :: global_undf
@@ -467,7 +456,7 @@ subroutine xios_diagnostic_domain_init(mesh_id, chi, vm, local_rank, total_ranks
   ! Set up arrays to hold number of dofs for local and global domains
 
   allocate(local_undf(1))
-  allocate(all_undfs(total_ranks))
+  allocate(all_undfs(get_comm_size()))
 
   
   all_undfs = 0
@@ -553,12 +542,9 @@ subroutine xios_diagnostic_domain_init(mesh_id, chi, vm, local_rank, total_ranks
 
   !!!!!!!!!!!!  Global domain calculation !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  call ESMF_VMAllGather(vm, sendData=local_undf, recvData=all_undfs, count=1, rc=rc)
-
-  ! Return code indicates something went wrong in the above, so log an error
-  if (rc /= ESMF_SUCCESS) &
-      call ESMF_LogWrite("Error doing allGather for domain sizes", ESMF_LOGMSG_ERROR, rc=rc)
- 
+  call all_gather ( local_undf, all_undfs, 1 )
+  if (err /= MPI_SUCCESS) &
+      call log_event("Error doing allGather for domain sizes", LOG_LEVEL_ERROR)
 
   ! Adjust size of data taking into account how many levels we have (same for each
   ! partition as we only partition horizontally)
@@ -573,10 +559,10 @@ subroutine xios_diagnostic_domain_init(mesh_id, chi, vm, local_rank, total_ranks
   ! Calculate ibegin for each rank (as we have the array of undfs in order
   ! we can just sum to get it)
 
-  if (local_rank == 0) then
+  if (get_comm_rank() == 0) then
     ibegin_nodes = 0
   else
-    ibegin_nodes = sum(all_undfs(1:local_rank))
+    ibegin_nodes = sum(all_undfs(1:get_comm_rank()))
   end if
 
 
@@ -601,7 +587,7 @@ subroutine xios_diagnostic_domain_init(mesh_id, chi, vm, local_rank, total_ranks
   ! Set up arrays for AllGather
 
   allocate(local_undf(1))
-  allocate(all_undfs(total_ranks))
+  allocate(all_undfs(get_comm_size()))
   
   all_undfs = 0
 
@@ -648,12 +634,9 @@ subroutine xios_diagnostic_domain_init(mesh_id, chi, vm, local_rank, total_ranks
 
   !!!!!!!!!!!!  Global domain calculation !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  call ESMF_VMAllGather(vm, sendData=local_undf, recvData=all_undfs, count=1, rc=rc)
-
-  ! Return code indicates something went wrong in the above, so log an error
-  if (rc /= ESMF_SUCCESS) &
-      call ESMF_LogWrite("Error doing allGather for domain sizes", ESMF_LOGMSG_ERROR, rc=rc)
- 
+  call all_gather ( local_undf, all_undfs, 1 )
+  if (err /= MPI_SUCCESS) &
+      call log_event("Error doing allGather for domain sizes", LOG_LEVEL_ERROR)
 
   ! Adjust size of data taking into account how many levels we have (same for each
   ! partition as we only partition horizontally)
@@ -669,10 +652,10 @@ subroutine xios_diagnostic_domain_init(mesh_id, chi, vm, local_rank, total_ranks
   ! Calculate ibegin for each rank as we have the array of undfs in order
   ! we can just sum to get it.
 
-  if (local_rank == 0) then
+  if (get_comm_rank() == 0) then
     ibegin_faces = 0
   else
-    ibegin_faces = sum(all_undfs(1:local_rank))
+    ibegin_faces = sum(all_undfs(1:get_comm_rank()))
   end if
 
 
@@ -695,7 +678,7 @@ subroutine xios_diagnostic_domain_init(mesh_id, chi, vm, local_rank, total_ranks
   ! Set up arrays for AllGather
 
   allocate(local_undf(1))
-  allocate(all_undfs(total_ranks))
+  allocate(all_undfs(get_comm_size()))
 
   all_undfs = 0
 
@@ -761,14 +744,12 @@ end subroutine xios_diagnostic_domain_init
 !!
 !!  @param[in]      mesh_id       Mesh id
 !!  @param[in]      chi           Coordinate field
-!!  @param[in]      vm            ESMF vm
-!!  @param[in]      local_rank    Local rank
-!!  @param[in]      total_ranks   Total ranks
 !-------------------------------------------------------------------------------
 
-subroutine xios_restart_domain_init(mesh_id, chi, vm, local_rank, total_ranks)
+subroutine xios_restart_domain_init(mesh_id, chi)
 
   use fs_continuity_mod, only : fs_enumerator, fs_name
+
 
   implicit none
 
@@ -776,9 +757,6 @@ subroutine xios_restart_domain_init(mesh_id, chi, vm, local_rank, total_ranks)
 
   integer(i_def),   intent(in)  :: mesh_id
   type(field_type), intent(in)  :: chi(3)
-  type(ESMF_VM),    intent(in)  :: vm
-  integer(i_def),   intent(in)  :: local_rank
-  integer(i_def),   intent(in)  :: total_ranks
 
 
   integer(i_native), parameter :: domain_function_spaces(5) &
@@ -786,7 +764,7 @@ subroutine xios_restart_domain_init(mesh_id, chi, vm, local_rank, total_ranks)
 
   ! Local variables
 
-  integer(i_def)    :: i, rc
+  integer(i_def)    :: i, err
   integer(i_native) :: fs_index
 
   ! Restart domain
@@ -808,7 +786,7 @@ subroutine xios_restart_domain_init(mesh_id, chi, vm, local_rank, total_ranks)
 
   type(function_space_type), pointer :: output_field_fs   => null()
 
-  ! Variables for ESMF gather to determine global domain sizes
+  ! Variables for the gather to determine global domain sizes
   ! from the local partitioned ones
 
   integer(i_def)                :: global_undf_restart
@@ -836,7 +814,7 @@ subroutine xios_restart_domain_init(mesh_id, chi, vm, local_rank, total_ranks)
 
 
     allocate(local_undf(1))
-    allocate(all_undfs_restart_domain(total_ranks))
+    allocate(all_undfs_restart_domain(get_comm_size()))
 
     all_undfs_restart_domain = 0
 
@@ -872,16 +850,10 @@ subroutine xios_restart_domain_init(mesh_id, chi, vm, local_rank, total_ranks)
 
     !!!!!!!!!!!!  Global domain calculation !!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    call ESMF_VMAllGather(vm,                                &
-                          sendData=local_undf,               &
-                          recvData=all_undfs_restart_domain, &
-                          count=1,                           &
-                          rc=rc)
-
-    ! Return code indicates something went wrong in the above, so log an error
-    if (rc /= ESMF_SUCCESS) &
-        call ESMF_LogWrite("Error doing allGather for restart domain sizes", &
-                           ESMF_LOGMSG_ERROR, rc=rc)
+    call all_gather ( local_undf, all_undfs_restart_domain, 1 )
+    if (err /= MPI_SUCCESS) &
+    call log_event("Error doing allGather for restart domain sizes", &
+                  LOG_LEVEL_ERROR)
 
     ! Now get the global sum of undf across all ranks to set the global domain sizes
     ! for restart domain
@@ -891,10 +863,10 @@ subroutine xios_restart_domain_init(mesh_id, chi, vm, local_rank, total_ranks)
     ! Calculate ibegin for each rank as we have the array of undfs in order
     ! we can just sum to get it.
 
-    if (local_rank == 0) then
+    if (get_comm_rank() == 0) then
       ibegin_restart = 0
     else
-      ibegin_restart = sum(all_undfs_restart_domain(1:local_rank))
+      ibegin_restart = sum(all_undfs_restart_domain(1:get_comm_rank()))
     end if
 
     ! Allocate coordinate arrays to be the size required for restart domain.

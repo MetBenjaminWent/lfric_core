@@ -7,6 +7,8 @@
 module generate_global_gw_fields_mod_test
 
   use constants_mod, only: r_def
+  use yaxt, only : xt_initialize, xt_finalize
+  use mpi_mod, only : store_comm, clear_comm
   use pFUnit_Mod
 
   implicit none
@@ -15,10 +17,11 @@ module generate_global_gw_fields_mod_test
   public :: generate_global_gw_fields_test_type, test_all
 
   @TestCase
-  type, extends(TestCase) :: generate_global_gw_fields_test_type
+  type, extends(MPITestCase) :: generate_global_gw_fields_test_type
     private
   contains
     procedure setUp
+    procedure tearDown
     procedure test_all
   end type generate_global_gw_fields_test_type
 
@@ -46,6 +49,11 @@ contains
     implicit none
 
     class(generate_global_gw_fields_test_type), intent(inout) :: this
+
+    ! Initialise YAXT
+    call xt_initialize(this%getMpiCommunicator())
+    !Store the MPI communicator for later use
+    call store_comm(this%getMpiCommunicator())
 
     call feign_initial_temperature_config( bvf_square, theta_surf )
 
@@ -75,7 +83,21 @@ contains
   end subroutine setUp
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  @test
+  subroutine tearDown( this )
+
+    implicit none
+
+    class(generate_global_gw_fields_test_type), intent(inout) :: this
+
+    ! Finalise YAXT
+    call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
+
+  end subroutine tearDown
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  @Test( npes=[1] )
   subroutine test_all( this )
 
     use generate_global_gw_fields_mod, only: generate_global_gw_fields

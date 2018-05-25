@@ -4,11 +4,10 @@
 
 class field_mod::field_type {
   -data : real[] <<allocatable>>
-  -esmf_array : ESMF_Array
   -halo_dirty : integer[]<<allocatable>>
   -vspace : function_space_type <<pointer>>
   -ospace : integer
-  -extant : logical
+  -data_extant : logical
   -write_field_method : procedure <<pointer>>
   -checkpoint_method : procedure <<pointer>>
   -restart_method : procedure <<pointer>>
@@ -40,7 +39,6 @@ class field_mod::field_type {
 
 class field_mod::field_proxy_type {
   +data: real[] <<allocatable>>
-  -esmf_array: ESMF_Array <<pointer>>
   -halo_dirty: integer[] <<pointer>>
   +vspace: function_space_type <<pointer>>
   -ospace: integer <<pointer>>

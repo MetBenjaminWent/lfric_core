@@ -9,6 +9,8 @@
 module calc_exner_pointwise_mod_test
 
   use constants_mod, only: r_def
+  use yaxt, only : xt_initialize, xt_finalize
+  use mpi_mod, only : store_comm, clear_comm
   use pFUnit_Mod
 
   implicit none
@@ -17,10 +19,11 @@ module calc_exner_pointwise_mod_test
   public :: calc_exner_pointwise_test_type, test_all
 
   @TestCase
-  type, extends(TestCase) :: calc_exner_pointwise_test_type
+  type, extends(MPITestCase) :: calc_exner_pointwise_test_type
     private
   contains
     procedure setUp
+    procedure tearDown
     procedure test_all
   end type calc_exner_pointwise_test_type
 
@@ -42,6 +45,11 @@ contains
 
     class(calc_exner_pointwise_test_type), intent(inout) :: this
 
+    ! Initialise YAXT
+    call xt_initialize(this%getMpiCommunicator())
+    !Store the MPI communicator for later use
+    call store_comm(this%getMpiCommunicator())
+
     call feign_planet_config( gravity=gravity, radius=radius, omega=omega, &
                               rd=rd, cp=cp, p_zero=p_zero,                 &
                               scaling_factor=scaling )
@@ -49,7 +57,21 @@ contains
   end subroutine setUp
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  @test
+  subroutine tearDown( this )
+
+    implicit none
+
+    class(calc_exner_pointwise_test_type), intent(inout) :: this
+
+    ! Finalise YAXT
+    call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
+
+  end subroutine tearDown
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  @Test( npes=[1] )
   subroutine test_all( this )
 
     use calc_exner_pointwise_mod, only: calc_exner_pointwise, &

@@ -6,11 +6,10 @@
 
 program configuration_test
 
-  use ESMF,                        only : ESMF_Finalize,   &
-                                          ESMF_Initialize, &
-                                          ESMF_VM,         &
-                                          ESMF_VMGet
   use iso_fortran_env,             only : error_unit, output_unit
+  use mpi_mod,                     only : initialise_comm, store_comm,       &
+                                          finalise_comm,                     &
+                                          get_comm_rank
   use one_of_each_test_config_mod, only : key_from_an_enum,                  &
                                       postprocess_one_of_each_test_namelist, &
                                           read_one_of_each_test_namelist,    &
@@ -28,22 +27,18 @@ program configuration_test
   integer,      parameter :: file_unit = 13
   character(*), parameter :: filename = 'one_of_each.nml'
 
-  type(ESMF_VM) :: vm
+  integer       :: comm
   integer       :: rank
   integer       :: condition
   character(30) :: format_string
 
-  call ESMF_Initialize( vm=vm, rc=condition )
-  if (condition /= 0) then
-    write( error_unit, '("Failed to initialise ESMF")' )
-    stop 1
-  end if
+  ! Initialse mpi and create the default communicator: mpi_comm_world
+  call initialise_comm(comm)
 
-  call ESMF_VMGet( vm, localPET=rank, rc=condition )
-  if (condition /= 0) then
-    write( error_unit, '("Failed to get rank from ESMF")' )
-    stop 2
-  end if
+  ! Save lfric's part of the split communicator for later use
+  call store_comm(comm)
+
+  rank = get_comm_rank()
 
   open( file_unit, file=filename, iostat=condition )
 
@@ -52,7 +47,7 @@ program configuration_test
     stop 3
   end if
 
-  call read_one_of_each_test_namelist( file_unit, vm ,rank )
+  call read_one_of_each_test_namelist( file_unit ,rank )
 
   close( file_unit, iostat=condition )
   if (condition /= 0) then
@@ -62,11 +57,7 @@ program configuration_test
 
   call postprocess_one_of_each_test_namelist
 
-  call ESMF_Finalize( rc=condition )
-  if (condition /= 0) then
-    write( error_unit, '("Failed to finalise ESMF")' )
-    stop 5
-  end if
+  call finalise_comm()
 
   write( output_unit, '("angle_deg: ", E14.7)' ) angle_deg
   write( output_unit, '("angle_rad: ", E14.7)' ) angle_rad

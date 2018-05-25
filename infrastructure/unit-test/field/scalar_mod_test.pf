@@ -10,6 +10,7 @@
 module scalar_mod_test
 
   use constants_mod, only : r_def
+  use mpi_mod, only : store_comm
   use pFUnit_Mod
 
   implicit none
@@ -18,7 +19,7 @@ module scalar_mod_test
   public :: test_all
 
   @TestCase
-  type, extends(TestCase), public :: scalar_test_type
+  type, extends(MPITestCase), public :: scalar_test_type
     private
   contains
     procedure setUp
@@ -35,6 +36,9 @@ contains
 
     class(scalar_test_type), intent(inout) :: this
 
+    !Store the MPI communicator for later use
+    call store_comm(this%getMpiCommunicator())
+
   end subroutine setUp
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -47,7 +51,7 @@ contains
   end subroutine tearDown
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  @test
+  @Test( npes=[1] )
   subroutine test_all( this )
 
     use scalar_mod, only: scalar_type

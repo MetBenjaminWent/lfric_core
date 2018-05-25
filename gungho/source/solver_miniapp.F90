@@ -1,6 +1,3 @@
-
-
-
 !-----------------------------------------------------------------------------
 ! (c) Crown copyright 2017 Met Office. All rights reserved.
 ! The file LICENCE, distributed with this code, contains details of the terms
@@ -22,7 +19,9 @@ program solver_miniapp
   use init_solver_miniapp_mod,        only : init_solver_miniapp
   use ESMF
   use yaxt,                           only : xt_initialize, xt_finalize
-  use mpi_mod,                        only : initialise_comm, finalise_comm
+  use mpi_mod,                        only : initialise_comm, store_comm, &
+                                             finalise_comm, &
+                                             get_comm_size, get_comm_rank
   use global_mesh_collection_mod,     only : global_mesh_collection, &
                                              global_mesh_collection_type
   use field_mod,                      only : field_type
@@ -31,6 +30,7 @@ program solver_miniapp
   use log_mod,                        only : log_event,         &
                                              log_set_level,     &
                                              log_scratch_space, &
+                                             log_set_parallel_logging, &
                                              LOG_LEVEL_ERROR,   &
                                              LOG_LEVEL_INFO
   use output_config_mod,              only : write_nodal_output
@@ -44,7 +44,6 @@ program solver_miniapp
   type(ESMF_VM)      :: vm
   integer(i_def)     :: rc
   integer(i_def)     :: total_ranks, local_rank
-  integer(i_def)     :: petCount, localPET
   integer(i_def)     :: comm = -999
 
   integer(i_def)     :: mesh_id, twod_mesh_id
@@ -60,6 +59,9 @@ program solver_miniapp
   ! Initialise MPI communicatios and get a valid communicator
   call initialise_comm(comm)
 
+  ! Save the commmunicator for later use
+  call store_comm(comm)
+
   ! Initialise YAXT
   call xt_initialize(comm)
 
@@ -69,16 +71,13 @@ program solver_miniapp
                        defaultlogfilename="solver_miniapp.Log", &
                        logkindflag=ESMF_LOGKIND_MULTI, &
                        rc=rc)
-
+  if(get_comm_size() > 1) call log_set_parallel_logging(.true.)
 
 
   if (rc /= ESMF_SUCCESS) call log_event( 'Failed to initialise ESMF.', LOG_LEVEL_ERROR )
 
-  call ESMF_VMGet(vm, localPet=localPET, petCount=petCount, rc=rc)
-  if (rc /= ESMF_SUCCESS) call log_event( 'Failed to get the ESMF virtual machine.', LOG_LEVEL_ERROR )
-
-  total_ranks = petCount
-  local_rank  = localPET
+  total_ranks = get_comm_size()
+  local_rank  = get_comm_rank()
 
   call log_event( 'solver miniapp running...', LOG_LEVEL_INFO )
 

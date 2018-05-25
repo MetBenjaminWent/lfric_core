@@ -22,7 +22,7 @@ module lhs_exner_kernel_mod_test
                                                quadrature_xyoz_proxy_type
   use quadrature_rule_gaussian_mod,      only: quadrature_rule_gaussian_type
   use yaxt,                          only : xt_initialize, xt_finalize
-  use mpi_mod,                       only : store_comm
+  use mpi_mod,                       only : store_comm, clear_comm
 
   implicit none
 
@@ -160,6 +160,8 @@ contains
 
     ! Finalise YAXT
     call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
 
   end subroutine tearDown
 

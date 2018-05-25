@@ -8,6 +8,8 @@ module departure_point_kernel_mod_test
 
   use pFUnit_Mod
   use constants_mod,      only : i_def, r_def
+  use yaxt, only : xt_initialize, xt_finalize
+  use mpi_mod, only : store_comm, clear_comm
   use mesh_mod,           only : mesh_type
 
   implicit none
@@ -16,11 +18,12 @@ module departure_point_kernel_mod_test
   public :: developed_departure_point_test_type , test_all
 
   @TestCase
-  type, extends(TestCase) :: developed_departure_point_test_type
+  type, extends(MPITestCase) :: developed_departure_point_test_type
     private
     type(mesh_type)          :: mesh
   contains
     procedure setUp
+    procedure tearDown
     procedure test_all
   end type developed_departure_point_test_type
 
@@ -49,6 +52,11 @@ contains
 
     class(developed_departure_point_test_type), intent(inout) :: this
 
+    ! Initialise YAXT
+    call xt_initialize(this%getMpiCommunicator())
+    !Store the MPI communicator for later use
+    call store_comm(this%getMpiCommunicator())
+
     call feign_timestepping_config( timestepping_method_semi_implicit,   &
                                     dt,                                  &
                                     alpha,                               &
@@ -66,9 +74,22 @@ contains
 
   end subroutine setUp
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine tearDown( this )
+
+    implicit none
+
+    class(developed_departure_point_test_type), intent(inout) :: this
+
+    ! Finalise YAXT
+    call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
+
+  end subroutine tearDown
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  @test
+  @Test( npes=[1] )
   subroutine test_all( this )
 
     use calc_departure_point_kernel_mod, only : calc_departure_point_code

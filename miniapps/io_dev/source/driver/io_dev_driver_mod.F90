@@ -25,17 +25,19 @@ use io_mod,                     only: output_xios_nodal, &
 use log_mod,                    only: log_event,         &
                                       log_set_level,     &
                                       log_scratch_space, &
+                                      log_set_parallel_logging, &
                                       LOG_LEVEL_ERROR,   &
                                       LOG_LEVEL_INFO,    &
                                       LOG_LEVEL_DEBUG,   &
                                       LOG_LEVEL_TRACE,   &
                                       log_scratch_space
 use mod_wait
-use mpi
-use mpi_mod,                    only: store_comm
 use restart_config_mod,         only: restart_filename => filename
 use restart_control_mod,        only: restart_type
 use timestepping_config_mod,    only: dt
+use mpi_mod,                    only: initialise_comm, store_comm, &
+                                      finalise_comm, &
+                                      get_comm_size, get_comm_rank
 use xios
 use yaxt,                       only: xt_initialize, xt_finalize
 
@@ -75,17 +77,19 @@ contains
 
   integer(i_def) :: rc
   integer(i_def) :: total_ranks, local_rank
-  integer(i_def) :: petCount, localPET, ierr
   integer(i_def) :: comm = -999
 
   integer(i_def) :: dtime
 
-  ! Initialise MPI
-  call mpi_init(ierr)
+  ! Initialse mpi and create the default communicator: mpi_comm_world
+  call initialise_comm(comm)
 
   ! Initialise XIOS and get back the split mpi communicator
   call init_wait()
   call xios_initialize(xios_id, return_comm = comm)
+
+  ! Save lfric's part of the split communicator for later use
+  call store_comm(comm)
 
   ! Initialise YAXT
   call xt_initialize(comm)
@@ -96,17 +100,13 @@ contains
                         defaultlogfilename=program_name//".Log", &
                         logkindflag=ESMF_LOGKIND_MULTI,          &
                         mpiCommunicator=comm, rc=rc )
+  if(get_comm_size() > 1) call log_set_parallel_logging(.true.)
 
   if (rc /= ESMF_SUCCESS) call log_event( 'Failed to initialise ESMF.', &
                                           LOG_LEVEL_ERROR )
 
-  call ESMF_VMGet(vm, localPet=localPET, petCount=petCount, rc=rc)
-  if (rc /= ESMF_SUCCESS)                                        &
-      call log_event( 'Failed to get the ESMF virtual machine.', &
-                      LOG_LEVEL_ERROR )
-
-  total_ranks = petCount
-  local_rank  = localPET
+  total_ranks = get_comm_size()
+  local_rank  = get_comm_rank()
 
   ! Store the MPI communicator for later use
   call store_comm(comm)
@@ -145,8 +145,7 @@ contains
   dtime = int(dt)
 
   call xios_domain_init( xios_ctx, comm, dtime, &
-                         restart, mesh_id, chi, &
-                         vm, local_rank, total_ranks )
+                         restart, mesh_id, chi )
 
   !-----------------------------------------------------------------------------
   ! Model init
@@ -211,8 +210,8 @@ contains
   ! Finalise YAXT
   call xt_finalize()
 
-  ! Finalise mpi
-  call mpi_finalize(ierr)
+  ! Finalise mpi and release the communicator
+  call finalise_comm()
 
   end subroutine finalise
 

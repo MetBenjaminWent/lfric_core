@@ -14,7 +14,6 @@ module gravity_wave_driver_mod
   use derived_config_mod,             only: set_derived_config
   use ESMF
   use yaxt,                           only: xt_initialize, xt_finalize
-  use mpi_mod,                        only: store_comm
   use field_mod,                      only: field_type
   use finite_element_config_mod,      only: element_order
   use function_space_chain_mod,       only: function_space_chain_type
@@ -33,13 +32,13 @@ module gravity_wave_driver_mod
   use log_mod,                        only: log_event,         &
                                             log_set_level,     &
                                             log_scratch_space, &
+                                            log_set_parallel_logging, &
                                             LOG_LEVEL_ERROR,   &
                                             LOG_LEVEL_INFO,    &
                                             LOG_LEVEL_DEBUG,   &
                                             LOG_LEVEL_TRACE,   &
                                             log_scratch_space
   use mod_wait
-  use mpi
   use operator_mod,                   only: operator_type
   use output_config_mod,              only: diagnostic_frequency, &
                                             subroutine_timers,    &
@@ -49,6 +48,9 @@ module gravity_wave_driver_mod
   use restart_control_mod,            only: restart_type
   use timer_mod,                      only: timer, output_timer
   use timestepping_config_mod,        only: dt
+  use mpi_mod,                        only: initialise_comm, store_comm, &
+                                            finalise_comm, &
+                                            get_comm_size, get_comm_rank
   use xios
 
   implicit none
@@ -98,36 +100,35 @@ contains
   integer(i_def) :: ts_init
   integer(i_def) :: dtime
 
-  ! Initialise MPI
-  call mpi_init(ierr)
+  ! Initialse mpi and create the default communicator: mpi_comm_world
+  call initialise_comm(comm)
 
   ! Initialise XIOS and get back the split mpi communicator
   call init_wait()
   call xios_initialize(xios_id, return_comm = comm)
 
+  !Store the MPI communicator for later use
+  call store_comm(comm)
+
   ! Initialise YAXT
   call xt_initialize(comm)
 
   ! Initialise ESMF using mpi communicator initialised by XIOS
-  ! and get the rank information from the virtual machine
   call ESMF_Initialize( vm=vm,                                   &
                         defaultlogfilename=program_name//".Log", &
                         logkindflag=ESMF_LOGKIND_MULTI,          &
                         mpiCommunicator=comm, rc=rc )
+  if(get_comm_size() > 1) call log_set_parallel_logging(.true.)
 
   if (rc /= ESMF_SUCCESS) call log_event( 'Failed to initialise ESMF.', &
                                           LOG_LEVEL_ERROR )
 
-  call ESMF_VMGet(vm, localPet=localPET, petCount=petCount, rc=rc)
-  if (rc /= ESMF_SUCCESS)                                        &
-      call log_event( 'Failed to get the ESMF virtual machine.', &
-                      LOG_LEVEL_ERROR )
-
-  total_ranks = petCount
-  local_rank  = localPET
-
   !Store the MPI communicator for later use
   call store_comm(comm)
+
+  ! Get the rank information
+  total_ranks = get_comm_size()
+  local_rank  = get_comm_rank()
 
   ! Currently log_event can only use ESMF so it cannot be used before ESMF
   ! is initialised.
@@ -170,10 +171,7 @@ contains
                            dtime,      &
                            restart,    &
                            mesh_id,    &
-                           chi,        &
-                           vm,         &
-                           local_rank, &
-                           total_ranks )
+                           chi)
 
     ! Make sure XIOS calendar is set to timestep 1 as it starts there
     ! not timestep 0.
@@ -350,8 +348,8 @@ contains
   ! Finalise YAXT
   call xt_finalize()
 
-  ! Finalise mpi
-  call mpi_finalize(ierr)
+  ! Finalise mpi and release the communicator
+  call finalise_comm()
 
 end subroutine finalise
 

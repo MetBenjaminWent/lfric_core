@@ -11,6 +11,7 @@ module timer_mod_test
 
   use pFUnit_Mod
   use timer_mod
+  use mpi_mod, only : store_comm
   use constants_mod, only: r_def, i_def, str_def
 
   implicit none
@@ -20,7 +21,7 @@ module timer_mod_test
   public test_timer
 
   @TestCase
-  type, extends(TestCase), public :: timer_test_type
+  type, extends(MPITestCase), public :: timer_test_type
     private
   contains
     procedure setUp
@@ -34,7 +35,8 @@ contains
 
     class(timer_test_type), intent(inout) :: this
 
-    ! Nothing to do
+    !Store the MPI communicator for later use
+    call store_comm(this%getMpiCommunicator())
 
   end subroutine setUp
 
@@ -48,7 +50,7 @@ contains
   end subroutine tearDown
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  @test
+  @Test( npes=[1] )
   subroutine test_timer(this)
 
     use timer_mod, only: timer, output_timer

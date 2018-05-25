@@ -8,6 +8,8 @@
 module compute_geopotential_kernel_mod_test
 
   use constants_mod, only : i_def, r_def
+  use yaxt, only : xt_initialize, xt_finalize
+  use mpi_mod, only : store_comm, clear_comm
   use pFUnit_Mod
 
   implicit none
@@ -16,7 +18,7 @@ module compute_geopotential_kernel_mod_test
   public :: compute_geopotential_kernel_test_type, test_all
 
   @TestCase
-  type, extends(TestCase) :: compute_geopotential_kernel_test_type
+  type, extends(MPITestCase) :: compute_geopotential_kernel_test_type
     private
     integer(i_def), allocatable :: map(:)
     real(r_def),    allocatable :: x(:), y(:), z(:), phi(:), basis(:,:,:)
@@ -53,6 +55,11 @@ contains
     implicit none
 
     class(compute_geopotential_kernel_test_type), intent(inout) :: this
+
+    ! Initialise YAXT
+    call xt_initialize(this%getMpiCommunicator())
+    !Store the MPI communicator for later use
+    call store_comm(this%getMpiCommunicator())
 
     call feign_planet_config( gravity=gravity, radius=radius, omega=omega, &
                               rd=rd, cp=cp, p_zero=p_zero,                 &
@@ -93,10 +100,15 @@ contains
 
     deallocate( this%map, this%x, this%y, this%z, this%phi, this%basis )
 
+    ! Finalise YAXT
+    call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
+
   end subroutine tearDown
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  @test
+  @Test( npes=[1] )
   subroutine test_all( this )
 
     use compute_geopotential_kernel_mod, only : compute_geopotential_code

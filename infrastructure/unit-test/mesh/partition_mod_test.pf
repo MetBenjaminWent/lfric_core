@@ -10,16 +10,14 @@ module partition_mod_test
 
   use constants_mod,                    only: r_def, i_def, str_max_filename, &
                                               str_def
-  use ESMF
   use global_mesh_mod,                  only: global_mesh_type
   use global_mesh_collection_mod,       only: global_mesh_collection_type, &
                                               global_mesh_collection
-  use infrastructure_suite_fixture_mod, only: get_esmf_handle
   use partition_mod
   use pFUnit_Mod
   use reference_element_mod,            only: reference_cube_type
   use yaxt, only : xt_initialize, xt_finalize
-  use mpi_mod, only: store_comm
+  use mpi_mod, only: store_comm, clear_comm, get_comm_size, get_comm_rank
 
   implicit none
 
@@ -53,18 +51,7 @@ contains
 
     class( partition_test_type ), intent( inout ) :: this
 
-    integer       :: rc
-    integer       :: petCount, localPET
-
-    call ESMF_VMGet(get_esmf_handle(), &
-                    localPet=localPET, &
-                    petCount=petCount, &
-                    rc=rc)
-    if (rc /= ESMF_SUCCESS) stop 'Unable to get VM'
-
     allocate( this%reference_element, source=reference_cube_type() )
-    this%total_ranks = petCount
-    this%local_rank  = localPET
 
     global_mesh_collection = global_mesh_collection_type()
 
@@ -72,6 +59,9 @@ contains
     call xt_initialize(this%getMpiCommunicator())
     !Store the MPI communicator for later use
     call store_comm(this%getMpiCommunicator())
+
+    this%total_ranks = get_comm_size()
+    this%local_rank  = get_comm_rank()
 
   end subroutine setUp
 
@@ -87,6 +77,8 @@ contains
 
     ! Finalise YAXT
     call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
 
   end subroutine teardown
 

@@ -8,6 +8,8 @@
 module rotation_vector_mod_test
 
   use constants_mod, only : i_def, r_def
+  use yaxt, only : xt_initialize, xt_finalize
+  use mpi_mod, only : store_comm, clear_comm
   use pFUnit_Mod
 
   implicit none
@@ -16,10 +18,11 @@ module rotation_vector_mod_test
   public :: rotation_vector_test_type, test_fplane
 
   @TestCase
-  type, extends(TestCase) :: rotation_vector_test_type
+  type, extends(MPITestCase) :: rotation_vector_test_type
     private
   contains
     procedure setUp
+    procedure tearDown
     procedure test_fplane
   end type rotation_vector_test_type
 
@@ -42,6 +45,11 @@ contains
 
     class(rotation_vector_test_type), intent(inout) :: this
 
+    ! Initialise YAXT
+    call xt_initialize(this%getMpiCommunicator())
+    !Store the MPI communicator for later use
+    call store_comm(this%getMpiCommunicator())
+
     call feign_planet_config( gravity=gravity, radius=radius, omega=omega, &
                               rd=rd, cp=cp, p_zero=p_zero,                 &
                               scaling_factor=scaling )
@@ -49,9 +57,23 @@ contains
   end subroutine setUp
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine tearDown( this )
+
+    implicit none
+
+    class(rotation_vector_test_type), intent(inout) :: this
+
+    ! Finalise YAXT
+    call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
+
+  end subroutine tearDown
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! 16/09/2014, IK: This version of rotation vector test is suitable only for
   !                 the f-plane for now.
-  @test
+  @Test( npes=[1] )
   subroutine test_fplane( this )
 
     use constants_mod,       only : PI

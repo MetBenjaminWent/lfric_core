@@ -30,8 +30,8 @@ module empty_mod
 
   use constants_mod, only : i_native, l_def, str_def, str_max_filename
   use log_mod,       only : log_scratch_space, log_event, LOG_LEVEL_ERROR
-  use ESMF,          only : ESMF_VM, ESMF_VMGet, ESMF_SUCCESS, &
-                            ESMF_VMGetCurrent, ESMF_VMBroadcast
+  use mpi_mod,       only : get_comm_rank, broadcast
+  use mpi,           only : MPI_SUCCESS
 
   implicit none
 
@@ -57,31 +57,18 @@ contains
     character(*), intent(in) :: filename
 
     integer(i_native) :: local_rank
-    type(ESMF_VM)     :: vm
 
     character(str_def), allocatable :: namelists(:)
     integer(i_native) :: unit = -1
     integer(i_native) :: condition
 
-    call ESMF_VMGetCurrent( vm=vm, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to get VM when trying to read configuration, file: "//filename
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
-
-    call ESMF_VMGet( vm, localPet=local_rank, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to query VM when trying to read configuration, file: "//filename
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
+    local_rank = get_comm_rank()
 
     if (local_rank == 0) unit = open_file( filename )
 
-    call get_namelist_names( unit, vm, local_rank, namelists )
+    call get_namelist_names( unit, local_rank, namelists )
 
-    call read_configuration_namelists( unit, vm, local_rank, &
+    call read_configuration_namelists( unit, local_rank, &
                                        namelists, filename )
 
     if (local_rank == 0) call close_file( unit )
@@ -95,14 +82,13 @@ contains
   !
   ! TODO: Assumes namelist tags are at the start of lines.
   !
-  subroutine get_namelist_names( unit, vm, local_rank, names )
+  subroutine get_namelist_names( unit, local_rank, names )
 
     use io_utility_mod, only : read_line
 
     implicit none
 
     integer(i_native),  intent(in)                 :: unit
-    type(esmf_vm),      intent(in)                 :: vm
     integer(i_native),  intent(in)                 :: local_rank
     character(str_def), intent(inout), allocatable :: names(:)
 
@@ -134,23 +120,13 @@ contains
       rewind(unit)
     end if
 
-    call ESMF_VMBroadcast( vm, namecount, 1, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast number of namelists"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
+    call broadcast( namecount, 1, 0 )
 
     if (local_rank /= 0) then
       allocate(names(namecount(1)))
     end if
 
-    call ESMF_VMBroadcast( vm, names, namecount(1)*str_def, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast list of namelist names"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
+    call broadcast( names, namecount(1)*str_def, 0 )
 
   end subroutine get_namelist_names
 
@@ -199,12 +175,11 @@ contains
 
   end function ensure_configuration
 
-  subroutine read_configuration_namelists( unit, vm, local_rank, &
+  subroutine read_configuration_namelists( unit, local_rank, &
                                            namelists, filename )
     implicit none
 
     integer(i_native),  intent(in) :: unit
-    type(ESMF_VM),      intent(in) :: vm
     integer(i_native),  intent(in) :: local_rank
     character(str_def), intent(in) :: namelists(:)
     character(*),       intent(in) :: filename
@@ -270,8 +245,8 @@ module content_mod
 
   use constants_mod, only : i_native, l_def, str_def, str_max_filename
   use log_mod,       only : log_scratch_space, log_event, LOG_LEVEL_ERROR
-  use ESMF,          only : ESMF_VM, ESMF_VMGet, ESMF_SUCCESS, &
-                            ESMF_VMGetCurrent, ESMF_VMBroadcast
+  use mpi_mod,       only : get_comm_rank, broadcast
+  use mpi,           only : MPI_SUCCESS
 
   use foo_config_mod, only : read_foo_namelist, &
                              postprocess_foo_namelist, &
@@ -303,31 +278,18 @@ contains
     character(*), intent(in) :: filename
 
     integer(i_native) :: local_rank
-    type(ESMF_VM)     :: vm
 
     character(str_def), allocatable :: namelists(:)
     integer(i_native) :: unit = -1
     integer(i_native) :: condition
 
-    call ESMF_VMGetCurrent( vm=vm, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to get VM when trying to read configuration, file: "//filename
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
-
-    call ESMF_VMGet( vm, localPet=local_rank, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to query VM when trying to read configuration, file: "//filename
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
+    local_rank = get_comm_rank()
 
     if (local_rank == 0) unit = open_file( filename )
 
-    call get_namelist_names( unit, vm, local_rank, namelists )
+    call get_namelist_names( unit, local_rank, namelists )
 
-    call read_configuration_namelists( unit, vm, local_rank, &
+    call read_configuration_namelists( unit, local_rank, &
                                        namelists, filename )
 
     if (local_rank == 0) call close_file( unit )
@@ -341,14 +303,13 @@ contains
   !
   ! TODO: Assumes namelist tags are at the start of lines.
   !
-  subroutine get_namelist_names( unit, vm, local_rank, names )
+  subroutine get_namelist_names( unit, local_rank, names )
 
     use io_utility_mod, only : read_line
 
     implicit none
 
     integer(i_native),  intent(in)                 :: unit
-    type(esmf_vm),      intent(in)                 :: vm
     integer(i_native),  intent(in)                 :: local_rank
     character(str_def), intent(inout), allocatable :: names(:)
 
@@ -380,23 +341,13 @@ contains
       rewind(unit)
     end if
 
-    call ESMF_VMBroadcast( vm, namecount, 1, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast number of namelists"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
+    call broadcast( namecount, 1, 0 )
 
     if (local_rank /= 0) then
       allocate(names(namecount(1)))
     end if
 
-    call ESMF_VMBroadcast( vm, names, namecount(1)*str_def, 0, rc=condition )
-    if (condition /= ESMF_SUCCESS) then
-      write(log_scratch_space, "(A)") &
-          "Failed to broadcast list of namelist names"
-      call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-    end if
+    call broadcast( names, namecount(1)*str_def, 0 )
 
   end subroutine get_namelist_names
 
@@ -447,12 +398,11 @@ contains
 
   end function ensure_configuration
 
-  subroutine read_configuration_namelists( unit, vm, local_rank, &
+  subroutine read_configuration_namelists( unit, local_rank, &
                                            namelists, filename )
     implicit none
 
     integer(i_native),  intent(in) :: unit
-    type(ESMF_VM),      intent(in) :: vm
     integer(i_native),  intent(in) :: local_rank
     character(str_def), intent(in) :: namelists(:)
     character(*),       intent(in) :: filename
@@ -464,7 +414,7 @@ contains
       select case (trim(namelists(i)))
         case ('foo')
           if (foo_is_loadable()) then
-            call read_foo_namelist( unit, vm, local_rank )
+            call read_foo_namelist( unit, local_rank )
           else
             write( log_scratch_space, '(A)' )      &
                   "Namelist """//                   &

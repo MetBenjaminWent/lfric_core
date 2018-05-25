@@ -9,6 +9,8 @@ module vertical_trapezoidal_kernel_mod_test
   use pFUnit_Mod
   use constants_mod,      only : i_def, r_def
   use mesh_mod,           only : mesh_type
+  use yaxt,               only : xt_initialize, xt_finalize
+  use mpi_mod,            only : store_comm, clear_comm
 
   implicit none
 
@@ -16,7 +18,7 @@ module vertical_trapezoidal_kernel_mod_test
   public :: vertical_trapezoidal_test_type , test_all
 
   @TestCase
-  type, extends(TestCase) :: vertical_trapezoidal_test_type
+  type, extends(MPITestCase) :: vertical_trapezoidal_test_type
     private
     type(mesh_type)          :: mesh
   contains
@@ -54,6 +56,11 @@ contains
 
     class(vertical_trapezoidal_test_type), intent(inout) :: this
 
+    ! Initialise YAXT
+    call xt_initialize(this%getMpiCommunicator())
+    !Store the MPI communicator for later use
+    call store_comm(this%getMpiCommunicator())
+
     call feign_biperiodic_deppt_config( method = biperiodic_deppt_method_trapezoidal,  &
                                         n_dep_pt_iterations=n_dep_pt_iterations  )
 
@@ -74,7 +81,21 @@ contains
   end subroutine setUp
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  @test
+  subroutine tearDown( this )
+
+    implicit none
+
+    class(vertical_trapezoidal_test_type), intent(inout) :: this
+
+    ! Finalise YAXT
+    call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
+
+  end subroutine tearDown
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  @Test( npes=[1] )
   subroutine test_all( this )
 
     use calc_departure_point_kernel_mod, only : calc_departure_point_code
