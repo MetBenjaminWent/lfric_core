@@ -34,7 +34,7 @@ module iter_timestep_alg_mod
   use derived_config_mod,        only: bundle_size
   use runtime_constants_mod,     only: get_qr, get_coordinates, get_height, &
                                        get_mass_matrix, get_da_at_w2,       &
-                                       w3inv_id,                            &
+                                       get_delta_at_wtheta, w3inv_id,       &
                                        theta_space_id, w2_id,               &
                                        get_normalisation
 
@@ -42,7 +42,8 @@ module iter_timestep_alg_mod
 
   ! PsyKAl-lite kernels
   use psykal_lite_mod,           only: invoke_tracer_viscosity, &
-                                       invoke_momentum_viscosity
+                                       invoke_momentum_viscosity, &
+                                       invoke_tracer_smagorinsky_diff
 
   use field_bundle_mod,          only: clone_bundle,      & 
                                        bundle_axpy,       & 
@@ -96,7 +97,8 @@ module iter_timestep_alg_mod
   use field_indices_mod,          only: igh_u, igh_t, igh_d, igh_p
 
   ! Mixing settings
-  use mixing_config_mod,          only: viscosity
+  use mixing_config_mod,          only: viscosity, smagorinsky
+
 #ifdef UM_PHYSICS
   ! UM BL scheme
   use bl_init_mod, only: bl_init
@@ -300,6 +302,7 @@ contains
     type(operator_type), pointer :: m3_inv => null()
     type(operator_type), pointer :: mm_wt => null()
     type( field_type ), pointer  :: dA => null() ! Areas of faces
+    type( field_type ), pointer  :: delta => null() ! Horizontal edge length
 
     integer(kind=i_def):: outer, inner, iter, imr
     real(kind=r_def)   :: varalpha, varbeta ! alpha, beta weight to use
@@ -315,6 +318,7 @@ contains
     height_w3  => get_height(W3)
     height_wth => get_height(Wtheta)
     dA => get_da_at_w2()
+    delta => get_delta_at_wtheta()
     mm_wt => get_mass_matrix(theta_space_id) 
     !--------------------------------------------------------------------
     ! Pass updated fields into state
@@ -522,6 +526,20 @@ contains
                    inc_X_plus_bY( state(igh_u), dt, inc(igh_u) ) )
     end if    
     
+    !--------------------------------------------------------------------
+    ! Apply Smagorinsky subgrid mixing
+    !--------------------------------------------------------------------
+    if ( smagorinsky ) then
+      call log_event( 'Applying Smagorinsky mixing', LOG_LEVEL_INFO ) 
+      call invoke_tracer_smagorinsky_diff(inc(igh_t), state(igh_t), 1, delta)
+      !  Placeholder code until the momentum mixing is implemented:
+      !call invoke_momentum_smagorinsky_diff(inc(igh_u), state(igh_u), 1, delta)
+      ! Set u increment to zero until momentum mixing is implemented:
+      call invoke( inc_X_plus_bY( state(igh_t), dt, inc(igh_t) ), &
+                   setval_c(inc(igh_u), 0.0_r_def),               &
+                   inc_X_plus_bY( state(igh_u), dt, inc(igh_u) ) )
+    end if    
+    
     if (use_wavedynamics) then
       if (.not. (spinup_winds .and. timestep*dt <= spinup_period)) then
 
@@ -545,7 +563,7 @@ contains
     end if
 
     nullify( m3_inv, chi, height_w3, height_wth, &
-             t_normalisation, u_normalisation, dA )
+             t_normalisation, u_normalisation, dA, delta )
 
     if ( subroutine_timers ) call timer('iter_timestep_alg')
 

@@ -4203,6 +4203,73 @@ end subroutine invoke_sample_poly_adv
     deallocate( basis_chi )
   end subroutine invoke_initial_exner_sample_kernel
 
+  !------------------------------------------------------------------------------
+  ! Ticket #1470. Kirsty Hanley
+  ! Needs correct loop limits in the presence of colouring for psyclone
+  ! implementation
+  subroutine invoke_tracer_smagorinsky_diff( theta_inc, theta_n, t_stencil_size, delta )
+
+    use tracer_smagorinsky_diff_kernel_mod, only : tracer_smagorinsky_diff_code
+    use mesh_mod,                    only : mesh_type 
+    use stencil_dofmap_mod,          only : stencil_dofmap_type, STENCIL_CROSS
+
+    implicit none
+
+    type( field_type ), intent( inout ) :: theta_inc, theta_n, delta
+    integer(kind=i_def),intent( in )    :: t_stencil_size
+    type( mesh_type ), pointer          :: mesh => null()
+    integer(kind=i_def)                 :: cell, nlayers
+    integer(kind=i_def)                 :: ndf_wt
+    integer(kind=i_def)                 :: undf_wt
+
+    type( field_proxy_type )  :: theta_inc_proxy, theta_n_proxy, &
+                                 delta_proxy
+
+    integer(kind=i_def), pointer        :: map_t(:,:) => null()
+
+    type(stencil_dofmap_type), pointer  :: cross_stencil_wt => null()
+
+
+    integer(kind=i_def), pointer        :: cross_stencil_wt_map(:,:,:) => null()
+    integer(kind=i_def)                 :: cross_stencil_wt_size
+
+    theta_inc_proxy = theta_inc%get_proxy()
+    theta_n_proxy   = theta_n%get_proxy()
+
+    delta_proxy = delta%get_proxy()
+
+    nlayers = theta_inc_proxy%vspace%get_nlayers()
+    ndf_wt  = theta_inc_proxy%vspace%get_ndf( )
+    undf_wt = theta_inc_proxy%vspace%get_undf()
+
+    mesh => theta_inc%get_mesh()
+
+    if (theta_inc_proxy%is_dirty(depth=1)) CALL theta_inc_proxy%halo_exchange(depth=1)
+    if (    delta_proxy%is_dirty(depth=1)) CALL     delta_proxy%halo_exchange(depth=1)
+
+    if (theta_n_proxy%is_dirty(depth=1+1)) CALL theta_n_proxy%halo_exchange(depth=1+1)
+
+    cross_stencil_wt => theta_n_proxy%vspace%get_stencil_dofmap(STENCIL_CROSS, t_stencil_size)
+    cross_stencil_wt_map => cross_stencil_wt%get_whole_dofmap()
+    cross_stencil_wt_size = cross_stencil_wt%get_size()
+    
+    map_t => theta_inc_proxy%vspace%get_whole_dofmap( )
+
+    do cell = 1, mesh%get_last_edge_cell()
+
+       call tracer_smagorinsky_diff_code(nlayers,                 &
+                                  theta_inc_proxy%data,           &
+                                  theta_n_proxy%data,             &
+                                  cross_stencil_wt_size,          &
+                                  cross_stencil_wt_map(:,:,cell), &
+                                  delta_proxy%data,               &
+                                  ndf_wt, undf_wt, map_t(:,cell) )
+    end do
+     
+   call theta_inc_proxy%set_dirty()
+
+  end subroutine invoke_tracer_smagorinsky_diff
+
 
 
 end module psykal_lite_mod

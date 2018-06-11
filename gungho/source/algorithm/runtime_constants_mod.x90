@@ -117,6 +117,7 @@ module runtime_constants_mod
   public :: get_cell_orientation
   public :: get_detj_at_w2
   public :: get_dA_at_w2
+  public :: get_delta_at_wtheta
   public :: get_mass_matrix
   public :: get_mass_matrix_diagonal
   public :: get_grad
@@ -443,6 +444,15 @@ contains
     dA => dA_at_w2
 
   end function get_dA_at_w2
+
+  !> @brief Function to return the delta_at_wtheta values at Wtheta dof locations
+  !> @return The delta_at_wtheta field
+  function get_delta_at_wtheta() result(delta)
+    implicit none
+    type(field_type), pointer :: delta
+    delta => delta_at_wtheta
+
+  end function get_delta_at_wtheta
 
   !> @brief Function to return a pointer to a mass matrix
   !> @param[in] i the index of the desired mass matrix field
