@@ -10,7 +10,7 @@
 !>          defined in this module. Their values are also set here.
 module constants_mod
 
-  use, intrinsic :: iso_fortran_env, only : real32, real64, int32, int64
+  use, intrinsic :: iso_fortran_env, only : real32, real64, real128, int32, int64
 
   implicit none
 
@@ -20,7 +20,8 @@ module constants_mod
             i_def, i_native, i_long, i_halo_index, i_um, l_def, l_native,    &
             c_def, c_native, str_short, str_def, str_long, str_max_filename, &
             LARGE_REAL_POSITIVE, LARGE_REAL_NEGATIVE, cache_block, EPS, PI,  &
-            degrees_to_radians, radians_to_degrees, RMDI, IMDI, CMDI, EMDI
+            degrees_to_radians, radians_to_degrees, RMDI, IMDI, CMDI, EMDI,  &
+            real_type, integer_type, logical_type, r_ncdf
 
   ! Define default application-defined kinds for all intrinsic data types
 
@@ -29,9 +30,21 @@ module constants_mod
   real               :: r_val              !< A native real used to compute kind of native real.
   double precision   :: dp_val             !< A native double-precision used to compute kind of native dp.
 
-  integer, parameter :: r_def     = real64 !< Default real kind for application.
+#if RDEF_PRECISION == 32
+  integer, parameter :: r_def     = real32  !< Default real kind for application.
+#elif RDEF_PRECISION == 128
+  integer, parameter :: r_def     = real128 !< Default real kind for application.
+#else ! Currently we default to 64 bits 
+  integer, parameter :: r_def     = real64  !< Default real kind for application.
+#endif
+
+  integer, parameter :: real_type    = 1 !< A parameter used to indicate a real data typa
+  integer, parameter :: integer_type = 2 !< A parameter used to indicate an integer data type
+  integer, parameter :: logical_type = 3 !< A parameter used to indicate a logical data type
+
   integer, parameter :: r_single  = real32 !< Default single precision real kind for application.
   integer, parameter :: r_double  = real64 !< Default double precision real kind for application.
+  integer, parameter :: r_quad  =  real128 !< Default quad precision real kind for application.
 
   integer, parameter :: r_native  = kind(r_val)  !< Native kind for real.
   integer, parameter :: dp_native = kind(dp_val) !< Native kind for double precision.
@@ -39,7 +52,10 @@ module constants_mod
   ! Define kinds specifically for IO
   integer, parameter :: dp_xios = kind(dp_val) !< XIOS kind for double precision fields
 
+  integer, parameter :: r_ncdf = real64 !< Default real kind used in netcdf get and put.
+
   integer, parameter :: r_um = real64 !< Default real kind used by the UM.
+
 
   !> @}
 

@@ -27,7 +27,7 @@ profile='solid_body_rotation',
 sbr_angle_lat=0.25,
 sbr_angle_lon=0.0,
 smp_init_wind=.false.,
-u0=38.61073731,
+u0=38.61073731e-3,
 v0=0.0,
 /
 &output
@@ -62,7 +62,7 @@ operators='fv',
 scheme='horz_cosmic',
 /
 &planet
-radius=6371229.0,
+radius=6371229.0e-3,
 scaling_factor=1.0,
 /
 &restart
@@ -81,7 +81,7 @@ n_dep_pt_iterations=1,
 &solver
 gcrk=1,
 maximum_iterations=399,
-method='bicgstab',
+method='gcr',
 preconditioner='diagonal',
 tolerance=1.0e-6,
 /

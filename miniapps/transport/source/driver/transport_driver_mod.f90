@@ -9,7 +9,7 @@
 module transport_driver_mod
 
   use checksum_alg_mod,               only: checksum_alg
-  use constants_mod,                  only: i_def
+  use constants_mod,                  only: i_def, r_def
   use derived_config_mod,             only: set_derived_config
   use yaxt,                           only: xt_initialize, xt_finalize
   use field_mod,                      only: field_type
@@ -125,6 +125,12 @@ contains
     call initialise_logging( local_rank, total_ranks, program_name )
 
     call log_event( program_name//': Running transport miniapp ...', LOG_LEVEL_INFO )
+
+    call log_event( program_name//': Miniapp will run with default precision set as:', LOG_LEVEL_INFO )
+    write(log_scratch_space, '(I1)') kind(1.0_r_def)
+    call log_event( program_name//':        r_def kind = '//log_scratch_space , LOG_LEVEL_INFO )
+    write(log_scratch_space, '(I1)') kind(1_i_def)
+    call log_event( program_name//':        i_def kind = '//log_scratch_space , LOG_LEVEL_INFO )
 
     call transport_load_configuration( filename )
     call set_derived_config( .true. )

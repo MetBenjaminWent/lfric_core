@@ -12,7 +12,8 @@
 !> store a valid MPI communicator.
 !>
 module mpi_mod
-  use constants_mod, only : r_def, i_def, i_native, l_def, i_halo_index, str_def
+  use constants_mod, only : r_def, i_def, i_native, l_def, i_halo_index, str_def, &
+                            real_type, integer_type, logical_type
   use mpi
   use yaxt,          only: xt_redist, xt_idxlist, xt_xmap, &
                            xt_idxvec_new, xt_xmap_dist_dir_new, &
@@ -119,7 +120,7 @@ contains
 
     if(comm_set)then
       ! Generate global sum
-      call mpi_allreduce( l_sum, g_sum, 1, get_mpi_datatype(r_def), &
+      call mpi_allreduce( l_sum, g_sum, 1, get_mpi_datatype( real_type, r_def ), &
                           mpi_sum, comm, err )
       if (err /= mpi_success) &
         call log_event('Call to real global_sum failed with an MPI error.', &
@@ -146,7 +147,7 @@ contains
 
     if(comm_set)then
       ! Generate global sum
-      call mpi_allreduce( l_sum, g_sum, 1, get_mpi_datatype(i_def), &
+      call mpi_allreduce( l_sum, g_sum, 1, get_mpi_datatype( integer_type, i_def ), &
                           mpi_sum, comm, err )
       if (err /= mpi_success) &
         call log_event('Call to integer global_sum failed with an MPI error.', &
@@ -174,7 +175,7 @@ contains
 
     if(comm_set)then
       ! Generate global min
-      call mpi_allreduce( l_min, g_min, 1, get_mpi_datatype(r_def), &
+      call mpi_allreduce( l_min, g_min, 1, get_mpi_datatype( real_type, r_def ), &
                           mpi_min, comm, err )
       if (err /= mpi_success) &
         call log_event('Call to global_min failed with an MPI error.', &
@@ -202,7 +203,7 @@ contains
 
     if(comm_set)then
       ! Generate global max
-      call mpi_allreduce( l_max, g_max, 1, get_mpi_datatype(r_def), &
+      call mpi_allreduce( l_max, g_max, 1, get_mpi_datatype( real_type, r_def ), &
                           mpi_max, comm, err )
       if (err /= mpi_success) &
         call log_event('Call to global_max failed with an MPI error.', &
@@ -233,8 +234,8 @@ contains
     integer(i_def) :: err
 
     if(comm_set)then
-      call mpi_allgather(send_buffer, count, get_mpi_datatype(i_def), &
-                         recv_buffer, count, get_mpi_datatype(i_def), &
+      call mpi_allgather(send_buffer, count, get_mpi_datatype( integer_type, i_def ), &
+                         recv_buffer, count, get_mpi_datatype( integer_type, i_def ), &
                          comm, err)
       if (err /= mpi_success) &
         call log_event('Call to all_gather failed with an MPI error.', &
@@ -287,7 +288,7 @@ contains
     integer(i_def) :: err
 
     if(comm_set)then
-      call mpi_bcast( buffer, count, get_mpi_datatype(i_def), root, comm, err )
+      call mpi_bcast( buffer, count, get_mpi_datatype( integer_type, i_def ), root, comm, err )
       if (err /= mpi_success) &
         call log_event('Call to integer broadcast failed with an MPI error.', &
                        LOG_LEVEL_ERROR )
@@ -312,7 +313,7 @@ contains
     integer(i_def) :: err
 
     if(comm_set)then
-      call mpi_bcast( buffer, count, get_mpi_datatype(r_def), root, comm, err )
+      call mpi_bcast( buffer, count, get_mpi_datatype( real_type, r_def ), root, comm, err )
       if (err /= mpi_success) &
         call log_event('Call to real broadcast failed with an MPI error.', &
                        LOG_LEVEL_ERROR )
@@ -408,27 +409,53 @@ contains
   !> Returns the appropriate MPI datatype enumerator for all the Fortran
   !> kinds supported by the LFRic distributed memory code
   !>
-  !> @param f_kind A Fortran kind variable
+  !> @param fortran_kind A Fortran kind variable
+  !> @param fortran_kind An integer parameter indicating the Fortran data type
   !> @return mpi_datatype The MPI datatype enumerator associated with the
   !>                      given Fortran kind
-  function get_mpi_datatype(f_kind) result(mpi_datatype)
-    use, intrinsic :: iso_fortran_env, only : real64, int32
+  function get_mpi_datatype( fortran_type, fortran_kind ) result(mpi_datatype)
+    use, intrinsic :: iso_fortran_env, only : real128, real64, real32, &
+                                              int64, int32, int16, int8
     implicit none
-    integer(i_native), intent(in) :: f_kind
+    integer(i_native), intent(in) :: fortran_type
+    integer(i_native), intent(in) :: fortran_kind
     integer(i_native)             :: mpi_datatype
 
    ! Determine MPI datatype enumerator from a Fortran kind.
    ! (To support a new Fortran kind, just add a new case clause)
-    select case (f_kind)
-      case (int32)
-        mpi_datatype = MPI_INTEGER
+    select case (fortran_type)
+    case (real_type)
+      ! In the case where the data is real
+      select case (fortran_kind)
+      case (real32)
+        mpi_datatype = MPI_REAL4
       case (real64)
         mpi_datatype = MPI_DOUBLE_PRECISION
+      case (real128)
+        mpi_datatype = MPI_REAL4
       case default
         call log_event( 'Unrecognised Fortran kind used for MPI comms', &
-                         LOG_LEVEL_ERROR )
+           LOG_LEVEL_ERROR )
+      end select
+    case (integer_type)
+      ! In the case where the data is integer
+      select case (fortran_kind)
+      case (int8)
+        mpi_datatype = MPI_INTEGER1
+      case (int16)
+        mpi_datatype = MPI_INTEGER2
+      case (int32)
+        mpi_datatype = MPI_INTEGER
+      case (int64)
+        mpi_datatype = MPI_INTEGER8
+      case default
+        call log_event( 'Unrecognised Fortran kind used for MPI comms', &
+           LOG_LEVEL_ERROR )
+      end select
+    case (logical_type)
+      mpi_datatype = MPI_LOGICAL
     end select
-
+    
   end function get_mpi_datatype
 
   !> Returns the number of MPI ranks in the communicator

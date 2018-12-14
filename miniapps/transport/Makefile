@@ -34,6 +34,7 @@ documentation doc docs: document-uml document-latex document-api
 
 include $(ROOT_DIR)/infrastructure/build/lfric.mk
 include $(ROOT_DIR)/infrastructure/build/fortran/$(FORTRAN_COMPILER).mk
+include $(PROJECT_DIR)/build/project.mk
 
 export FFLAGS  := $(FFLAGS)  $(OPENMP_ARG)
 export LDFLAGS := $(LDFLAGS) $(OPENMP_ARG)

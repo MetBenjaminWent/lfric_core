@@ -16,7 +16,7 @@ module function_space_mod
 
 
 use constants_mod,         only: i_def, i_native, i_halo_index, &
-                                 l_def, r_def, dp_xios
+                                 l_def, r_def, dp_xios, real_type
 use mesh_mod,              only: mesh_type
 use master_dofmap_mod,     only: master_dofmap_type
 use stencil_dofmap_mod,    only: stencil_dofmap_type, STENCIL_POINT,           &
@@ -525,7 +525,7 @@ subroutine init_function_space( self )
       self%redist(idepth) = generate_redistribution_map( &
                                  self%global_dof_id(1:self%last_dof_owned), &
                                  self%global_dof_id( halo_start:halo_finish ), &
-                                 get_mpi_datatype(r_def) )
+                                 get_mpi_datatype( real_type, r_def ) )
     end do
 
   end if

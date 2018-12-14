@@ -254,8 +254,8 @@ subroutine xios_diagnostic_domain_init(mesh_id, chi)
   integer(i_def)             :: ibegin_nodes
   integer(i_def)             :: coord_dim_full
   integer(i_def)             :: coord_dim_owned
-  real(dp_xios),allocatable  :: nodes_lon_full(:)
-  real(dp_xios),allocatable  :: nodes_lat_full(:)
+  real(r_def),allocatable    :: nodes_lon_full(:)
+  real(r_def),allocatable    :: nodes_lat_full(:)
   real(dp_xios),allocatable  :: nodes_lon(:)
   real(dp_xios),allocatable  :: nodes_lat(:)
   real(dp_xios),allocatable  :: bnd_nodes_lon(:,:)
@@ -389,8 +389,8 @@ subroutine xios_diagnostic_domain_init(mesh_id, chi)
   allocate(nodes_lon( coord_dim_owned ))
   allocate(nodes_lat( coord_dim_owned ))
 
-  nodes_lon = 0.0_r_def
-  nodes_lat = 0.0_r_def
+  nodes_lon = 0.0_dp_xios
+  nodes_lat = 0.0_dp_xios
 
   allocate(bnd_nodes_lon(1,size(nodes_lon)))
   allocate(bnd_nodes_lat(1,size(nodes_lat)))
@@ -917,15 +917,15 @@ subroutine calc_xios_domain_coords(local_mesh, nodal_coords, chi, &
   implicit none
 
   type(mesh_type), pointer, intent(in) :: local_mesh
-  type(field_type), intent(in)         :: nodal_coords(3)
-  type(field_type), intent(in)         :: chi(:)
-  integer(i_def),   intent(in)         :: nlayers
-  integer(i_def),   intent(in)         :: ncells
-  real(kind=r_def), intent(out)        :: lon_coords(:), lat_coords(:)
-  real(kind=r_def), intent(inout)      :: face_bnds_lon_coords(:,:)
-  real(kind=r_def), intent(inout)      :: face_bnds_lat_coords(:,:)
-  real(kind=r_def), intent(inout)      :: edge_bnds_lon_coords(:,:)
-  real(kind=r_def), intent(inout)      :: edge_bnds_lat_coords(:,:)
+  type(field_type),   intent(in)       :: nodal_coords(3)
+  type(field_type),   intent(in)       :: chi(:)
+  integer(i_def),     intent(in)       :: nlayers
+  integer(i_def),     intent(in)       :: ncells
+  real(kind=r_def),   intent(out)      :: lon_coords(:), lat_coords(:)
+  real(kind=dp_xios), intent(inout)    :: face_bnds_lon_coords(:,:)
+  real(kind=dp_xios), intent(inout)    :: face_bnds_lat_coords(:,:)
+  real(kind=dp_xios), intent(inout)    :: edge_bnds_lon_coords(:,:)
+  real(kind=dp_xios), intent(inout)    :: edge_bnds_lat_coords(:,:)
 
   type(field_proxy_type) :: x_p(3), chi_p(3)
    

@@ -86,6 +86,9 @@ ifdef PE_ENV
   endif
 endif
 
+# Set the default precision for reals
+RDEF_PRECISION ?= 64
+
 include $(LFRIC_BUILD)/fortran/$(FORTRAN_COMPILER).mk
 export F_MOD_DESTINATION_ARG OPENMP_ARG
 
@@ -242,6 +245,7 @@ launch-test-suite:
 	          --config=$(SUITE_CONFIG) \
 	          --opt-conf-key=$$target \
 	          $(CLEAN_OPT) $(QUIET_ARG) \
+	          --define-suite=RDEF_PRECISION=$(RDEF_PRECISION) \
 	          --group=$(SUITE_GROUP) ; \
 	done
 

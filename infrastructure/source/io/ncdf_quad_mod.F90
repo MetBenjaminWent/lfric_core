@@ -9,7 +9,7 @@
 module ncdf_quad_mod
 
 use constants_mod,  only : r_def, i_def, l_def, str_def, str_long,             &
-                           str_max_filename
+                           str_max_filename, r_ncdf
 use global_mesh_map_collection_mod, only: global_mesh_map_collection_type
 use global_mesh_map_mod,            only: global_mesh_map_type
 use ugrid_file_mod, only : ugrid_file_type
@@ -1224,6 +1224,27 @@ subroutine read_mesh( self, mesh_name, mesh_class, constructor_inputs, &
   character(str_long) :: cmess
   character(str_long) :: target_mesh_names_str
 
+  ! We need to ensure that netcdf receives data with the appropriate
+  ! precision to create temporary arrays to hold real data 
+  ! converted from/to default precision
+  real(r_ncdf), allocatable :: node_coordinates_ncdf(:,:)
+  real(r_ncdf), allocatable :: face_coordinates_ncdf(:,:)
+
+  integer(i_def) :: lower1,upper1,lower2,upper2
+
+  lower1 = lbound(node_coordinates, 1)
+  lower2 = lbound(node_coordinates, 2)
+  upper1 = ubound(node_coordinates, 1)
+  upper2 = ubound(node_coordinates, 2)
+
+  allocate(node_coordinates_ncdf(lower1:upper1,lower2:upper2))
+
+  lower1 = lbound(face_coordinates, 1)
+  lower2 = lbound(face_coordinates, 2)
+  upper1 = ubound(face_coordinates, 1)
+  upper2 = ubound(face_coordinates, 2)
+
+  allocate(face_coordinates_ncdf(lower1:upper1,lower2:upper2))
 
   call inquire_ids(self, mesh_name)
 
@@ -1277,12 +1298,12 @@ subroutine read_mesh( self, mesh_name, mesh_class, constructor_inputs, &
   ! Node coordinates
   cmess = 'Getting node x coords for mesh "'//trim(mesh_name)//'"'
   ierr = nf90_get_var( self%ncid, self%mesh_node_x_id, &
-                       node_coordinates(1,:))
+                       node_coordinates_ncdf(1,:))
   call check_err(ierr, routine, cmess)
 
   cmess = 'Getting node y coords for mesh "'//trim(mesh_name)//'"'
   ierr = nf90_get_var( self%ncid, self%mesh_node_y_id, &
-                       node_coordinates(2,:))
+                       node_coordinates_ncdf(2,:))
   call check_err(ierr, routine, cmess)
 
 
@@ -1290,12 +1311,12 @@ subroutine read_mesh( self, mesh_name, mesh_class, constructor_inputs, &
   ! Face coordinates
   cmess = 'Getting face x coords for mesh "'//trim(mesh_name)//'"'
   ierr = nf90_get_var( self%ncid, self%mesh_face_x_id, &
-                       face_coordinates(1,:))
+                       face_coordinates_ncdf(1,:))
   call check_err(ierr, routine, cmess)
 
   cmess = 'Getting face y coords for mesh "'//trim(mesh_name)//'"'
   ierr = nf90_get_var( self%ncid, self%mesh_face_y_id, &
-                       face_coordinates(2,:))
+                       face_coordinates_ncdf(2,:))
   call check_err(ierr, routine, cmess)
 
 
@@ -1329,6 +1350,12 @@ subroutine read_mesh( self, mesh_name, mesh_class, constructor_inputs, &
   ierr = nf90_get_var( self%ncid, self%mesh_face_links_id, &
                        face_face_connectivity(:,:))
   call check_err(ierr, routine, cmess)
+
+  ! Pass back to r_def arrays and deallocate
+  node_coordinates(:,:) = real( node_coordinates_ncdf(:,:), kind=r_def )
+  face_coordinates(:,:) = real( face_coordinates_ncdf(:,:), kind=r_def )
+  deallocate(node_coordinates_ncdf)
+  deallocate(face_coordinates_ncdf)
 
   return
 end subroutine read_mesh
@@ -1390,8 +1417,6 @@ subroutine write_mesh( self, mesh_name, mesh_class, constructor_inputs,   &
   type(global_mesh_map_collection_type), pointer, &
                        intent(in) :: target_mesh_maps
 
-
-
   ! Internal variables
   integer(i_def)      :: ierr, i, ratio, cell
   character(*), parameter :: routine = 'write_mesh'
@@ -1401,6 +1426,29 @@ subroutine write_mesh( self, mesh_name, mesh_class, constructor_inputs,   &
 
   type(global_mesh_map_type), pointer :: mesh_map => null()
 
+  ! We need to ensure that netcdf receives data with the appropriate
+  ! precision to create temporary arrays to hold real data 
+  ! converted from/to default precision
+
+  real(r_ncdf), allocatable :: node_coordinates_ncdf(:,:)
+  real(r_ncdf), allocatable :: face_coordinates_ncdf(:,:)
+
+  integer(i_def) :: lower1,upper1,lower2,upper2
+
+  lower1 = lbound(node_coordinates, 1)
+  lower2 = lbound(node_coordinates, 2)
+  upper1 = ubound(node_coordinates, 1)
+  upper2 = ubound(node_coordinates, 2)
+  allocate(node_coordinates_ncdf(lower1:upper1,lower2:upper2))
+
+  lower1 = lbound(face_coordinates, 1)
+  lower2 = lbound(face_coordinates, 2)
+  upper1 = ubound(face_coordinates, 1)
+  upper2 = ubound(face_coordinates, 2)
+  allocate(face_coordinates_ncdf(lower1:upper1,lower2:upper2))
+
+  node_coordinates_ncdf(:,:) =  real( node_coordinates(:,:), kind=r_ncdf )
+  face_coordinates_ncdf(:,:) =  real( face_coordinates(:,:), kind=r_ncdf )
 
   self%mesh_name     = mesh_name
   self%mesh_class    = mesh_class
@@ -1444,20 +1492,20 @@ subroutine write_mesh( self, mesh_name, mesh_class, constructor_inputs,   &
 
   ! Node coordinates
   cmess = 'Writing node x-coords for mesh, "'//trim(mesh_name)//'"'
-  ierr = nf90_put_var( self%ncid, self%mesh_node_x_id, node_coordinates(1,:) )
+  ierr = nf90_put_var( self%ncid, self%mesh_node_x_id, node_coordinates_ncdf(1,:) )
   call check_err(ierr, routine, cmess)
 
   cmess = 'Writing node y-coords for mesh, "'//trim(mesh_name)//'"'
-  ierr = nf90_put_var( self%ncid, self%mesh_node_y_id, node_coordinates(2,:) )
+  ierr = nf90_put_var( self%ncid, self%mesh_node_y_id, node_coordinates_ncdf(2,:) )
   call check_err(ierr, routine, cmess)
 
   ! Face coordinates
   cmess = 'Writing face x-coords for mesh, "'//trim(mesh_name)//'"'
-  ierr = nf90_put_var( self%ncid, self%mesh_face_x_id, face_coordinates(1,:) )
+  ierr = nf90_put_var( self%ncid, self%mesh_face_x_id, face_coordinates_ncdf(1,:) )
   call check_err(ierr, routine, cmess)
 
   cmess = 'Writing face y-coords for mesh, "'//trim(mesh_name)//'"'
-  ierr = nf90_put_var( self%ncid, self%mesh_face_y_id, face_coordinates(2,:) )
+  ierr = nf90_put_var( self%ncid, self%mesh_face_y_id, face_coordinates_ncdf(2,:) )
   call check_err(ierr, routine, cmess)
 
   ! Face node connectivity
@@ -1503,6 +1551,9 @@ subroutine write_mesh( self, mesh_name, mesh_class, constructor_inputs,   &
     deallocate(tmp_cell_map)
     call check_err(ierr, routine, cmess)
   end do
+
+  deallocate(node_coordinates_ncdf)
+  deallocate(face_coordinates_ncdf)
 
   return
 end subroutine write_mesh

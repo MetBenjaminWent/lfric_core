@@ -202,6 +202,7 @@
                  mkdir -p `dirname $TMP_TARGET_DIR/documentation`
                  mkdir -p `dirname $TMP_TARGET_DIR/kgos`
                  mkdir -p `dirname $TMP_TARGET_DIR/example`
+                 mkdir -p `dirname $TMP_TARGET_DIR/build`
 
                  # All namelist description files for miniapp + base projects need to be in the miniapp
                  # configuration directory. This step may need further attention in future
@@ -216,6 +217,7 @@
                  svn export --force $TMP_SOURCE_DIR/kgos             $TMP_TARGET_DIR/kgos
                  svn export --force $TMP_SOURCE_DIR/example          $TMP_TARGET_DIR/example
                  svn export --force $TMP_SOURCE_DIR/Makefile         $TMP_TARGET_DIR/Makefile
+                 svn export --force $TMP_SOURCE_DIR/build            $TMP_TARGET_DIR/build
 
                  HOST={{TARGET_HOST}}
                  RELATIVE_SOURCE_DIRECTORY=`echo $SOURCE_DIRECTORY | sed "s|$HOME/||"`
@@ -446,6 +448,8 @@
             PROFILE               = {{build}}
             LFRIC_TARGET_PLATFORM = {{TARGET_OPT}}
             MAKE_THREADS          = 4
+	    RDEF_PRECISION        = {{RDEF_PRECISION}}
+
 
         [[[directives]]]
 {%-       for DIRECTIVE in TARGET_BUILD_BATCHER_DIRECTIVES %}
@@ -818,6 +822,11 @@
             CONFIG     = {{configuration}}
             RES        = {{res_value}}{{dt_labels[i]}}
             RES_LABEL  = {{res_label}}{{dt_labels[i]}}
+{% if RDEF_PRECISION is none %}
+            KGO_PREC_DIR = 
+{% else %}
+	    KGO_PREC_DIR = {{RDEF_PRECISION}}-bit
+{% endif %}
 
         [[[directives]]]
 {%-                 for DIRECTIVE in TARGET_TECHNICAL_BATCHER_DIRECTIVES %}

@@ -10,7 +10,8 @@
 module mpi_mod_test
 
   use pFUnit_Mod
-  use constants_mod, only: i_def, r_def
+  use constants_mod, only: i_def, r_def, r_single, r_double, &
+                           integer_type, real_type
   use mpi_mod, only: store_comm, clear_comm, &
                      global_sum, global_max, global_min, &
                      all_gather, broadcast, &
@@ -64,7 +65,7 @@ contains
   @Test( npes=[1] )
   subroutine test_all(this)
 
-    use mpi, only: MPI_INTEGER, MPI_DOUBLE_PRECISION
+    use mpi, only: MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_REAL4
 
     implicit none
 
@@ -124,11 +125,14 @@ contains
     call broadcast( str_buffer, len(str_buffer(1))*size(str_buffer), 0 )
     @assertEqual( 'Hi', str_buffer(1) )
 
-    mpi_datatype=get_mpi_datatype(i_def)
+    mpi_datatype=get_mpi_datatype( integer_type, i_def )
     @assertEqual( MPI_INTEGER, mpi_datatype )
 
-    mpi_datatype=get_mpi_datatype(r_def)
+    mpi_datatype=get_mpi_datatype( real_type, r_double )
     @assertEqual( MPI_DOUBLE_PRECISION, mpi_datatype )
+
+    mpi_datatype=get_mpi_datatype( real_type, r_single )
+    @assertEqual( MPI_REAL4, mpi_datatype )
 
   end subroutine test_all
 

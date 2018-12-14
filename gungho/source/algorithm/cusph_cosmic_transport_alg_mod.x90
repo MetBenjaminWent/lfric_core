@@ -84,6 +84,7 @@ contains
                  setval_c(r_u, 0.0_r_def), &
                  initial_u_kernel_type(r_u, chi, time, qr), &
                  enforce_bc_kernel_type( r_u ) )
+
     call mass_matrix_solver_alg(u, r_u)
     
     call invoke( setval_X(u_n, u), &

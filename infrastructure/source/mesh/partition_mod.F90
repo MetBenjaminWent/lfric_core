@@ -24,7 +24,7 @@ module partition_mod
   use global_mesh_mod, only : global_mesh_type
   use log_mod,         only : log_event,         &
                               LOG_LEVEL_ERROR
-  use constants_mod,   only: i_def, i_halo_index, r_def, l_def
+  use constants_mod,   only: i_def, i_halo_index, r_def, l_def, integer_type
 
   use yaxt,            only: xt_redist, xt_redist_s_exchange
   use mpi_mod,         only: generate_redistribution_map, get_mpi_datatype
@@ -277,7 +277,7 @@ contains
   redist = generate_redistribution_map( &
      int(self%global_cell_id(1:total_inners+self%num_edge),kind=i_halo_index), &
      int(self%global_cell_id( halo_start:halo_finish ),kind=i_halo_index), &
-     get_mpi_datatype(i_def) )
+     get_mpi_datatype( integer_type, i_def ) )
 
   ! Set ownership of all inner and edge cells to the local rank id
   ! - halo cells are unset
