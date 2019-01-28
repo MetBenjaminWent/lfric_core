@@ -42,7 +42,7 @@ module field_collection_mod
     procedure, public :: add_field
     procedure, public :: add_reference_to_field
     procedure, public :: get_field
-
+    procedure, public :: get_iterator
     procedure, public :: clear
     final             :: field_collection_destructor
   end type field_collection_type
@@ -50,6 +50,25 @@ module field_collection_mod
 
   interface field_collection_type
     module procedure field_collection_constructor
+  end interface
+
+  !-----------------------------------------------------------------------------
+  ! Type that iterates through a field collection
+  !-----------------------------------------------------------------------------
+  type, public :: field_collection_iterator_type
+
+    private
+    !> A pointer to the field within the collection that will be
+    !> the next to be returned 
+    type(linked_list_item_type), pointer :: current
+
+  contains
+    procedure, public :: next
+    procedure, public :: has_next
+  end type field_collection_iterator_type
+
+  interface field_collection_iterator_type
+    module procedure field_collection_iterator_constructor
   end interface
 
 contains
@@ -68,6 +87,26 @@ function field_collection_constructor(name) result(self)
   if (present(name))self%name = trim(name)
 
 end function field_collection_constructor
+
+!> Constructor for a field collection iterator
+!> @param [in] collection The collection to iterate over
+function field_collection_iterator_constructor(collection) result(self)
+
+  implicit none
+
+  type(field_collection_type) :: collection
+  type(field_collection_iterator_type) :: self
+
+  self%current => collection%field_list%get_head()
+
+  if(.not.associated(self%current))then
+    write(log_scratch_space, '(2A)') &
+       'Cannot create an iterator on an empty field collection: ', &
+        trim(collection%name)
+    call log_event( log_scratch_space, LOG_LEVEL_ERROR)
+  end if
+
+end function field_collection_iterator_constructor
 
 !> Adds a field to the collection. The field maintained in the collection will
 !> either be a copy of the original or a field pointer object containing a 
@@ -196,6 +235,17 @@ function get_field(self, field_name) result(field)
 
 end function get_field
 
+!> Returns an iterator on the field collection
+function get_iterator(self) result(iterator)
+
+  implicit none
+
+  class(field_collection_type), intent(inout) :: self
+  type(field_collection_iterator_type) :: iterator
+
+  iterator=field_collection_iterator_type(self)
+
+end function get_iterator
 
 !> Clears all items from the field collection linked list
 subroutine clear(self)
@@ -220,5 +270,41 @@ subroutine field_collection_destructor(self)
 
   return
 end subroutine field_collection_destructor
+
+!> Returns the next field form the collection
+!> @return field Pointer to the field that is next in the collection
+function next(self) result (field)
+
+  implicit none
+
+  class(field_collection_iterator_type), intent(inout), target :: self
+  type(field_type), pointer :: field
+
+  ! Extract a pointer to the current field in the collection
+  select type(listfield => self%current%payload)
+    type is (field_type)
+      field => listfield
+    type is (field_pointer_type)
+      field => listfield%field_ptr
+  end select
+  ! Move the current field pointer onto the next field in the collection
+  self%current => self%current%next
+
+end function next
+
+!> Checks if there are any further fields in the collection being iterated over
+!> @return next Returns true if there is another field in the collection,
+!>              and  false if there isn't.
+function has_next(self) result(next)
+
+  implicit none
+
+  class(field_collection_iterator_type), intent(in) :: self
+  logical(l_def) :: next
+
+  next = .true.
+  if(.not.associated(self%current)) next = .false.
+
+end function has_next
 
 end module field_collection_mod
