@@ -1,0 +1,261 @@
+!-----------------------------------------------------------------------------
+! (C) Crown copyright 2017 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
+!> Drives the execution of the cell_locator miniapp.
+!>
+!> This is a temporary solution until we have a proper driver layer.
+!>
+module cell_locator_driver_mod
+
+  use constants_mod,                  only : i_def, r_def
+  use cli_mod,                        only : get_initial_filename
+  use cell_locator_mod,               only : load_configuration
+  use init_mesh_mod,                  only : init_mesh
+  use init_fem_mod,                   only : init_fem
+  use yaxt,                           only : xt_initialize, xt_finalize
+  use global_mesh_collection_mod,     only : global_mesh_collection, &
+                                             global_mesh_collection_type
+  use field_mod,                      only : field_type
+  use runtime_constants_mod,          only : create_runtime_constants
+  use derived_config_mod,             only : set_derived_config
+  use log_mod,                        only : log_event,         &
+                                             log_set_level,     &
+                                             log_scratch_space, &
+                                             initialise_logging, &
+                                             finalise_logging,  &
+                                             LOG_LEVEL_ERROR,   &
+                                             LOG_LEVEL_INFO,    &
+                                             LOG_LEVEL_DEBUG,   &
+                                             LOG_LEVEL_TRACE
+  use mpi_mod,                        only : initialise_comm, store_comm, &
+                                             finalise_comm, &
+                                             get_comm_size, get_comm_rank
+
+  use cell_locator_api_mod,           only : cell_locator_api_type, &
+                                             cell_locator_api_clear, &
+                                             cell_locator_api_build, &
+                                             cell_locator_api_find
+
+  use cell_locator_config_mod,        only : verbose, output_filename
+
+  use timer_mod,                      only : timer, output_timer
+
+  use, intrinsic :: iso_c_binding,    only : c_long_long
+
+  implicit none
+
+  private
+  public initialise, run, finalise
+
+  ! Coordinate field
+  type(field_type), target, dimension(3) :: chi
+
+  integer(i_def) :: mesh_id, twod_mesh_id
+
+  type(cell_locator_api_type) :: cell_locator_obj
+
+contains
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !> Sets up required state in preparation for run.
+  !>
+  subroutine initialise( filename )
+
+    implicit none
+
+    character(:), intent(in), allocatable :: filename
+
+    integer(i_def) :: total_ranks, local_rank
+    integer(i_def) :: comm = -999
+    integer(i_def) :: ier
+
+    ! Initialise mpi and create the default communicator: mpi_comm_world
+    call initialise_comm(comm)
+
+    !Store the MPI communicator for later use
+    call store_comm(comm)
+
+    ! Initialise YAXT
+    call xt_initialize(comm)
+
+    ! and get the rank information from the virtual machine
+    total_ranks = get_comm_size()
+    local_rank  = get_comm_rank()
+
+    call initialise_logging(local_rank, total_ranks, "cell_locator")
+
+    call log_event( 'cell_locator: Running miniapp ...', LOG_LEVEL_INFO )
+
+    call load_configuration( filename )
+    call set_derived_config( .true. )
+
+    !-------------------------------------------------------------------------
+    ! Model init
+    !-------------------------------------------------------------------------
+
+    allocate( global_mesh_collection, &
+              source = global_mesh_collection_type() )
+
+    ! Create the mesh
+    call init_mesh( local_rank, total_ranks,  mesh_id, twod_mesh_id )
+
+    ! Full global meshes no longer required, so reclaim
+    ! the memory from global_mesh_collection
+    write( log_scratch_space,'(A)' ) "Purging global mesh collection."
+    call log_event( log_scratch_space, LOG_LEVEL_INFO )
+    deallocate( global_mesh_collection )
+
+    ! Create FEM specifics (function spaces and chi field)
+    call init_fem( mesh_id, chi )
+
+    ! Sets up chi. Create runtime_constants object. This creates various things
+    ! needed by the timestepping algorithms such as mass matrix operators, mass
+    ! matrix diagonal fields and the geopotential field. 
+    call create_runtime_constants( mesh_id, chi )    
+
+    ! Construct cell locator
+    call timer('constructor')
+    cell_locator_obj = cell_locator_api_type( ier )
+    if ( ier /= 0 ) then
+      call log_event( 'cell_locator: Error after constructing cell locator', &
+                      LOG_LEVEL_ERROR )
+    endif
+    call timer('constructor')
+
+    call timer('build')
+    call cell_locator_obj%build( mesh_id, ier )
+    if ( ier /= 0 ) then
+      call log_event( 'cell_locator: Error after building cell locator', &
+                      LOG_LEVEL_ERROR )
+    endif
+    call timer('build')
+
+  end subroutine initialise
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !> Find all the cells containing target points and write the results
+  !>
+  subroutine run()
+
+    implicit none
+    real(r_def)            :: target_point(3)
+    integer(c_long_long)   :: cell_id_0 ! index of cell, zero based
+    real(r_def)            :: pcoords(3)
+    real(r_def)            :: dist_error_square
+    character(len=1024)    :: msg
+    integer(i_def)         :: ier, ipoint, npts, num_not_found, counter
+    real(r_def)            :: total_error
+
+    ! initially set to invalid
+    cell_id_0 = -1
+
+    npts = cell_locator_obj%get_number_of_target_points()
+
+    counter = 1
+    total_error = 0
+    num_not_found = 0
+    call timer('run')
+    do ipoint = 1, npts
+      target_point = cell_locator_obj%get_target_point( ipoint )
+      call cell_locator_obj%find( target_point, cell_id_0, pcoords, &
+                                  dist_error_square, ier )
+      if ( ier /= 0 ) then
+        write (msg, &
+               '(A, I4, A, I8, A, 1PE11.4, A, 1PE11.4, A, 1PE11.4)' ) &
+               'cell_locator: Error ier = ', ier, &
+               ' after calling find in cell locator for ', &
+               ipoint, '-th target_point = ', &
+               target_point(1), ', ', target_point(2), ', ', target_point(3)
+        call log_event( msg, LOG_LEVEL_ERROR )
+      endif
+      if (cell_id_0 >= 0) then
+        if ( verbose > 1 ) then
+          write( msg, &
+            '(A, I8, A, F5.3, A, F5.3, A, F5.3, A, 1PE11.4, A,' & 
+            // ' 1PE11.4, A, 1PE11.4, A, 1PE9.2)' ) &
+            'cell_locator: Found cell id ', cell_id_0, &
+            ' pcoords = ', pcoords(1), ', ', pcoords(2), ', ', pcoords(3), &
+            ' for target point = ', target_point(1), ', ', target_point(2), &
+            ', ', target_point(3), &
+            ' interp error sq = ', dist_error_square
+          call log_event( msg, LOG_LEVEL_DEBUG )
+        endif
+        ! Store
+        call cell_locator_obj%set_result(counter, ipoint, cell_id_0, &
+                                         pcoords, dist_error_square)
+        counter = counter + 1
+
+        total_error = total_error + dist_error_square
+      else
+        if ( verbose > 1 ) then
+          write( msg, '(A, 1PE11.4, A, 1PE11.4, A, 1PE11.4)' ) & 
+            'cell_locator: ~ Failed to find cell for target point = ', &
+            target_point(1), ', ', target_point(2), ', ', target_point(3)
+          call log_event( msg, LOG_LEVEL_TRACE )
+        end if
+        num_not_found = num_not_found + 1
+      endif
+
+    enddo
+    call timer('run')
+
+    write( msg, '(A, I8, A, I8, A, F7.2, A, 1PE9.2)') &
+           'cell_locator: Ratio of points not found = ', num_not_found, &
+           '/', npts, ' = ', &
+           100*real(num_not_found)/real(npts), &
+           ' % total error = ', total_error
+    call log_event( msg, LOG_LEVEL_INFO )
+
+    call cell_locator_obj%write_results( output_filename, ier )
+    if ( ier /= 0 ) then
+      call log_event( &
+        'cell_locator: Error occurred when writing results in file "' & 
+        //output_filename//'"', LOG_LEVEL_ERROR )
+    endif
+
+  end subroutine run
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !> Tidies up after a run.
+  !>
+  subroutine finalise()
+
+    implicit none
+
+    integer(i_def) :: ier
+
+    !--------------------------------------------------------------------------
+    ! Model finalise
+    !--------------------------------------------------------------------------
+
+    call log_event( 'cell_locator: Miniapp completed', LOG_LEVEL_INFO )
+
+    call output_timer()
+
+    !-------------------------------------------------------------------------
+    ! Driver layer finalise
+    !-------------------------------------------------------------------------
+
+    ! Write results and free cell locator object
+    call timer('reclaiming memory')
+    call cell_locator_obj%clear( ier )
+    if ( ier /= 0 ) then
+      call log_event( &
+        'cell_locator: Error occurred when calling clear', LOG_LEVEL_ERROR )
+    endif
+    call timer('reclaiming memory')
+
+    ! Finalise YAXT
+    call xt_finalize()
+
+    ! Finalise mpi and release the communicator
+    call finalise_comm()
+
+    ! Finalise the logging system
+    call finalise_logging()
+
+  end subroutine finalise
+
+end module cell_locator_driver_mod
