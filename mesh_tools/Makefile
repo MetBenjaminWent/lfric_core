@@ -95,36 +95,35 @@ else
   $(error Unrecognised profile "$(PROFILE)". Must be one of full-debug, fast-debug or production)
 endif
 build: PROJECT      = mesh_tools
-build: SOURCE_DIR   = source
 build: WORKING_DIR := $(WORKING_DIR)/mesh_tools
 build: BIN_DIR     ?= $(PROJECT_DIR)/bin
-build: PROGRAMS    := $(basename $(notdir $(shell find $(SOURCE_DIR) -maxdepth 1 -name '*.[Ff]90' -print)))
-build: generate-configuration extract
-	$(Q)$(MAKE) $(QUIET_ARG) -C $(LFRIC_INFRASTRUCTURE) extract WORKING_DIR=$(realpath $(WORKING_DIR))
-	$(Q)$(MAKE) $(QUIET_ARG) -C $(WORKING_DIR) -f $(LFRIC_BUILD)/analyse.mk
-	$(Q)$(MAKE) $(QUIET_ARG) -C $(WORKING_DIR) -f $(LFRIC_BUILD)/compile.mk \
-	                             BIN_DIR=$(BIN_DIR) PROGRAMS="$(PROGRAMS)"
+build: PROGRAMS    := $(basename $(notdir $(shell find source -maxdepth 1 -name '*.[Ff]90' -print)))
+build: ALWAYS
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
+                  SOURCE_DIR=$(LFRIC_INFRASTRUCTURE)/source \
+                  WORKING_DIR=$(WORKING_DIR)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone.mk \
+                  SOURCE_DIR=$(LFRIC_INFRASTRUCTURE)/source \
+                  WORKING_DIR=$(WORKING_DIR)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
+                  SOURCE_DIR=source \
+                  WORKING_DIR=$(WORKING_DIR)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/configuration.mk \
+                  PROJECT=$(PROJECT) \
+	          SOURCE_DIR=source \
+                  WORKING_DIR=$(WORKING_DIR) \
+                  META_FILE_DIR=$(META_FILE_DIR)
+	$Q$(MAKE) $(QUIET_ARG) -C $(WORKING_DIR) -f $(LFRIC_BUILD)/analyse.mk
+	$Q$(MAKE) $(QUIET_ARG) -C $(WORKING_DIR) -f $(LFRIC_BUILD)/compile.mk \
+	          BIN_DIR=$(BIN_DIR) PROGRAMS="$(PROGRAMS)"
 
-.PHONY: generate-configuration
-generate-configuration: SOURCE_DIR = source
-generate-configuration: ALWAYS
-	$(Q)$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/configuration.mk \
-                    PROJECT=$(PROJECT)         \
-	            SOURCE_DIR=$(SOURCE_DIR)   \
-	            WORKING_DIR=$(WORKING_DIR) \
-                    META_FILE_DIR=$(META_FILE_DIR)
-.PHONY: extract
-extract: export SOURCE_DIR = source
-extract: ALWAYS
-	$(Q)$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk
 
 ##############################################################################
 # Unit tests
 #
 .PHONY: unit-tests
 unit-tests: export PROJECT      = mesh_tools
-unit-tests: export SOURCE_DIR   = unit-test
-unit-tests: export WORKING_DIR := $(WORKING_DIR)
+unit-tests: export WORKING_DIR := $(WORKING_DIR)/unit-test
 unit-tests: export BIN_DIR     ?= $(PROJECT_DIR)/test
 unit-tests: export PROGRAMS     = mesh_tools_unit_tests
 unit-tests: export EXTERNAL_STATIC_LIBRARIES += pfunit
@@ -138,15 +137,26 @@ unit-tests:run-unit-tests
 endif
 
 .PHONY: generate-unit-tests
-generate-unit-tests: extract-unit-tests
-	$(Q)$(MAKE) $(QUIET_ARG) -C $(LFRIC_INFRASTRUCTURE) extract WORKING_DIR=$(realpath $(WORKING_DIR))
-	$(Q)$(MAKE) $(QUIET_ARG) extract
-	$(Q)$(MAKE) $(QUIET_ARG) generate-configuration
-	$(Q)$(MAKE) $(QUIET_ARG) pfunit
+generate-unit-tests: ALWAYS
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
+                  SOURCE_DIR=$(LFRIC_INFRASTRUCTURE)/source \
+                  WORKING_DIR=$(WORKING_DIR)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone.mk \
+                  SOURCE_DIR=$(LFRIC_INFRASTRUCTURE)/source \
+                  WORKING_DIR=$(WORKING_DIR)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
+                  SOURCE_DIR=source \
+                  WORKING_DIR=$(WORKING_DIR)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/configuration.mk \
+                  PROJECT=$(PROJECT) \
+	          SOURCE_DIR=source \
+                  WORKING_DIR=$(WORKING_DIR) \
+                  META_FILE_DIR=$(META_FILE_DIR)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/pfunit.mk \
+                  PROJECT=mesh_tools \
+                  SOURCE_DIR=unit-test \
+                  WORKING_DIR=$(WORKING_DIR)
 
-.PHONY: extract-unit-tests
-extract-unit-tests:
-	$(Q)$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk
 
 ##############################################################################
 # Clean

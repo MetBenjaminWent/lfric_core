@@ -15,16 +15,16 @@ configuration_files: $(WORKING_DIR)/$(PROJECT)_configuration_mod.f90 \
                      $(WORKING_DIR)/$(PROJECT)_feign_config_mod.f90
 
 
+.INTERMEDIATE: $(CONFIG_DIR)/rose-meta.json $(CONFIG_DIR)/config_namelists.txt
 $(CONFIG_DIR)/rose-meta.json $(CONFIG_DIR)/config_namelists.txt: $(META_FILE_DIR)/rose-meta.conf
-$(CONFIG_DIR)/rose-meta.json $(CONFIG_DIR)/config_namelists.txt:
 	$(call MESSAGE,Generating namelist configuration file.)
 	$(Q)mkdir -p $(dir $@)
 	$(Q)rose_picker $(META_FILE_DIR)/rose-meta.conf    \
                         -directory $(CONFIG_DIR)           \
                         -include_dirs $(ROOT_DIR)
 
+.INTERMEDIATE: $(CONFIG_DIR)/build_config_loaders
 $(CONFIG_DIR)/build_config_loaders: $(CONFIG_DIR)/rose-meta.json
-$(CONFIG_DIR)/build_config_loaders:
 	$(call MESSAGE,Generating namelist loading modules.)
 	$(Q)$(LFRIC_BUILD)/tools/GenerateNamelist $(VERBOSE_ARG) \
                            $(CONFIG_DIR)/rose-meta.json           \
@@ -41,7 +41,6 @@ $(WORKING_DIR)/%_configuration_mod.f90: $(CONFIG_DIR)/build_config_loaders $(CON
 
 .PRECIOUS: $(WORKING_DIR)/%_feign_config_mod.f90
 $(WORKING_DIR)/$(PROJECT)_feign_config_mod.f90: $(CONFIG_DIR)/rose-meta.json
-$(WORKING_DIR)/$(PROJECT)_feign_config_mod.f90:
 	$(call MESSAGE,Generating namelist feigning module.)
 	$(Q)mkdir -p $(dir $@)
 	$(Q)$(LFRIC_BUILD)/tools/GenerateFeigns        \

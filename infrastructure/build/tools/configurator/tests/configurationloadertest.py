@@ -82,8 +82,6 @@ contains
   ! [in] unit File holding namelists.
   ! [out] names of namelist in file (in order).
   !
-  ! TODO: Assumes namelist tags are at the start of lines.
-  !
   subroutine get_namelist_names( unit, local_rank, names )
 
     use io_utility_mod, only : read_line
@@ -96,7 +94,11 @@ contains
 
     character(str_def), allocatable :: names_temp(:)
     integer(i_native)  :: condition
-    character(str_def) :: buffer
+    ! TODO: Buffer is large enough for a fair sized string and a filename.
+    !       Ideally it should be dynamically sized for the length of the
+    !       incoming data but I'm not sure how best to achieve that at the
+    !       moment. #1752
+    character(str_def + str_max_filename) :: buffer
     logical(l_def)     :: continue_read
     ! Number of names - technically a scalar but must be defined as a
     ! single element array to be broadcast-able
@@ -109,6 +111,8 @@ contains
         continue_read = read_line( unit, buffer )
         if ( .not. continue_read ) exit text_line_loop
 
+        ! TODO: Assumes namelist tags are at the start of lines. #1753
+        !
         if (buffer(1:1) == '&') then
           namecount = namecount + 1
           allocate(names_temp(namecount(1)))
@@ -303,8 +307,6 @@ contains
   ! [in] unit File holding namelists.
   ! [out] names of namelist in file (in order).
   !
-  ! TODO: Assumes namelist tags are at the start of lines.
-  !
   subroutine get_namelist_names( unit, local_rank, names )
 
     use io_utility_mod, only : read_line
@@ -317,7 +319,11 @@ contains
 
     character(str_def), allocatable :: names_temp(:)
     integer(i_native)  :: condition
-    character(str_def) :: buffer
+    ! TODO: Buffer is large enough for a fair sized string and a filename.
+    !       Ideally it should be dynamically sized for the length of the
+    !       incoming data but I'm not sure how best to achieve that at the
+    !       moment. #1752
+    character(str_def + str_max_filename) :: buffer
     logical(l_def)     :: continue_read
     ! Number of names - technically a scalar but must be defined as a
     ! single element array to be broadcast-able
@@ -330,6 +336,8 @@ contains
         continue_read = read_line( unit, buffer )
         if ( .not. continue_read ) exit text_line_loop
 
+        ! TODO: Assumes namelist tags are at the start of lines. #1753
+        !
         if (buffer(1:1) == '&') then
           namecount = namecount + 1
           allocate(names_temp(namecount(1)))

@@ -73,74 +73,72 @@ build: export FFLAGS += $(FFLAGS_DEBUG) $(FFLAGS_WARNINGS) $(FFLAGS_RISKY_OPTIMI
 else
   $(error Unrecognised profile "$(PROFILE)". Must be one of full-debug, fast-debug or production)
 endif
-build: PROJECT      = gungho
-build: SOURCE_DIR   = source
-build: SCRATCH_DIR := $(WORKING_DIR)/gungho-scratch
-build: WORKING_DIR := $(WORKING_DIR)/gungho
+build: PROJECT      = lfric_atm
+build: SCRATCH_DIR := $(WORKING_DIR)/um-scratch
+build: WORKING_DIR := $(WORKING_DIR)/lfric-atm
 build: BIN_DIR     ?= $(PROJECT_DIR)/bin
-build: PROGRAMS    := $(basename $(notdir $(shell find $(SOURCE_DIR) -maxdepth 1 -name '*.[Ff]90' -exec egrep -l "^\s*program" {} \;)))
-build: generate-psykal extract-gungho extract-um-physics
-	$(Q)$(MAKE) $(QUIET_ARG) -C $(LFRIC_INFRASTRUCTURE) extract WORKING_DIR=$(abspath $(WORKING_DIR))
-	$(Q)$(MAKE) $(QUIET_ARG) -C $(WORKING_DIR) -f $(LFRIC_BUILD)/analyse.mk
-	$(Q)$(MAKE) $(QUIET_ARG) -C $(WORKING_DIR) -f $(LFRIC_BUILD)/compile.mk \
-	                             BIN_DIR=$(BIN_DIR) \
-                                     PROGRAMS="$(PROGRAMS)"
-
-.PHONY: generate-psykal
-generate-psykal: extract-gungho
-	$(Q)$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk SOURCE_DIR=source \
-	                                     WORKING_DIR=$(WORKING_DIR)
-	$(Q)$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone.mk SOURCE_DIR=source
-
-.PHONY: extract-gungho
-extract-gungho: ALWAYS
+build: PROGRAMS    := $(basename $(notdir $(shell find source -maxdepth 1 -name '*.[Ff]90' -exec egrep -l "^\s*program" {} \;)))
+build: export platform_config_dir=$(strip $(shell grep -E "$(LFRIC_TARGET_PLATFORM)\s*:\s*$(FORTRAN_COMPILER)\s*:" $(PROJECT_DIR)/fcm-make/target-map.txt | cut -d : -f 3))
+build: export optimisation_level=$(strip $(shell grep -E "$(PROFILE)\s*:\s*" $(PROJECT_DIR)/fcm-make/optimisation-map.txt | cut -d : -f 2))
+build: ALWAYS
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
+                  SOURCE_DIR=$(LFRIC_INFRASTRUCTURE)/source \
+                  WORKING_DIR=$(WORKING_DIR)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone.mk \
+	          SOURCE_DIR=$(LFRIC_INFRASTRUCTURE)/source \
+                  WORKING_DIR=$(WORKING_DIR)
 	$(call MESSAGE,========================================)
 	$(call MESSAGE,Extracting Gungho dynamical core)
 	$(call MESSAGE,========================================)
-	$(Q)$(MAKE) $(QUIET_ARG)                       \
-                 -C $(ROOT_DIR)/gungho                 \
-                 -f $(LFRIC_BUILD)/extract.mk          \
-	         SOURCE_DIR=source                     \
-	         WORKING_DIR=$(abspath $(WORKING_DIR)) \
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
+	         SOURCE_DIR=$(ROOT_DIR)/gungho/source \
+	         WORKING_DIR=$(WORKING_DIR) \
 	         WITHOUT_PROGRAMS=1
 	$(call MESSAGE,====================================)
 	$(call MESSAGE,Psycloning Gungho dynamical core)
 	$(call MESSAGE,====================================)
-	$(Q)$(MAKE) $(QUIET_ARG)             \
-               -C $(ROOT_DIR)/gungho         \
-               -f $(LFRIC_BUILD)/psyclone.mk \
-	        SOURCE_DIR=source            \
-                WORKING_DIR=$(abspath $(WORKING_DIR))
-	$(Q)$(MAKE) $(QUIET_ARG)             \
-               -C $(ROOT_DIR)/gungho generate-configuration \
-	        PROJECT=$(PROJECT)           \
-                WORKING_DIR=$(abspath $(WORKING_DIR))
-
-.PHONY: extract-um-physics
-extract-um-physics: export platform_config_dir=$(strip $(shell grep -E "$(LFRIC_TARGET_PLATFORM)\s*:\s*$(FORTRAN_COMPILER)\s*:" $(PROJECT_DIR)/fcm-make/target-map.txt | cut -d : -f 3))
-extract-um-physics: export optimisation_level=$(strip $(shell grep -E "$(PROFILE)\s*:\s*" $(PROJECT_DIR)/fcm-make/optimisation-map.txt | cut -d : -f 2))
-extract-um-physics:
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone.mk \
+	        SOURCE_DIR=$(ROOT_DIR)/gungho/source \
+                WORKING_DIR=$(WORKING_DIR)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/configuration.mk \
+                  PROJECT=gungho \
+                  SOURCE_DIR=$(ROOT_DIR)/gungho/source \
+                  WORKING_DIR=$(WORKING_DIR) \
+                  META_FILE_DIR=$(META_FILE_DIR)
 	$(call MESSAGE,Extracting,"UM physics" )
-	$(Q)if [ x$(platform_config_dir) = x ] ; then echo Unable to convert $(LFRIC_TARGET_PLATFORM):$(FORTRAN_COMPILER) to a UM target; false; fi
-	$(Q)$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
+	$Qif [ x$(platform_config_dir) = x ] ; then echo Unable to convert $(LFRIC_TARGET_PLATFORM):$(FORTRAN_COMPILER) to a UM target; false; fi
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
+	          SOURCE_DIR=$(ROOT_DIR)/um_physics/source \
+	          WORKING_DIR=$(WORKING_DIR)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone.mk \
 	        SOURCE_DIR=$(ROOT_DIR)/um_physics/source \
-	        WORKING_DIR=$(abspath $(WORKING_DIR))
-	$(Q)$(MAKE) $(QUIET_ARG) -C $(ROOT_DIR)/um_physics -f $(LFRIC_BUILD)/psyclone.mk \
-	        SOURCE_DIR=source WORKING_DIR=$(abspath $(WORKING_DIR))
-	$(Q)$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
-	        SOURCE_DIR=$(ROOT_DIR)/socrates/source \
-	        WORKING_DIR=$(abspath $(WORKING_DIR))
-	$(Q)$(MAKE) $(QUIET_ARG) -C $(ROOT_DIR)/socrates -f $(LFRIC_BUILD)/psyclone.mk \
-	        SOURCE_DIR=source WORKING_DIR=$(abspath $(WORKING_DIR))
+                WORKING_DIR=$(WORKING_DIR)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
+	          SOURCE_DIR=$(ROOT_DIR)/socrates/source \
+	          WORKING_DIR=$(WORKING_DIR)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone.mk \
+	          SOURCE_DIR=$(ROOT_DIR)/socrates/source \
+                  WORKING_DIR=$(WORKING_DIR)
 	$(info Using UM target $(platform_config_dir))
 	# Retrieve and preprocess the UM, Jules and Socrates code
 	# The UM_ENV file contains the appropriate locations and UM side
 	# environment variables
-	$(Q)source $(PROJECT_DIR)/fcm-make/parameters.sh && \
+	$Qsource $(PROJECT_DIR)/fcm-make/parameters.sh && \
 	    fcm make -C $(SCRATCH_DIR) -f $(PROJECT_DIR)/fcm-make/extract.cfg
 	# Note that if wanting to modify UM source this should be done via the
 	# UM repository either through a working copy or branch
-	$(Q)rsync -acvz $(SCRATCH_DIR)/preprocess-atmos/ $(WORKING_DIR)/science/
+	$Qrsync -acvz $(SCRATCH_DIR)/preprocess-atmos/ $(WORKING_DIR)/science/
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
+                  SOURCE_DIR=source \
+	          WORKING_DIR=$(WORKING_DIR)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone.mk \
+                  SOURCE_DIR=source \
+	          WORKING_DIR=$(WORKING_DIR)
+	$Q$(MAKE) $(QUIET_ARG) -C $(WORKING_DIR) -f $(LFRIC_BUILD)/analyse.mk
+	$Q$(MAKE) $(QUIET_ARG) -C $(WORKING_DIR) -f $(LFRIC_BUILD)/compile.mk \
+                  BIN_DIR=$(BIN_DIR) \
+                  PROGRAMS="$(PROGRAMS)"
+
 
 ##############################################################################
 # Clean

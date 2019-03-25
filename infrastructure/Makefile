@@ -84,13 +84,6 @@ ANY_INTEGRATION_TESTS := $(shell if [ -d integration-test ] ; then \
                                    find integration-test -name '*.[Ff]90' -exec egrep -l "^\s*program" {} \; ; \
                                  fi )
 
-##############################################################################
-# Extract infrastructure source
-#
-.PHONY: extract
-extract: export SOURCE_DIR = source
-extract: ALWAYS
-	$(Q)$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk
 
 ##############################################################################
 # Documentation
@@ -112,12 +105,12 @@ document-api: WORKING_DIR  := $(WORKING_DIR)/api
 document-api: api-documentation
 	$(Q)echo > /dev/null
 
+
 ##############################################################################
 # Unit tests
 #
 .PHONY: unit-tests
 unit-tests: export PROJECT      = infrastructure
-unit-tests: export SOURCE_DIR   = unit-test
 unit-tests: export WORKING_DIR := $(WORKING_DIR)/unit-tests
 unit-tests: export BIN_DIR     ?= $(PROJECT_DIR)/test
 unit-tests: export PROGRAMS     = infrastructure_unit_tests
@@ -132,14 +125,22 @@ unit-tests:run-unit-tests
 endif
 
 .PHONY: generate-unit-tests
-generate-unit-tests: extract-unit-tests
-	$(Q)$(MAKE) $(QUIET_ARG) extract
-	$(Q)$(MAKE) $(QUIET_ARG) pfunit
+generate-unit-tests: ALWAYS
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
+                  SOURCE_DIR=source \
+                  WORKING_DIR=$(WORKING_DIR)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone.mk \
+                  SOURCE_DIR=source \
+                  WORKING_DIR=$(WORKING_DIR)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
+                  SOURCE_DIR=unit-test \
+                  WORKING_DIR=$(WORKING_DIR)
+	$Qcp -r unit-test/data $(WORKING_DIR)/
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/pfunit.mk \
+                  PROJECT=infrastructure \
+                  SOURCE_DIR=unit-test \
+                  WORKING_DIR=$(WORKING_DIR)
 
-.PHONY: extract-unit-tests
-extract-unit-tests: ALWAYS
-	$(Q)$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk
-	$(Q)cp -r $(SOURCE_DIR)/data $(WORKING_DIR)/
 
 ##############################################################################
 # Integration tests
@@ -148,9 +149,6 @@ extract-unit-tests: ALWAYS
 integration-tests: export PROJECT        = infrastructure
 integration-tests: export WORKING_DIR   := $(WORKING_DIR)/integration-tests
 integration-tests: export BIN_DIR       ?= $(PROJECT_DIR)/test
-integration-tests: export SOURCE_DIR     = integration-test
-integration-tests: export META_FILE_DIR  = $(SOURCE_DIR)/configuration_test
-integration-tests: export CONFIG_LOADER_DIR = $(WORKING_DIR)/configuration_test
 ifeq ($(strip $(ANY_INTEGRATION_TESTS)),)
 integration-tests:
 	$(call MESSAGE,No integration-tests to process.)
@@ -160,20 +158,22 @@ integration-tests: $(addprefix integration-test-run/,$(basename $(shell find int
 endif
 
 .PHONY: generate-integration-tests
-generate-integration-tests: extract-integration-test \
-	                   configuration-integration-test
-	$(Q)$(MAKE) $(QUIET_ARG) extract
+generate-integration-tests: ALWAYS
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
+                  SOURCE_DIR=source \
+                  WORKING_DIR=$(WORKING_DIR)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone.mk \
+                  SOURCE_DIR=source \
+                  WORKING_DIR=$(WORKING_DIR)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/configuration.mk \
+                  PROJECT=infrastructure \
+                  SOURCE_DIR=source \
+                  WORKING_DIR=$(WORKING_DIR) \
+                  META_FILE_DIR=integration-test/configuration_test
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
+                  SOURCE_DIR=integration-test \
+                  WORKING_DIR=$(WORKING_DIR)
 
-.PHONY: configuration-integration-test
-configuration-integration-test: ALWAYS
-	$(Q)$(MAKE) $(QUIET_ARG)                            \
-                     META_FILE_DIR=$(META_FILE_DIR)         \
-                     CONFIG_LOADER_DIR=$(CONFIG_LOADER_DIR) \
-            -f $(LFRIC_BUILD)/lfric.mk configuration
-
-.PHONY: extract-integration-test
-extract-integration-test: ALWAYS
-	$(Q)$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk
 
 ##############################################################################
 # Clean
