@@ -28,8 +28,8 @@ contains
   !>
   subroutine load_configuration( filename )
 
-    use cell_locator_configuration_mod, only : read_configuration, &
-                                         ensure_configuration
+    use configuration_mod, only : read_configuration, &
+                                  ensure_configuration
 
     implicit none
 

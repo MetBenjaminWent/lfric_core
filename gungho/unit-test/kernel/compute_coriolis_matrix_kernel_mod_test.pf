@@ -42,7 +42,7 @@ contains
 
     use base_mesh_config_mod,      only : geometry_planar, &
                                           partitioner_planar
-    use gungho_feign_config_mod,   only : feign_base_mesh_config, &
+    use feign_config_mod,          only : feign_base_mesh_config, &
                                           feign_formulation_config, &
                                           feign_planet_config
 
@@ -89,7 +89,7 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine tearDown( this )
 
-    use gungho_configuration_mod, only: final_configuration
+    use configuration_mod,        only: final_configuration
 
     implicit none
 

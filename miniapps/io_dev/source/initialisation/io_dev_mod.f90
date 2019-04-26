@@ -12,8 +12,8 @@
 module io_dev_mod
 
 
-  use io_dev_configuration_mod, only : read_configuration,   &
-                                       ensure_configuration
+  use configuration_mod, only : read_configuration,   &
+                                ensure_configuration
 
   use log_mod, only : log_event,         &
                       log_scratch_space, &

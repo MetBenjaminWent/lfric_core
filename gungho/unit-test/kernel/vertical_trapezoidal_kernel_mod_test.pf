@@ -44,13 +44,13 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine setUp( this )
 
-    use gungho_feign_config_mod,      only : feign_biperiodic_deppt_config
+    use feign_config_mod,             only : feign_biperiodic_deppt_config
     use timestepping_config_mod,      only : method_semi_implicit, &
                                              runge_kutta_method_ssp3
     use biperiodic_deppt_config_mod,  only : method_euler,  &
                                              method_trapezoidal, &
                                              method_midpoint
-    use gungho_feign_config_mod,      only : feign_timestepping_config
+    use feign_config_mod,             only : feign_timestepping_config
 
     implicit none
 
@@ -83,7 +83,7 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine tearDown( this )
 
-    use gungho_configuration_mod, only: final_configuration
+    use configuration_mod,        only: final_configuration
 
     implicit none
 

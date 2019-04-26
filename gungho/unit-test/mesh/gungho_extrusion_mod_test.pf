@@ -9,7 +9,7 @@ module gungho_extrusion_mod_test
   use constants_mod,           only : i_def, r_def
   use extrusion_mod,           only : extrusion_type
   use gungho_extrusion_mod,    only : create_extrusion
-  use gungho_feign_config_mod, only : feign_base_mesh_config, &
+  use feign_config_mod,        only : feign_base_mesh_config, &
                                       feign_extrusion_config, &
                                       feign_planet_config
   use yaxt,                    only : xt_initialize, xt_finalize
@@ -52,7 +52,7 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine tearDown( this )
 
-    use gungho_configuration_mod, only: final_configuration
+    use configuration_mod,        only: final_configuration
 
     implicit none
 

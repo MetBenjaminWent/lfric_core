@@ -17,7 +17,7 @@ module held_suarez_kernel_mod_test
                                             field_proxy_type
   use fs_continuity_mod,             only : W2, W3, Wtheta
   use function_space_mod,            only : function_space_type
-  use gungho_feign_config_mod,       only : feign_base_mesh_config, &
+  use feign_config_mod,              only : feign_base_mesh_config, &
                                             feign_planet_config, &
                                             feign_timestepping_config, &
                                             feign_physics_config
@@ -165,7 +165,7 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine tearDown( this )
 
-    use gungho_configuration_mod, only: final_configuration
+    use configuration_mod,        only: final_configuration
 
     implicit none
 

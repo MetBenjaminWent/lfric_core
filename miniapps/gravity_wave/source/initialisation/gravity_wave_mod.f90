@@ -11,8 +11,8 @@
 !>
 module gravity_wave_mod
 
-  use gravity_wave_configuration_mod, only : read_configuration,   &
-                                             ensure_configuration
+  use configuration_mod, only : read_configuration,   &
+                                ensure_configuration
 
 
   use log_mod, only : log_event,         &

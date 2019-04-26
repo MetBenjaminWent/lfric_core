@@ -38,7 +38,7 @@ contains
   subroutine setUp( this )
 
     use finite_element_config_mod, only : cellshape_quadrilateral
-    use gungho_feign_config_mod,   only : feign_finite_element_config
+    use feign_config_mod,          only : feign_finite_element_config
     use mesh_mod,                  only : PLANE_BI_PERIODIC
 
     implicit none

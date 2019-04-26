@@ -17,8 +17,8 @@ module gungho_mod
                       LOG_LEVEL_TRACE,   &
                       LOG_LEVEL_DEBUG
 
-  use gungho_configuration_mod, only : read_configuration,   &
-                                       ensure_configuration
+  use configuration_mod, only : read_configuration,   &
+                                ensure_configuration
 
   implicit none
 

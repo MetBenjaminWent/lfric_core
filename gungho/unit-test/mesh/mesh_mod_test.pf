@@ -163,7 +163,7 @@ contains
                                           partitioner_cubedsphere
     use extrusion_config_mod,      only : method_uniform
     use finite_element_config_mod, only : cellshape_quadrilateral
-    use gungho_feign_config_mod,   only : feign_base_mesh_config, &
+    use feign_config_mod,          only : feign_base_mesh_config, &
                                           feign_extrusion_config, &
                                           feign_planet_config
 
@@ -206,7 +206,7 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine tearDown( this )
 
-    use gungho_configuration_mod, only: final_configuration
+    use configuration_mod,        only: final_configuration
 
     implicit none
 

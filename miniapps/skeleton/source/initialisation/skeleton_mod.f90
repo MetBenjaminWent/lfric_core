@@ -28,8 +28,8 @@ contains
   !>
   subroutine load_configuration( filename )
 
-    use skeleton_configuration_mod, only : read_configuration, &
-                                           ensure_configuration
+    use configuration_mod, only : read_configuration, &
+                                  ensure_configuration
 
     implicit none
 

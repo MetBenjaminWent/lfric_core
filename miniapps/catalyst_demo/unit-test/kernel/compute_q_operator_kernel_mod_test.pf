@@ -56,8 +56,8 @@ contains
   subroutine setUp( this )
 
     use finite_element_config_mod,     only: finite_element_cellshape_quadrilateral
-    use gravity_wave_feign_config_mod, only: feign_finite_element_config
-    use mesh_mod,                      only: PLANE_BI_PERIODIC
+    use feign_config_mod, only: feign_finite_element_config
+    use mesh_mod,         only: PLANE_BI_PERIODIC
 
     implicit none
 

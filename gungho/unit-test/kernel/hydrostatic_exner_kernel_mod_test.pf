@@ -63,7 +63,7 @@ contains
     use base_mesh_config_mod,      only : geometry_planar, &
                                           partitioner_planar
     use finite_element_config_mod, only : cellshape_quadrilateral
-    use gungho_feign_config_mod,   only : feign_base_mesh_config,           &
+    use feign_config_mod,          only : feign_base_mesh_config,           &
                                           feign_initial_temperature_config, &
                                           feign_planet_config,              &
                                           feign_idealised_config,           &
@@ -164,7 +164,7 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine tearDown( this )
 
-    use gungho_configuration_mod, only: final_configuration
+    use configuration_mod,        only: final_configuration
 
     implicit none
 
@@ -197,7 +197,7 @@ contains
   subroutine test_bottom_up( this )
 
     use hydrostatic_exner_kernel_mod, only : hydrostatic_exner_code
-    use gungho_feign_config_mod,      only : feign_formulation_config
+    use feign_config_mod,             only : feign_formulation_config
 
     implicit none
 
@@ -251,7 +251,7 @@ contains
   subroutine test_top_down( this )
 
     use hydrostatic_exner_kernel_mod, only : hydrostatic_exner_code
-    use gungho_feign_config_mod,      only : feign_formulation_config
+    use feign_config_mod,             only : feign_formulation_config
 
     implicit none
 

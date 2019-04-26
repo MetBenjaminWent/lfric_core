@@ -25,7 +25,7 @@ program solver_miniapp
   use field_mod,                        only : field_type
   use field_vector_mod,                 only : field_vector_type
   use solver_miniapp_alg_mod,           only : solver_miniapp_alg
-  use solver_miniapp_configuration_mod, only : final_configuration
+  use configuration_mod,                only : final_configuration
   use solver_miniapp_mod,               only : load_configuration
   use log_mod,                          only : log_event,          &
                                                log_set_level,      &

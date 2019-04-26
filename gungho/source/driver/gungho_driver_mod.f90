@@ -32,7 +32,7 @@ module gungho_driver_mod
                                          field_collection_iterator_type
   use global_mesh_collection_mod, only : global_mesh_collection, &
                                          global_mesh_collection_type
-  use gungho_configuration_mod,   only : final_configuration
+  use configuration_mod,          only : final_configuration
   use gungho_mod,                 only : load_configuration
   use init_fem_mod,               only : init_fem
   use init_gungho_mod,            only : init_gungho

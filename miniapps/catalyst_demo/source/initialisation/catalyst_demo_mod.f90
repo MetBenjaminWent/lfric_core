@@ -11,9 +11,9 @@
 !>
 module catalyst_demo_mod
 
-  use catalyst_demo_configuration_mod, only : read_configuration,   &
-                                              ensure_configuration, &
-                                              final_configuration
+  use configuration_mod, only : read_configuration,   &
+                                ensure_configuration, &
+                                final_configuration
 
   use log_mod, only : log_event,         &
                       log_scratch_space, &

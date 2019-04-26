@@ -18,7 +18,7 @@ use global_mesh_collection_mod, only: global_mesh_collection, &
 use init_io_dev_mod,            only: init_io_dev
 use init_fem_mod,               only: init_fem
 use init_mesh_mod,              only: init_mesh
-use io_dev_configuration_mod,   only: final_configuration
+use configuration_mod,          only: final_configuration
 use io_dev_mod,                 only: load_configuration
 use io_mod,                     only: xios_domain_init
 use diagnostics_io_mod,         only: write_scalar_diagnostic, &

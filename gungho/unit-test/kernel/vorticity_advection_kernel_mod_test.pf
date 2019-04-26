@@ -58,7 +58,7 @@ contains
     use base_mesh_config_mod,      only : geometry_planar, &
                                           partitioner_planar
     use finite_element_config_mod, only : cellshape_quadrilateral
-    use gungho_feign_config_mod,   only : feign_base_mesh_config
+    use feign_config_mod,          only : feign_base_mesh_config
     use mesh_mod,                  only : PLANE_BI_PERIODIC
 
     implicit none
@@ -139,7 +139,7 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine tearDown( this )
 
-    use gungho_configuration_mod, only: final_configuration
+    use configuration_mod,        only: final_configuration
 
     implicit none
 

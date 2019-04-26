@@ -58,8 +58,7 @@ contains
 
     use base_mesh_config_mod,      only : geometry_planar, &
                                           partitioner_planar
-    use gravity_wave_feign_config_mod,                                      &
-                                   only : feign_base_mesh_config,           &
+    use feign_config_mod,          only : feign_base_mesh_config,           &
                                           feign_idealised_config,           &
                                           feign_initial_density_config,     &
                                           feign_initial_temperature_config, &

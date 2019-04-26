@@ -11,8 +11,8 @@
 export CONFIG_DIR=$(WORKING_DIR)/configuration
 
 .PHONY: configuration_files
-configuration_files: $(WORKING_DIR)/$(PROJECT)_configuration_mod.f90 \
-                     $(WORKING_DIR)/$(PROJECT)_feign_config_mod.f90
+configuration_files: $(WORKING_DIR)/configuration_mod.f90 \
+                     $(WORKING_DIR)/feign_config_mod.f90
 
 
 .INTERMEDIATE: $(CONFIG_DIR)/rose-meta.json $(CONFIG_DIR)/config_namelists.txt
@@ -35,20 +35,20 @@ $(CONFIG_DIR)/build_config_loaders: $(CONFIG_DIR)/rose-meta.json
 # causes a race condition when calling Make in parallel. The generation
 # of config_namelists.txt is done at the same time as rose-meta.json, so the
 # presense of config_namelists.txt is implied as true if rose-meta.json is present
-.PRECIOUS: $(WORKING_DIR)/%_configuration_mod.f90 $(CONFIG_DIR)/%_config_mod.f90
-$(WORKING_DIR)/%_configuration_mod.f90: $(CONFIG_DIR)/build_config_loaders
+.PRECIOUS: $(WORKING_DIR)/configuration_mod.f90 $(CONFIG_DIR)/%_config_mod.f90
+$(WORKING_DIR)/configuration_mod.f90: $(CONFIG_DIR)/build_config_loaders
 	$(call MESSAGE,Generating configuration loader module,$(notdir $@))
 	$(Q)mkdir -p $(dir $@)
 	$(Q)$(LFRIC_BUILD)/tools/GenerateLoader $(VERBOSE_ARG) $@ $(shell cat $(CONFIG_DIR)/config_namelists.txt)
 
 
-.PRECIOUS: $(WORKING_DIR)/%_feign_config_mod.f90
-$(WORKING_DIR)/$(PROJECT)_feign_config_mod.f90: $(CONFIG_DIR)/rose-meta.json
+.PRECIOUS: $(WORKING_DIR)/feign_config_mod.f90
+$(WORKING_DIR)/feign_config_mod.f90: $(CONFIG_DIR)/rose-meta.json
 	$(call MESSAGE,Generating namelist feigning module.)
 	$(Q)mkdir -p $(dir $@)
 	$(Q)$(LFRIC_BUILD)/tools/GenerateFeigns        \
                            $(CONFIG_DIR)/rose-meta.json \
-                           -output $(WORKING_DIR)/$(PROJECT)_feign_config_mod.f90
+                           -output $@
 
 
 include $(LFRIC_BUILD)/lfric.mk

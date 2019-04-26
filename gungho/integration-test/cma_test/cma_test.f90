@@ -40,7 +40,7 @@ program cma_test
   use fs_continuity_mod,              only : W0,W1,W2,W3
   use function_space_mod,             only : function_space_type
   use function_space_collection_mod,  only : function_space_collection
-  use gungho_configuration_mod,       only : read_configuration, &
+  use configuration_mod,              only : read_configuration, &
                                              ensure_configuration
   use init_mesh_mod,                  only : init_mesh
   use log_mod,                        only : log_event,         &

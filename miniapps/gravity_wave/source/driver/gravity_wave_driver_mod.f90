@@ -18,7 +18,7 @@ module gravity_wave_driver_mod
   use function_space_chain_mod,       only: function_space_chain_type
   use global_mesh_collection_mod,     only: global_mesh_collection, &
                                             global_mesh_collection_type
-  use gravity_wave_configuration_mod, only: final_configuration
+  use configuration_mod,              only: final_configuration
   use gravity_wave_mod,               only: load_configuration
   use gravity_wave_alg_mod,           only: gravity_wave_alg_init, &
                                             gravity_wave_alg_step, &

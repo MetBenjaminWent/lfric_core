@@ -51,7 +51,7 @@ contains
 
     use base_mesh_config_mod,      only : geometry_planar, &
                                           partitioner_planar
-    use gungho_feign_config_mod,   only : feign_base_mesh_config, &
+    use feign_config_mod,          only : feign_base_mesh_config, &
                                           feign_timestepping_config, &
                                           feign_checks_config
     use timestepping_config_mod,   only : method_semi_implicit, &
@@ -118,7 +118,7 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine tearDown( this )
 
-    use gungho_configuration_mod, only: final_configuration
+    use configuration_mod,        only: final_configuration
 
     implicit none
 

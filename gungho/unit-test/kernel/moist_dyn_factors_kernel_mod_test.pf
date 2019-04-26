@@ -49,7 +49,7 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine setUp( this )
 
-    use gungho_feign_config_mod, only: feign_planet_config
+    use feign_config_mod,        only: feign_planet_config
 
     implicit none
 

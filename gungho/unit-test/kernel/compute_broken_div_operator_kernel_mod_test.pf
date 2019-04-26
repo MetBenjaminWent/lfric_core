@@ -46,7 +46,7 @@ contains
 
     use finite_element_config_mod, &
       only : cellshape_quadrilateral
-    use gungho_feign_config_mod, only : feign_finite_element_config
+    use feign_config_mod,        only : feign_finite_element_config
 
     implicit none
 
@@ -70,7 +70,7 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine tearDown( this )
 
-    use gungho_configuration_mod, only: final_configuration
+    use configuration_mod,        only: final_configuration
 
     implicit none
 

@@ -67,7 +67,7 @@ contains
     use finite_element_config_mod,        only : cellshape_quadrilateral
     use base_mesh_config_mod,             only : geometry_spherical, &
                                                  partitioner_cubedsphere
-    use gungho_feign_config_mod,          only :                  &
+    use feign_config_mod,                 only :                  &
                                           feign_base_mesh_config, &
                                           feign_planet_config,    &
                                           feign_orography_dcmip200_spherical_config
@@ -132,7 +132,7 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine tearDown(this)
 
-    use gungho_configuration_mod, only: final_configuration
+    use configuration_mod,        only: final_configuration
 
     implicit none
 
