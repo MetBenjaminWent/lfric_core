@@ -12,7 +12,6 @@ module advection_alg_mod
   use enforce_bc_kernel_mod,          only: enforce_bc_kernel_type
   use runtime_constants_mod,          only: get_coordinates, &
                                             get_div, &
-                                            get_curl, &
                                             get_mass_matrix, &
                                             get_mass_matrix_diagonal, &
                                             get_inverse_lumped_mass_matrix, &
@@ -20,7 +19,6 @@ module advection_alg_mod
                                             wt_id
   use field_mod,                      only: field_type
   use finite_element_config_mod,      only: element_order, supg, &
-                                            vorticity_in_w1, &
                                             nqp_exact
   use function_space_mod,             only: function_space_type
   use matrix_vector_kernel_mod,       only: matrix_vector_kernel_type
@@ -51,15 +49,7 @@ module advection_alg_mod
   use rtheta_supg_kernel_mod,         only: rtheta_supg_kernel_type
   use flux_rhs_kernel_mod,            only: flux_rhs_kernel_type
   use mass_matrix_solver_alg_mod,     only: mass_matrix_solver_alg
-  use transpose_matrix_vector_kernel_mod, &
-                                      only: transpose_matrix_vector_kernel_type
-  use vorticity_advection_kernel_mod, only: vorticity_advection_kernel_type
-  use vorticity_rhs_kernel_mod,       only: vorticity_rhs_kernel_type
   use derived_config_mod,             only: bundle_size 
-  use w2_to_w1_projection_kernel_mod, only: w2_to_w1_projection_kernel_type
-  use w2_vorticity_advection_kernel_mod, &
-                                      only: w2_vorticity_advection_kernel_type
-
   use transport_config_mod,           only: operators,            &
                                             fv_flux_order,        &
                                             fv_advective_order,   &
@@ -79,7 +69,6 @@ module advection_alg_mod
   use timer_mod,                      only: timer
   use timestepping_config_mod,        only: time_method => method, &
                                             method_rk  
-  use strong_curl_kernel_mod,         only: strong_curl_kernel_type
   use poly_advective_kernel_mod,      only: poly_advective_kernel_type
   use cosmic_threed_alg_mod,          only: cosmic_threed_transport_step
   use calc_dep_pts_alg_mod,           only: calc_dep_pts
@@ -329,9 +318,6 @@ contains
       allocate ( mr_prediction(nstage_adv) )
     end if
 
-    if ( .not. vorticity_in_w1 ) &
-      w1_fs => function_space_collection%get_fs( mesh_id, element_order, W1 )
-
     nullify( chi, md_w3, md_wt, w3_fs, wt_fs, reference_element, mesh )
 
   end subroutine advection_alg_init
@@ -346,7 +332,6 @@ contains
 
     if (allocated(mr_prediction)) deallocate( mr_prediction )
     if (allocated(ak_adv))        deallocate( ak_adv )
-    nullify (w1_fs)
 
     if ( operators == operators_fv .and. &
          element_order == 0 ) then
@@ -362,24 +347,20 @@ contains
   !=============================================================================!
   !>@details A wrapper algorithm for computing the advection of the prognostic
   !>         equations, namely:
-  !>         \f[ \mathbf{R_u} = \xi \times \frac{\mathbf{F}}{\rho} \f]
   !>         \f[ R_\theta = \frac{\mathbf{F}}{\rho}.\nabla\theta \f]
   !>         \f[ R_\rho = \nabla.\mathbf{F} \f]
   !>         with diagnostic fields:
   !>
   !>         Mass flux: \f$ \mathbf{F} = \mathbf{u}\rho \f$
-  !>         Vorticity: \f$ \xi = \nabla\times\mathbf{u} \f$
   !>
   !>         Using a method of lines algorithm
   !> @param[inout] advection Advective terms
   !> @param[in]    state Current state of the model prognostics
-  !> @param[inout] xi Relative vorticity field
   !> @param[in]    advecting_wind Wind field used to advect all quantities
   !> @param[in]    wind_n Wind field at timestep n
   !> @param[in]    wind_np1 Latest estimate of wind field at timestep n+1
   subroutine advection_alg( advection,           &
                             state,               &
-                            xi,                  &
                             advecting_wind,      &
                             wind_n,              &
                             wind_np1 )
@@ -388,7 +369,6 @@ contains
   ! Form of state and advection is [u,theta,rho] & [r_u,r_theta,r_rho]
   type(field_type), intent(in),    target  :: state(bundle_size)
   type(field_type), intent(inout)          :: advection(bundle_size)
-  type(field_type), intent(inout)          :: xi
   type(field_type), intent(in)             :: advecting_wind
   type(field_type), intent(in)             :: wind_n
   type(field_type), intent(in)             :: wind_np1
@@ -396,13 +376,13 @@ contains
 
   type(field_type),    pointer :: chi(:) => null()
   type(operator_type), pointer :: mm_wt => null(), mm_w3_inv => null(), &
-                                  div => null(), curl => null()
+                                  div => null()
 
   type(quadrature_xyoz_type)          :: qr
   type(quadrature_rule_gaussian_type) :: quadrature_rule
 
   type(field_type), pointer :: u => null() ,theta => null(), rho  => null()
-  type(field_type)          :: r_xi, mass_flux, r_rho, rho_adv, mf, &
+  type(field_type)          :: mass_flux, r_rho, rho_adv, mf, &
                                theta_adv, r_theta, u_grad_theta
 
   type(field_type)          :: dep_pts_x, dep_pts_y, dep_pts_z
@@ -412,7 +392,7 @@ contains
 
   type(field_type), allocatable :: rrho_prediction(:), rtheta_prediction(:)
 
-  type(function_space_type), pointer :: xi_fs => null(), u_fs => null(), &
+  type(function_space_type), pointer :: u_fs => null(), &
                                         rho_fs => null(), theta_fs => null()
   type(field_type), pointer          :: mt_lumped_inv => null()
   type(field_type)                   :: u_in_w1, r_u
@@ -430,7 +410,6 @@ contains
   rho   => state(igh_d)
 
   u_fs     => u%get_function_space()
-  xi_fs    => xi%get_function_space()
   rho_fs   => rho%get_function_space()
   theta_fs => theta%get_function_space()
 
@@ -478,7 +457,7 @@ contains
     ! Compute the mass flux using desired spatial reconstruction
     call mass_flux_alg(mf, rho_adv, advecting_wind)
     ! Compute m3^-1 * div * mass flux
-    call invoke( name = "Compute mm_w3_inv and initialise r_rho", &
+    call invoke( name = "compute_mm_w3_inv_and_initialise_r_rho", &
                  dg_matrix_vector_kernel_type(r_rho, mf, div),    &
                  dg_matrix_vector_kernel_type(rrho_prediction(stage), r_rho, &
                                               mm_w3_inv),         &
@@ -488,7 +467,7 @@ contains
       call invoke( inc_X_minus_bY(r_rho, ak_adv(stage,st), rrho_prediction(st)) )
     end do
     ! Increment the advected density field to obtain estimate at this stage
-    call invoke( name = "Increment density",         &
+    call invoke( name = "increment_density",         &
                  aX_plus_Y(rho_adv, dt, r_rho, rho), &
     ! Add increment from this stage to the time integrated mass flux 
                  inc_X_plus_bY(mass_flux, ak_adv(nstage_adv,stage), mf) )
@@ -549,54 +528,18 @@ contains
   else
     call invoke( X_divideby_Y(advection(igh_t), u_grad_theta, mt_lumped_inv) )
   end if
+  ! 3) Advection update for the momentum equation, since this advection terms
+  ! ( grad(1/2 u.u) + [u X curl(u)] )
+  ! are currently handled by the semi-implicit scheme the increment is zero
+  call invoke( name = "compute_advective_momentum_increment",    &
+               setval_c(advection(igh_u), 0.0_r_def) )
 
-  ! 3) Vorticity computation ( xi = curl(u) )
-  ! 4) Vorticity advection of u ( u \cross curl(u))
-  ! Currently this is just a single stage approximation using xi = curl(u), it 
-  ! should later be updated to use a RK scheme for the vorticity
-  if ( vorticity_in_w1 ) then
-    ! Compute the vorticity field xi in W1 using the weak curl and then
-    ! project it into W2 as part of the advection kernel
-    call log_event( "Computing advective vorticity in W1...", LOG_LEVEL_INFO)
-    r_xi = field_type( vector_space = xi_fs  )
-    curl => get_curl()
-    call invoke( name = "Compute advective vorticity",                            &
-                 setval_c(r_xi, 0.0_r_def),                                       &
-                 transpose_matrix_vector_kernel_type(r_xi, advecting_wind, curl), &
-                 enforce_bc_kernel_type(r_xi) )
-    call mass_matrix_solver_alg(xi, r_xi)
-    call log_event( "Computing advective wind increment...", LOG_LEVEL_INFO)
-    call invoke( name = "Compute advective wind increment",    &
-                 setval_c(advection(igh_u), 0.0_r_def),        &
-                 vorticity_advection_kernel_type(advection(igh_u), advecting_wind, &
-                                                 xi, chi, qr), &
-                 enforce_bc_kernel_type(advection(igh_u)) )
-  else
-    ! Compute the W1 representation of the wind field by galerkin projection and
-    ! then compute the vorticity field xi in W2 using the strong curl
-    call log_event( "Computing advective wind in W1...", LOG_LEVEL_INFO)
-    u_in_w1 = field_type( vector_space = w1_fs )
-    r_u     = field_type( vector_space = w1_fs )
-    call invoke( name = "Compute advective wind in W1",                        &
-                 setval_c(r_u, 0.0_r_def),                                     &
-                 w2_to_w1_projection_kernel_type(r_u, advecting_wind, qr) )
-    call mass_matrix_solver_alg( u_in_w1, r_u, .false.)  
-    call log_event( "Computing advective wind increment...", LOG_LEVEL_INFO)
-    call invoke( name = "Compute advective wind increment using u in W1",      &
-                 strong_curl_kernel_type(xi, u_in_w1),                         &
-                 setval_c(advection(igh_u), 0.0_r_def),                        &
-                 w2_vorticity_advection_kernel_type(advection(igh_u),          &
-                                                    advecting_wind,            &
-                                                    xi, chi, qr),              &
-                 enforce_bc_kernel_type(advection(igh_u)) )
-  end if
-
-  ! 5) Advection update for the continuity equation divergence of mass flux: 
+  ! 4) Advection update for the continuity equation divergence of mass flux: 
   !    M3^-1(div(F))
   if (scheme == scheme_method_of_lines) then
 
     call log_event( "Computing advective density increment...", LOG_LEVEL_INFO)
-    call invoke( name = "Compute advective density increment",     &
+    call invoke( name = "compute_advective_density_increment",     &
                  setval_c(r_rho, 0.0_r_def),                       &
                  matrix_vector_kernel_type(r_rho, mass_flux, div), &
                  inc_a_times_X(minus_one, r_rho),                  &
@@ -613,16 +556,16 @@ contains
 
   end if
 
-  ! 6) Advection update for the equation of state, since this is diagnostic the
+  ! 5) Advection update for the equation of state, since this is diagnostic the
   ! increment is always zero
-  call invoke( name = "Compute advective pressure increment",    &
+  call invoke( name = "compute_advective_pressure_increment",    &
                setval_c(advection(igh_p), 0.0_r_def) )
 
 
   deallocate ( rrho_prediction, rtheta_prediction )
 
-  nullify( mm_wt, mm_w3_inv, div, curl, chi, u, theta, rho, &
-           xi_fs, u_fs, rho_fs, theta_fs, mt_lumped_inv, detj_at_w2,  &
+  nullify( mm_wt, mm_w3_inv, div, chi, u, theta, rho, &
+           u_fs, rho_fs, theta_fs, mt_lumped_inv, detj_at_w2,  &
            cell_orientation )
 
   if ( subroutine_timers ) call timer('advection_alg')
@@ -732,7 +675,7 @@ contains
       chi    => get_coordinates()
       u_fs   => wind%get_function_space()
       rhs_f = field_type( vector_space = u_fs )
-      call invoke( name = "Transport operators fem",                    &
+      call invoke( name = "transport_operators_fem",                    &
                    setval_c(rhs_f, 0.0_r_def),                          &
                    flux_rhs_kernel_type(rhs_f, wind, density, chi, qr), &
                    enforce_bc_kernel_type(rhs_f),                       &

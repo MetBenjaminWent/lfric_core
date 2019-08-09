@@ -12,13 +12,11 @@ module conservation_algorithm_mod
   use compute_total_aam_kernel_mod,    only: compute_total_aam_kernel_type
   use compute_total_energy_kernel_mod, only: compute_total_energy_kernel_type
   use compute_total_mass_kernel_mod,   only: compute_total_mass_kernel_type
-  use compute_total_pv_kernel_mod,     only: compute_total_pv_kernel_type
 
   use constants_mod,                   only: r_def, i_def
   use function_space_collection_mod,   only: function_space_collection
   use field_mod,                       only: field_type
   use finite_element_config_mod,       only: element_order, &
-                                             vorticity_in_w1, &
                                              nqp_exact
   use fs_continuity_mod,               only: W3
   use function_space_mod,              only: function_space_type
@@ -47,19 +45,17 @@ contains
   !> @param[in] u Velocity field
   !> @param[in] theta Potential temperature field
   !> @param[in] exner Exner pressure field
-  !> @param[in] xi Vorticity field
   subroutine conservation_algorithm( tstep,        &
                                      rho,          &
                                      u,            &
                                      theta,        &
-                                     exner,        &
-                                     xi)
+                                     exner)
   implicit none
     integer, intent(in) :: tstep
 
 
     ! Prognostic fields    
-    type( field_type ), intent( in ) :: u, rho, theta, exner, xi
+    type( field_type ), intent( in ) :: u, rho, theta, exner
 
     ! Local variables
     type( field_type ), pointer :: geopotential => null()
@@ -70,8 +66,9 @@ contains
 
     type(function_space_type), pointer :: w3_fs => null()
 
-    type( field_type ) :: mass, pv, aam, energy
-    real(kind=r_def) :: total_mass, total_pv, total_aam, total_energy 
+    type( field_type ) :: mass, aam, energy
+
+    real(kind=r_def) :: total_mass, total_aam, total_energy 
     integer(i_def)   :: mesh 
 
     if ( subroutine_timers ) call timer('conservation_alg')
@@ -103,21 +100,9 @@ contains
                  compute_total_aam_kernel_type(aam, u, rho, chi, qr),     &
                  sum_X(total_aam, aam) )
 
-    ! Gradient of theta not defined for the Wtheta case, TBD
-    if ( .false. .and. vorticity_in_w1 ) then
-      ! Compute Ertel PV
-      pv = field_type( vector_space = w3_fs )
-      call invoke( name = "Compute total PV",                            &
-                   compute_total_pv_kernel_type(pv, xi, theta, chi, qr), &
-                   sum_X(total_pv, pv) )
-      write( log_scratch_space, '(A,I4,4E32.24)')  &
-             'Conservation  = ',&
-              tstep, total_mass, total_energy, total_pv, total_aam
-    else
-      write( log_scratch_space, '(A,I4,4E32.24)')  &
-             'Conservation  = ',&
-              tstep, total_mass, total_energy, total_aam
-    end if
+    write( log_scratch_space, '(A,I4,4E32.24)')  &
+           'Conservation  = ',&
+            tstep, total_mass, total_energy, total_aam
 
     call log_event( log_scratch_space, LOG_LEVEL_INFO )
 

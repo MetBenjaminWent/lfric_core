@@ -73,7 +73,7 @@
 		     env={"crun":2, "nrun":1,
                           "directives":{"C12":{"mpi_parts":6,
                                                  "threads":1,
-                                               "wallclock":"00:05:00"},
+                                               "wallclock":"00:10:00"},
                                        }, 
                          }
 		     )',

@@ -8,7 +8,7 @@
 !>       equations
 module rhs_alg_mod
 
-  use constants_mod,                       only: r_def
+  use constants_mod,                       only: r_def, i_def
   use enforce_bc_kernel_mod,               only: enforce_bc_kernel_type
   use runtime_constants_mod,               only: get_geopotential, &
                                                  get_coordinates,  &
@@ -18,7 +18,8 @@ module rhs_alg_mod
                                                  w3inv_id, dl_id,  &
                                                  get_coriolis
   use field_mod,                           only: field_type
-  use finite_element_config_mod,           only: element_order
+  use finite_element_config_mod,           only: element_order, &
+                                                 vorticity_in_w1
   use formulation_config_mod,              only: rotating
   use kinetic_energy_gradient_kernel_mod,  only: kinetic_energy_gradient_kernel_type
   use matrix_vector_kernel_mod,            only: matrix_vector_kernel_type
@@ -37,6 +38,11 @@ module rhs_alg_mod
   use dg_matrix_vector_kernel_mod,         only: dg_matrix_vector_kernel_type
   use reference_element_mod,               only: reference_element_type
   use mesh_mod,                            only: mesh_type
+  use vorticity_advection_kernel_mod,      only: vorticity_advection_kernel_type
+  use compute_vorticity_alg_mod,           only: compute_vorticity_alg
+  use fs_continuity_mod,                   only: W1, W2
+  use function_space_collection_mod,       only: function_space_collection
+  use w2_vorticity_advection_kernel_mod,   only: w2_vorticity_advection_kernel_type
   implicit none
 
   private
@@ -88,12 +94,16 @@ contains
                                  theta        => null(), &
                                  rho          => null(), &
                                  exner        => null()
+
     type(field_type)                       :: rhs_tmp, rhs_eos
-    type(quadrature_xyoz_type)             :: qr
+    type(field_type)                       :: vorticity
+    type(quadrature_xyoz_type)             :: qr, qr_exact
     type(quadrature_face_type)             :: qrf
     type(quadrature_rule_gaussian_type)    :: gaussian_quadrature
     class(reference_element_type), pointer :: reference_element => null()
     type (mesh_type),              pointer :: mesh => null()
+    integer(i_def)                         :: mesh_id
+    integer(i_def)                         :: vorticity_fs
 
     if ( subroutine_timers ) call timer('rhs_alg')
 
@@ -117,7 +127,8 @@ contains
  
     rhs_tmp = field_type( vector_space=rhs(igh_u)%get_function_space() )
     rhs_eos = field_type( vector_space=rhs(igh_p)%get_function_space() )
-    qr  = quadrature_xyoz_type(element_order+2, gaussian_quadrature)
+    qr       = quadrature_xyoz_type(element_order+2, gaussian_quadrature)
+    qr_exact = quadrature_xyoz_type(element_order+3, gaussian_quadrature)
     mesh              => theta%get_mesh()
     reference_element => mesh%get_reference_element()
     qrf = quadrature_face_type(element_order+2, .true., .false., &
@@ -136,6 +147,25 @@ contains
                                           geopotential, qr ),                &
                  kinetic_energy_gradient_kernel_type( rhs_tmp, u, chi, qr ), &
                  matrix_vector_kernel_type( rhs(igh_u), u, mm_vel ) )
+
+     ! Compute the vorticity
+    mesh_id = u%get_mesh_id()
+    if ( vorticity_in_w1 ) then
+      vorticity_fs = W1
+    else
+      vorticity_fs = W2
+    end if
+    vorticity = field_type( vector_space = &
+                 function_space_collection%get_fs(mesh_id, element_order, &
+                                                  vorticity_fs) )
+    call compute_vorticity_alg(vorticity, u, .false.)
+    if ( vorticity_in_w1 ) then
+      call invoke( vorticity_advection_kernel_type(rhs_tmp, u, vorticity,    &
+                                                   chi, qr_exact) )
+    else
+      call invoke( w2_vorticity_advection_kernel_type(rhs_tmp, u, vorticity, &
+                                                      chi, qr_exact) )
+    end if
   
     if ( rotating ) then
       coriolis => get_coriolis()

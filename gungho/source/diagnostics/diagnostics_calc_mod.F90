@@ -18,8 +18,10 @@ module diagnostics_calc_mod
                                            split_wind_diagnostic_alg,   &
                                            scalar_nodal_diagnostic_alg, &
                                            scalar_ugrid_diagnostic_alg, &
-                                           vector_nodal_diagnostic_alg
-  use io_config_mod,                 only: use_xios_io
+                                           vector_nodal_diagnostic_alg, &
+                                           vorticity_diagnostic_alg
+  use io_config_mod,                 only: use_xios_io,          &
+                                           nodal_output_on_w3
   use files_config_mod,              only: diag_stem_name
   use project_output_mod,            only: project_output
   use io_mod,                        only: ts_fname,                    &
@@ -45,7 +47,8 @@ module diagnostics_calc_mod
   private
   public :: write_divergence_diagnostic, &
             write_density_diagnostic,    &
-            write_hydbal_diagnostic
+            write_hydbal_diagnostic,     &
+            write_vorticity_diagnostic
             
 
 contains
@@ -151,6 +154,31 @@ subroutine write_hydbal_diagnostic(theta_field, moist_dyn_field, exner_field,  &
 
 
 end subroutine write_hydbal_diagnostic
+
+
+!-------------------------------------------------------------------------------
+!>  @brief    Handles vorticity diagnostic processing
+!!
+!!  @details  Handles vorticity diagnostic processing
+!!
+!!> @param[in] u_field   The wind field
+!!> @param[in] timestep  Model timestep to index the output file
+!-------------------------------------------------------------------------------
+
+subroutine write_vorticity_diagnostic(u_field, timestep)
+  implicit none
+
+  type(field_type), intent(in) :: u_field
+  integer(i_def),   intent(in) :: timestep
+
+  type(field_type) :: vorticity
+
+  call vorticity_diagnostic_alg(vorticity, u_field)
+
+  call write_vector_diagnostic('xi', vorticity, timestep, &
+                               vorticity%get_mesh_id(), nodal_output_on_w3)
+
+end subroutine write_vorticity_diagnostic
 
 
 end module diagnostics_calc_mod

@@ -76,7 +76,6 @@ module final_gungho_mod
     type( field_type), pointer :: u => null()
     type( field_type), pointer :: rho => null()
     type( field_type), pointer :: exner => null()
-    type( field_type), pointer :: xi => null()
 
     ! Pointer for tstar_2d to allow write to dump
     type( field_type ), pointer   :: tstar_2d => null()
@@ -89,7 +88,6 @@ module final_gungho_mod
     u => prognostic_fields%get_field('u')
     rho => prognostic_fields%get_field('rho')
     exner => prognostic_fields%get_field('exner')
-    xi => diagnostic_fields%get_field('xi')
 
     ! Log fields
     call rho%log_field(   LOG_LEVEL_DEBUG, 'rho' )

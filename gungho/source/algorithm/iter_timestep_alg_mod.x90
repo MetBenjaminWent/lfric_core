@@ -301,7 +301,6 @@ contains
   !> @param[in,out] exner             Exner pressure
   !> @param[in,out] mr                Mixing ratios
   !> @param[in,out] moist_dyn         Factors for moist dynamics
-  !> @param[in,out] xi                Vorticity field
   !> @param[in,out] derived_fields    Group of derived fields
   !> @param[in,out] cloud_fields      Group of cloud fields
   !> @param[in,out] twod_fields       2D fields for UM physics
@@ -310,7 +309,7 @@ contains
   !> @param[in,out] jules_prognostics Prognostic fields for Jules
   !> @param[in]     timestep          Model timestep number
   !> @param[in]     twod_mesh_id      Identifier given to the current 2d mesh
-  subroutine iter_alg_step(u, rho, theta, exner, mr, moist_dyn, xi,       &
+  subroutine iter_alg_step(u, rho, theta, exner, mr, moist_dyn,           &
                            derived_fields, cloud_fields, twod_fields,     &
                            physics_incs, jules_ancils, jules_prognostics, &
                            timestep, twod_mesh_id)
@@ -318,7 +317,7 @@ contains
     implicit none
 
     ! Prognostic fields
-    type( field_type ), intent( inout ) :: u, rho, theta, exner, xi
+    type( field_type ), intent( inout ) :: u, rho, theta, exner
     type( field_type ), intent( inout ) :: mr(nummr)
     type( field_type ), intent( inout ) :: moist_dyn(num_moist_factors)
     ! Surface fields
@@ -471,7 +470,7 @@ contains
 
         ! Set advecting velocity & terms
         call invoke( aX_plus_bY(u_adv, varbeta, state_after_slow(igh_u), varalpha, state(igh_u)) )
-        call advection_alg(rhs_adv, state_after_slow, xi, u_adv, state_n(igh_u), state(igh_u) )
+        call advection_alg(rhs_adv, state_after_slow, u_adv, state_n(igh_u), state(igh_u) )
         if ( use_moisture )then
           ! Advect mr_after_slow values with latest advecting velocity 
           call advection_mr_alg(mr_inc, mr_after_slow, u_adv)

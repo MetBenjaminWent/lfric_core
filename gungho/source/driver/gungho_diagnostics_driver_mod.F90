@@ -16,7 +16,8 @@ module gungho_diagnostics_driver_mod
   use diagnostics_io_mod,             only : write_scalar_diagnostic, &
                                              write_vector_diagnostic
   use diagnostics_calc_mod,           only : write_divergence_diagnostic, &
-                                             write_hydbal_diagnostic
+                                             write_hydbal_diagnostic, &
+                                             write_vorticity_diagnostic
   use field_collection_mod,           only : field_collection_type, &
                                              field_collection_iterator_type
   use field_mod,                      only : field_type
@@ -72,7 +73,6 @@ contains
     type( field_type), pointer :: u => null()
     type( field_type), pointer :: rho => null()
     type( field_type), pointer :: exner => null()
-    type( field_type), pointer :: xi => null()
 
     ! Iterator for field collection
     type(field_collection_iterator_type)  :: iterator
@@ -92,7 +92,6 @@ contains
     u => prognostic_fields%get_field('u')
     rho => prognostic_fields%get_field('rho')
     exner => prognostic_fields%get_field('exner')
-    xi => diagnostic_fields%get_field('xi')
 
     ! Scalar fields
     call write_scalar_diagnostic('rho', rho, &
@@ -105,8 +104,7 @@ contains
     ! Vector fields
     call write_vector_diagnostic('u', u, &
                                  timestep, mesh_id, nodal_output_on_w3)
-    call write_vector_diagnostic('xi', xi, &
-                                 timestep, mesh_id, nodal_output_on_w3)
+    call write_vorticity_diagnostic(u, timestep)
 
     ! Moisture fields
     if (use_moisture) then

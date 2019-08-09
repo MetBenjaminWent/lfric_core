@@ -69,7 +69,7 @@ function analytic_temperature(chi, choice) result(temperature)
   real(kind=r_def), parameter  :: XR = 4000.0_r_def, &
                                   ZC_cold = 3000.0_r_def, &
                                   ZC_hot = 260.0_r_def, &
-                                  ZC_3d  = 260.0_r_def, &
+                                  ZC_3d  = 350.0_r_def, &
                                   ZR = 2000.0_r_def
   real(kind=r_def)             :: long, lat, radius, z
   real(kind=r_def)             :: l1, l2
@@ -133,7 +133,7 @@ function analytic_temperature(chi, choice) result(temperature)
     l = sqrt( (chi(1)-XC)**2 + (chi(2)-YC)**2 + (chi(3)-ZC_3d)**2 )
 
     if ( abs(l) <= 250.0_r_def ) then
-      dt = 0.5_r_def*(1.0_r_def + cos(PI*l/250.0_r_def))
+      dt = 0.25_r_def*(1.0_r_def + cos(PI*l/250.0_r_def))
     else
       dt = 0.0_r_def
     end if

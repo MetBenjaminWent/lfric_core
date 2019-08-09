@@ -20,10 +20,9 @@ module create_gungho_prognostics_mod
                                              checkpoint_write_interface, &
                                              checkpoint_read_interface
   use field_collection_mod,           only : field_collection_type
-  use finite_element_config_mod,      only : element_order, &
-                                             vorticity_in_w1
+  use finite_element_config_mod,      only : element_order
   use formulation_config_mod,         only : use_moisture
-  use fs_continuity_mod,              only : W0, W1, W2, W3, Wtheta
+  use fs_continuity_mod,              only : W0, W2, W3, Wtheta
   use function_space_collection_mod , only : function_space_collection
   use log_mod,                        only : log_event,         &
                                              LOG_LEVEL_INFO
@@ -80,8 +79,6 @@ contains
 
     ! Temp fields to create prognostics
     type( field_type )                         :: u, rho, theta, exner
-    ! Temp fields to create diagnostics
-    type( field_type )                         :: xi
 
     call log_event( 'GungHo: Creating prognostics...', LOG_LEVEL_INFO )
 
@@ -89,15 +86,6 @@ contains
     theta = field_type( vector_space = &
                         function_space_collection%get_fs(mesh_id, element_order, Wtheta), &
                         name= "theta" )
-    if ( vorticity_in_w1 ) then
-      xi    = field_type( vector_space = &
-                          function_space_collection%get_fs(mesh_id, element_order, W1), &
-                          name = "xi" )
-    else
-      xi    = field_type( vector_space = &
-                          function_space_collection%get_fs(mesh_id, element_order, W2), &
-                          name = "xi" )
-    end if
     u     = field_type( vector_space = &
                         function_space_collection%get_fs(mesh_id, element_order, W2), &
                         name = "u" )
@@ -134,7 +122,6 @@ contains
        tmp_write_ptr => xios_write_field_face
 
        ! Vector fields that are projected to scalar components
-       call xi%set_write_behaviour(tmp_write_ptr)
        call u%set_write_behaviour(tmp_write_ptr)
 
        ! Scalar fields
@@ -209,7 +196,6 @@ contains
     call depository%add_field( rho )
     call depository%add_field( u )
     call depository%add_field( exner )
-    call depository%add_field( xi )
 
     ! Populate the prognostic field collection
     call prognostic_fields%add_reference_to_field(depository%get_field('theta'))
@@ -224,9 +210,6 @@ contains
         call prognostic_fields%add_reference_to_field( tmp_ptr )
       end do
     end if
-
-    ! Populate the diagnostic field collection
-    call diagnostic_fields%add_reference_to_field(depository%get_field('xi'))
 
     nullify( tmp_write_ptr, tmp_checkpoint_write_ptr, tmp_checkpoint_read_ptr )
 

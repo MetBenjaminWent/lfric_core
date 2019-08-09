@@ -87,7 +87,6 @@ module step_gungho_mod
     type( field_type), pointer :: u => null()
     type( field_type), pointer :: rho => null()
     type( field_type), pointer :: exner => null()
-    type( field_type), pointer :: xi => null()
 
     ! Get pointers to fields in the prognostic/diagnostic field collections
     ! for use downstream
@@ -95,7 +94,6 @@ module step_gungho_mod
     u => prognostic_fields%get_field('u')
     rho => prognostic_fields%get_field('rho')
     exner => prognostic_fields%get_field('exner')
-    xi => diagnostic_fields%get_field('xi')
 
     if ( transport_only ) then
       select case( scheme )
@@ -104,19 +102,19 @@ module step_gungho_mod
       end select
       call write_density_diagnostic(rho, timestep)
       if ( write_diag ) &
-        call conservation_algorithm(timestep, rho, u, theta, exner, xi)
+        call conservation_algorithm(timestep, rho, u, theta, exner)
     else  ! Not transport_only
       select case( method )
         case( method_semi_implicit )  ! Semi-Implicit
-          call iter_alg_step(u, rho, theta, exner, mr, moist_dyn, xi,       &
+          call iter_alg_step(u, rho, theta, exner, mr, moist_dyn,           &
                              derived_fields, cloud_fields, twod_fields,     &
                              physics_incs, jules_ancils, jules_prognostics, &
                              timestep, twod_mesh_id)
         case( method_rk )             ! RK
-          call rk_alg_step(u, rho, theta, moist_dyn, exner, xi)
+          call rk_alg_step(u, rho, theta, moist_dyn, exner)
       end select
 
-      if ( write_diag ) call conservation_algorithm(timestep, rho, u, theta, exner, xi)
+      if ( write_diag ) call conservation_algorithm(timestep, rho, u, theta, exner)
 
       if(write_minmax_tseries) call minmax_tseries(u, 'u', mesh_id)
 

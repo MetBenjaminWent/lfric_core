@@ -147,9 +147,9 @@ contains
     temperature = analytic_temperature(xyz, test_warm_bubble)
     @assertEqual(answer, temperature, tol)
 
-    xyz = (/ 0.0_r_def, 0.0_r_def, 260.0_r_def /)
+    xyz = (/ 0.0_r_def, 0.0_r_def, 350.0_r_def /)
     call reference_profile(pressure, density, temperature, xyz, test_warm_bubble_3d)
-    answer = temperature + 1.0_r_def
+    answer = temperature + 0.5_r_def
     temperature = analytic_temperature(xyz, test_warm_bubble_3d)
     @assertEqual(answer, temperature, tol)
 

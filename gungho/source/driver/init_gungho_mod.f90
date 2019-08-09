@@ -62,7 +62,6 @@ module init_gungho_mod
     type( field_type), pointer :: u => null()
     type( field_type), pointer :: rho => null()
     type( field_type), pointer :: exner => null()
-    type( field_type), pointer :: xi => null()
 
     ! Get pointers to fields in the prognostic/diagnostic field collections
     ! for use downstream
@@ -70,7 +69,6 @@ module init_gungho_mod
     u => prognostic_fields%get_field('u')
     rho => prognostic_fields%get_field('rho')
     exner => prognostic_fields%get_field('exner')
-    xi => diagnostic_fields%get_field('xi')
 
     if (write_minmax_tseries) then
       call minmax_tseries_init('u', mesh_id)
@@ -96,13 +94,13 @@ module init_gungho_mod
           call iter_alg_init(mesh_id, u, rho, theta, exner, mr, &
                              twod_fields)
           if ( write_diag ) &
-           call conservation_algorithm(timestep_start, rho, u, theta, exner, xi)
+           call conservation_algorithm(timestep_start, rho, u, theta, exner)
         case( method_rk )             ! RK
           ! Initialise and output initial conditions for first timestep
           call runge_kutta_init()
           call rk_alg_init(mesh_id, u, rho, theta, exner)
           if ( write_diag ) &
-           call conservation_algorithm(timestep_start, rho, u, theta, exner, xi)
+           call conservation_algorithm(timestep_start, rho, u, theta, exner)
         case default
           call log_event("Gungho: Incorrect time stepping option chosen, "// &
                           "stopping program! ",LOG_LEVEL_ERROR)

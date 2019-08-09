@@ -17,7 +17,8 @@ module rk_alg_timestep_mod
                                                LOG_LEVEL_TRACE
 
   ! Configuration options
-  use finite_element_config_mod, only: element_order
+  use finite_element_config_mod, only: element_order, &
+                                       vorticity_in_w1
   use formulation_config_mod,    only: rotating
   use runge_kutta_init_mod,      only: num_rk_stage, ak
   use timestepping_config_mod,   only: dt, &
@@ -54,6 +55,8 @@ module rk_alg_timestep_mod
   use kinetic_energy_gradient_kernel_mod,  only: kinetic_energy_gradient_kernel_type
   use project_pressure_kernel_mod,         only: project_pressure_kernel_type
   use matrix_vector_kernel_mod,            only: matrix_vector_kernel_type
+  use vorticity_advection_kernel_mod,      only: vorticity_advection_kernel_type
+  use w2_vorticity_advection_kernel_mod,   only: w2_vorticity_advection_kernel_type
 
   ! Derived Types
   use field_mod,                         only: field_type
@@ -66,6 +69,7 @@ module rk_alg_timestep_mod
   ! Algorithms
   use mass_matrix_solver_alg_mod,        only: mass_matrix_solver_alg
   use advection_alg_mod,                 only: advection_alg, advection_alg_init
+  use compute_vorticity_alg_mod,         only: compute_vorticity_alg
 
   ! Field indices
   use field_indices_mod,                 only: igh_u, igh_t, igh_d, igh_p
@@ -81,6 +85,7 @@ module rk_alg_timestep_mod
   ! 'State' items that need to be created once but used every step
   type( field_type ), allocatable :: state(:), state_n(:), rhs(:), inc(:)
   type( field_type ), allocatable :: rhs_prediction(:,:)
+  type( field_type )              :: vorticity
 
   public :: rk_alg_init
   public :: rk_alg_step
@@ -96,6 +101,8 @@ contains
   !> @param[in]    theta Potential temperature
   !> @param[in]    exner Exner pressure
   subroutine rk_alg_init(mesh_id, u, rho, theta, exner)
+    use fs_continuity_mod,             only: W1, W2
+    use function_space_collection_mod, only: function_space_collection
     implicit none
 
     ! Mesh
@@ -106,6 +113,9 @@ contains
 
     ! Timestepping variables
     integer(i_def) :: stage
+
+    ! Function space for vorticity
+    integer(i_def) :: vorticity_fs
 
     !=== Allocate internal state field arrays ================================!
     allocate(state(bundle_size))   
@@ -129,6 +139,15 @@ contains
     do stage = 1,num_rk_stage
       call clone_bundle(state, rhs_prediction(:,stage), bundle_size) 
     end do
+
+    ! Create the diagnostic vorticity field
+    if ( vorticity_in_w1 ) then
+      vorticity_fs = W1
+    else
+      vorticity_fs = W2
+    end if
+    vorticity = field_type( vector_space = &
+      function_space_collection%get_fs(mesh_id, element_order, vorticity_fs) )
 
 
     !=== Copy prognostic field data to state arrays ===========================!
@@ -156,13 +175,12 @@ contains
   !> @param[inout] rho Density
   !> @param[inout] theta Potential temperature
   !> @param[inout] moist_dyn Moist dynamics factors
-  !> @param[inout] xi Vorticity field  
-  subroutine rk_alg_step(u, rho, theta, moist_dyn, exner, xi)
+  subroutine rk_alg_step(u, rho, theta, moist_dyn, exner)
      
     implicit none
     ! Prognostic fields    
     type( field_type ), intent( inout ) :: u, rho, theta, moist_dyn(num_moist_factors), &
-                                           exner, xi
+                                           exner
 
     ! The quadrature object
     type( quadrature_xyoz_type ) :: qr
@@ -183,6 +201,7 @@ contains
     type(quadrature_rule_gaussian_type) :: gaussian_quadrature
 
     integer(i_def) :: st, stage
+
     if ( subroutine_timers ) call timer('rk_alg')
     qr = get_qr()
     mesh => theta%get_mesh()
@@ -198,7 +217,7 @@ contains
     ! Get coordinates
     chi => get_coordinates()
     !=== Do a single timestep ==============================================!
-
+                        
     ! Runge-Kutta algorithm
     call copy_bundle(state, state_n, bundle_size)
     do stage = 1,num_rk_stage
@@ -206,21 +225,31 @@ contains
       call log_event( log_scratch_space, LOG_LEVEL_INFO )
       ! Compute advection terms
       call advection_alg( rhs_prediction(:,stage),                             &
-                          state_n, xi, state(igh_u), state(igh_u), state(igh_u))
+                          state_n, state(igh_u), state(igh_u), state(igh_u))
       ! Compute new rhs
       if ( rotating ) then
         coriolis => get_coriolis()
         call invoke( matrix_vector_kernel_type( rhs_prediction(igh_u,stage),   &
                                                 state(igh_u), coriolis ) )
       end if
+      call compute_vorticity_alg(vorticity, state(igh_u), .false.)
+      if ( vorticity_in_w1 ) then
+        call invoke( vorticity_advection_kernel_type(rhs_prediction(igh_u,stage), &
+                                                     state(igh_u), vorticity,     &
+                                                     chi, qr) )
+      else
+        call invoke( w2_vorticity_advection_kernel_type(rhs_prediction(igh_u,stage), &
+                                                        state(igh_u), vorticity,     &
+                                                        chi, qr) )
+      end if
       call invoke_ru_bd_kernel ( rhs_prediction(igh_u, stage), state(igh_p), state(igh_t), &
                                  moist_dyn, qrf ) 
-      call invoke( name = "Compute new rhs",                            &
-                   hydrostatic_kernel_type       &
-           ( rhs_prediction(igh_u,stage), state(igh_p), state(igh_t),   &
-             moist_dyn, geopotential, qr ),                             &
-                   kinetic_energy_gradient_kernel_type &
-           ( rhs_prediction(igh_u,stage), state(igh_u), chi, qr ),          &
+      call invoke( name = "Compute new rhs",                                   &
+                   hydrostatic_kernel_type( rhs_prediction(igh_u,stage),       &
+                                            state(igh_p), state(igh_t),        &
+                                            moist_dyn, geopotential, qr ),     &
+                   kinetic_energy_gradient_kernel_type(                        & 
+                        rhs_prediction(igh_u,stage), state(igh_u), chi, qr ),  &
                    enforce_bc_kernel_type( rhs_prediction(1,stage) ) ) 
       call set_bundle_scalar(0.0_r_def, rhs, bundle_size)
 
