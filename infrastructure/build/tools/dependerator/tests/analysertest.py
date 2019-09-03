@@ -16,7 +16,6 @@ import unittest
 
 import dependerator.analyser
 import dependerator.database
-import utilities.logging
 import six
 
 ##############################################################################
@@ -24,7 +23,6 @@ class NamelistDescriptionAnalyserTest(unittest.TestCase):
     ##########################################################################
     def setUp( self ):
         self._scratchDirectory = tempfile.mkdtemp()
-        self._logger       = utilities.logging.NoLogger()
         dbFilename = os.path.join( self._scratchDirectory, 'test.db' )
         self._database     = dependerator.database.SQLiteDatabase( dbFilename )
         self._dependencies = dependerator.database.FileDependencies( self._database )
@@ -33,7 +31,6 @@ class NamelistDescriptionAnalyserTest(unittest.TestCase):
     def tearDown( self ):
         del self._dependencies
         del self._database
-        del self._logger
         shutil.rmtree( self._scratchDirectory )
 
     ##########################################################################
@@ -55,7 +52,7 @@ end namelist foo
                    '''.strip(), file=nldFile )
 
         uut = dependerator.analyser \
-              .NamelistDescriptionAnalyser( self._logger, self._dependencies )
+              .NamelistDescriptionAnalyser(self._dependencies)
         uut.analyse( testFilename )
         dependencies = list(self._dependencies.getDependencies())
         self.assertEqual( [(u'foo_configuration_mod.f90',
@@ -68,7 +65,6 @@ class FortranAnalyserTest(unittest.TestCase):
         self.maxDiff = None
 
         self._scratchDirectory = tempfile.mkdtemp()
-        self._logger       = utilities.logging.NoLogger()
         dbFilename = os.path.join( self._scratchDirectory, 'test.db' )
         self._database     = dependerator.database.SQLiteDatabase( dbFilename )
         self._dependencies = dependerator.database \
@@ -78,7 +74,6 @@ class FortranAnalyserTest(unittest.TestCase):
     def tearDown( self ):
         del self._dependencies
         del self._database
-        del self._logger
         shutil.rmtree( self._scratchDirectory )
 
     ##########################################################################
@@ -115,9 +110,7 @@ subroutine old_school( bibble, &
   implicit none
 end subroutine old_school
                '''.strip(), file=fortranFile )
-      uut = dependerator.analyser.FortranAnalyser( self._logger,
-                                                   [],
-                                                   self._dependencies )
+      uut = dependerator.analyser.FortranAnalyser([], self._dependencies)
       uut.analyse( testFilename )
 
       dependencies = list(self._dependencies.getCompileDependencies())
@@ -149,9 +142,7 @@ real function cosd(degree)
 end function cosd
                   '''.strip(), file=fortranFile )
 
-      uut = dependerator.analyser.FortranAnalyser( self._logger,
-                                                   [],
-                                                   self._dependencies )
+      uut = dependerator.analyser.FortranAnalyser([], self._dependencies)
       uut.analyse( testFilename )
 
       self.assertEqual( [(u'cosd',      testFilename),
@@ -179,9 +170,7 @@ program fOo
 end program fOo
                    '''.strip(), file=fortranFile )
 
-        uut = dependerator.analyser.FortranAnalyser( self._logger,
-                                                     [],
-                                                     self._dependencies )
+        uut = dependerator.analyser.FortranAnalyser([], self._dependencies)
         uut.analyse( testFilename )
 
         programs = list( self._dependencies.getPrograms() )
@@ -205,9 +194,7 @@ end program fOo
     # Includes disparate case to ensure case insensitivity.
     #
     def testAnalyseModule( self ):
-        uut = dependerator.analyser.FortranAnalyser( self._logger,
-                                                     [],
-                                                     self._dependencies )
+        uut = dependerator.analyser.FortranAnalyser([], self._dependencies)
 
         testFilename = os.path.join( self._scratchDirectory, 'test.f90' )
         with open( testFilename, 'w' ) as fortranFile:
@@ -264,9 +251,7 @@ end module coNstants_mod
     # enforced.
     #
     def testAnalyseSubModule( self ):
-        uut = dependerator.analyser.FortranAnalyser( self._logger,
-                                                     [],
-                                                     self._dependencies )
+        uut = dependerator.analyser.FortranAnalyser([], self._dependencies)
 
         parentFilename = six.text_type(os.path.join( self._scratchDirectory,
                                                'parent.f90' ), "utf-8")
@@ -434,9 +419,7 @@ end submodule grandChild
     # program units.
     #
     def testFunctionInModuleName( self ):
-        uut = dependerator.analyser.FortranAnalyser( self._logger,
-                                                     [],
-                                                     self._dependencies )
+        uut = dependerator.analyser.FortranAnalyser([], self._dependencies)
 
         testFilename = os.path.join( self._scratchDirectory, 'test.f90' )
         with open( testFilename, 'w' ) as fortranFile:
@@ -543,9 +526,7 @@ subroutine wooble
 end subroutine wooble
                    '''.strip(), file=dependFile )
 
-        uut = dependerator.analyser.FortranAnalyser( self._logger,
-                                                     [],
-                                                     self._dependencies )
+        uut = dependerator.analyser.FortranAnalyser([], self._dependencies)
         uut.analyse( testFilename )
         uut.analyse( otherFilename )
         uut.analyse( dependFilename )
@@ -617,9 +598,7 @@ contains
 end module second_mod
                '''.strip(), file=fortranFile )
 
-      uut = dependerator.analyser.FortranAnalyser( self._logger,
-                                                  [],
-                                                  self._dependencies )
+      uut = dependerator.analyser.FortranAnalyser([], self._dependencies)
       uut.analyse( firstFilename )
       uut.analyse( secondFilename )
 
@@ -648,9 +627,7 @@ program boo
 end program boo
                '''.strip(), file=fortranFile )
 
-      uut = dependerator.analyser.FortranAnalyser( self._logger,
-                                                   [],
-                                                   self._dependencies )
+      uut = dependerator.analyser.FortranAnalyser([], self._dependencies)
       uut.analyse( testFilename )
 
       programs = list( self._dependencies.getPrograms() )

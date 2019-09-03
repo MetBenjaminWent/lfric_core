@@ -8,12 +8,13 @@
 # Manages a database of dependency information.
 #
 
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 
-from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod
+import logging
 import sqlite3
 import six
+from time import time
 
 ##############################################################################
 # Databases throw this exception.
@@ -63,15 +64,21 @@ class SQLiteDatabase(_Database):
     def __init__( self, filename ):
         super(SQLiteDatabase, self).__init__()
 
+        start_time = time()
         self._database = sqlite3.connect( filename, timeout=5.0 )
         self._database.row_factory     = sqlite3.Row
+        message = 'Time to initialise database: {0}'
+        logging.getLogger(__name__).debug(message.format(time() - start_time))
 
     ###########################################################################
     # Destructor.
     #
     def __del__( self ):
+        start_time = time()
         self._database.commit()
         self._database.close()
+        message = 'Time to finalise database: {0}'
+        logging.getLogger(__name__).debug(message.format(time() - start_time))
 
     ###########################################################################
     # Creates a table if it does not already exist.
@@ -87,9 +94,13 @@ class SQLiteDatabase(_Database):
         for columnDetails in columns:
             columnDefinitions.append( ' '.join( columnDetails ) )
         query = 'CREATE TABLE IF NOT EXISTS {} ( {} )'
+        start_time = time()
         with self._database:
             columnList = ', '.join( columnDefinitions )
             self._database.execute( query.format( name, columnList ) )
+        message = 'Time to ensure database table: {0} [{1}]'
+        logging.getLogger(__name__).debug(message.format(time() - start_time,
+                                                         name))
 
     ###########################################################################
     # Execute an SQL query against the database.
@@ -99,17 +110,23 @@ class SQLiteDatabase(_Database):
     #           of strings, each containing a single SQL instruction.
     #
     def query( self, query ):
+      if isinstance(query, list):
+        query = '; '.join(query) + ';'
+      query = ' '.join(query.split())  # This wheeze collapses whitespace
+      start_time = time()
       try:
         cursor = self._database.cursor()
-        if not isinstance( query, list ):
-            query = query.strip().replace( '\n', ' ' )
-            cursor.execute( query )
+        if query.count(';') > 1:
+          cursor.executescript(query)
         else:
-            query = ';\n'.join( query ) + ';'
-            cursor.executescript( query )
+          cursor.execute(query)
         return cursor.fetchall()
       except sqlite3.IntegrityError as ex:
         raise DatabaseException( ex )
+      finally:
+        message = 'Time to query database: {0} [{1}]'
+        logging.getLogger(__name__).debug(message.format(time() - start_time,
+                                          query))
 
 ###############################################################################
 # Basic file dependencies.

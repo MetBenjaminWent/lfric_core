@@ -16,13 +16,11 @@ import unittest
 
 import dependerator.database
 import dependerator.process
-import utilities.logging
 
 ##############################################################################
 class NamelistDescriptionAnalyserTest(unittest.TestCase):
     ##########################################################################
     def setUp( self ):
-        self._logger   = utilities.logging.NoLogger()
         self._scratchDirectory = tempfile.mkdtemp()
         dbFilename = os.path.join( self._scratchDirectory, 'fortran.db' )
         database = dependerator.database.SQLiteDatabase( dbFilename )
@@ -33,16 +31,14 @@ class NamelistDescriptionAnalyserTest(unittest.TestCase):
     def tearDown( self ):
         del self._fileDatabase
         del self._fortranDatabase
-        del self._logger
         shutil.rmtree( self._scratchDirectory )
 
     ##########################################################################
     def testCompileDependencies( self ):
         self.populateDatabase()
 
-        uut = dependerator.process.FortranProcessor( self._logger,          \
-                                                     self._fortranDatabase, \
-                                                     "objects", "modules" )
+        uut = dependerator.process.FortranProcessor(self._fortranDatabase,
+                                                    "objects", "modules")
         uut.determineCompileDependencies( self._fileDatabase )
 
         self.assertEqual( [(u'objects/bits/bar.o', [u'modules/bits/baz.mod']), \
@@ -55,9 +51,8 @@ class NamelistDescriptionAnalyserTest(unittest.TestCase):
         self.populateDatabase()
 
         import sys
-        uut = dependerator.process.FortranProcessor( self._logger,          \
-                                                     self._fortranDatabase, \
-                                                     "objects", "modules" )
+        uut = dependerator.process.FortranProcessor(self._fortranDatabase,
+                                                    "objects", "modules")
         result = list(uut.determineLinkDependencies())
 
         self.assertEqual( [(u'objects/foo', ['objects/bobs/qux.o', \

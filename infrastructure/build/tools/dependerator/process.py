@@ -7,9 +7,9 @@
 ##############################################################################
 # Process previously analysed dependency database. For fun and profit!
 
-from __future__ import print_function;
+from __future__ import absolute_import, print_function
 
-from __future__ import absolute_import
+import logging
 import os.path
 
 from utilities.path import replaceExtension
@@ -22,13 +22,11 @@ class FortranProcessor():
     # Constructor.
     #
     # Arguments:
-    #   logger    - A Logger object to write output to.
     #   database  - FortranDatabase object holding details.
     #   objectdir - The directory which holds .o files.
     #   moduledir - The directory which holds .mod files.
     #
-    def __init__( self, logger, database, objectDirectory, moduleDirectory):
-        self._logger          = logger
+    def __init__(self, database, objectDirectory, moduleDirectory):
         self._database        = database
         self._objectDirectory = objectDirectory
         self._moduleDirectory = moduleDirectory
@@ -42,8 +40,8 @@ class FortranProcessor():
     def determineCompileDependencies( self, fileStore ):
         for unit, unitFilename, prerequisite, prerequisiteFilename \
                 in self._database.getCompileDependencies():
-            self._logger.logEvent( '{} depends on {}'.format( unit, \
-                                                              prerequisite ) )
+            message = '{0} depends on {1}'.format(unit, prerequisite)
+            logging.getLogger(__name__).info(message)
 
             objectFilename = replaceExtension( unitFilename, 'o' )
             objectPathname = os.path.join( self._objectDirectory, \
@@ -63,7 +61,7 @@ class FortranProcessor():
     #
     def determineLinkDependencies( self ):
         for program in self._database.getPrograms():
-            self._logger.logEvent( 'Program {}'.format( program ) )
+            logging.getLogger(__name__).info('Program {0}'.format(program))
 
             prerequisites = set()
             self._descend( program, prerequisites )
@@ -76,15 +74,16 @@ class FortranProcessor():
 
     ##########################################################################
     def _descend( self, programUnit, prerequisites ):
+        logger = logging.getLogger(__name__)
         for unit, unit_file, prereq, prereq_file \
                          in self._database.getLinkDependencies( programUnit ):
-            self._logger.logEvent( '  Requires {}'.format( unit ) )
+            logger.info('  Requires {0}'.format(unit))
 
             prereq_object_file = os.path.join( self._objectDirectory, \
                                         replaceExtension( prereq_file, 'o' ) )
 
             if prereq_object_file in prerequisites:
-                self._logger.logEvent( '    Seen already, stopping descent' )
+                logger.info('    Seen already, stopping descent')
             else:
                 prerequisites.add( prereq_object_file )
                 self._descend( prereq, prerequisites )

@@ -21,6 +21,9 @@
 
 .NOTPARALLEL:
 
+# Force everything into debug logging mode
+VERBOSE_ARG = -debug
+
 DATABASE ?= dependencies.db
 
 SOURCE_FILES := $(subst ./,,$(shell find . -name '*.[Ff]90' -print))
@@ -28,12 +31,14 @@ TOUCH_FILES = $(subst .F90,.t,$(subst .f90,.t,$(SOURCE_FILES)))
 
 programs.mk: dependencies.mk
 	$(call MESSAGE,Collating,$@)
-	$(Q)$(LFRIC_BUILD)/tools/ProgramObjects -database $(DATABASE) \
+	$(Q)$(LFRIC_BUILD)/tools/ProgramObjects $(VERBOSE_ARG) \
+                                                -database $(DATABASE) \
 	                                        -objectdir . $@
 
 dependencies.mk: $(TOUCH_FILES)
 	$(call MESSAGE,Building,$@)
-	$(Q)$(LFRIC_BUILD)/tools/DependencyRules -database $(DATABASE) \
+	$(Q)$(LFRIC_BUILD)/tools/DependencyRules $(VERBOSE_ARG) \
+                                                 -database $(DATABASE) \
 	                                         -objectdir . \
 	                                         -moduledir . \
 	                                         $(DEPRULE_FLAGS) $@

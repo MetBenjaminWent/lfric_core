@@ -12,17 +12,18 @@ program.
 This snippet may then be "include"ed into other make files.
 '''
 
-from __future__ import print_function;
+from __future__ import absolute_import, print_function
 
 import argparse
+import logging
 import os
 import sys
+from time import time
 import traceback
 
 from dependerator import __version__
 import dependerator.database as database
 import dependerator.process  as process
-import utilities.logging  as logging
 from utilities.path import replaceExtension
 
 ###############################################################################
@@ -37,6 +38,8 @@ if __name__ == '__main__':
                          version='%(prog)s {}'.format( __version__ ) )
     parser.add_argument( '-verbose', action='store_true', \
                          help='Provide a running commentry' )
+    parser.add_argument('-debug', action='store_true',
+                        help='Illucidate the minutia of execution')
     parser.add_argument( '-database', metavar='database-file', \
                          help='Database file to use' )
     parser.add_argument( '-moduledir', metavar='module-directory', \
@@ -51,10 +54,14 @@ if __name__ == '__main__':
                          help='Dependency details are put here' )
     args = parser.parse_args()
 
-    if args.verbose:
-        logger = logging.PrintLogger( sys.stdout )
+    logger = logging.getLogger('dependerator')
+    logger.addHandler(logging.StreamHandler())
+    if args.debug:
+        logger.setLevel(logging.DEBUG)
+    elif args.verbose:
+        logger.setLevel(logging.INFO)
     else:
-        logger = logging.NoLogger()
+        logger.setLevel(logging.WARNING)
 
     if os.path.exists( args.output ):
         os.unlink( args.output )
@@ -70,12 +77,13 @@ if __name__ == '__main__':
 
     backend = database.SQLiteDatabase( args.database )
     fortranStore = database.FortranDependencies( backend )
-    processor = process.FortranProcessor( logger, fortranStore, \
-                                          args.objectdir, args.moduledir )
+    processor = process.FortranProcessor(fortranStore,
+                                         args.objectdir, args.moduledir )
 
     fileStore = database.FileDependencies( backend )
     processor.determineCompileDependencies( fileStore )
 
+    start_time = time()
     try:
         with open( args.output, 'w' ) as listFile:
             print( '# Object dependendencies', file=listFile )
@@ -96,3 +104,6 @@ if __name__ == '__main__':
         os.unlink( args.output )
         traceback.print_exc( file=sys.stdout )
         sys.exit(1)
+    finally:
+        message = 'Time to write out dependencies: {0}'
+        logger.debug(message.format(time() - start_time))

@@ -14,21 +14,22 @@
 # listing all the modules which go to make that program.
 #
 # These snippets may then be "include"ed into other make files.
+#
+'''
+Examine Fortran source and build dependency information for use by "make".
+'''
 
-from __future__ import print_function;
+from __future__ import absolute_import, print_function
 
-from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod
+import logging
 import os
 import os.path
 import re
 import shutil
 import subprocess
 import six
-
-'''
-Examine Fortran source and build dependency information for use by "make".
-'''
+from time import time
 
 ###############################################################################
 # Interface for analysers
@@ -51,11 +52,9 @@ class NamelistDescriptionAnalyser(Analyser):
     ###########################################################################
     # Constructor
     # Arguments:
-    #   logger   - A logger object to write output to.
     #   database - FileDependencies object to hold details.
     #
-    def __init__( self, logger, database ):
-        self._logger   = logger
+    def __init__( self, database ):
         self._database = database
 
     ###########################################################################
@@ -67,11 +66,14 @@ class NamelistDescriptionAnalyser(Analyser):
     def analyse( self, sourceFilename ):
         if not sourceFilename.endswith( '.nld' ):
             raise Exception( 'File doesn''t look like a namelist description' \
+                         
                              + ' file: ' + sourceFilename )
 
-        self._logger.logEvent( '  Scanning ' + sourceFilename )
+        logging.getLogger(__name__).info('  Scanning ' + sourceFilename)
+
         self._database.removeFile( sourceFilename )
 
+        start_time = time()
         with open( sourceFilename, 'r' ) as sourceFile:
             for line in sourceFile:
                 match = re.match( r'^\s*namelist\s+(\S+)', line, \
@@ -81,6 +83,8 @@ class NamelistDescriptionAnalyser(Analyser):
                                       .format( match.group( 1 ) )
                     self._database.addFileDependency( fortranFilename, \
                                                       sourceFilename )
+        message = 'Time to analyse namelist description file: {0}'
+        logging.getLogger(__name__).debug(message.format(time() - start_time))
 
 ###############################################################################
 # Examine Fortran source code for module dependencies.
@@ -90,12 +94,10 @@ class FortranAnalyser(Analyser):
   # Constructor
   #
   # Arguments:
-  #   logger        - A Logger object to write output to.
   #   ignoreModules - A list of module names to ignore.
   #   database      - FortranDatabase object to hold details.
   #
-  def __init__( self, logger, ignoreModules, database ):
-    self._logger          = logger
+  def __init__( self, ignoreModules, database ):
     self._ignoreModules   = [str.lower(mod) for mod in ignoreModules]
     self._database        = database
 
@@ -148,10 +150,11 @@ class FortranAnalyser(Analyser):
   #                            empty macros.
   #
   def analyse( self, sourceFilename, preprocessMacros=None ):
+    logger = logging.getLogger(__name__)
     # Perform any necessary preprocessing
     #
     if sourceFilename.endswith( '.F90' ):
-      self._logger.logEvent( '  Preprocessing ' + sourceFilename )
+      logging.getLogger(__name__).info('  Preprocessing ' + sourceFilename)
       preprocessCommand = self._fpp
       if preprocessMacros:
         for name, macro in preprocessMacros.items():
@@ -160,16 +163,23 @@ class FortranAnalyser(Analyser):
           else:
             preprocessCommand.append( '-D{}'.format( name ) )
       preprocessCommand.append( sourceFilename )
+
+      start_time = time()
       preprocessor = subprocess.Popen( preprocessCommand, \
                                        stdout=subprocess.PIPE, \
                                        stderr=subprocess.PIPE )
       processed_source, errors = preprocessor.communicate()
+      message = 'Time to preprocess Fortran source: {0}'
+      logging.getLogger(__name__).debug(message.format(time() - start_time))
       if preprocessor.returncode:
         raise subprocess.CalledProcessError( preprocessor.returncode,
                                              " ".join( preprocessCommand ) )
     elif sourceFilename.endswith( '.f90' ):
+      start_time = time()
       with open( sourceFilename, 'r' ) as sourceFile:
         processed_source = sourceFile.read()
+      message = 'Time to read Fortran source: {0}'
+      logging.getLogger(__name__).debug(message.format(time() - start_time))
     else:
       message = 'File doesn''t look like a Fortran file: {}'
       raise Exception( message.format( sourceFilename ) )
@@ -178,13 +188,14 @@ class FortranAnalyser(Analyser):
     # database.
     #
     def add_dependency( program_unit, prerequisite_unit, reverseLink=False ):
+      logger = logging.getLogger(__name__)
       prerequisite_unit = prerequisite_unit.lower()
       if prerequisite_unit in self._ignoreModules:
-        self._logger.logEvent( '      - Ignored 3rd party prerequisite' )
+        logger.info('      - Ignored 3rd party prerequisite')
       elif prerequisite_unit in modules:
-        self._logger.logEvent( '      - Ignored self' )
+        logger.info('      - Ignored self')
       elif prerequisite_unit in dependencies:
-        self._logger.logEvent( '      - Ignore duplicate prerequisite' )
+        logger.info('      - Ignore duplicate prerequisite')
       else:
         dependencies.append( prerequisite_unit )
         self._database.addModuleCompileDependency( program_unit, \
@@ -268,7 +279,7 @@ class FortranAnalyser(Analyser):
 
     # Scan file for dependencies.
     #
-    self._logger.logEvent( '  Scanning ' + sourceFilename )
+    logger.info('  Scanning ' + sourceFilename)
     self._database.removeFile( sourceFilename )
 
     program_unit = None
@@ -280,7 +291,7 @@ class FortranAnalyser(Analyser):
       match = self._programPattern.match( code )
       if match:
         program_unit = match.group(1).lower()
-        self._logger.logEvent( '    Contains program: ' + program_unit )
+        logger.info('    Contains program: ' + program_unit)
         self._database.addProgram( program_unit, sourceFilename )
         scope_stack.append( ('program', program_unit) )
         continue
@@ -288,7 +299,7 @@ class FortranAnalyser(Analyser):
       match = self._modulePattern.match( code )
       if match:
         program_unit = match.group( 1 ).lower()
-        self._logger.logEvent( '    Contains module ' + program_unit )
+        logger.info('    Contains module ' + program_unit)
         modules.append( program_unit )
         self._database.addModule( program_unit, sourceFilename )
         scope_stack.append( ('module', program_unit) )
@@ -307,7 +318,7 @@ class FortranAnalyser(Analyser):
                                                           parentUnit )
         if ancestorUnit:
           message = message + '({})'.format( ancestorUnit )
-        self._logger.logEvent( message )
+        logger.info(message)
 
         self._database.addModule( program_unit, sourceFilename )
         # I don't think it's necessary to append this to "modules".
@@ -321,7 +332,7 @@ class FortranAnalyser(Analyser):
         # Only if this subroutine is a program unit.
         is_module    = match.group( 1 )
         program_unit = match.group( 2 ).lower()
-        self._logger.logEvent( '    Contains subroutine ' + program_unit )
+        logger.info('    Contains subroutine ' + program_unit)
         modules.append( program_unit )
         self._database.add_procedure( program_unit, sourceFilename )
         scope_stack.append( ('subroutine', program_unit) )
@@ -332,7 +343,7 @@ class FortranAnalyser(Analyser):
         # Only if this function is a program unit.
         is_module    = match.group( 1 )
         program_unit = match.group( 2 ).lower()
-        self._logger.logEvent( '    Contains function ' + program_unit )
+        logger.info('    Contains function ' + program_unit)
         modules.append( program_unit )
         self._database.add_procedure( program_unit, sourceFilename )
         scope_stack.append( ('function', program_unit) )
@@ -355,7 +366,7 @@ class FortranAnalyser(Analyser):
       match = self._usePattern.match( code )
       if match is not None:
         moduleName = match.group( 1 ).lower()
-        self._logger.logEvent( '    Depends on module ' + moduleName )
+        logger.info('    Depends on module ' + moduleName)
         add_dependency( program_unit, moduleName )
         continue
 
@@ -365,15 +376,16 @@ class FortranAnalyser(Analyser):
                        for moduleName in match.group(1).split(',')]
         for moduleName in moduleNames:
           if moduleName is not None:
-            self._logger.logEvent( '    Depends on external ' + moduleName )
+            logger.info('    Depends on external ' + moduleName)
             add_dependency( program_unit, moduleName )
         continue
 
       match = self._pFUnitPattern.match( code )
       if not pFUnitDriver and match is not None:
-        self._logger.logEvent( '    Is driver' )
+        logger.info('    Is driver')
         pFUnitDriver = True
 
+        start_time = time()
         includeFilename = os.path.join( os.path.dirname( sourceFilename ),
                                         'testSuites.inc' )
         with open( includeFilename, 'r' ) as includeFile:
@@ -382,15 +394,17 @@ class FortranAnalyser(Analyser):
             if match is not None:
               testGeneratorFunction = match.group( 1 )
               testModule = testGeneratorFunction.replace( '_suite', '' )
-              self._logger.logEvent( '      Depends on module ' + testModule )
+              logger.info('      Depends on module ' + testModule)
               self._database.addModuleCompileDependency( program_unit, testModule )
               self._database.addModuleLinkDependency( program_unit, testModule )
+        message = 'Time to read pFUnit driver include file: {0}'
+        logging.getLogger(__name__).debug(message.format(time() - start_time))
         continue
 
       for match in self._dependsPattern.finditer( comment ):
         name = match.group( 1 ).lower()
         extension = match.group( 2 )
         if name is not None:
-            self._logger.logEvent( '    %s depends on call to %s ' % (program_unit, name) )
+            logger.info('    %s depends on call to %s ' % (program_unit, name))
         add_dependency( program_unit, name )
         continue

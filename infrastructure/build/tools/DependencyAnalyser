@@ -15,16 +15,16 @@ file "use"s.
 This snippet may then be "include"ed into other make files.
 '''
 
-from __future__ import print_function;
+from __future__ import absolute_import, print_function
 
 import argparse
+import logging
 import os
 import sys
 
 from dependerator import __version__
 import dependerator.analyser as analyser
 import dependerator.database as database
-import utilities.logging  as logging
 
 ###############################################################################
 # Entry point
@@ -37,24 +37,29 @@ if __name__ == '__main__':
                         version='%(prog)s {}'.format( __version__ ) )
   parser.add_argument( '-verbose', action='store_true',
                         help='Provide a running commentry' )
-  parser.add_argument( '-ignore', metavar='MODULE', action='append',
-                        help='A 3rd party module name to be ignored. '
-                            + 'This may appear multiple times.' )
-  parser.add_argument( '-macro', metavar='NAME[=MACRO]', action='append',
-                       help='Macro definitions to be passed to preprocessor.' )
+  parser.add_argument('-debug', action='store_true',
+                      help='Illucidate the minutia of execution')
+  parser.add_argument('-ignore', metavar='MODULE', action='append',
+                      default=[],
+                      help='A 3rd party module name to be ignored. '
+                           + 'This may appear multiple times.')
+  parser.add_argument('-macro', metavar='NAME[=MACRO]', action='append',
+                      default=[],
+                      help='Macro definitions to be passed to preprocessor.')
   parser.add_argument( 'database', metavar='database-file',
                         help='Database file to use' )
   parser.add_argument( 'source', metavar='source-file',
                         help='The source file.' )
   args = parser.parse_args()
 
-  if args.verbose:
-    logger = logging.PrintLogger( sys.stdout )
+  logger = logging.getLogger('dependerator')
+  logger.addHandler(logging.StreamHandler())
+  if args.debug:
+    logger.setLevel(logging.DEBUG)
+  elif args.verbose:
+    logger.setLevel(logging.INFO)
   else:
-    logger = logging.NoLogger()
-
-  if args.ignore is None: args.ignore = []
-  if args.macro is None: args.macro = []
+    logger.setLevel(logging.WARNING)
 
   macroDictionary = {}
   for macroString in args.macro:
@@ -68,12 +73,9 @@ if __name__ == '__main__':
 
   backend = database.SQLiteDatabase( args.database )
   namelistStore = database.FileDependencies( backend )
-  namelistAnalyser = analyser.NamelistDescriptionAnalyser( logger,
-                                                           namelistStore )
+  namelistAnalyser = analyser.NamelistDescriptionAnalyser(namelistStore)
   fortranStore = database.FortranDependencies( backend )
-  fortranAnalyser = analyser.FortranAnalyser( logger,      \
-                                              args.ignore, \
-                                              fortranStore )
+  fortranAnalyser = analyser.FortranAnalyser(args.ignore, fortranStore)
   if args.source.endswith( '.nld' ):
     namelistAnalyser.analyse( args.source )
   else:
