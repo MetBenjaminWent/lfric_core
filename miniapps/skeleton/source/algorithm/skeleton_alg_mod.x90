@@ -46,7 +46,7 @@ contains
 
     ! Create a new field on the W2 function space
     mesh_id = field_1%get_mesh_id()
-    field_2 = field_type( function_space_collection%get_fs(mesh_id, element_order, W2))
+    call field_2%initialise( function_space_collection%get_fs(mesh_id, element_order, W2))
 
     ! Set the new field to a constant value and compute the divergence of it
     divergence => get_div()

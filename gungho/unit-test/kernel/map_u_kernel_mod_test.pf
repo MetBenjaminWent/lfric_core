@@ -117,18 +117,18 @@ contains
     this%w3_fs => function_space_collection%get_fs( mesh_id, element_order, W3 )
     this%wt_fs => function_space_collection%get_fs( mesh_id, element_order, Wtheta )
 
-    this%r_u   = field_type( vector_space = this%w2_fs )
+    call this%r_u%initialise( vector_space = this%w2_fs )
     r_u_proxy  = this%r_u%get_proxy()
 
     ndf_w2      = r_u_proxy%vspace%get_ndf()
     dim_w2      = r_u_proxy%vspace%get_dim_space()
     undf_w2     = r_u_proxy%vspace%get_undf()
 
-    this%u_lon  = field_type( vector_space = this%w3_fs )
+    call this%u_lon%initialise( vector_space = this%w3_fs )
     u_lon_proxy = this%u_lon%get_proxy()
-    this%u_lat  = field_type( vector_space = this%w3_fs )
+    call this%u_lat%initialise( vector_space = this%w3_fs )
     u_lat_proxy = this%u_lat%get_proxy()
-    this%u_up   = field_type( vector_space = this%wt_fs )
+    call this%u_up%initialise( vector_space = this%wt_fs )
     u_up_proxy  = this%u_up%get_proxy()
 
     ndf_w3      = u_lon_proxy%vspace%get_ndf()
@@ -144,9 +144,9 @@ contains
     allocate(this%basis_wt(dim_wt,ndf_wt,nqp_h,nqp_v))
 
     ! make a coordinate field with a function space
-    this%chi1 = field_type( vector_space = this%w0_fs )
-    this%chi2 = field_type( vector_space = this%w0_fs )
-    this%chi3 = field_type( vector_space = this%w0_fs )
+    call this%chi1%initialise( vector_space = this%w0_fs )
+    call this%chi2%initialise( vector_space = this%w0_fs )
+    call this%chi3%initialise( vector_space = this%w0_fs )
     chi_p(1) = this%chi1%get_proxy()
     chi_p(2) = this%chi2%get_proxy()
     chi_p(3) = this%chi3%get_proxy()

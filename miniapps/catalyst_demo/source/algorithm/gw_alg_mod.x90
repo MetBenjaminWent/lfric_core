@@ -101,14 +101,14 @@ contains
     p_fs => pressure%get_function_space()
     b_fs => buoyancy%get_function_space()
 
-    state(igw_u) = field_type( vector_space = u_fs )
-    state(igw_p) = field_type( vector_space = p_fs )
-    state(igw_b) = field_type( vector_space = b_fs )
+    call state(igw_u)%initialise( vector_space = u_fs )
+    call state(igw_p)%initialise( vector_space = p_fs )
+    call state(igw_b)%initialise( vector_space = b_fs )
 
     call clone_bundle(state, state_n,   bundle_size)
     call clone_bundle(state, rhs_n,     bundle_size)
 
-    rhs_p =  field_type( vector_space = p_fs )
+    call rhs_p%initialise( vector_space = p_fs )
 
     !=== Copy prognostic field data to state arrays ===========================!
     call invoke( name = "Copy init fields to state",  &

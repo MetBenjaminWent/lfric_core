@@ -86,7 +86,7 @@ contains
     call invoke( initial_buoyancy_kernel_type(buoyancy, chi) )
 
     ! Initialise U and p according to formulation
-    r_u = field_type( vector_space = wind%get_function_space() )
+    call r_u % initialise( vector_space = wind%get_function_space() )
     call invoke( name = 'Initialise U and p',     &
                  setval_c( wind,     0.0_r_def ), &
                  setval_c( r_u,      0.0_r_def ), &

@@ -397,7 +397,7 @@ subroutine xios_diagnostic_domain_init(mesh_id, chi)
 
   ! Set up fields to hold the output coordinates
   do i = 1,3
-    coord_output(i) = field_type( vector_space = output_field_fs )
+    call coord_output(i)%initialise( vector_space = output_field_fs )
   end do
 
   ! Get proxies for coordinates so we can access them
@@ -541,7 +541,7 @@ subroutine xios_diagnostic_domain_init(mesh_id, chi)
 
   ! Set up fields to hold the output coordinates
   do i = 1,3
-    coord_output(i) = field_type( vector_space = output_field_fs )
+    call coord_output(i)%initialise( vector_space = output_field_fs )
   end do
 
 
@@ -642,7 +642,7 @@ subroutine xios_diagnostic_domain_init(mesh_id, chi)
 
   ! Set up fields to hold the output coordinates
   do i = 1,3
-    coord_output(i) = field_type( vector_space = output_field_fs )
+    call coord_output(i)%initialise( vector_space = output_field_fs )
   end do
 
   ! Convert field to physical nodal output & sample chi on nodal points
@@ -700,7 +700,7 @@ subroutine xios_diagnostic_domain_init(mesh_id, chi)
 
   ! Set up fields to hold the output coordinates
   do i = 1,3
-    coord_output(i) = field_type( vector_space = output_field_fs )
+    call coord_output(i)%initialise( vector_space = output_field_fs )
   end do
 
 
@@ -877,7 +877,7 @@ subroutine xios_checkpoint_domain_init(fs_id, domain_name, mesh_id, chi, use_ind
 
   ! Set up fields to hold the output coordinates
   do i = 1,3
-    coord_output(i) = field_type( vector_space = output_field_fs )
+    call coord_output(i)%initialise( vector_space = output_field_fs )
   end do
 
 

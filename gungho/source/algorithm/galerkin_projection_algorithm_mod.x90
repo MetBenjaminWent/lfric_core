@@ -71,7 +71,7 @@ contains
 ! Create continuous fields to project data into
     out_fs = f_out(1)%which_function_space()
     do dir = 1,space_dimension
-      rhs(dir) = field_type( vector_space = f_out(1)%get_function_space() )
+      call rhs(dir)%initialise( vector_space = f_out(1)%get_function_space() )
       call invoke( setval_c(rhs(dir), 0.0_r_def) )
     end do
     
@@ -92,7 +92,7 @@ contains
           call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
           ! Create dummy W2 field for kernel to perform check again
-          w2_field = field_type( vector_space =  &
+          call w2_field%initialise( vector_space =  &
                               function_space_collection%get_fs(mesh, element_order, W2) ) 
 
           call invoke( gp_vector_rhs_kernel_type(rhs, f_in, chi, w2_field, qr) )

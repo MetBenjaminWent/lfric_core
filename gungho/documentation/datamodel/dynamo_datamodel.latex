@@ -1141,10 +1141,13 @@ the highest global cell id. }
 \label{sec:proxy}
 
 A field is created for a given function space. A typical operation to
-create a new field at the algorithm level is as follows.
+create a new field (in this case called ``theta'') at the algorithm
+level is as follows.
 
 \begin{verbatim}
-   theta = field_type(vector_space = function_space%get_instance(mesh, W0))
+call theta%initialise( vector_space = &
+      function_space_collection%get_fs(mesh_id, element_order, Wtheta), &
+      name= "theta" )
 \end{verbatim}
 
 The field type contains various operations that can take place on the

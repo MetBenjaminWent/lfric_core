@@ -69,16 +69,16 @@ contains
     w2_fs      => dep_pts_y%get_function_space()
     w3_fs      => rho%get_function_space()
 
-    mass_flux_y        = field_type( vector_space = w2_fs )
-    mass_flux_z        = field_type( vector_space = w2_fs )
+    call mass_flux_y%initialise( vector_space = w2_fs )
+    call mass_flux_z%initialise( vector_space = w2_fs )
 
-    cell_orientation   = field_type( vector_space = w3_fs )
-    rho_hat_adv_y      = field_type( vector_space = w3_fs )
-    rho_adv_y          = field_type( vector_space = w3_fs )
-    rho_hat_adv_z      = field_type( vector_space = w3_fs )
-    rho_adv_z          = field_type( vector_space = w3_fs )
-    increment_y        = field_type( vector_space = w3_fs )
-    increment_z        = field_type( vector_space = w3_fs )
+    call cell_orientation%initialise( vector_space = w3_fs )
+    call rho_hat_adv_y%initialise( vector_space = w3_fs )
+    call rho_adv_y%initialise( vector_space = w3_fs )
+    call rho_hat_adv_z%initialise( vector_space = w3_fs )
+    call rho_adv_z%initialise( vector_space = w3_fs )
+    call increment_y%initialise( vector_space = w3_fs )
+    call increment_z%initialise( vector_space = w3_fs )
 
     ! Calculate the departure points for W2 nodal points at lowest order
     call invoke( setval_c(cell_orientation, 1.0_r_def) )

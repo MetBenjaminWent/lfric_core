@@ -56,15 +56,22 @@ module gw_pressure_operator_alg_mod
 
      contains
      !> Return the lumped inverse \f$\tilde{H}_B^{-1}\f$
-     procedure, public :: get_Hb_lumped_inv
+     procedure, public  :: get_Hb_lumped_inv
      !> over-ride the abstract interface
      !> param[in] self a linear operator
      !> param[in] x a fieldvector the linear operator is applied to
      !> param[inout] y a fieldvector, the result.
      procedure, public  :: apply => apply_gw_pressure_operator
      procedure, private :: apply_gw_pressure_operator
+     !> performs a deep copy (for overriding the "=" operator)
+     !> @param[out] dest   gw_pressure_operator_type lhs
+     !> @param[in]  source gw_pressure_operator_type rhs
+     procedure, public  :: gw_pressure_operator_assign
 
-     final :: destroy_gw_pressure_operator
+     final              :: destroy_gw_pressure_operator
+
+     !> Override default assignment for gw_pressure_operator_type pairs.
+     generic            :: assignment(=) => gw_pressure_operator_assign
 
   end type gw_pressure_operator_type
 
@@ -121,13 +128,13 @@ contains
     wb => state%vector(igw_b)%get_function_space()
     
     ! Temporaries required in operator application
-    self%grad_p     = field_type(vector_space = wu)
-    self%div_grad_p = field_type(vector_space = wp)
+    call self%grad_p%initialise( vector_space = wu )
+    call self%div_grad_p%initialise( vector_space = wp )
 
     ! Compute inverse approximate \tilde{M}_b^{-1}
-    ones          = field_type(vector_space = wb)
-    M_lumped      = field_type(vector_space = wb)
-    Mb_lumped_inv = field_type(vector_space = wb)
+    call ones%initialise( vector_space = wb )
+    call M_lumped%initialise( vector_space = wb )
+    call Mb_lumped_inv%initialise( vector_space = wb )
     select case(b_space)
       case(b_space_w0)  
         Mb => get_mass_matrix(w0_id)
@@ -147,10 +154,10 @@ contains
     call invoke( compute_q_operator_type(Q, qr) )
 
    ! Compute inverse approximate \f$ \tilde{H}_b^{-1} \f$
-    ones_u             = field_type(vector_space = wu)
-    M_lumped_u         = field_type(vector_space = wu)
-    QT1                = field_type(vector_space = wb)
-    self%Hb_lumped_inv = field_type(vector_space = wu)
+    call ones_u%initialise( vector_space = wu )
+    call M_lumped_u%initialise( vector_space = wu )
+    call QT1%initialise( vector_space = wb )
+    call self%Hb_lumped_inv%initialise( vector_space = wu )
     Mu => get_mass_matrix(w2_id)
 
     const1 = self%alpha**2*dt**2*bvf_square
@@ -169,6 +176,25 @@ contains
 
   end function gw_pressure_operator_constructor
 
+  !> Performs a deep copy between gw_pressure_operator_type pairs.
+  !> (for overriding the "=" operator)
+  !>
+  !> @param[out] dest   gw_pressure_operator_type lhs
+  !> @param[in]  source gw_pressure_operator_type rhs
+  subroutine gw_pressure_operator_assign(dest, source)
+
+    implicit none
+    class(gw_pressure_operator_type), intent(in)  :: source
+    class(gw_pressure_operator_type), intent(out) :: dest
+
+    ! Deep copy of the contents of the pressure_operator_type
+    dest%alpha = source%alpha
+    call source%grad_p%copy_field(dest%grad_p)
+    call source%div_grad_p%copy_field(dest%div_grad_p)
+    call source%Hb_lumped_inv%copy_field(dest%Hb_lumped_inv)
+
+  end subroutine gw_pressure_operator_assign
+
   !>@brief Return lumped inverse matrix
   !>
   !>@details Return the matrix \f$\tilde{H}_b^{-1}\f$. This matrix is also
@@ -180,7 +206,7 @@ contains
     implicit none
     class(gw_pressure_operator_type), intent(in) :: self
     type(field_type) :: Hb_lumped_inv
-    Hb_lumped_inv = self%Hb_lumped_inv
+    call self%Hb_lumped_inv%copy_field(Hb_lumped_inv)
   end function get_Hb_lumped_inv
 
   !>@brief Apply Helmholtz operator to a pressure field to obtain \f$y=Hx\f$

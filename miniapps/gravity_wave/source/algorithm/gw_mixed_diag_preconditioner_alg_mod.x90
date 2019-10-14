@@ -47,8 +47,16 @@ module gw_mixed_diag_preconditioner_alg_mod
      procedure, public :: apply => apply_gw_mixed_diag_preconditioner
      procedure, private :: apply_gw_mixed_diag_preconditioner
 
+     !> performs a deep copy (for overriding the "=" operator)
+     !> @param[out] dest   gw_mixed_diag_preconditioner_type lhs
+     !> @param[in]  source gw_mixed_diag_preconditioner_type rhs
+     procedure, public  :: gw_mixed_diag_preconditioner_assign
+
      !> Destructor
      final :: destroy_gw_mixed_diag_preconditioner
+
+     !> Override default assignment for gw_mixed_diag_preconditioner_type pairs.
+     generic            :: assignment(=) => gw_mixed_diag_preconditioner_assign
   end type gw_mixed_diag_preconditioner_type
 
   ! Overload the default structure constructor                                 
@@ -94,6 +102,24 @@ contains
     call log_event( 'done', LOG_LEVEL_INFO )
 
   end function gw_mixed_diag_preconditioner_constructor
+
+  !> Performs a deep copy between gw_mixed_diag_preconditioner_type pairs.
+  !> (for overriding the "=" operator)
+  !>
+  !> @param[out] dest   gw_mixed_diag_preconditioner_type lhs
+  !> @param[in]  source gw_mixed_diag_preconditioner_type rhs
+  subroutine gw_mixed_diag_preconditioner_assign(dest, source)
+
+    implicit none
+    class(gw_mixed_diag_preconditioner_type), intent(in)  :: source
+    class(gw_mixed_diag_preconditioner_type), intent(out) :: dest
+
+    ! Deep copy of the contents of the pressure_operator_type
+    call source%mm_diagonal_p%copy_field(dest%mm_diagonal_p)
+    call source%mm_diagonal_u%copy_field(dest%mm_diagonal_u)
+    call source%mm_diagonal_b%copy_field(dest%mm_diagonal_b)
+
+  end subroutine gw_mixed_diag_preconditioner_assign
 
   !>@brief Apply the preconditioner to calculate \f$y = P.x\f$ for the
   !> mixed system in velocity, pressure and buoyancy

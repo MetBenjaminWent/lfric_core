@@ -68,7 +68,7 @@ contains
 
     ! Create the output field
     do dir = 1,d
-      projected_field(dir) = field_type( vector_space = &
+      call projected_field(dir)%initialise( vector_space = &
               function_space_collection%get_fs(mesh_id,element_order, output_fs ) )
       call field%get_write_behaviour(tmp_write_ptr)
       ! set the write field behaviour based upon what is set in the original field

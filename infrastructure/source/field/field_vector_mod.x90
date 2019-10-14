@@ -217,7 +217,7 @@ contains
     end if
     self%vector_set=.true.
     
-    self%vector(position) = field
+    call field%copy_field(self%vector(position))
   end subroutine import_field
 
    ! Copies a field from the nominated position. The procedure a field has been
@@ -237,7 +237,7 @@ contains
        call log_event(log_scratch_space,LOG_LEVEL_ERROR)
     end if
 
-    field=self%vector(position)
+    call self%vector(position)%copy_field(field)
   end subroutine export_field
 
   ! allocates the array of fields to the given size
@@ -269,7 +269,7 @@ contains
           do pos = 1, nfctr
              elem = self%vector(pos)%get_element_order()
              fs_label = self%vector(pos)%which_function_space()
-             vec%vector(pos) = field_type(vector_space = &
+             call vec%vector(pos)%initialise(vector_space = &
                    function_space_collection%get_fs(mesh_id, elem, fs_label) )
           end do
        class default
@@ -308,7 +308,7 @@ contains
        if(source%vector_set) then
           nfctr = size(self%vector)
           do pos = 1, nfctr
-             self%vector(pos) = source%vector(pos)
+             call source%vector(pos)%copy_field(self%vector(pos))
           end do
           self%vector_set=.true.
        end if

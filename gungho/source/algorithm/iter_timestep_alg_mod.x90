@@ -798,7 +798,7 @@ contains
 
         call log_event( 'iter timestep: Running Cloud Scheme', LOG_LEVEL_INFO )
   
-        dtheta_cld = field_type( vector_space = theta%get_function_space() )
+        call dtheta_cld%initialise( vector_space = theta%get_function_space() )
         call invoke( setval_c(dtheta_cld, 0.0_r_def) )
         exner_theta => derived_fields%get_field('exner_in_wth')
         call map_physics_scalars(exner_theta, state(igh_p))

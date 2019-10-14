@@ -82,10 +82,10 @@ contains
     w2_fs => dep_pts_x%get_function_space()
     w3_fs => rho%get_function_space()
 
-    rho_xy       = field_type( vector_space = w3_fs )
-    increment_xy = field_type( vector_space = w3_fs )
-    increment_z  = field_type( vector_space = w3_fs )
-    mass_flux_z  = field_type( vector_space = w2_fs )
+    call rho_xy%initialise( vector_space = w3_fs )
+    call increment_xy%initialise( vector_space = w3_fs )
+    call increment_z%initialise( vector_space = w3_fs )
+    call mass_flux_z%initialise( vector_space = w2_fs )
 
     if ( subroutine_timers ) call timer('3D Cosmic update')
 

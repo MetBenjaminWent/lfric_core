@@ -134,8 +134,8 @@ contains
     theta_base => base_state(igh_t)
     rho_base   => base_state(igh_d)
  
-    rhs_tmp = field_type( vector_space=rhs(igh_u)%get_function_space() )
-    rhs_eos = field_type( vector_space=rhs(igh_p)%get_function_space() )
+    call rhs_tmp%initialise( vector_space=rhs(igh_u)%get_function_space() )
+    call rhs_eos%initialise( vector_space=rhs(igh_p)%get_function_space() )
     qr       = quadrature_xyoz_type(element_order+2, gaussian_quadrature)
     qr_exact = quadrature_xyoz_type(element_order+3, gaussian_quadrature)
     mesh              => theta%get_mesh()
@@ -164,7 +164,7 @@ contains
     else
       vorticity_fs = W2
     end if
-    vorticity = field_type( vector_space = &
+    call vorticity%initialise( vector_space = &
                  function_space_collection%get_fs(mesh_id, element_order, &
                                                   vorticity_fs) )
     call compute_vorticity_alg(vorticity, u, .false.)

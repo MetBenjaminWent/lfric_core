@@ -144,8 +144,16 @@ module gw_mixed_schur_preconditioner_alg_mod
      !> Helmholtz equation
      procedure, private :: back_substitute
 
+     !> performs a deep copy (for overriding the "=" operator)
+     !> @param[out] dest   gw_mixed_schur_preconditioner_type lhs
+     !> @param[in]  source gw_mixed_schur_preconditioner_type rhs
+     procedure, public  :: gw_mixed_schur_preconditioner_assign
+
      !> Destructor
      final :: destroy_gw_mixed_schur_preconditioner
+
+     !> Override default assignment for gw_mixed_schur_preconditioner_type pairs.
+     generic            :: assignment(=) => gw_mixed_schur_preconditioner_assign
   end type gw_mixed_schur_preconditioner_type
 
   ! Overload the default structure constructor                                 
@@ -208,16 +216,16 @@ contains
     wb => state%vector(igw_b)%get_function_space()
 
     ! Create fields for increments
-    self%p_inc        = field_type(vector_space = wp)
-    self%b_inc        = field_type(vector_space = wb)
-    self%u_inc        = field_type(vector_space = wu)
+    call self%p_inc%initialise( vector_space = wp )
+    call self%b_inc%initialise( vector_space = wb )
+    call self%u_inc%initialise( vector_space = wu )
 
     ! Create fields for right-hand-side
-    self%rhs_u     = field_type(vector_space = wu)
-    self%rhs_p     = field_type(vector_space = wp)
-    self%rhs_p_tmp = field_type(vector_space = wp)
-    self%mb_rb     = field_type(vector_space = wb)
-    self%hb_ru     = field_type(vector_space = wu)
+    call self%rhs_u%initialise( vector_space = wu )
+    call self%rhs_p%initialise( vector_space = wp )
+    call self%rhs_p_tmp%initialise( vector_space = wp )
+    call self%mb_rb%initialise( vector_space = wb )
+    call self%hb_ru%initialise( vector_space = wu )
 
     ! right hand side and solution as a one-component field-vector in
     ! pressure space
@@ -225,9 +233,9 @@ contains
     self%pressure_x = field_vector_type(1)
 
     ! Compute inverse approximate \f$ \tilde{M}_b^{-1} \f$
-    ones          = field_type(vector_space = wb)
-    M_lumped      = field_type(vector_space = wb)
-    self%Mb_lumped_inv = field_type(vector_space = wb)
+    call ones%initialise( vector_space = wb )
+    call M_lumped%initialise( vector_space = wb )
+    call self%Mb_lumped_inv%initialise( vector_space = wb )
     select case(b_space)
     case(b_space_w0)  
        Mb => get_mass_matrix(w0_id)
@@ -247,7 +255,7 @@ contains
     call invoke( compute_q_operator_type(self%Q, qr) )
 
     ! Set \f$ \tilde{H}_b^{-1}\f$
-    self%Hb_lumped_inv = Hb_lumped_inv
+    call hb_lumped_inv%copy_field(self%hb_lumped_inv)
 
     ! Set pressure solver
     self%gw_pressure_solver => pressure_solver
@@ -255,6 +263,36 @@ contains
     call log_event( 'done', LOG_LEVEL_INFO )
 
   end function gw_mixed_schur_preconditioner_constructor
+
+  !> Performs a deep copy between gw_mixed_operator_type pairs.
+  !> (for overriding the "=" operator)
+  !>
+  !> @param[out] dest   gw_mixed_schur_preconditioner_type lhs
+  !> @param[in]  source gw_mixed_schur_preconditioner_type rhs
+  subroutine gw_mixed_schur_preconditioner_assign(dest, source)
+
+    implicit none
+    class(gw_mixed_schur_preconditioner_type), intent(in)  :: source
+    class(gw_mixed_schur_preconditioner_type), intent(out) :: dest
+
+    ! Deep copy of the contents of the pressure_operator_type
+    dest%alpha = source%alpha
+    dest%Q = source%Q
+    call source%p_inc%copy_field(dest%p_inc)
+    call source%b_inc%copy_field(dest%b_inc)
+    call source%u_inc%copy_field(dest%u_inc)
+    call source%rhs_p_tmp%copy_field(dest%rhs_p_tmp)
+    call source%rhs_u%copy_field(dest%rhs_u)
+    call source%rhs_p%copy_field(dest%rhs_p)
+    dest%pressure_b = source%pressure_b
+    dest%pressure_x = source%pressure_x
+    call source%hb_ru%copy_field(dest%hb_ru)
+    call source%mb_rb%copy_field(dest%mb_rb)
+    call source%Mb_lumped_inv%copy_field(dest%Mb_lumped_inv)
+    call source%Hb_lumped_inv%copy_field(dest%Hb_lumped_inv)
+    dest%gw_pressure_solver => source%gw_pressure_solver
+  end subroutine gw_mixed_schur_preconditioner_assign
+
 
   !>@brief Apply the preconditioner to calculate \f$y = P.x\f$ for the
   !> mixed system in velocity, pressure and buoyancy

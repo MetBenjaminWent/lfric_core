@@ -68,20 +68,20 @@ module init_transport_mod
     type(function_space_type), pointer       :: function_space => null()
     procedure(write_interface), pointer :: tmp_write_ptr => null()
 
-    wind_n   = field_type( vector_space = &
+    call wind_n%initialise( vector_space = &
                           function_space_collection%get_fs( mesh_id, element_order, W2 ) )
-    density = field_type( vector_space = &
+    call density%initialise( vector_space = &
                           function_space_collection%get_fs( mesh_id, element_order, W3 ) )
-    increment = field_type( vector_space = &
+    call increment%initialise( vector_space = &
                           function_space_collection%get_fs( mesh_id, element_order, W3 ) )
-    divergence = field_type( vector_space = &
+    call divergence%initialise( vector_space = &
                           function_space_collection%get_fs( mesh_id, element_order, W3 ) )
 
-    dep_pts_x  = field_type( vector_space = &
+    call dep_pts_x%initialise( vector_space = &
                           function_space_collection%get_fs( mesh_id, element_order, W2 ) )
-    dep_pts_y  = field_type( vector_space = &
+    call dep_pts_y%initialise( vector_space = &
                           function_space_collection%get_fs( mesh_id, element_order, W2 ) )
-    dep_pts_z  = field_type( vector_space = &
+    call dep_pts_z%initialise( vector_space = &
                           function_space_collection%get_fs( mesh_id, element_order, W2 ) )
 
     ! Create wind and density fields which live on the shifted coordinate field
@@ -89,9 +89,9 @@ module init_transport_mod
     ! species living at Wtheta dofs.
     ! The shifted coordinate field has nlayers+1 with a half layer at the top and
     ! bottom of the column.
-    wind_shifted    = field_type( vector_space = &
+    call wind_shifted%initialise( vector_space = &
                           function_space_collection%get_fs( shifted_mesh_id, element_order, W2 ) )
-    density_shifted = field_type( vector_space = &
+    call density_shifted%initialise( vector_space = &
                           function_space_collection%get_fs( shifted_mesh_id, element_order, W3 ) )
 
     ! Create runtime_constants object.

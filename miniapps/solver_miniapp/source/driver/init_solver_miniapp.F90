@@ -48,10 +48,10 @@ contains
 
     ! Create prognostic fields
     ! Create a field in the W0 function space (fully continuous field)
-    f1 = field_type( vector_space = &
+    call f1%initialise( vector_space = &
          function_space_collection%get_fs(mesh_id, element_order, W0) )
     ! Create a field in the W3 function space (fully discontinuous field)
-    f2 = field_type( vector_space = &
+    call f2%initialise( vector_space = &
          function_space_collection%get_fs(mesh_id, element_order, W3) )
 
     ! Initialise the fields

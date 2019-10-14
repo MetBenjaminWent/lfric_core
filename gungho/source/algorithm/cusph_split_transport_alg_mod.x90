@@ -82,12 +82,12 @@ contains
     w3_fs => rho%get_function_space()
     w2_fs => mass_flux_x%get_function_space()
 
-    rho_adv_x          = field_type( vector_space = w3_fs )
-    rho_adv_y          = field_type( vector_space = w3_fs )
-    rho_hat_adv_x      = field_type( vector_space = w3_fs )
-    rho_hat_adv_y      = field_type( vector_space = w3_fs )
-    rho_x              = field_type( vector_space = w3_fs )
-    rho_y              = field_type( vector_space = w3_fs )
+    call rho_adv_x%initialise( vector_space = w3_fs )
+    call rho_adv_y%initialise( vector_space = w3_fs )
+    call rho_hat_adv_x%initialise( vector_space = w3_fs )
+    call rho_hat_adv_y%initialise( vector_space = w3_fs )
+    call rho_x%initialise( vector_space = w3_fs )
+    call rho_y%initialise( vector_space = w3_fs )
 
     ! Perform two 1D advective updates in the x and y directions (horizontal)
     call oned_density_update_alg(x_direction, dep_pts_x,       &

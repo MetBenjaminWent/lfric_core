@@ -80,16 +80,16 @@ contains
 
     rho_fs => rho_x%get_function_space()
 
-    a0_x = field_type( vector_space = rho_fs )
-    a1_x = field_type( vector_space = rho_fs )
-    a2_x = field_type( vector_space = rho_fs )
+    call a0_x%initialise( vector_space = rho_fs )
+    call a1_x%initialise( vector_space = rho_fs )
+    call a2_x%initialise( vector_space = rho_fs )
 
-    a0_y = field_type( vector_space = rho_fs )
-    a1_y = field_type( vector_space = rho_fs )
-    a2_y = field_type( vector_space = rho_fs )
+    call a0_y%initialise( vector_space = rho_fs )
+    call a1_y%initialise( vector_space = rho_fs )
+    call a2_y%initialise( vector_space = rho_fs )
 
-    rho_x_corrected = field_type( vector_space = rho_fs )
-    rho_y_corrected = field_type( vector_space = rho_fs )
+    call rho_x_corrected%initialise( vector_space = rho_fs )
+    call rho_y_corrected%initialise( vector_space = rho_fs )
 
     ! Initialise to a large negative value to ensure bugs show up clearly
     call invoke( setval_c(a0_x            , LARGE_REAL_NEGATIVE), &

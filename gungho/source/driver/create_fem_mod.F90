@@ -94,7 +94,7 @@ module create_fem_mod
     fs => function_space_collection%get_fs(mesh_id, coordinate_order, chi_space)
 
     do coord = 1, size(chi)
-      chi(coord) = field_type (vector_space = fs )
+      call chi(coord)%initialise(vector_space = fs )
     end do
 
     call assign_coordinate_field(chi, mesh_id)
@@ -106,7 +106,7 @@ module create_fem_mod
       shifted_fs => function_space_collection%get_fs(shifted_mesh_id, coordinate_order, chi_space)
 
       do coord = 1, size(chi)
-        shifted_chi(coord) = field_type(vector_space = shifted_fs)
+        call shifted_chi(coord)%initialise(vector_space = shifted_fs)
       end do
 
       call assign_coordinate_field(shifted_chi, shifted_mesh_id)

@@ -247,7 +247,7 @@ module cell_locator_api_mod
     output_field_fs => function_space_collection%get_fs( mesh_id, 0, W0 )
     do i = 1, 3
       ! Create 3 new scalar fields
-      coord_output(i) = field_type( vector_space = output_field_fs )
+      call coord_output(i)%initialise( vector_space = output_field_fs )
       ! Access the field through a proxy
       proxy_coord_output(i) = coord_output(i)%get_proxy()
     end do

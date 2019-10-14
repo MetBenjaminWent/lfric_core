@@ -189,15 +189,15 @@ contains
        p3theta(i)        = operator_type( w3_fs, wt_fs )
        compound_div(i)   = operator_type( w3_fs, w2_fs )
        
-       rho_at_u(i)  = field_type(vector_space = w2_fs)
+       call rho_at_u(i)%initialise(vector_space = w2_fs)
        if ( preconditioner == preconditioner_tridiagonal .or. &
             preconditioner == preconditioner_multigrid ) then
-          tri_precon(1,i) = field_type(vector_space = w3_fs)
-          tri_precon(2,i) = field_type(vector_space = w3_fs)
-          tri_precon(3,i) = field_type(vector_space = w3_fs)
+          call tri_precon(1,i)%initialise(vector_space = w3_fs)
+          call tri_precon(2,i)%initialise(vector_space = w3_fs)
+          call tri_precon(3,i)%initialise(vector_space = w3_fs)
        end if
-       helm_diag(i)     = field_type(vector_space = w3_fs)
-       Hb_lumped_inv(i) = field_type(vector_space = w2_fs)      
+       call helm_diag(i)%initialise(vector_space = w3_fs)
+       call Hb_lumped_inv(i)%initialise(vector_space = w2_fs)
        if(l_multigrid) then
           w3_fs=>multigrid_function_space_chain%get_next()
           w2_fs=>w2_multigrid_function_space_chain%get_next()
@@ -335,9 +335,9 @@ contains
     if ( subroutine_timers ) call timer('si_operators_alg:compute')
     call log_event( "Gungho: computing si_operators", LOG_LEVEL_INFO )
 
-    exner  = ref_state(igh_p)
-    rho    = ref_state(igh_d)
-    theta  = ref_state(igh_t)
+    call ref_state(igh_p)%copy_field(exner)
+    call ref_state(igh_d)%copy_field(rho)
+    call ref_state(igh_t)%copy_field(theta)
 
     w3_fs => ref_state(igh_p)%get_function_space()    
     w2_fs => ref_state(igh_u)%get_function_space()
@@ -398,7 +398,7 @@ contains
                mg_flux_kernel_type(rho_at_u(level), rho) )
        else
           ! for non MG, at higher order, need computed rmultiplicity
-          ones = field_type( vector_space = w2_fs )
+          call ones%initialise( vector_space = w2_fs )
           w2_rmultiplicity => get_rmultiplicity( W2 )
           call invoke( setval_c(ones,     1.0_r_def),                &
                setval_c(rho_at_u(level), 0.0_r_def),                 &
@@ -424,9 +424,9 @@ contains
        u_normalisation => get_normalisation(w2_id, level)
        t_normalisation => get_normalisation(wt_id, level)
     
-       m2_u           = field_type( vector_space = w2_fs )
-       ones           = field_type( vector_space = w2_fs )
-       theta_adv_term = field_type( vector_space = wt_fs )
+       call m2_u%initialise( vector_space = w2_fs )
+       call ones%initialise( vector_space = w2_fs )
+       call theta_adv_term%initialise( vector_space = wt_fs )
        
     call invoke( name = "Compute lumped inverse H_B operator",               &
                  setval_c(ones, 1.0_r_def),                                  &
@@ -460,7 +460,7 @@ contains
     end if
     if ( normalise .and. &
          preconditioner == preconditioner_tridiagonal ) then
-       Helm_diag(level) = tri_precon(1,level)
+       call tri_precon(1,level)%copy_field(Helm_diag(level))
        call invoke( name = "Normalise tridiagonal preconditioner", &
                    inc_X_powint_n(Helm_diag(level), imone),              &
                    inc_X_times_Y(tri_precon(1,level), Helm_diag(level)),       &
@@ -481,26 +481,25 @@ contains
              call log_event(log_scratch_space,LOG_LEVEL_INFO)
 
              ! copy current field to coarse field          
-             coarse_field = field_type(vector_space = wt_fs)
-             coarse_field = theta
+             call theta%copy_field(coarse_field)
              ! set the fs to the next (fine)
              wt_fs=>wtheta_multigrid_function_space_chain%get_next()
-             theta = field_type(vector_space = wt_fs)
+             call theta%initialise(vector_space = wt_fs)
              ! call restrict
              call invoke( restrict_kernel_type(theta, coarse_field) )
              
              ! copy current field to coarse field          
-             coarse_field = field_type(w3_fs)
-             coarse_field = rho
+             call rho%copy_field(coarse_field)
              ! set the fs to the next (fine)
              w3_fs=>multigrid_function_space_chain%get_next()
-             rho = field_type(vector_space = w3_fs )
+             call rho%initialise(vector_space = w3_fs )
              ! call restrict
              call invoke( restrict_kernel_type(rho, coarse_field) )
+
              ! copy current field to coarse field
-             coarse_field = exner
+             call exner%copy_field(coarse_field)
              ! fs already set fine
-             exner = field_type(vector_space = w3_fs )          
+             call exner%initialise(vector_space = w3_fs )
              ! call restrict
              call invoke( restrict_kernel_type(exner, coarse_field) )
              ! set w2_fs to next in chain

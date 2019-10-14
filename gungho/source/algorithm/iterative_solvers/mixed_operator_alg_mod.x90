@@ -164,12 +164,12 @@ contains
        select type (y)
        type is (field_vector_type)
          u_fs => y%vector(igh_u)%get_function_space()
-         f_star = field_type( vector_space = u_fs )
+         call f_star%initialise( vector_space = u_fs )
          ! Create temporary fields
-         u_tmp = field_type( vector_space = y%vector(igh_u)%get_function_space() )
-         t_tmp = field_type( vector_space = y%vector(igh_t)%get_function_space() )
-         r_tmp = field_type( vector_space = y%vector(igh_d)%get_function_space() )
-         p_tmp = field_type( vector_space = y%vector(igh_p)%get_function_space() )
+         call u_tmp%initialise( vector_space = y%vector(igh_u)%get_function_space() )
+         call t_tmp%initialise( vector_space = y%vector(igh_t)%get_function_space() )
+         call r_tmp%initialise( vector_space = y%vector(igh_d)%get_function_space() )
+         call p_tmp%initialise( vector_space = y%vector(igh_p)%get_function_space() )
 
          ! Compute lhs
          if ( rotating ) then 

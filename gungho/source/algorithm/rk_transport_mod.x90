@@ -164,19 +164,19 @@ contains
     rho_fs   => rho%get_function_space()
     theta_fs => theta%get_function_space()
 
-    rho_n        = field_type( vector_space = rho_fs )
-    r_rho        = field_type( vector_space = rho_fs )
-    rho_inc      = field_type( vector_space = rho_fs )
-    r_u          = field_type( vector_space = u_fs )
-    mass_flux    = field_type( vector_space = u_fs )
-    theta_n      = field_type( vector_space = theta_fs )
-    r_theta      = field_type( vector_space = theta_fs )
-    theta_inc    = field_type( vector_space = theta_fs )
+    call rho_n%initialise( vector_space = rho_fs )
+    call r_rho%initialise( vector_space = rho_fs )
+    call rho_inc%initialise( vector_space = rho_fs )
+    call r_u%initialise( vector_space = u_fs )
+    call mass_flux%initialise( vector_space = u_fs )
+    call theta_n%initialise( vector_space = theta_fs )
+    call r_theta%initialise( vector_space = theta_fs )
+    call theta_inc%initialise( vector_space = theta_fs )
 
 
     do stage = 1,num_rk_stage
-      rr_prediction(stage) = field_type( vector_space = rho_fs )
-      rt_prediction(stage) = field_type( vector_space = theta_fs )
+      call rr_prediction(stage)%initialise( vector_space = rho_fs )
+      call rt_prediction(stage)%initialise( vector_space = theta_fs )
     end do
 
     call invoke( setval_c(mass_flux, 0.0_r_def) )
@@ -198,8 +198,8 @@ contains
         call log_event( "Gungho: subgrid mappings needed for FV MoL with high order elements", LOG_LEVEL_ERROR )
       end if
       mm_wt => get_mass_matrix(wt_id)
-      ones  = field_type( vector_space = theta_fs )
-      mt_lumped  = field_type( vector_space = theta_fs )
+      call ones%initialise( vector_space = theta_fs )
+      call mt_lumped%initialise( vector_space = theta_fs )
       call invoke( name = "Compute mt_lumped",     &
                    setval_c(ones,      1.0_r_def), &
                    setval_c(mt_lumped, 0.0_r_def), &
@@ -255,7 +255,7 @@ contains
         allocate( flux_coeffs(fv_flux_order+1, nfaces_h) )
         do direction = 1,nfaces_h
           do polynomial = 1,fv_flux_order+1
-            flux_coeffs(polynomial,direction) = field_type( vector_space = rho_fs )
+            call flux_coeffs(polynomial,direction)%initialise( vector_space = rho_fs )
           end do
         end do
         call invoke_poly1d_flux_coeffs( flux_coeffs, md_w3, chi, qr, qrf, &
@@ -265,7 +265,7 @@ contains
         allocate( flux_coeffs(flux2d_stencil_size, nfaces_h) )
         do direction = 1,nfaces_h
           do polynomial = 1,flux2d_stencil_size
-            flux_coeffs(polynomial,direction) = field_type( vector_space = rho_fs )
+            call flux_coeffs(polynomial,direction)%initialise( vector_space = rho_fs )
           end do
         end do
         call invoke_poly2d_flux_coeffs( flux_coeffs, md_w3, chi, qr, qrf, &
@@ -277,7 +277,7 @@ contains
       allocate( vert_flux_coeffs(fv_flux_order+1, nfaces_v) )
       do direction = 1,nfaces_v
         do polynomial = 1,fv_flux_order+1
-          vert_flux_coeffs(polynomial,direction) = field_type( vector_space = rho_fs )
+          call vert_flux_coeffs(polynomial,direction)%initialise( vector_space = rho_fs )
         end do
       end do
       nqp_xyz = 1
@@ -298,13 +298,13 @@ contains
       qre = quadrature_edge_type(face_quad_order, .true., .false., &
                                  reference_element, gaussian_quadrature)
       md_wt => get_mass_matrix_diagonal(wt_id)
-      theta_av = field_type( vector_space =                                    &
+      call theta_av%initialise( vector_space =                                    &
           function_space_collection%get_fs(mesh_id, element_order, W1) )
       if ( oned_reconstruction ) then
         allocate( adv_coeffs(fv_advective_order+1, nfaces_h) )
         do direction = 1,nfaces_h
           do polynomial = 1,fv_advective_order+1
-            adv_coeffs(polynomial,direction) = field_type( vector_space = theta_fs )
+            call adv_coeffs(polynomial,direction)%initialise( vector_space = theta_fs )
           end do
         end do
         call invoke_poly1d_advective_coeffs( adv_coeffs, md_wt, chi, qr, qre,  &
@@ -314,7 +314,7 @@ contains
         allocate( adv_coeffs(advective2d_stencil_size, nfaces_h) )
         do direction = 1,nfaces_h
           do polynomial = 1,advective2d_stencil_size
-            adv_coeffs(polynomial,direction) = field_type( vector_space = theta_fs )
+            call adv_coeffs(polynomial,direction)%initialise( vector_space = theta_fs )
           end do
         end do
         call invoke_poly2d_advective_coeffs( adv_coeffs, md_wt, chi, qr, &
@@ -327,30 +327,30 @@ contains
       allocate( vert_adv_coeffs(fv_advective_order+2, nfaces_v) )
       do direction = 1,nfaces_v
         do polynomial = 1,fv_advective_order+2
-          vert_adv_coeffs(polynomial,direction) = field_type( vector_space = theta_fs )
+          call vert_adv_coeffs(polynomial,direction)%initialise( vector_space = theta_fs )
         end do
       end do
       call invoke_poly1d_vert_adv_coeffs( vert_adv_coeffs, md_wt, chi, & 
                                           fv_advective_order, nfaces_v )
 
       if ( consistent_metric ) then
-        advective_av_chi3 = field_type(vector_space = theta_av%get_function_space() )
-        theta_metrics     = field_type(vector_space = theta_fs )
-        chi3_at_wt        = field_type(vector_space = theta_fs )
-        wt_multiplicity   = field_type(vector_space = theta_fs )
+        call advective_av_chi3%initialise(vector_space = theta_av%get_function_space() )
+        call theta_metrics%initialise(vector_space = theta_fs )
+        call chi3_at_wt%initialise(vector_space = theta_fs )
+        call wt_multiplicity%initialise(vector_space = theta_fs )
         call invoke( setval_c(wt_multiplicity, 0.0_r_def),       &
                      multiplicity_kernel_type(wt_multiplicity),  &
                      sample_field_kernel_type( chi3_at_wt, wt_multiplicity, chi(3)) )
       end if
       if ( subroutine_timers ) call timer('rk_transport_alg: V adv coeffs')
     else
-      ones  = field_type( vector_space = rho_fs)
+      call ones%initialise( vector_space = rho_fs)
       call invoke( setval_c(ones, 1.0_r_def) )
     end if
 
     ! Store initial values for computing errors
-    rho0   = rho
-    theta0 = theta
+    call rho%copy_field(rho0)
+    call theta%copy_field(theta0)
 
     nullify( mm_wt, u_fs, rho_fs, theta_fs, mesh, reference_element )
 
@@ -445,7 +445,7 @@ contains
                                         fv_flux_order, nfaces_v)
 
           ! Compute vertical components of advective update
-          consistent_wind = u
+          call u%copy_field(consistent_wind)
           if ( consistent_metric ) then
             call invoke( poly_advective_kernel_type(theta_metrics, u, advective_av_chi3), &
             ! Modify advecting wind
@@ -535,10 +535,10 @@ contains
     theta_fs => theta%get_function_space()
     rho_fs   => rho%get_function_space()
 
-    dtheta   = field_type( vector_space = theta_fs )
-    l2_theta = field_type( vector_space = theta_fs )
-    drho     = field_type( vector_space = rho_fs )
-    l2_rho   = field_type( vector_space = rho_fs )
+    call dtheta%initialise( vector_space = theta_fs )
+    call l2_theta%initialise( vector_space = theta_fs )
+    call drho%initialise( vector_space = rho_fs )
+    call l2_rho%initialise( vector_space = rho_fs )
 
     mm_w3 => get_mass_matrix(w3_id)
     mm_wt => get_mass_matrix(theta_space_id)

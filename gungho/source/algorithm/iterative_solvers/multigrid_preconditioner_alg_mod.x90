@@ -137,17 +137,17 @@ contains
     self%fs_id(1) = fs_fine_id
     fs => p_rhs%get_function_space()
     self%mesh_id(1) = fs%get_mesh_id()
-    self%u_mg(1) = field_type( fs ) 
-    self%b_mg(1) = field_type( fs ) 
-    self%r_mg(1) = field_type( fs )
+    call self%u_mg(1)%initialise( fs )
+    call self%b_mg(1)%initialise( fs )
+    call self%r_mg(1)%initialise( fs )
     self%H_operator(1) = helmholtz_operator_type(fs, 1)    
     do level = 2, self%n_level
        fs => multigrid_function_space_chain%get_next()
        self%fs_id(level) = fs%get_id()
        self%mesh_id(level) = fs%get_mesh_id()
-       self%u_mg(level) = field_type( fs ) 
-       self%b_mg(level) = field_type( fs ) 
-       self%r_mg(level) = field_type( fs ) 
+       call self%u_mg(level)%initialise( fs )
+       call self%b_mg(level)%initialise( fs )
+       call self%r_mg(level)%initialise( fs )
 
        self%H_operator(level) = helmholtz_operator_type(fs, level)          
     end do
@@ -271,7 +271,7 @@ contains
     ! Construct temporary fields (we probably do not want to construct them
     ! in every smoother application in the future)
     fs => self%u_mg(level)%get_function_space()
-    res = field_type(vector_space = fs)
+    call res%initialise(vector_space = fs)
     
     if (initial_solution_is_zero) then
        ! First iteration

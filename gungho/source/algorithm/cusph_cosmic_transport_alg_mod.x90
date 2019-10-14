@@ -71,9 +71,9 @@ contains
     w2_fs   => function_space_collection%get_fs( mesh_id, element_order, W2 )
     w3_fs   => function_space_collection%get_fs( mesh_id, element_order, W3 )
 
-    u_n         = field_type( vector_space = w2_fs )
-    u_np1       = field_type( vector_space = w2_fs )
-    r_u         = field_type( vector_space = w2_fs )
+    call u_n%initialise( vector_space = w2_fs )
+    call u_np1%initialise( vector_space = w2_fs )
+    call r_u%initialise( vector_space = w2_fs )
 
     qr = quadrature_xyoz_type(element_order+2, quadrature_rule)
     chi => get_coordinates()
@@ -137,10 +137,10 @@ contains
     w2_fs => dep_pts_x%get_function_space()
     w3_fs => rho%get_function_space()
 
-    mass_flux_x = field_type( vector_space = w2_fs )
-    mass_flux_y = field_type( vector_space = w2_fs )
-    increment_x = field_type( vector_space = w3_fs )
-    increment_y = field_type( vector_space = w3_fs )
+    call mass_flux_x%initialise( vector_space = w2_fs )
+    call mass_flux_y%initialise( vector_space = w2_fs )
+    call increment_x%initialise( vector_space = w3_fs )
+    call increment_y%initialise( vector_space = w3_fs )
 
     ! Call algorithm to calculate mass fluxes in x and y direction using COSMIC scheme
     call cusph_split_transport_alg( rho, cell_orientation,             &

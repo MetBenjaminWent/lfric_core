@@ -44,7 +44,7 @@ contains
 
     qr = quadrature_xyoz_type(nqp_exact, quadrature_rule)    
     mesh_id =  source_field%get_mesh_id() ! Currently only coded for fields on the same mesh
-    projected_field(1) = field_type( vector_space = target_field%get_function_space() )
+    call projected_field(1)%initialise( vector_space = target_field%get_function_space() )
     call galerkin_projection_algorithm(projected_field, source_field, mesh_id, &
        1, qr) 
     call invoke( setval_X(target_field, projected_field(1)) )
@@ -112,9 +112,9 @@ contains
     qr = quadrature_xyoz_type(nqp_exact, quadrature_rule)
 
       mesh_id =  source_field%get_mesh_id()
-      projected_field(1) = field_type( vector_space = u1_field%get_function_space() )
-      projected_field(2) = field_type( vector_space = u2_field%get_function_space() )
-      projected_field(3) = field_type( vector_space = u3_field%get_function_space() )
+      call projected_field(1)%initialise( vector_space = u1_field%get_function_space() )
+      call projected_field(2)%initialise( vector_space = u2_field%get_function_space() )
+      call projected_field(3)%initialise( vector_space = u3_field%get_function_space() )
       call galerkin_projection_algorithm(projected_field, source_field, mesh_id, &
                                          3, qr) 
       call invoke( name = "Copy wind fields2",             &

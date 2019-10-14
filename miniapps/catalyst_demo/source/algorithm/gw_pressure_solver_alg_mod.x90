@@ -94,36 +94,36 @@ contains
     wp => state(igw_p)%get_function_space()
     wb => state(igw_b)%get_function_space()
 
-    pressure_rhs = field_type(vector_space = wp)
-    p_inc        = field_type(vector_space = wp)
-    b_inc        = field_type(vector_space = wb)
-    u_inc        = field_type(vector_space = wu)
+    call pressure_rhs%initialise(vector_space = wp)
+    call p_inc%initialise(vector_space = wp)
+    call b_inc%initialise(vector_space = wb)
+    call u_inc%initialise(vector_space = wu)
 
     ! For building the rhs
-    rhs_u = field_type(vector_space = wu)
-    rhs_p = field_type(vector_space = wp)
-    mb_rb = field_type(vector_space = wb)
-    hb_ru = field_type(vector_space = wu)
+    call rhs_u%initialise(vector_space = wu)
+    call rhs_p%initialise(vector_space = wp)
+    call mb_rb%initialise(vector_space = wb)
+    call hb_ru%initialise(vector_space = wu)
 
     ! Create bicgstab fields
-    v   = field_type( vector_space = wp)
-    z   = field_type( vector_space = wp)
-    p   = field_type( vector_space = wp)
-    t   = field_type( vector_space = wp)
-    s   = field_type( vector_space = wp)
-    y   = field_type( vector_space = wp)
-    res = field_type( vector_space = wp)
+    call v%initialise( vector_space = wp)
+    call z%initialise( vector_space = wp)
+    call p%initialise( vector_space = wp)
+    call t%initialise( vector_space = wp)
+    call s%initialise( vector_space = wp)
+    call y%initialise( vector_space = wp)
+    call res%initialise( vector_space = wp)
 
     ! Apply lhs
-    grad_p     = field_type(vector_space = wu)
-    div_grad_p = field_type(vector_space = wp)
+    call grad_p%initialise(vector_space = wu)
+    call div_grad_p%initialise(vector_space = wp)
 
     ! Back substitute
 
     ! Compute inverse approximate Mt
-    ones          = field_type(vector_space = wb)
-    M_lumped      = field_type(vector_space = wb)
-    Mb_lumped_inv = field_type(vector_space = wb)
+    call ones%initialise(vector_space = wb)
+    call M_lumped%initialise(vector_space = wb)
+    call Mb_lumped_inv%initialise(vector_space = wb)
     select case(b_space)
       case(gravity_wave_constants_b_space_w0)
         Mb => get_mass_matrix(w0_id)
@@ -144,10 +144,10 @@ contains
     call invoke( compute_q_operator_type(Q, qr) )
 
    ! Compute inverse approximate HB
-    ones          = field_type(vector_space = wu)
-    M_lumped      = field_type(vector_space = wu)
-    QT1           = field_type(vector_space = wb)
-    Hb_lumped_inv = field_type(vector_space = wu)
+    call ones%initialise(vector_space = wu)
+    call M_lumped%initialise(vector_space = wu)
+    call QT1%initialise(vector_space = wb)
+    call Hb_lumped_inv%initialise(vector_space = wu)
     Mu => get_mass_matrix(w2_id)
 
     const1 = tau_u*tau_b*dt**2*bvf_square

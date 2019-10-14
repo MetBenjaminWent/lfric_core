@@ -55,8 +55,15 @@ module helmholtz_field_operator_alg_mod
      procedure, private :: apply_helmholtz_operator
      procedure, public  :: apply_inv_diag => apply_inv_diag_helmholtz
      procedure, private :: apply_inv_diag_helmholtz
+     !> performs a deep copy (for overriding the "=" operator)
+     !> @param[out] dest   helmholtz_operator_type lhs
+     !> @param[in]  source helmholtz_operator_type rhs
+     procedure, public  :: helmholtz_operator_assign
+
      final :: destroy_helmholtz_operator
 
+     !> Override default assignment for helmholtz_operator_type pairs.
+     generic            :: assignment(=) => helmholtz_operator_assign
   end type helmholtz_operator_type
 
   interface helmholtz_operator_type
@@ -91,14 +98,32 @@ contains
     fs_w2     => function_space_collection%get_fs( fs_w3%get_mesh_id(), fs_w3%get_element_order(), W2 )
     
     ! Temporaries required in operator application
-    self%grad_p     = field_type(vector_space = fs_w2)
-    self%div_grad_p = field_type(vector_space = fs_w3)
+    call self%grad_p%initialise(vector_space = fs_w2)
+    call self%div_grad_p%initialise(vector_space = fs_w3)
     self%mg_level   = mg_level
     
     call log_event( 'done', LOG_LEVEL_INFO )
     
 
   end function helmholtz_operator_constructor
+
+  !> Performs a deep copy helmholtz_operator_type pairs.
+  !> (for overriding the "=" operator)
+  !>
+  !> @param[out] dest   helmholtz_operator_type lhs
+  !> @param[in]  source helmholtz_operator_type rhs
+  subroutine helmholtz_operator_assign(dest, source)
+
+    implicit none
+    class(helmholtz_operator_type), intent(in)  :: source
+    class(helmholtz_operator_type), intent(out) :: dest
+
+    ! Deep copy of the contents of the pressure_operator_type
+     call source%grad_p%copy_field(dest%grad_p)
+     call source%div_grad_p%copy_field(dest%div_grad_p)
+     dest%mg_level = source%mg_level
+
+  end subroutine helmholtz_operator_assign
 
   !>@brief Apply Helmholtz operator to a pressure field to obtain \f$y=Hx\f$
   !>

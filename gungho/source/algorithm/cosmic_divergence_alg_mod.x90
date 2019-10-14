@@ -62,8 +62,8 @@ contains
 
     m3_inv => get_mass_matrix(w3inv_id)
 
-    div_temp       = field_type( vector_space = divergence%get_function_space() )
-    mass_flux_mult = field_type( vector_space = detj_at_w2%get_function_space() )
+    call div_temp%initialise( vector_space = divergence%get_function_space() )
+    call mass_flux_mult%initialise( vector_space = detj_at_w2%get_function_space() )
 
     !
     ! Part 1. Calculate div(mass_flux) = (1/detj_at_w3)*d(detj_at_w2 * mass_flux)/dx

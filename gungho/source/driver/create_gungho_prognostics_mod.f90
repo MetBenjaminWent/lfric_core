@@ -88,16 +88,16 @@ contains
     diagnostic_fields = field_collection_type(name="diagnostics")
 
     ! Create prognostic fields
-    theta = field_type( vector_space = &
+    call theta%initialise( vector_space = &
                         function_space_collection%get_fs(mesh_id, element_order, Wtheta), &
                         name= "theta" )
-    u     = field_type( vector_space = &
+    call u%initialise( vector_space = &
                         function_space_collection%get_fs(mesh_id, element_order, W2), &
                         name = "u" )
-    rho   = field_type( vector_space = &
+    call rho%initialise( vector_space = &
                         function_space_collection%get_fs(mesh_id, element_order, W3), &
                         name = "rho" )
-    exner = field_type( vector_space = &
+    call exner%initialise( vector_space = &
                         function_space_collection%get_fs(mesh_id, element_order, W3), &
                         name = "exner" )
 
@@ -105,14 +105,14 @@ contains
     ! (moist_dyn) are always passed into the timestep algorithm, so are
     ! always created here (even if use_moisture is false).
     do imr = 1,nummr
-      mr(imr) = field_type( vector_space = &
+      call mr(imr)%initialise( vector_space = &
       function_space_collection%get_fs(mesh_id, element_order, theta%which_function_space()), &
                             name = trim(mr_names(imr)) )
     end do
 
     ! Auxilliary fields holding moisture-dependent factors for dynamics
     do imr = 1, num_moist_factors
-      moist_dyn(imr) = field_type( vector_space = &
+      call moist_dyn(imr)%initialise( vector_space = &
       function_space_collection%get_fs(mesh_id, element_order, theta%which_function_space()) )
     end do
 

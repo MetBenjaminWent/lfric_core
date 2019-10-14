@@ -73,17 +73,17 @@ contains
     rho_fs => rho_in%get_function_space()
     u_fs   => dep_pts%get_function_space() 
 
-    a0 = field_type( vector_space = rho_fs )
-    a1 = field_type( vector_space = rho_fs )
-    a2 = field_type( vector_space = rho_fs )
+    call a0%initialise( vector_space = rho_fs )
+    call a1%initialise( vector_space = rho_fs )
+    call a2%initialise( vector_space = rho_fs )
 
-    rho_adv           = field_type( vector_space = rho_fs )
-    rho_hat_adv       = field_type( vector_space = rho_fs )
-    rho_adv_np1       = field_type( vector_space = rho_fs )
-    rho_constant_np1  = field_type( vector_space = rho_fs )
-    rho_constant_1    = field_type( vector_space = rho_fs )
-    mass_flux         = field_type( vector_space = u_fs )
-    mass              = field_type( vector_space = rho_fs )
+    call rho_adv%initialise( vector_space = rho_fs )
+    call rho_hat_adv%initialise( vector_space = rho_fs )
+    call rho_adv_np1%initialise( vector_space = rho_fs )
+    call rho_constant_np1%initialise( vector_space = rho_fs )
+    call rho_constant_1%initialise( vector_space = rho_fs )
+    call mass_flux%initialise( vector_space = u_fs )
+    call mass%initialise( vector_space = rho_fs )
 
     ! Calculate the conservative fluxes and update rho
     call invoke( setval_c(mass_flux, 0.0_r_def), &

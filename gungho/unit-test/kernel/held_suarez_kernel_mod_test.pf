@@ -138,34 +138,34 @@ contains
     this%w3_fs => function_space_collection%get_fs(mesh_id, element_order, W3)
     this%wth_fs => function_space_collection%get_fs(mesh_id, element_order, Wtheta)
 
-    this%u  = field_type( vector_space = this%w2_fs )
+    call this%u%initialise( vector_space = this%w2_fs )
     u_proxy = this%u%get_proxy()
     ndf_w2  = u_proxy%vspace%get_ndf( )
     dim_w2  = u_proxy%vspace%get_dim_space( )
     undf_w2 = u_proxy%vspace%get_undf()
     allocate( this%answer_du(undf_w2) )
 
-    this%theta  = field_type( vector_space = this%wth_fs )
+    call this%theta%initialise( vector_space = this%wth_fs )
     theta_proxy = this%theta%get_proxy()
     ndf_wth        = theta_proxy%vspace%get_ndf( )
     dim_wth        = theta_proxy%vspace%get_dim_space( )
     undf_wth       = theta_proxy%vspace%get_undf()
     allocate( this%answer_dtheta(undf_wth) )
 
-    this%exner  = field_type( vector_space = this%w3_fs )
+    call this%exner%initialise( vector_space = this%w3_fs )
     exner_proxy = this%exner%get_proxy()
     ndf_w3    = exner_proxy%vspace%get_ndf( )
     dim_w3    = exner_proxy%vspace%get_dim_space( )
 
-    this%w2_rmultiplicity  = field_type( vector_space = this%w2_fs )
+    call this%w2_rmultiplicity%initialise( vector_space = this%w2_fs )
     w2_rmultiplicity_proxy = this%w2_rmultiplicity%get_proxy()
 
-    this%du  = field_type( vector_space = this%w2_fs )
-    this%dtheta  = field_type( vector_space = this%wth_fs )
+    call this%du%initialise( vector_space = this%w2_fs )
+    call this%dtheta%initialise( vector_space = this%wth_fs )
 
-    this%chi1 = field_type( vector_space = this%w3_fs )
-    this%chi2 = field_type( vector_space = this%w3_fs )
-    this%chi3 = field_type( vector_space = this%w3_fs )
+    call this%chi1%initialise( vector_space = this%w3_fs )
+    call this%chi2%initialise( vector_space = this%w3_fs )
+    call this%chi3%initialise( vector_space = this%w3_fs )
 
   end subroutine setUp
 

@@ -57,8 +57,8 @@ contains
 
     rho_n_fs => rho_n%get_function_space()
 
-    mass_divergence = field_type( vector_space = rho_n_fs )
-    divergence_term = field_type( vector_space = rho_n_fs )
+    call mass_divergence%initialise( vector_space = rho_n_fs )
+    call divergence_term%initialise( vector_space = rho_n_fs )
 
     call invoke_fv_divergence(mass_divergence,mass_flux,mass_flux,     &
                                                     cell_orientation, direction)

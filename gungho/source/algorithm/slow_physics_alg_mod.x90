@@ -167,7 +167,7 @@ contains
     exner_in_wth => derived_fields%get_field('exner_in_wth')
 
     if (heldsuarez_thermo_placement < 0)then
-      dtheta_hs = field_type( vector_space = theta%get_function_space() )
+      call dtheta_hs%initialise( vector_space = theta%get_function_space() )
       call invoke( setval_c(dtheta_hs, 0.0_r_def) )
       call log_event( &
          'slow_physics: Running Held-Suarez theta forcing', &
@@ -177,7 +177,7 @@ contains
     end if
 
     if (heldsuarez_wind_placement < 0)then
-      du_hs = field_type( vector_space = u_physics%get_function_space() )
+      call du_hs%initialise( vector_space = u_physics%get_function_space() )
       call invoke( setval_c(du_hs, 0.0_r_def) )
       call log_event( &
          'slow_physics: Running Held-Suarez wind forcing', &
@@ -197,7 +197,7 @@ contains
         call clone_bundle(mr, dmr_mphys, nummr)
         call set_bundle_scalar(0.0_r_def, dmr_mphys, nummr)
 
-        dtheta_mphys = field_type( vector_space = theta%get_function_space() )
+        call dtheta_mphys%initialise( vector_space = theta%get_function_space() )
         call invoke( setval_c(dtheta_mphys, 0.0_r_def) )
 
         call mphys_alg_step( mr_n, theta,  exner, height_w3, height_wth,   &
@@ -230,16 +230,16 @@ contains
       ! Use a temporary treatment for multi-dimensional fields using
       ! higher-order fields
       vector_space=>function_space_collection%get_fs(twod_mesh_id,alb_order,W3)
-      tile_sw_direct_albedo  = field_type(vector_space)
-      tile_sw_diffuse_albedo = field_type(vector_space)
-      tile_lw_albedo         = field_type(vector_space)
+      call tile_sw_direct_albedo%initialise(vector_space)
+      call tile_sw_diffuse_albedo%initialise(vector_space)
+      call tile_lw_albedo%initialise(vector_space)
       if (.not.l_planet_grey_surface) then
         call rad_tile_alg_step(tile_sw_direct_albedo, tile_sw_diffuse_albedo,  &
                                tile_lw_albedo, jules_ancils, jules_prognostics,&
                                derived_fields, twod_fields, height_w3)
       end if
 
-      dtheta_rad = field_type( vector_space = theta%get_function_space() )
+      call dtheta_rad%initialise( vector_space = theta%get_function_space() )
       call radiation_alg_step(dtheta_rad, theta, exner, mr_n,                &
                               jules_ancils, jules_prognostics,               &
                               derived_fields, cloud_fields, twod_fields,     &

@@ -170,8 +170,8 @@ contains
         ! This needs some temporary fields for computing undf in the PSy layer
         w3_fs => function_space_collection%get_fs( mesh_id, element_order, W3 )
         wt_fs => function_space_collection%get_fs( mesh_id, element_order, Wtheta )                
-        w3_field = field_type( vector_space = w3_fs )
-        wt_field = field_type( vector_space = wt_fs )
+        call w3_field%initialise( vector_space = w3_fs )
+        call wt_field%initialise( vector_space = wt_fs )
 
         ! Get topology information from the reference element
         mesh              => wt_field%get_mesh()
@@ -235,8 +235,8 @@ contains
                    adv_coeffs(flux_stencil_size, nfaces_h) )
         do direction = 1, nfaces_h
           do polynomial = 1,flux_stencil_size
-              flux_coeffs(polynomial, direction) = field_type( vector_space = w3_fs )
-              adv_coeffs(polynomial, direction)  = field_type( vector_space = wt_fs )
+              call flux_coeffs(polynomial,direction)%initialise( vector_space = w3_fs )
+              call adv_coeffs(polynomial,direction)%initialise( vector_space = wt_fs )
           end do
         end do
         if ( oned_reconstruction ) then
@@ -253,7 +253,7 @@ contains
         allocate( vert_flux_coeffs(fv_flux_order+1, nfaces_v) )
         do direction = 1, nfaces_v
           do polynomial = 1,fv_flux_order+1
-            vert_flux_coeffs(polynomial, direction) = field_type( vector_space = w3_fs )
+            call vert_flux_coeffs(polynomial,direction)%initialise( vector_space = w3_fs )
           end do
         end do
         ! Quadrature rule on vertical faces with 1 point in both horizontal and
@@ -280,7 +280,7 @@ contains
 
         md_wt => get_mass_matrix_diagonal(wt_id)
         w1_fs => function_space_collection%get_fs( mesh_id, element_order, W1 )
-        advective_av = field_type( vector_space =  w1_fs )
+        call advective_av%initialise( vector_space =  w1_fs )
         if ( oned_reconstruction ) then
           call invoke_poly1d_advective_coeffs( adv_coeffs, md_wt, chi, qr, qre,  &
                                                fv_advective_order,               &
@@ -296,15 +296,15 @@ contains
         allocate( vert_adv_coeffs(fv_advective_order+2, nfaces_v) )
         do direction = 1, nfaces_v
           do polynomial = 1, fv_advective_order+2
-            vert_adv_coeffs(polynomial, direction) = field_type( vector_space = wt_fs )
+            call vert_adv_coeffs(polynomial,direction)%initialise( vector_space = wt_fs )
           end do
         end do
         call invoke_poly1d_vert_adv_coeffs( vert_adv_coeffs, md_wt, chi, & 
                                             fv_advective_order, nfaces_v )
         if ( consistent_metric ) then
-          advective_av_chi3 = field_type(vector_space = w1_fs )
-          theta_metrics     = field_type(vector_space = wt_fs )
-          chi3_at_wt        = field_type(vector_space = wt_fs )
+          call advective_av_chi3%initialise(vector_space = w1_fs )
+          call theta_metrics%initialise(vector_space = wt_fs )
+          call chi3_at_wt%initialise(vector_space = wt_fs )
           call invoke( setval_c(wt_field,   0.0_r_def),       &
                        setval_c(chi3_at_wt, 0.0_r_def),       &
                        multiplicity_kernel_type(wt_field),    &
@@ -415,20 +415,20 @@ contains
   theta_fs => theta%get_function_space()
 
   ! Advective time integrated mass flux = rho*u
-  mass_flux = field_type( vector_space = u_fs  )
+  call mass_flux%initialise( vector_space = u_fs  )
 
   if (scheme == scheme_cosmic_3D) then
-    dep_pts_x       = field_type( vector_space = u_fs )
-    dep_pts_y       = field_type( vector_space = u_fs )
-    dep_pts_z       = field_type( vector_space = u_fs )
-    wind_divergence = field_type( vector_space = rho_fs )
+    call dep_pts_x%initialise( vector_space = u_fs )
+    call dep_pts_y%initialise( vector_space = u_fs )
+    call dep_pts_z%initialise( vector_space = u_fs )
+    call wind_divergence%initialise( vector_space = rho_fs )
 
     detj_at_w2 => get_detj_at_w2()
     cell_orientation => get_cell_orientation()
   end if
 
-  r_rho     = field_type( vector_space = rho_fs )
-  r_theta   = field_type( vector_space = theta_fs)
+  call r_rho%initialise( vector_space = rho_fs )
+  call r_theta%initialise( vector_space = theta_fs)
 
   qr = quadrature_xyoz_type(nqp_exact, quadrature_rule)
 
@@ -436,8 +436,8 @@ contains
   ! Runge-Kutta algorithm
   allocate ( rrho_prediction(nstage_adv), rtheta_prediction(nstage_adv) )
   do stage = 1,nstage_adv
-    rrho_prediction(stage)   = field_type( vector_space = rho_fs )
-    rtheta_prediction(stage) = field_type( vector_space = theta_fs )
+    call rrho_prediction(stage)%initialise( vector_space = rho_fs )
+    call rtheta_prediction(stage)%initialise( vector_space = theta_fs )
   end do
 
   ! Compute advection terms
@@ -445,9 +445,9 @@ contains
   !rho_np1 = rho_n - dt* mm_w3_inv * div * F
   call log_event( "Computing advective mass flux...", LOG_LEVEL_INFO)
   ! advected density field
-  rho_adv = field_type( vector_space = rho_fs )
+  call rho_adv%initialise( vector_space = rho_fs )
   ! mass flux at each stage of rk scheme
-  mf      = field_type( vector_space = u_fs ) 
+  call mf%initialise( vector_space = u_fs )
   mm_w3_inv => get_mass_matrix(w3inv_id)
   div       => get_div()
 
@@ -479,9 +479,9 @@ contains
   call log_event( "Computing advective potential temperature increment...", &
                    LOG_LEVEL_INFO)
   ! Advected theta field
-  theta_adv    = field_type( vector_space = theta_fs )
+  call theta_adv%initialise( vector_space = theta_fs )
   ! time integrated update to theta state
-  u_grad_theta = field_type( vector_space = theta_fs )
+  call u_grad_theta%initialise( vector_space = theta_fs )
 
   ! Runge-Kutta algorithm  
   call invoke( setval_c(u_grad_theta, 0.0_r_def), &
@@ -597,10 +597,10 @@ contains
 
     theta_fs => mr(1)%get_function_space()
 
-    mr_adv = field_type( vector_space = theta_fs )
-    mr_latest = field_type( vector_space = theta_fs )
+    call mr_adv%initialise( vector_space = theta_fs )
+    call mr_latest%initialise( vector_space = theta_fs )
     do stage = 1,nstage_adv
-      mr_prediction(stage) = field_type( vector_space = theta_fs )
+      call mr_prediction(stage)%initialise( vector_space = theta_fs )
     end do
 
     ! Runge-Kutta algorithm
@@ -675,7 +675,7 @@ contains
       mmd_w2 => get_mass_matrix_diagonal(w2_id)
       chi    => get_coordinates()
       u_fs   => wind%get_function_space()
-      rhs_f = field_type( vector_space = u_fs )
+      call rhs_f%initialise( vector_space = u_fs )
       call invoke( name = "transport_operators_fem",                    &
                    setval_c(rhs_f, 0.0_r_def),                          &
                    flux_rhs_kernel_type(rhs_f, wind, density, chi, qr), &
@@ -743,7 +743,7 @@ contains
       end if
       ! Compute horizontal advective update
       call invoke( poly_advective_kernel_type(rtheta, wind, advective_av) )
-      consistent_wind = wind 
+      call wind%copy_field(consistent_wind)
       if ( consistent_metric ) then
         chi => get_coordinates()
         call invoke( poly_advective_kernel_type(theta_metrics, wind, advective_av_chi3), &

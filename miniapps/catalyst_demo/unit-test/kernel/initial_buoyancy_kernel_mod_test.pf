@@ -112,13 +112,13 @@ contains
                                                     element_order, &
                                                     Wtheta )
 
-    this%buoyancy = field_type( vector_space = this%wt_fs )
+    call this%buoyancy%initialise( vector_space = this%wt_fs )
     buoyancy_p    = this%buoyancy%get_proxy()
 
     ndf_buoyancy  = buoyancy_p%vspace%get_ndf( )
 
     do i = 1,3
-      this%chi(i) = field_type( vector_space = this%w0_fs )
+      call this%chi(i)%initialise( vector_space = this%w0_fs )
       chi_p(i)    = this%chi(i)%get_proxy()
     end do
 

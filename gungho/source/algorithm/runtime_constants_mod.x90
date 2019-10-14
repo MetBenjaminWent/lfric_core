@@ -255,7 +255,7 @@ contains
     ! make the multigrid chi field.
     allocate(chi_mg(3,multigrid_levels))
     do i = 1, 3
-       chi_mg(i,1) = chi(i)
+       call chi(i)%copy_field(chi_mg(i,1))
     end do
      ! Compute coordinates
     if ( coordinate_order == 0 ) then
@@ -277,7 +277,7 @@ contains
           w3_fs=>multigrid_function_space_chain%get_next()
           mg_mesh_id=w3_fs%get_mesh_id()
           do i = 1, 3
-             chi_mg(i,level) = field_type(vector_space = &
+             call chi_mg(i,level)%initialise(vector_space = &
                   function_space_collection%get_fs( &
                   mg_mesh_id, coordinate_order, chi_space) )
           end do
@@ -306,7 +306,7 @@ contains
     qr = quadrature_xyoz_type(nqp_exact, quadrature_rule)
     !=================== Create geopotential field ============================!
 
-    geopotential = field_type( vector_space = w3_fs )
+    call geopotential%initialise( vector_space = w3_fs )
     if ( rehabilitate ) then
       call invoke( compute_geopotential_kernel_type( geopotential, chi ) )
     else
@@ -319,17 +319,17 @@ contains
         scheme == scheme_horz_cosmic   .or. &
         scheme == scheme_cosmic_3D   ) then
 
-      temp_w2_field = field_type( vector_space = w2_fs )
-      cell_orientation = field_type( vector_space = w3_fs )
+      call temp_w2_field%initialise( vector_space = w2_fs )
+      call cell_orientation%initialise( vector_space = w3_fs )
       call invoke( setval_c(temp_w2_field,    0.0_r_def), &
                    setval_c(cell_orientation, 0.0_r_def) )
       call invoke_mpi_calc_cell_orientation( temp_w2_field, cell_orientation )
 
       if ( present(shifted_mesh_id) ) then
 
-        temp_w2_field_shifted = field_type( vector_space =                      &
+        call temp_w2_field_shifted%initialise( vector_space =                      &
           function_space_collection%get_fs( shifted_mesh_id, element_order, W2 ) )
-        cell_orientation_shifted = field_type( vector_space =                   &
+        call cell_orientation_shifted%initialise( vector_space =                   &
           function_space_collection%get_fs( shifted_mesh_id, element_order, W3 ) )
         call invoke( setval_c(temp_w2_field_shifted,    0.0_r_def),             &
                      setval_c(cell_orientation_shifted, 0.0_r_def) )
@@ -391,12 +391,12 @@ contains
 
     !================= Create mass matrix diagonal fields =====================!
 
-    mm0_diag       = field_type( vector_space = w0_fs )
-    mm1_diag       = field_type( vector_space = w1_fs )
-    mm2_diag       = field_type( vector_space = w2_fs )
-    mm3_diag       = field_type( vector_space = w3_fs )
-    mmtheta_diag   = field_type( vector_space = wtheta_fs )
-    eye            = field_type( vector_space = w3_fs )
+    call mm0_diag%initialise( vector_space = w0_fs )
+    call mm1_diag%initialise( vector_space = w1_fs )
+    call mm2_diag%initialise( vector_space = w2_fs )
+    call mm3_diag%initialise( vector_space = w3_fs )
+    call mmtheta_diag%initialise( vector_space = wtheta_fs )
+    call eye%initialise( vector_space = w3_fs )
     ! Initialise fields
     call invoke( name = "Create mass matrix diagonal fields",      &
                  setval_c(mm0_diag,     0.0_r_def),                &
@@ -416,25 +416,25 @@ contains
 
     !================= Create inverse lumped mass matrices =====================!
 
-    ones           = field_type( vector_space = w1_fs )
-    m1_lumped_inv  = field_type( vector_space = w1_fs )
+    call ones%initialise( vector_space = w1_fs )
+    call m1_lumped_inv%initialise( vector_space = w1_fs )
     call invoke( name = "Create m1_lumped_inv",                         &
                  setval_c(ones,          1.0_r_def),                    &
                  setval_c(m1_lumped_inv, 0.0_r_def),                    &
                  matrix_vector_kernel_type(m1_lumped_inv, ones, mm_w1), &
                  inc_X_powint_n(m1_lumped_inv, i_minus_one) )
 
-    ones           = field_type( vector_space = w0_fs )
-    m0_lumped_inv  = field_type( vector_space = w0_fs )
+    call ones%initialise( vector_space = w0_fs )
+    call m0_lumped_inv%initialise( vector_space = w0_fs )
     call invoke( name = "Create m0_lumped_inv",                         &
                  setval_c(ones,          1.0_r_def),                    &
                  setval_c(m0_lumped_inv, 0.0_r_def),                    &
                  matrix_vector_kernel_type(m0_lumped_inv, ones, mm_w0), &
                  inc_X_powint_n(m0_lumped_inv, i_minus_one) )
 
-    ones           = field_type( vector_space = wtheta_fs )
+    call ones%initialise( vector_space = wtheta_fs )
     allocate(mt_lumped_inv(multigrid_levels))
-    mt_lumped_inv(level)  = field_type( vector_space = wtheta_fs )
+    call mt_lumped_inv(level)%initialise( vector_space = wtheta_fs )
     call invoke( name = "Create mt_lumped_inv",                                           &
                  setval_c(ones,          1.0_r_def),                                      &
                  setval_c(mt_lumped_inv(level), 0.0_r_def),                               &
@@ -446,25 +446,25 @@ contains
     ! the surface as represented by a sphere.  With the current
     ! representation of chi, this will result in the lowest
     ! levels being -ve. This should be reviewed with ticket #562
-    height_w3  = field_type( vector_space = w3_k0_fs )
-    height_wth = field_type( vector_space = wth_k0_fs )
+    call height_w3%initialise( vector_space = w3_k0_fs )
+    call height_wth%initialise( vector_space = wth_k0_fs )
     call invoke( get_height_kernel_type(height_w3, chi) )
     call invoke( get_height_kernel_type(height_wth, chi) )
 
     !=== Create multiplicity for horizontally continuous fields ===!
     ! NB most of the time we want 1/multiplicity
 
-    nodal_multiplicity_w1  = field_type( vector_space = w1_fs )
-    nodal_multiplicity_w2  = field_type( vector_space = w2_fs )
+    call nodal_multiplicity_w1%initialise( vector_space = w1_fs )
+    call nodal_multiplicity_w2%initialise( vector_space = w2_fs )
     if ( present(shifted_mesh_id) ) then
-      nodal_multiplicity_w2_shifted = field_type( vector_space = &
+      call nodal_multiplicity_w2_shifted%initialise( vector_space = &
                             function_space_collection%get_fs( shifted_mesh_id, element_order, W2 ) )
       call invoke( name = "create_shifted_multiplicity",             &
                    multiplicity_kernel_type(nodal_multiplicity_w2_shifted) )
     end if
 
-    nodal_multiplicity_w2h = field_type( vector_space = w2h_fs )
-    nodal_multiplicity_w0  = field_type( vector_space = w0_fs )
+    call nodal_multiplicity_w2h%initialise( vector_space = w2h_fs )
+    call nodal_multiplicity_w0%initialise( vector_space = w0_fs )
     call invoke( name = "Create multiplicity",                     &
                  setval_c(nodal_multiplicity_w1, 0.0_r_def),       &
                  multiplicity_kernel_type(nodal_multiplicity_w1),  &
@@ -476,29 +476,29 @@ contains
                  multiplicity_kernel_type(nodal_multiplicity_w0) )
 
     ! Calculate the reciprocals
-    nodal_rmultiplicity_w1  = field_type( vector_space = w1_fs )
+    call nodal_rmultiplicity_w1%initialise( vector_space = w1_fs )
     allocate(nodal_rmultiplicity_w2(multigrid_levels))
-    nodal_rmultiplicity_w2(level)  = field_type( vector_space = w2_fs )
-    nodal_rmultiplicity_w2h = field_type( vector_space = w2h_fs )
-    nodal_rmultiplicity_w0  = field_type( vector_space = w0_fs )
+    call nodal_rmultiplicity_w2(level)%initialise( vector_space = w2_fs )
+    call nodal_rmultiplicity_w2h%initialise( vector_space = w2h_fs )
+    call nodal_rmultiplicity_w0%initialise( vector_space = w0_fs )
 
-    ones = field_type( vector_space = w1_fs )
+    call ones%initialise( vector_space = w1_fs )
     call invoke( setval_c(ones, 1.0_r_def), &
                  X_divideby_Y(nodal_rmultiplicity_w1, ones, nodal_multiplicity_w1) )
 
-    ones = field_type( vector_space = w2_fs )
+    call ones%initialise( vector_space = w2_fs )
     call invoke( setval_c(ones, 1.0_r_def), &
                  X_divideby_Y(nodal_rmultiplicity_w2(level), ones, nodal_multiplicity_w2) )
 
-    ones = field_type( vector_space = w2h_fs )
+    call ones%initialise( vector_space = w2h_fs )
     call invoke( setval_c( ones, 1.0_r_def ), &
                  X_divideby_Y(nodal_rmultiplicity_w2h, ones, nodal_multiplicity_w2h) )
 
-    ones = field_type( vector_space = w0_fs )
+    call ones%initialise( vector_space = w0_fs )
     call invoke( setval_c(ones, 1.0_r_def), &
                  X_divideby_Y(nodal_rmultiplicity_w0, ones, nodal_multiplicity_w0) )
 
-    w2_normalisation(level) = field_type( vector_space = w2_fs )
+    call w2_normalisation(level)%initialise( vector_space = w2_fs )
     call invoke( setval_c(w2_normalisation(level), 0.0_r_def),                     &
                  w2_normalisation_kernel_type(w2_normalisation(level), chi),       &
                  inc_X_divideby_Y(w2_normalisation(level), nodal_multiplicity_w2), &
@@ -511,8 +511,8 @@ contains
     end if
 
     ! Compute latitude and longitude maps
-    latitude_w3 = field_type( vector_space = w3_k0_2d_fs )
-    longitude_w3 = field_type( vector_space = w3_k0_2d_fs )
+    call latitude_w3%initialise( vector_space = w3_k0_2d_fs )
+    call longitude_w3%initialise( vector_space = w3_k0_2d_fs )
     if ( geometry == geometry_spherical ) then
       call invoke( compute_latlon_kernel_type( latitude_w3, longitude_w3, chi) )
     else
@@ -523,7 +523,7 @@ contains
 
     !================ Create detj values at W2 dof locations ==================!
 
-    detj_at_w2 = field_type( vector_space = w2_fs )
+    call detj_at_w2%initialise( vector_space = w2_fs )
     call invoke(setval_c(detj_at_w2,0.0_r_def),               &
                 calc_detj_at_w2_kernel_type(detj_at_w2,chi),  &
                 inc_X_divideby_Y(detj_at_w2, nodal_multiplicity_w2) )
@@ -532,7 +532,7 @@ contains
     !================ Create detj values at vertically shifted W2 dofs ========!
 
     if ( present(shifted_mesh_id) ) then
-      detj_at_w2_shifted = field_type( vector_space = &
+      call detj_at_w2_shifted%initialise( vector_space = &
                             function_space_collection%get_fs( shifted_mesh_id, &
                                                           element_order, W2 ) )
       call invoke(setval_c(detj_at_w2_shifted,0.0_r_def),               &
@@ -542,7 +542,7 @@ contains
 
     !================ Create dA values at W2 dof locations ==================!
 
-    dA_at_w2 = field_type( vector_space = w2_fs )
+    call dA_at_w2%initialise( vector_space = w2_fs )
     call invoke( setval_c(dA_at_w2, 0.0_r_def),&
                  calc_dA_at_w2_kernel_type(dA_at_w2, chi) )
 
@@ -550,9 +550,9 @@ contains
 
     ! Need to define field properties outside IF test as the fields are passed
     ! to the BL scheme, even if Smagorinsky is false
-    dx_at_w2 = field_type( vector_space = w2_fs )
-    delta_at_wtheta = field_type( vector_space = wtheta_fs )
-    max_diff_wtheta = field_type( vector_space = wtheta_fs )
+    call dx_at_w2%initialise( vector_space = w2_fs )
+    call delta_at_wtheta%initialise( vector_space = wtheta_fs )
+    call max_diff_wtheta%initialise( vector_space = wtheta_fs )
 
     if (smagorinsky) then
       call invoke( X_divideby_Y(dx_at_w2, detj_at_w2, dA_at_w2),&
@@ -562,7 +562,7 @@ contains
       ! based on UMDP 28 equation 32: max_diff = dx^2/(8*dt)
       const = 0.125_r_def/dt
       iconst = 2_i_def
-      max_diff_wtheta = delta_at_wtheta
+      call delta_at_wtheta%copy_field(max_diff_wtheta)
       call invoke( inc_X_powint_n( max_diff_wtheta, iconst ),  & 
                    inc_a_times_X( const, max_diff_wtheta )     &
                  )
@@ -602,9 +602,9 @@ contains
          if (dlayer_on) call invoke( compute_dl_matrix_kernel_type( &
               mm_dl(level), chi_mg(:,level), qr) )
          
-         ones = field_type( vector_space = wtheta_fs )
+         call ones%initialise( vector_space = wtheta_fs )
          
-         mt_lumped_inv(level)  = field_type( vector_space = wtheta_fs )
+         call mt_lumped_inv(level)%initialise( vector_space = wtheta_fs )
          ! Create mt_lumped_inv    
          call invoke(  &
               setval_c(ones,          1.0_r_def),                        &
@@ -612,8 +612,8 @@ contains
               matrix_vector_kernel_type(mt_lumped_inv(level), ones, mm_wtheta(level)), &
               inc_X_powint_n(mt_lumped_inv(level), i_minus_one) )
          
-         w2_normalisation(level) = field_type( vector_space = w2_fs )
-         nodal_multiplicity_w2 = field_type( vector_space = w2_fs )
+         call w2_normalisation(level)%initialise( vector_space = w2_fs )
+         call nodal_multiplicity_w2%initialise( vector_space = w2_fs )
          call invoke( setval_c(w2_normalisation(level), 0.0_r_def),                 &
               setval_c(nodal_multiplicity_w2, 2.0_r_def),                   &
               w2_normalisation_kernel_type(w2_normalisation(level), chi_mg(:,level) ),       &

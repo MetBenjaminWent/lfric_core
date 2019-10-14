@@ -52,7 +52,7 @@ contains
 
     p_fs => function_space_collection%get_fs ( mesh_id, element_order,   &
                                                state(igw_p)%which_function_space() )
-    lhs_p =  field_type( vector_space = p_fs )
+    call lhs_p%initialise( vector_space = p_fs )
 
     b_fs => function_space_collection%get_fs ( mesh_id, element_order,   &
                                                state(igw_b)%which_function_space() )

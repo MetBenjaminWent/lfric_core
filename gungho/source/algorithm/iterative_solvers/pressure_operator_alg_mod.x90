@@ -100,8 +100,8 @@ contains
     wp => state%vector(igh_p)%get_function_space()
     
     ! Temporaries required in operator application
-    self%grad_p     = field_type(vector_space = wu)
-    self%div_grad_p = field_type(vector_space = wp)
+    call self%grad_p%initialise(vector_space = wu, name='grad_p')
+    call self%div_grad_p%initialise(vector_space = wp, name='div_grad_p')
 
     call log_event( 'done', LOG_LEVEL_INFO )
 
@@ -119,8 +119,9 @@ contains
     class(pressure_operator_type), intent(out) :: dest
 
     ! Deep copy of the contents of the pressure_operator_type
-    dest%grad_p = source%grad_p
-    dest%div_grad_p = source%div_grad_p
+
+    call source%grad_p%copy_field(dest%grad_p)
+    call source%div_grad_p%copy_field(dest%div_grad_p)
 
   end subroutine pressure_operator_assign
 

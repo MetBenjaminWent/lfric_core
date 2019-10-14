@@ -141,9 +141,9 @@ contains
            profile == profile_dcmip301_streamfunction ) then
         call log_event( "Gungho: Initialising winds from stream function", LOG_LEVEL_INFO )
         mesh_id = u%get_mesh_id()
-        psi = field_type( vector_space =                                           &
+        call psi%initialise( vector_space =                                           &
                     function_space_collection%get_fs(mesh_id, element_order, W1) )
-        r_psi = field_type( vector_space =                                         &
+        call r_psi%initialise( vector_space =                                         &
                     function_space_collection%get_fs(mesh_id, element_order, W1) )
         call invoke( setval_c(psi, 0.0_r_def),   &
                      setval_c(r_psi, 0.0_r_def), &
@@ -151,7 +151,7 @@ contains
         call mass_matrix_solver_alg(psi, r_psi)
         call invoke( strong_curl_kernel_type(u, psi) )
       else
-        r_u = field_type( vector_space =  u%get_function_space() )
+        call r_u%initialise( vector_space =  u%get_function_space() )
         call invoke( name = "Initialise U and Rho",   &
                      setval_c( u,   0.0_r_def ),      &
                      setval_c( r_u, 0.0_r_def ),      &

@@ -116,7 +116,7 @@ contains
     real(r_def) :: sum, min, max
 
     ! Make a field with a function space
-    f1 = field_type( vector_space = this%w2_fs, name='f1' )
+    call f1%initialise( vector_space = this%w2_fs, name='f1' )
 
     ! Get  and check the the name of the field
     name = f1%get_name()
@@ -141,7 +141,7 @@ contains
     end do
 
     ! Make a second field, identical to the first
-    f2 = field_type( vector_space = this%w2_fs )
+    call f2%initialise( vector_space = this%w2_fs )
     f2_p = f2%get_proxy()
     do i=1,f2_p%vspace%get_undf()
       f2_p%data(i)=real(i)
@@ -166,8 +166,8 @@ contains
     @assertEqual( 90.0  , max, 1.0e-2_r_def)
 
 
-    ! Assignment operator tests follow...
-    f2 = f1
+    ! Copy field operator tests follow...
+    call f1%copy_field(f2)
     f2_p = f2%get_proxy()
 
     ! Check that contained vector_space pointers point to same address
@@ -232,7 +232,7 @@ contains
     type(field_pointer_type)  :: field_pointer
 
     ! Create a field and a pointer to it
-    f1 = field_type( vector_space = this%w2_fs, name='f1' )
+    call f1%initialise( vector_space = this%w2_fs, name='f1' )
     f1_ptr => f1
 
     ! Make a field pointer object based on the above field

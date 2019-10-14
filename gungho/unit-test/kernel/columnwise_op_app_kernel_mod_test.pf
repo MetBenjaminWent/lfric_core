@@ -85,8 +85,8 @@ contains
                                                     0, &
                                                     Wtheta )
 
-    this%lhs = field_type( vector_space = this%wtheta_fs )
-    this%rhs = field_type( vector_space = this%wtheta_fs )
+    call this%lhs%initialise( vector_space = this%wtheta_fs )
+    call this%rhs%initialise( vector_space = this%wtheta_fs )
 
     this%columnwise_mm = columnwise_operator_type( this%wtheta_fs, this%wtheta_fs )
 

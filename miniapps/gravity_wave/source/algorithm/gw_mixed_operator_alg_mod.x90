@@ -62,8 +62,17 @@ module gw_mixed_operator_alg_mod
      procedure, public  :: apply => apply_gw_mixed_operator
      !> Applies the operator as LMA matrix matrix-vector kernels in all blocks
      procedure, private :: apply_gw_mixed_operator
+     !> performs a deep copy (for overriding the "=" operator)
+     !> @param[out] dest   gw_mixed_operator_type lhs
+     !> @param[in]  source gw_mixed_operator_type rhs
+     procedure, public  :: gw_mixed_operator_assign
+
      !> Destroys the object
      final              :: destroy_gw_mixed_operator
+
+     !> Override default assignment for gw_mixed_operator_type pairs.
+     generic            :: assignment(=) => gw_mixed_operator_assign
+
   end type gw_mixed_operator_type
 
   interface gw_mixed_operator_type
@@ -104,7 +113,7 @@ contains
 
     p_fs => function_space_collection%get_fs ( mesh_id, element_order,   &
                                state%vector(igw_p)%which_function_space() )
-    self%lhs_p =  field_type( vector_space = p_fs )
+    call self % lhs_p % initialise( vector_space = p_fs )
 
     b_fs => function_space_collection%get_fs ( mesh_id, element_order,   &
                                state%vector(igw_b)%which_function_space() )
@@ -115,6 +124,23 @@ contains
     call invoke( compute_q_operator_type(self%Q, qr) )
     
   end function gw_mixed_operator_constructor
+
+  !> Performs a deep copy between gw_mixed_operator_type pairs.
+  !> (for overriding the "=" operator)
+  !>
+  !> @param[out] dest   gw_mixed_operator_type lhs
+  !> @param[in]  source gw_mixed_operator_type rhs
+  subroutine gw_mixed_operator_assign(dest, source)
+
+    implicit none
+    class(gw_mixed_operator_type), intent(in)  :: source
+    class(gw_mixed_operator_type), intent(out) :: dest
+
+    ! Deep copy of the contents of the pressure_operator_type
+    dest%Q = source%Q
+    call source%lhs_p%copy_field(dest%lhs_p)
+
+  end subroutine gw_mixed_operator_assign
 
   !> @brief Applies the GW mixed operator to the vector, \f$ y = M x \f$
   !> 

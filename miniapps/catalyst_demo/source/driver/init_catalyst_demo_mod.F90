@@ -115,11 +115,11 @@ module init_catalyst_demo_mod
         call log_event( 'catalyst_demo: Invalid buoyancy space', LOG_LEVEL_ERROR )
     end select
 
-    wind = field_type( vector_space = &
+    call wind%initialise( vector_space = &
                        function_space_collection%get_fs(mesh_id, element_order, W2))
-    buoyancy = field_type( vector_space = &
+    call buoyancy%initialise( vector_space = &
                function_space_collection%get_fs(mesh_id, element_order, buoyancy_space) )
-    pressure = field_type( vector_space = &
+    call pressure%initialise( vector_space = &
                        function_space_collection%get_fs(mesh_id, element_order, W3) )
 
     ! Set I/O behaviours for diagnostic output

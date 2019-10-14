@@ -113,16 +113,16 @@ contains
     this%w3_fs => function_space_collection%get_fs( this%mesh_id, element_order, W3 )
     this%wt_fs => function_space_collection%get_fs( this%mesh_id, element_order, Wtheta )
 
-    this%chi1 = field_type( vector_space = this%w0_fs )
-    this%chi2 = field_type( vector_space = this%w0_fs )
-    this%chi3 = field_type( vector_space = this%w0_fs )
+    call this%chi1%initialise( vector_space = this%w0_fs )
+    call this%chi2%initialise( vector_space = this%w0_fs )
+    call this%chi3%initialise( vector_space = this%w0_fs )
     chi_p(1)    = this%chi1%get_proxy()
     chi_p(2)    = this%chi2%get_proxy()
     chi_p(3)    = this%chi3%get_proxy()
 
-    this%rho   =  field_type( vector_space = this%w3_fs )
-    this%exner =  field_type( vector_space = this%w3_fs )
-    this%theta =  field_type( vector_space = this%wt_fs )
+    call this%rho%initialise( vector_space = this%w3_fs )
+    call this%exner%initialise( vector_space = this%w3_fs )
+    call this%theta%initialise( vector_space = this%wt_fs )
 
     diff_dim = chi_p(1)%vspace%get_dim_space_diff( )   
     ndf_chi  = chi_p(1)%vspace%get_ndf()

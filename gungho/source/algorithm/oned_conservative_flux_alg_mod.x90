@@ -74,12 +74,12 @@ contains
 
     rho_fs => rho_x%get_function_space()
 
-    a0 = field_type( vector_space = rho_fs )
-    a1 = field_type( vector_space = rho_fs )
-    a2 = field_type( vector_space = rho_fs )
+    call a0%initialise( vector_space = rho_fs )
+    call a1%initialise( vector_space = rho_fs )
+    call a2%initialise( vector_space = rho_fs )
 
-    rho_x_halos_corrected = field_type( vector_space = rho_fs )
-    rho_y_halos_corrected = field_type( vector_space = rho_fs )
+    call rho_x_halos_corrected%initialise( vector_space = rho_fs )
+    call rho_y_halos_corrected%initialise( vector_space = rho_fs )
 
     call invoke( name = "Mass flux and PPM initialisation", &
                  setval_c( mass_flux, 0.0_r_def ),          &

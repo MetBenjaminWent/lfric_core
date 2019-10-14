@@ -61,19 +61,19 @@ contains
 
     if ( weak_form_u ) then
       ! Advect u^* = M^-1 * <v,{u + beta*dt*[coriolis + pgf + grad(phi+K)]}> 
-      advected_u = field_type( vector_space = u%get_function_space()  )     
+      call advected_u%initialise( vector_space = u%get_function_space()  )
       call invoke( setval_c(advected_u, 0.0_r_def) )
       call mass_matrix_solver_alg(advected_u, u)
     else
       ! Advect u
-      advected_u = u
+      call u%copy_field(advected_u)
     end if
 
     if ( vorticity_in_w1 ) then 
       ! Compute vorticity in W1 as the weak curl of the W2 winds
       m1_lumped_inv => get_inverse_lumped_mass_matrix(w1_id)
       curl          => get_curl()
-      r_xi = field_type( vector_space = xi%get_function_space() )
+      call r_xi%initialise( vector_space = xi%get_function_space() )
       call invoke ( setval_c(r_xi, 0.0_r_def),                                   &
                     transpose_matrix_vector_kernel_type(r_xi, advected_u, curl), &
                     enforce_bc_kernel_type(r_xi),                                &
@@ -84,8 +84,8 @@ contains
       qr = get_qr()
       mesh_id = u%get_mesh_id()
       w1_fs => function_space_collection%get_fs( mesh_id, element_order, W1 )
-      u_in_w1 = field_type( vector_space = w1_fs )
-      r_u     = field_type( vector_space = w1_fs )
+      call u_in_w1%initialise( vector_space = w1_fs )
+      call r_u%initialise( vector_space = w1_fs )
       call invoke( setval_c(r_u, 0.0_r_def),                                   &
                    setval_c(u_in_w1, 0.0_r_def),                               &
                    w2_to_w1_projection_kernel_type(r_u, advected_u, qr) )

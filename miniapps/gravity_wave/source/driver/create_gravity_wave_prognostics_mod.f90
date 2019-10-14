@@ -85,13 +85,13 @@ module create_gravity_wave_prognostics_mod
         call log_event( 'gravity_wave: Invalid buoyancy space', LOG_LEVEL_ERROR )
     end select
 
-    wind = field_type( vector_space = &
+    call wind%initialise( vector_space = &
                        function_space_collection%get_fs(mesh_id, element_order, W2), &
                        name="wind" )
-    buoyancy = field_type( vector_space = &
+    call buoyancy%initialise( vector_space = &
                function_space_collection%get_fs(mesh_id, element_order, buoyancy_space), &
                name="buoyancy" )
-    pressure = field_type( vector_space = &
+    call pressure%initialise( vector_space = &
                        function_space_collection%get_fs(mesh_id, element_order, W3), &
                        name="pressure" )
 

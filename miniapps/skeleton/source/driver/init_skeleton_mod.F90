@@ -46,7 +46,7 @@ module init_skeleton_mod
 
     ! Create prognostic fields
     ! Creates a field in the W3 function space (fully discontinuous field)
-    field_1 = field_type( vector_space = &
+    call field_1%initialise( vector_space = &
                       function_space_collection%get_fs(mesh_id, element_order, W3) )
 
     ! Set up field with an IO behaviour (XIOS only at present)

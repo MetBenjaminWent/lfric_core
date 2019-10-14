@@ -471,7 +471,7 @@ contains
       checkpoint_read_behaviour => checkpoint_read_netcdf
     endif
 
-    new_field = field_type( vector_space, name=trim(name) )
+    call new_field%initialise( vector_space, name=trim(name) )
 
     if (use_xios_io .and. write_diag) then
       ! All physics fields currently require output on faces...

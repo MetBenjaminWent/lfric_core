@@ -192,10 +192,10 @@ contains
                     LOG_LEVEL_INFO )
 
     ! r_u with theta eliminated
-    self%rhs_u = field_type( vector_space = state%vector(igh_u)%get_function_space() )
+    call self%rhs_u%initialise( vector_space = state%vector(igh_u)%get_function_space() )
 
     ! Helmholtz rhs
-    self%rhs_p = field_type( vector_space = state%vector(igh_p)%get_function_space() )
+    call self%rhs_p%initialise( vector_space = state%vector(igh_p)%get_function_space() )
     
     ! right hand side and solution as a one-component field-vector in
     ! pressure space
@@ -245,7 +245,7 @@ contains
 
           ! STEP 2: Solve Helmholtz system
           ! Krylov solver to obtain pressure increment
-          exner_inc = field_type( vector_space = y%vector(igh_p)%get_function_space() )
+          call exner_inc%initialise( vector_space = y%vector(igh_p)%get_function_space() )
           call invoke (setval_c(exner_inc, 0.0_r_def) )
           call self%pressure_x%import_field(exner_inc,1)
           ! (import required to initialise field)
@@ -309,8 +309,8 @@ contains
     type(field_type)             :: r_p, u_term
     real(kind=r_def), parameter  :: minus_one = -1.0_r_def
 
-    r_p    = field_type(vector_space = rhs0%vector(igh_p)%get_function_space())
-    u_term = field_type(vector_space = rhs0%vector(igh_u)%get_function_space())
+    call r_p%initialise(vector_space = rhs0%vector(igh_p)%get_function_space())
+    call u_term%initialise(vector_space = rhs0%vector(igh_u)%get_function_space())
 
     p2theta         => get_p2theta()
     ptheta2         => get_ptheta2v()
@@ -414,14 +414,14 @@ contains
     Hb_lumped_inv => get_Hb_lumped_inv()
 
     ! Create increment fields
-    u_inc     = field_type( vector_space = state%vector(igh_u)%get_function_space() )
-    theta_inc = field_type( vector_space = state%vector(igh_t)%get_function_space() )
-    rho_inc   = field_type( vector_space = state%vector(igh_d)%get_function_space() )
+    call u_inc%initialise( vector_space = state%vector(igh_u)%get_function_space() )
+    call theta_inc%initialise( vector_space = state%vector(igh_t)%get_function_space() )
+    call rho_inc%initialise( vector_space = state%vector(igh_d)%get_function_space() )
 
-    ru_inc = field_type( vector_space = state%vector(igh_u)%get_function_space() )
-    rr_inc = field_type( vector_space = state%vector(igh_d)%get_function_space() )
+    call ru_inc%initialise( vector_space = state%vector(igh_u)%get_function_space() )
+    call rr_inc%initialise( vector_space = state%vector(igh_d)%get_function_space() )
 
-    flux = field_type( vector_space = state%vector(igh_u)%get_function_space() )
+    call flux%initialise( vector_space = state%vector(igh_u)%get_function_space() )
 
     tau_dt = -tau_r*dt
     call invoke( name = "Compute increments",                                 &

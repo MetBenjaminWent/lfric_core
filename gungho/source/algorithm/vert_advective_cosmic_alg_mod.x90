@@ -64,12 +64,12 @@ contains
     w2_fs => dep_pts%get_function_space()
     w3_fs => rho%get_function_space()
 
-    rho_n              = field_type( vector_space = w3_fs )
-    rho_np1            = field_type( vector_space = w3_fs )
-    rho_constant_1     = field_type( vector_space = w3_fs )
-    rho_constant_1_np1 = field_type( vector_space = w3_fs )
-    mass_flux          = field_type( vector_space = w2_fs )
-    increment          = field_type( vector_space = w3_fs )
+    call rho_n%initialise( vector_space = w3_fs )
+    call rho_np1%initialise( vector_space = w3_fs )
+    call rho_constant_1%initialise( vector_space = w3_fs )
+    call rho_constant_1_np1%initialise( vector_space = w3_fs )
+    call mass_flux%initialise( vector_space = w2_fs )
+    call increment%initialise( vector_space = w3_fs )
 
     ! To calculate the advective step we use the following equation
     !

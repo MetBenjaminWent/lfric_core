@@ -58,9 +58,9 @@ contains
 
     w3_fs => rho%get_function_space()
 
-    a0 = field_type( vector_space = w3_fs )
-    a1 = field_type( vector_space = w3_fs )
-    a2 = field_type( vector_space = w3_fs )
+    call a0%initialise( vector_space = w3_fs )
+    call a1%initialise( vector_space = w3_fs )
+    call a2%initialise( vector_space = w3_fs )
 
     ! Calculate a0, a1 and a2 which are coefficients of subgrid representation
     ! of density where rho(x) = a0 + a1*x+a2*x**2 with 0<x<1.

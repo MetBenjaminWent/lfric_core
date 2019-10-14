@@ -66,8 +66,8 @@ contains
 
 
 
-    divergence =  field_type( vector_space = function_space_collection%get_fs(mesh_id,element_order, W3) )
-    div_u      =  field_type( vector_space = function_space_collection%get_fs(mesh_id,element_order, W3) )
+    call divergence%initialise( vector_space = function_space_collection%get_fs(mesh_id,element_order, W3) )
+    call div_u%initialise( vector_space = function_space_collection%get_fs(mesh_id,element_order, W3) )
     div    => get_div()
     m3_inv => get_mass_matrix(w3inv_id)
     ! Compute l2 norm of area integrated quantity
@@ -122,10 +122,10 @@ contains
 
     chi => get_coordinates()
 
-    rho_analytic = field_type( vector_space = rho_num%get_function_space() )
-    rho_diff     = field_type( vector_space = rho_num%get_function_space() )
-    w3_rho_diff  = field_type( vector_space = rho_num%get_function_space() )
-    w3_rho_analytic  = field_type( vector_space = rho_num%get_function_space() )
+    call rho_analytic%initialise( vector_space = rho_num%get_function_space() )
+    call rho_diff%initialise( vector_space = rho_num%get_function_space() )
+    call w3_rho_diff%initialise( vector_space = rho_num%get_function_space() )
+    call w3_rho_analytic%initialise( vector_space = rho_num%get_function_space() )
 
     mm_w3 => get_mass_matrix(w3_id)
 
@@ -189,7 +189,7 @@ contains
     ! the quadrature object
     type( quadrature_xyoz_type ) :: qr
 
-    hyd_imbal =  field_type( vector_space = function_space_collection%get_fs(mesh_id,element_order, W2V) )
+    call hyd_imbal%initialise( vector_space = function_space_collection%get_fs(mesh_id,element_order, W2V) )
 
     qr = get_qr()
 
@@ -246,13 +246,13 @@ contains
       call invoke( setval_c(physical_wind(i), 0.0_r_def) )
     end do
 
-    u1_wind =  field_type( vector_space = &
+    call u1_wind%initialise( vector_space = &
               function_space_collection%get_fs(mesh_id,element_order, W2H) )
 
-    u2_wind =  field_type( vector_space = &
+    call u2_wind%initialise( vector_space = &
               function_space_collection%get_fs(mesh_id,element_order, W2H) )
 
-    u3_wind =  field_type( vector_space = &
+    call u3_wind%initialise( vector_space = &
               function_space_collection%get_fs(mesh_id,element_order, Wtheta) )
 
     w2_rmultiplicity => get_rmultiplicity( W2 )
@@ -553,10 +553,10 @@ contains
 
     mesh_id = u%get_mesh_id()
     if ( vorticity_in_w1 ) then
-      vorticity =  field_type( vector_space = &
+      call vorticity%initialise( vector_space = &
           function_space_collection%get_fs(mesh_id, element_order, W1) )
     else
-      vorticity =  field_type( vector_space = &
+      call vorticity%initialise( vector_space = &
           function_space_collection%get_fs(mesh_id, element_order, W2) )
     end if
     call compute_vorticity_alg(vorticity, u, .false.)

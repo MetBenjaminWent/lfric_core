@@ -43,9 +43,9 @@ module init_io_dev_mod
     call log_event( 'io_dev: initialisation...', LOG_LEVEL_INFO )
 
     ! Create scalar fields
-    density   = field_type( vector_space = &
+    call density%initialise( vector_space = &
                    function_space_collection%get_fs(mesh_id, element_order, W3) )
-    theta   = field_type( vector_space = &
+    call theta%initialise( vector_space = &
                    function_space_collection%get_fs(mesh_id, element_order, Wtheta) )
 
     ! Set up procedure pointer to IO behaviour
@@ -56,7 +56,7 @@ module init_io_dev_mod
 
     ! Create vector field
 
-    wind   = field_type( vector_space = &
+    call wind%initialise( vector_space = &
                    function_space_collection%get_fs(mesh_id, element_order, W2) )
 
 

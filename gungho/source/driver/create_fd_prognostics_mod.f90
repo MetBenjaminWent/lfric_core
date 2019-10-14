@@ -81,7 +81,7 @@ contains
     ! W3 fields - rho levels
     !========================================================================
 
-    ew_wind_in_w3 = field_type( vector_space = & 
+    call ew_wind_in_w3%initialise( vector_space = &
          function_space_collection%get_fs(mesh_id, element_order, W3), &
          name='ew_wind_in_w3')
 
@@ -90,7 +90,7 @@ contains
 
     call fd_field_collection%add_field(ew_wind_in_w3)
 
-    ns_wind_in_w3 = field_type( vector_space = & 
+    call ns_wind_in_w3%initialise( vector_space = &
          function_space_collection%get_fs(mesh_id, element_order, W3), &
          name='ns_wind_in_w3')
 
@@ -99,7 +99,7 @@ contains
 
     call fd_field_collection%add_field(ns_wind_in_w3)
 
-    dry_rho_in_w3 = field_type( vector_space = & 
+    call dry_rho_in_w3%initialise( vector_space = &
          function_space_collection%get_fs(mesh_id, element_order, W3), &
          name='dry_rho_in_w3')
 
@@ -112,7 +112,7 @@ contains
     ! Wtheta fields - theta levels
     !========================================================================
 
-    upward_wind_in_wtheta = field_type( vector_space = & 
+    call upward_wind_in_wtheta%initialise( vector_space = &
          function_space_collection%get_fs(mesh_id, element_order, Wtheta), &
          name='upward_wind_in_wtheta')
 
@@ -121,7 +121,7 @@ contains
 
     call fd_field_collection%add_field(upward_wind_in_wtheta)
 
-    theta_in_wtheta = field_type( vector_space =        & 
+    call theta_in_wtheta%initialise( vector_space =        &
          function_space_collection%get_fs(mesh_id, element_order, Wtheta), &
          name='theta_in_wtheta')
 
@@ -130,7 +130,7 @@ contains
 
     call fd_field_collection%add_field(theta_in_wtheta)
 
-    ozone_in_wtheta = field_type( vector_space =        & 
+    call ozone_in_wtheta%initialise( vector_space =        &
          function_space_collection%get_fs(mesh_id, element_order, Wtheta), &
          name='ozone_in_wtheta')
 
@@ -139,7 +139,7 @@ contains
 
     call fd_field_collection%add_field(ozone_in_wtheta)
 
-    mv_in_wtheta = field_type( vector_space =           & 
+    call mv_in_wtheta%initialise( vector_space =           &
          function_space_collection%get_fs(mesh_id, element_order, Wtheta), &
          name='mv_in_wtheta')
 
@@ -148,7 +148,7 @@ contains
 
     call fd_field_collection%add_field(mv_in_wtheta)
 
-    mcl_in_wtheta = field_type( vector_space =          & 
+    call mcl_in_wtheta%initialise( vector_space =          &
          function_space_collection%get_fs(mesh_id, element_order, Wtheta), &
          name='mcl_in_wtheta')
 
@@ -157,7 +157,7 @@ contains
 
     call fd_field_collection%add_field(mcl_in_wtheta)
 
-    mcf_in_wtheta = field_type( vector_space =          & 
+    call mcf_in_wtheta%initialise( vector_space =          &
          function_space_collection%get_fs(mesh_id, element_order, Wtheta), &
          name='mcf_in_wtheta')
 

@@ -117,7 +117,7 @@ contains
 
     ! Create field with the name 'test_field' into test_field1
     ! and put 99.0 in the first dof
-    test_field1 = field_type( this%w0_fs, name='test_field1' )
+    call test_field1%initialise( this%w0_fs, name='test_field1' )
     test_field1_p = test_field1%get_proxy()
     test_field1_p%data(1)=99.0
 
@@ -171,7 +171,7 @@ contains
     @assertEqual(f_collection_copy % get_name(), "test_field_collection1")
 
     ! Create field with the name 'test_field1' and put 42.0 in the first dof.
-    test_field1 = field_type( self % w0_fs, name='test_field1' )
+    call test_field1%initialise( self % w0_fs, name='test_field1' )
     proxy = test_field1%get_proxy()
     proxy%data(1) = 42.0
 
@@ -193,7 +193,7 @@ contains
     @assertEqual(42.0, proxy%data(1), tol)
 
     ! Make a pointer to another field, and add that as a reference to the collection.
-    test_field2 = field_type( self % w2_fs, name='test_field2' )
+    call test_field2%initialise( self % w2_fs, name='test_field2' )
     test_field2_ptr => test_field2
     call f_collection % add_reference_to_field( test_field2_ptr )
 

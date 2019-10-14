@@ -111,7 +111,7 @@ contains
 
     ! Make a field with a function space
     w2_fs => function_space_collection%get_fs( mesh_id, element_order, W2 )
-    f1 = field_type( vector_space = w2_fs )
+    call f1%initialise( vector_space = w2_fs )
 
     fv1 = field_vector_type(3_i_def)
 
@@ -141,9 +141,9 @@ contains
     @assertEqual( max1, max2, 1.0e-2_r_def )
 
       ! Test for set_scalar
-    f1 = field_type( vector_space = &
+    call f1%initialise( vector_space = &
          function_space_collection%get_fs(mesh_id, element_order, W0))
-    f3 = field_type(vector_space = &
+    call f3%initialise(vector_space = &
          function_space_collection%get_fs(mesh_id, element_order, W3))
     call fv1%import_field(f1,1)
     call fv1%import_field(f3,3)

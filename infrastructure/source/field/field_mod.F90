@@ -32,9 +32,9 @@ module field_mod
 
   private
 
-  !---------------------------------------------------------------------------
-  ! Public types
-  !---------------------------------------------------------------------------
+! Public types
+
+!______<abstract> field_parent_type___________________________________________
 
 
    !> Abstract field type that is the parent of any field type in the field
@@ -42,6 +42,8 @@ module field_mod
    type, extends(linked_list_data_type), public, abstract :: field_parent_type
    contains
    end type field_parent_type
+
+!______field_type_____________________________________________________________
 
   !> Algorithm layer representation of a field.
   !>
@@ -54,17 +56,15 @@ module field_mod
 
     !> Each field has a pointer to the function space on which it lives
     type( function_space_type ), pointer         :: vspace => null( )
-    !> Each field also holds an integer enaumerated value for the
-    !> Allocatable array of type real which holds the values of the field
+    !> Each field also holds an integer enumerated value for the
+    !> allocatable array of type real which holds the values of the field
     real(kind=r_def), allocatable :: data( : )
-    !> Holds metadata information about a field - like dofmap or routing tables
+    !> Holds information about how to halo exchange a field
     type(halo_routing_type), pointer :: halo_routing => null()
     !> Flag that holds whether each depth of halo is clean or dirty (dirty=1)
     integer(kind=i_def), allocatable :: halo_dirty(:)
-    !> Flag that determines whether the copy constructor should copy the data.
-    !! false to start with, true thereafter.
-    logical(kind=l_def) :: data_extant = .false.
-    !> Name of the field
+    !> Name of the field. Note the name is immutable once defined via
+    !! the initialiser.
     character(str_def) :: name
 
     ! IO interface procedure pointers
@@ -75,13 +75,18 @@ module field_mod
     procedure(checkpoint_read_interface), nopass, pointer  :: checkpoint_read_method => null()
 
   contains
+    !> Initialiser for a field. May only be called once.
+    procedure, public :: initialise => field_initialiser
+
+    ! Routine to return a deep copy of a field including all its data
+    procedure, public :: copy_field
+
+    ! Routine to return a deep, but empty copy of a field
+    procedure, public :: copy_field_properties
 
     !> Function to get a proxy with public pointers to the data in a
     !! field_type.
     procedure, public :: get_proxy
-
-    ! Routine to return a deep, but empty copy of a field
-    procedure, public :: copy_field_properties
 
     ! Logging procedures
     procedure, public :: log_field
@@ -161,26 +166,26 @@ module field_mod
 
   end type field_type
 
-  interface field_type
-    module procedure field_constructor
-  end interface
+!______field_pointer_type_____________________________________________________
 
-   !> A pointer to a field
-   !>
-   !> We want to be able hold pointers to fields but when these are passed
-   !> around, Fortran has a habit of automatically dereferencing them for you.
-   !> If we store them in an object that contains the pointer - they won't
-   !> get dereferenced.
-   !>
-   type, extends(field_parent_type), public :: field_pointer_type
-     type(field_type), pointer, public :: field_ptr
-   contains
-     final :: field_pointer_destructor
-   end type field_pointer_type
+  !> A pointer to a field
+  !>
+  !> We want to be able hold pointers to fields but when these are passed
+  !> around, Fortran has a habit of automatically dereferencing them for you.
+  !> If we store them in an object that contains the pointer - they won't
+  !> get dereferenced.
+  !>
+  type, extends(field_parent_type), public :: field_pointer_type
+    type(field_type), pointer, public :: field_ptr
+  contains
+    final :: field_pointer_destructor
+  end type field_pointer_type
 
   interface field_pointer_type
     module procedure field_pointer_constructor
   end interface
+
+!______field_proxy_type_______________________________________________________
 
   !> Psy layer representation of a field.
   !>
@@ -262,14 +267,7 @@ module field_mod
 
   end type field_proxy_type
 
-  !----- Interface for the deferred function in the field_parent_type -----
-  interface
-   type(field_proxy_type)function get_proxy_interface(self)
-     import field_parent_type
-     import field_proxy_type
-     class(field_parent_type), target, intent(in) :: self
-   end function
-  end interface
+!______end of type declarations_______________________________________________
 
   ! Define the IO interfaces
 
@@ -310,20 +308,7 @@ module field_mod
 
 contains
 
-  !> Function to create a proxy with access to the data in the field_type.
-  !>
-  !> @return The proxy type with public pointers to the elements of
-  !> field_type
-  type(field_proxy_type ) function get_proxy(self)
-    implicit none
-    class(field_type), target, intent(in)  :: self
-
-    get_proxy % vspace                 => self % vspace
-    get_proxy % data                   => self % data
-    get_proxy % halo_routing           => self % halo_routing
-    get_proxy % halo_dirty             => self % halo_dirty
-
-  end function get_proxy
+!______field_ptr_type_procedures______________________________________________
 
   !> Constructor for a field pointer
   !>
@@ -349,25 +334,47 @@ contains
     type(field_pointer_type), intent(inout) :: self
   end subroutine field_pointer_destructor
 
-  !> Construct a <code>field_type</code> object.
+
+!______field_type_procedures____________________________________________________
+
+  !> Function to create a proxy with access to the data in the field_type.
   !>
+  !> @return The proxy type with public pointers to the elements of
+  !> field_type
+  type(field_proxy_type ) function get_proxy(self)
+    implicit none
+    class(field_type), target, intent(in)  :: self
+
+    get_proxy % vspace                 => self % vspace
+    get_proxy % data                   => self % data
+    get_proxy % halo_routing           => self % halo_routing
+    get_proxy % halo_dirty             => self % halo_dirty
+
+  end function get_proxy
+
+  !> Initialise a <code>field_type</code> object.
+  !>
+  !> @param [inout] self the field object that will be initialised
   !> @param [in] vector_space the function space that the field lives on
-  !> @param [in] name The name of the field
-  !> @return self the field
+  !> @param [in] name The name of the field. 'none' is a reserved name
   !>
-  function field_constructor(vector_space, name) result(self)
+  subroutine field_initialiser(self, vector_space, name)
 
     use log_mod,         only : log_event, &
                                 LOG_LEVEL_ERROR
     implicit none
 
+    class(field_type), intent(inout) :: self
     type(function_space_type), target, intent(in) :: vector_space
     character(*), optional, intent(in)            :: name
 
-    type(field_type), target :: self
-    ! only associate the vspace pointer, copy constructor does the rest.
+    type (mesh_type), pointer :: mesh => null()
+
+    ! If there's already data in the field, destruct it 
+    ! ready for re-initialisation
+    if(allocated(self%data))call field_destructor_scalar(self)
+
     self%vspace => vector_space
-    self%data_extant = .false.
     if ( self%vspace%which() /= WCHI ) then ! chi fields are never halo exchanged - so don't neeed a routing table
       self%halo_routing => &
         halo_routing_collection%get_halo_routing( self%vspace%get_mesh_id(),&
@@ -381,8 +388,90 @@ contains
       self%name = 'none'
     end if 
 
-  end function field_constructor
+    ! Create space for holding field data
+    allocate( self%data(self%vspace%get_last_dof_halo()) )
 
+    ! Create a flag for holding whether a halo depth is dirty or not
+    mesh=>self%vspace%get_mesh()
+    allocate(self%halo_dirty(mesh%get_halo_depth()))
+    self%halo_dirty(:) = 1
+    nullify(mesh)
+
+  end subroutine field_initialiser
+
+  !> Create a new field that inherits the properties of the source field and
+  !> has a copy of all the field data from the source field.
+  !>
+  !> @param[out] dest   field object into which the copy will be made
+  !> @param[in]  name   An optional argument that provides an identifying name
+  subroutine copy_field(self, dest, name)
+
+    implicit none
+    class(field_type), target, intent(in)  :: self
+    class(field_type), target, intent(out) :: dest
+    character(*), optional, intent(in)     :: name
+
+    if (present(name)) then
+      call self%copy_field_properties(dest, name)
+    else
+      call self%copy_field_properties(dest)
+    end if
+
+    dest%data(:) = self%data(:)
+    dest%halo_dirty(:)=self%halo_dirty(:)
+
+  end subroutine copy_field
+
+  !> Create a new empty field that inherits the properties of the source field.
+  !>
+  !> @param[out] dest   field object into which the copy will be made
+  !> @param[in]  name   An optional argument that provides an identifying name
+  subroutine copy_field_properties(self, dest, name)
+    use log_mod,         only : log_event, &
+                                LOG_LEVEL_ERROR
+    implicit none
+    class(field_type), target, intent(in)  :: self
+    class(field_type), target, intent(out) :: dest
+    character(*), optional, intent(in)     :: name
+
+    if (present(name)) then
+      call dest%initialise(self%vspace, name)
+    else
+      call dest%initialise(self%vspace, self%name)
+    end if
+
+    dest%write_method => self%write_method
+    dest%read_method => self%read_method
+    dest%checkpoint_write_method => self%checkpoint_write_method
+    dest%checkpoint_read_method => self%checkpoint_read_method
+
+  end subroutine copy_field_properties
+
+  !> DEPRECATED: Assignment operator between field_type pairs. Currently, this
+  !> routine generates a (hopefully) useful message, then performs a double
+  !> allocate to force an error stack trace (which should be useful to the
+  !> developer - tells them where they have called the deprecated routine from).
+  !>
+  !> @param[out] dest   field_type lhs
+  !> @param[in]  source field_type rhs
+  subroutine field_type_assign(dest, source)
+
+    use log_mod,         only : log_event, &
+                                log_scratch_space, &
+                                LOG_LEVEL_INFO
+    implicit none
+    class(field_type), intent(in)  :: source
+    class(field_type), intent(out) :: dest
+
+    write(log_scratch_space,'(A,A)')&
+              '"field2=field1" syntax no longer supported. '// &
+              'Use "call field1%copy_field(field2)". Field: ', &
+              source%name
+    call log_event(log_scratch_space,LOG_LEVEL_INFO )
+    allocate(dest%data(1))   ! allocate the same memory twice, to force
+    allocate(dest%data(2))   ! an error and generate a stack trace
+
+  end subroutine field_type_assign
 
   !> Destroy a scalar field_type instance.
   subroutine field_final(self)
@@ -406,8 +495,6 @@ contains
              self%checkpoint_read_method )
 
   end subroutine field_final
-
-
 
   !> Finalizer for a scalar <code>field_type</code> instance.
   subroutine field_destructor_scalar(self)
@@ -449,61 +536,6 @@ contains
     end do
 
   end subroutine field_destructor_array2d
-
-  !> Create new empty field that inherits the properties of source field
-  !>
-  !> @param[in]  self  field_type 
-  !> @param[out] dest  field_type new field
-  subroutine copy_field_properties(self, dest)
-    use log_mod,         only : log_event, &
-                                LOG_LEVEL_ERROR
-    implicit none
-    class(field_type), target, intent(in)  :: self
-    class(field_type), target, intent(out) :: dest
-
-    type (mesh_type), pointer   :: mesh => null()
-    real(kind=r_def), pointer   :: data_ptr( : ) => null()
-
-    dest%vspace => self%vspace
-    dest%write_method => self%write_method
-    dest%read_method => self%read_method
-    dest%checkpoint_write_method => self%checkpoint_write_method
-    dest%checkpoint_read_method => self%checkpoint_read_method
-    dest%name = self%name
-    dest%halo_routing => self%halo_routing
-
-    allocate( dest%data(self%vspace%get_last_dof_halo()) )
-
-    ! Set the data_extant to be .true. now that the data array has been allocated.
-    dest%data_extant = .true.
-
-    ! Create a flag for holding whether a halo depth is dirty or not
-    mesh=>dest%vspace%get_mesh()
-    allocate(dest%halo_dirty(mesh%get_halo_depth()))
-    dest%halo_dirty(:) = 1
-
-    nullify(data_ptr)
-    nullify(mesh)
-
-  end subroutine copy_field_properties
-
-  !> Assignment operator between field_type pairs.
-  !>
-  !> @param[out] dest   field_type lhs
-  !> @param[in]  source field_type rhs
-  subroutine field_type_assign(dest, source)
-
-    implicit none
-    class(field_type), intent(in)  :: source
-    class(field_type), intent(out) :: dest
-
-    call source%copy_field_properties(dest)
-
-    if(source%data_extant) then
-       dest%data(:) = source%data(:)
-       dest%halo_dirty(:)=source%halo_dirty(:)
-    end if
-  end subroutine field_type_assign
 
   !> Setter for field write behaviour
   !> @param[in,out]  self  field_type 
@@ -1195,12 +1227,10 @@ contains
 
     dirtiness = .false.
     if(self%halo_dirty(depth) == 1)dirtiness = .true.
-
     nullify( mesh )
   end function is_dirty
 
   ! Sets a halo depth to be flagged as dirty
-  ! @param[in] depth The depth up to which to make the halo dirty
   subroutine set_dirty( self )
 
     implicit none

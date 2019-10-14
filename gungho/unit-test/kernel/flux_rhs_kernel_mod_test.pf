@@ -104,9 +104,9 @@ contains
     this%w2_fs => function_space_collection%get_fs( mesh_id, element_order, W2 )
     this%w3_fs => function_space_collection%get_fs( mesh_id, element_order, W3 )
 
-    this%chi1 = field_type( vector_space = this%w0_fs )
-    this%chi2 = field_type( vector_space = this%w0_fs )
-    this%chi3 = field_type( vector_space = this%w0_fs )
+    call this%chi1%initialise( vector_space = this%w0_fs )
+    call this%chi2%initialise( vector_space = this%w0_fs )
+    call this%chi3%initialise( vector_space = this%w0_fs )
     chi_p(1) = this%chi1%get_proxy()
     chi_p(2) = this%chi2%get_proxy()
     chi_p(3) = this%chi3%get_proxy()
@@ -114,12 +114,12 @@ contains
     ndf_chi      = chi_p(1)%vspace%get_ndf( )
     dim_diff_chi = chi_p(1)%vspace%get_dim_space_diff( )
 
-    this%rhs =  field_type( vector_space = this%w2_fs )
+    call this%rhs%initialise( vector_space = this%w2_fs )
     rhs_p    = this%rhs%get_proxy()
     ndf_u    = rhs_p%vspace%get_ndf( )
     dim_u    = rhs_p%vspace%get_dim_space( )
 
-    this%f =  field_type( vector_space = this%w3_fs )
+    call this%f%initialise( vector_space = this%w3_fs )
     f_p    = this%f%get_proxy()
     ndf_f  = f_p%vspace%get_ndf( )
     dim_f  = f_p%vspace%get_dim_space( )
@@ -207,7 +207,7 @@ contains
     end do
 
     ! Test flux rhs
-    u   =  field_type( vector_space = this%w2_fs )
+    call u%initialise( vector_space = this%w2_fs )
 
     rhs_p = this%rhs%get_proxy()
     f_p   = this%f%get_proxy()

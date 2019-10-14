@@ -167,7 +167,7 @@ contains
     rhs_n = state
     state_inc = state    
 
-    rhs_p =  field_type( vector_space = p_fs )
+    call rhs_p%initialise( vector_space = p_fs )
 
     ! Create Q operator
     Q = operator_type( u_fs, b_fs)

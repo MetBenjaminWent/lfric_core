@@ -82,9 +82,9 @@ contains
     w3_fs => function_space_collection%get_fs( mesh, element_order, W3)
    
     ! Initialise Mass, Energy and Axial Angular Momentum fields
-    mass = field_type( vector_space = w3_fs )
-    energy = field_type( vector_space = w3_fs )
-    aam = field_type( vector_space = w3_fs )
+    call mass%initialise( vector_space = w3_fs )
+    call energy%initialise( vector_space = w3_fs )
+    call aam%initialise( vector_space = w3_fs )
 
     ! Compute conserved quantities
     call invoke( name = "Compute conserved quantities",                   &
