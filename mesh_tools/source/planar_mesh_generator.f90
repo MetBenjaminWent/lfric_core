@@ -212,11 +212,33 @@ program planar_mesh_generator
   !===================================================================
   allocate( target_mesh_names(max_n_targets) )
 
-  do i=1, n_unique_meshes
+  select case(n_unique_meshes)
 
-    target_mesh_names(:) = ''
-    if (n_unique_meshes > 1) then
+  case(:0)
+      write(log_scratch_space, "(A,I0,A)") &
+           '  Number of unique meshes is <= 0 [', n_unique_meshes,']'
+      call log_event( trim(log_scratch_space), LOG_LEVEL_ERROR)
+  case(1)
+    ! Only 1 mesh requested, so it must be the prime mesh
+    ! and so no optional target_ndivs required
+    mesh_gen(1) = gen_planar_type                                 &
+                    ( reference_element = cube_element,           &
+                      mesh_name         = unique_mesh_names(1),   &
+                      edge_cells_x      = unique_edge_cells_x(1), &
+                      edge_cells_y      = unique_edge_cells_y(1), &
+                      periodic_x        = periodic_x,             &
+                      periodic_y        = periodic_y,             &
+                      domain_x          = domain_x,               &
+                      domain_y          = domain_y )
 
+    ! Pass the cubesphere generation object to the ugrid file writer
+    call ugrid_2d(1)%set_by_generator(mesh_gen(1))
+
+  case default
+
+    do i=1, n_unique_meshes
+
+      target_mesh_names(:) = ''
       ! From the requested chain, get all the edge_cell values for
       ! all the other meshes this mesh need to map to
       target = 1
@@ -287,36 +309,17 @@ program planar_mesh_generator
                        target_edge_cells_x = unique_target_edge_cells_x, &
                        target_edge_cells_y = unique_target_edge_cells_y  )
 
+      ! Pass the cubesphere generation object to the ugrid file writer
+      call ugrid_2d(i)%set_by_generator(mesh_gen(i))
 
+      if (allocated(unique_target_edge_cells_x)) deallocate(unique_target_edge_cells_x)
+      if (allocated(unique_target_edge_cells_y)) deallocate(unique_target_edge_cells_y)
 
-    else if ( n_unique_meshes == 1 ) then
+    end do
 
-      ! Only 1 mesh requested, so it must be the prime mesh
-      ! and so no optional target_ndivs required
-      mesh_gen(i) = gen_planar_type                                &
-                     ( reference_element = cube_element,           &
-                       mesh_name         = unique_mesh_names(i),   &
-                       edge_cells_x      = unique_edge_cells_x(i), &
-                       edge_cells_y      = unique_edge_cells_y(i), &
-                       periodic_x        = periodic_x,             &
-                       periodic_y        = periodic_y,             &
-                       domain_x          = domain_x,               &
-                       domain_y          = domain_y )
+    if (allocated(target_mesh_names)) deallocate(target_mesh_names)
 
-    else
-      write(log_scratch_space, "(A,I0,A)") &
-           '  Number of unique meshes is negative [', n_unique_meshes,']'
-      call log_event( trim(log_scratch_space), LOG_LEVEL_ERROR)
-    end if
-
-    ! Pass the cubesphere generation object to the ugrid file writer
-    call ugrid_2d(i)%set_by_generator(mesh_gen(i))
-
-    if (allocated(unique_target_edge_cells_x)) deallocate(unique_target_edge_cells_x)
-    if (allocated(unique_target_edge_cells_y)) deallocate(unique_target_edge_cells_y)
-  end do
-
-  if (allocated(target_mesh_names)) deallocate(target_mesh_names)
+  end select
 
   call log_event( "...generation complete.", LOG_LEVEL_INFO )
 
