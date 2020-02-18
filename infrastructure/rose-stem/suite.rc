@@ -18,11 +18,14 @@
 {%- if RUN_NAMES is defined %}
 {%-   if RUN_NAMES is string %}
 {%-     set groupsToRun = [RUN_NAMES] %}
+{%-     set publishGroup = RUN_NAMES %}
 {%-   else %}
 {%-     set groupsToRun = RUN_NAMES %}
+{%-     set publishGroup = RUN_NAMES|join(",") %}
 {%-   endif %}
 {%- else %}
 {%-   set groupsToRun = ['developer'] %}
+{%-   set publishGroup = 'developer' %}
 {%- endif %}
 
 {%- if miniappFlag == True %}
@@ -129,7 +132,7 @@
 
 ##############################################################################
 
-{%- set publish_destination = '$CYLC_SUITE_SHARE_DIR/publish-' + TARGET_OPT %}
+{%- set publish_destination = '$CYLC_SUITE_SHARE_DIR/publish-' + projectName + '-' + publishGroup + '-' + TARGET_OPT %}
   [[PUBLISH]]
     [[[environment]]]
       DESTINATION = {{publish_destination}}
@@ -163,7 +166,7 @@
     [[[environment]]]
       REWRITE = ''
       SOURCE  = {{publish_destination}}
-      TARGET  = file://$HOME/public_html/lfric-infrastructure-{{TARGET_OPT}}
+      TARGET  = file://$HOME/public_html/lfric-{{projectName}}-{{TARGET_OPT}}-{{publishGroup}}
 {%- endif %}
 
 {%- if 'mirror_results_remote' in scheduledTasks %}
@@ -178,7 +181,7 @@
     [[[environment]]]
       REWRITE = {{MIRROR_REWRITE}}
       SOURCE  = {{publish_destination}}
-      TARGET  = {{MIRROR_UPLOAD_URL}}lfric-infrastructure-{{TARGET_OPT}}
+      TARGET  = {{MIRROR_UPLOAD_URL}}lfric-{{projectName}}-{{TARGET_OPT}}-{{publishGroup}}
 {%- endif %}
 
 ##############################################################################

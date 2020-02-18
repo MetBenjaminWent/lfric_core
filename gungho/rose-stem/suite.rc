@@ -34,7 +34,7 @@
 {%-     set publishGroup = RUN_NAMES %}
 {%-   else %}
 {%-     set groupsToRun = RUN_NAMES %}
-{%-     set publishGroup = RUN_NAMES[0] %}
+{%-     set publishGroup = RUN_NAMES|join(",") %}
 {%-   endif %}
 {%- else %}
 {%-   set groupsToRun = ['developer'] %}
@@ -192,7 +192,7 @@
 
 {# PUBLISH #}
 ##############################################################################
-{%- set publish_destination = '$CYLC_SUITE_SHARE_DIR/publish-' + publishGroup + '-' + TARGET_OPT %}
+{%- set publish_destination = '$CYLC_SUITE_SHARE_DIR/publish-' + projectName + '-' + publishGroup + '-' + TARGET_OPT %}
     [[PUBLISH]]
         [[[environment]]]
             DESTINATION = {{publish_destination}}
@@ -244,7 +244,7 @@
         [[[environment]]]
             REWRITE = {{MIRROR_REWRITE}}
             SOURCE  = {{publish_destination}}
-            TARGET  = {{MIRROR_UPLOAD_URL}}lfric-{{projectName}}-{{TARGET_OPT}}
+            TARGET  = {{MIRROR_UPLOAD_URL}}lfric-{{projectName}}-{{TARGET_OPT}}-{{publishGroup}}
 {%- endif %}
 
 
