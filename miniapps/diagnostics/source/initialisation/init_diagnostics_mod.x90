@@ -23,6 +23,7 @@ module init_diagnostics_mod
     use log_mod, only : log_event, &
             LOG_LEVEL_INFO, &
             LOG_LEVEL_ERROR
+    use pure_abstract_field_mod, only : pure_abstract_field_type
     use runtime_constants_mod, only : create_runtime_constants
 
     implicit none
@@ -45,6 +46,7 @@ contains
         type(field_type), intent(inout) :: chi(:)
         type (field_type), allocatable :: new_field
         type (field_type), pointer :: tmp_field
+        class(pure_abstract_field_type), pointer  :: tmp_field_ptr => null()
 
         procedure(write_interface), pointer :: tmp_ptr
 
@@ -68,7 +70,8 @@ contains
                     name = trim(prog_field_list(i)))
             call depository%add_field(new_field)
             tmp_field => depository%get_field(trim(prog_field_list(i)))
-            call prognostic_fields%add_reference_to_field(tmp_field)
+            tmp_field_ptr => tmp_field
+            call prognostic_fields%add_reference_to_field(tmp_field_ptr)
             call invoke(setval_c(tmp_field, 0.0_r_def))
             if (write_diag .and. use_xios_io) then
                 call tmp_field%set_write_behaviour(tmp_ptr)
@@ -80,7 +83,8 @@ contains
                     name = trim(diag_field_list(i)))
             call depository%add_field(new_field)
             tmp_field => depository%get_field(trim(diag_field_list(i)))
-            call diagnostic_fields%add_reference_to_field(tmp_field)
+            tmp_field_ptr => tmp_field
+            call diagnostic_fields%add_reference_to_field(tmp_field_ptr)
             call invoke(setval_c(tmp_field, 0.0_r_def))
             if (write_diag .and. use_xios_io) then
                 call tmp_field%set_write_behaviour(tmp_ptr)

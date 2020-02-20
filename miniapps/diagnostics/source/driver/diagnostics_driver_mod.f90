@@ -12,9 +12,11 @@ module diagnostics_driver_mod
     use constants_mod, only : i_def, i_native, str_def
     use diagnostics_configuration_mod, only : load_configuration, program_name
     use field_mod, only : field_type
+    use field_parent_mod, only : field_parent_type
     use field_collection_mod, only : field_collection_type, &
             field_collection_iterator_type
     use gungho_model_data_mod, only : model_data_type
+    use integer_field_mod, only : integer_field_type
     use io_config_mod, only : write_diag, &
             use_xios_io
     use log_mod, only : log_event, &
@@ -216,7 +218,7 @@ contains
 
         integer(i_def) :: timestep
         type(field_collection_type), pointer :: depository
-        type (field_type), pointer :: tmp_field
+        class(field_parent_type), pointer :: tmp_field
         ! Iterator for field collection
         type(field_collection_iterator_type) :: iterator
         character(str_def) :: name
@@ -247,10 +249,16 @@ contains
                 iterator = depository%get_iterator()
                 do
                     if (.not.iterator%has_next()) exit
+
                     tmp_field => iterator%next()
-                    name = trim(adjustl(tmp_field%get_name()))
-                    call log_event("write_" // name, LOG_LEVEL_INFO)
-                    call tmp_field%write_field('diagnostics_' // name)
+                    select type(tmp_field)
+                    type is (field_type)
+                        name = trim(adjustl(tmp_field%get_name()))
+                        call log_event("write_" // name, LOG_LEVEL_INFO)
+                        call tmp_field%write_field('diagnostics_' // name)
+                    type is (integer_field_type)
+                        ! todo: integer field i/o
+                    end select
                 end do
             end if
         end do
@@ -268,7 +276,7 @@ contains
         implicit none
 
         type(field_collection_type), pointer :: depository
-        type (field_type), pointer :: tmp_field
+        class(field_parent_type), pointer :: tmp_field
         ! Iterator for field collection
         type(field_collection_iterator_type) :: iterator
         character(str_def) :: name
@@ -285,8 +293,14 @@ contains
         do
             if (.not.iterator%has_next()) exit
             tmp_field => iterator%next()
-            name = trim(adjustl(tmp_field%get_name()))
-            call checksum_alg('diagnostics', tmp_field, 'diagnostics_' // name)
+            select type(tmp_field)
+            type is (field_type)
+                name = trim(adjustl(tmp_field%get_name()))
+                call checksum_alg('diagnostics', tmp_field, &
+                    'diagnostics_' // name)
+            type is (integer_field_type)
+                ! todo: integer field i/o
+            end select
         end do
         !-------------------------------------------------------------------------
         ! Driver layer finalise

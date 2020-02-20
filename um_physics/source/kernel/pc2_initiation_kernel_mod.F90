@@ -58,7 +58,7 @@ end type
 public pc2_initiation_code
 contains
 
-!> @brief Interface to pc2 initiation 
+!> @brief Interface to pc2 initiation
 !> @details Calculates whether cloud should be created from clear-sky conditions
 !>          or whether overcast conditions should be broken up.
 !>          More info is in UMDP 30.

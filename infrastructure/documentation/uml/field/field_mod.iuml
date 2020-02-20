@@ -36,6 +36,16 @@ class field_mod::field_type {
   <<destroy>>+field_destructor_array2d()
 
 }
+note right
+ For clarity, this diagram
+ shows only the standard, 
+ floating-point 'field_type'
+ object. To see how other
+ varieties of field objects
+ (such as 'integer' fields)
+ are implemented, see the
+ field_varieties diagram.
+end note
 
 class field_mod::field_proxy_type {
   +data: real[] <<pointer>>
@@ -50,6 +60,10 @@ class field_mod::field_proxy_type {
   +reduction_finish()
 }
 
+class field_mod::field_pointer_type {
+  +field_ptr: field_type <<pointer>>
+
+}
 
 field_mod::field_type <- field_mod::field_proxy_type
 

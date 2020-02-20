@@ -79,10 +79,12 @@ contains
     integer(i_def) :: l_array_i(3) = (/ 2_i_def, 3_i_def, 1_i_def /)
     integer(i_def) :: i_buffer(1),i_buffer_ans(1)
     integer(i_def) :: i, num_pes, mpi_datatype
-    integer(i_def) :: l_sum_i, answer_i
+    integer(i_def) :: l_sum_i, l_min_i, l_max_i
+    integer(i_def) :: answer_i
     character(len=2) :: str_buffer(1)
     integer(i_def) :: rank_number, total_ranks
 
+    ! Test real global sum routine
     l_sum=0.0_r_def
     do i=1,size(l_array)
       l_sum = l_sum + l_array(i)
@@ -90,6 +92,7 @@ contains
     call global_sum( l_sum, answer )
     @assertEqual( 6.0_r_def, answer, 1.0e-2_r_def )
 
+    ! Test integer global sum routine
     l_sum_i=0_i_def
     do i=1,size(l_array_i)
       l_sum_i = l_sum_i + l_array_i(i)
@@ -97,6 +100,7 @@ contains
     call global_sum( l_sum_i, answer_i )
     @assertEqual( 6_i_def, answer_i )
 
+    ! Test real global maximum routine
     l_max=l_array(1)
     do i=2,size(l_array)
       if(l_array(i) > l_max) l_max = l_array(i)
@@ -104,6 +108,15 @@ contains
     call global_max( l_max, answer )
     @assertEqual( 3.0_r_def, answer, 1.0e-2_r_def )
 
+    ! Test integer global maximum routine
+    l_max_i=l_array_i(1)
+    do i=2,size(l_array_i)
+      if(l_array_i(i) > l_max_i) l_max_i = l_array_i(i)
+    end do
+    call global_max( l_max_i, answer_i )
+    @assertEqual( 3_i_def, answer_i )
+
+    ! Test real global minimum routine
     l_min=l_array(1)
     do i=2,size(l_array)
       if(l_array(i) < l_min) l_min = l_array(i)
@@ -111,22 +124,35 @@ contains
     call global_min( l_min, answer )
     @assertEqual( 1.0_r_def, answer, 1.0e-2_r_def )
 
+    ! Test integer global minimum routine
+    l_min_i=l_array_i(1)
+    do i=2,size(l_array_i)
+      if(l_array_i(i) < l_min_i) l_min_i = l_array_i(i)
+    end do
+    call global_min( l_min_i, answer_i )
+    @assertEqual( 1_i_def, answer_i )
+
+    ! Test integer gather routine
     i_buffer(1) = 7_i_def
     call all_gather(i_buffer, i_buffer_ans, 1)
     @assertEqual( 7_i_def, i_buffer_ans(1) )
 
-    i_buffer(1) = 9_i_def
-    call broadcast( i_buffer, 1, 0 )
-    @assertEqual( 9_i_def, i_buffer(1) )
-
+    ! Test real broadcast routine
     r_buffer(1) = 11.0_r_def
     call broadcast( r_buffer, 1, 0 )
     @assertEqual( 11.0_r_def, r_buffer(1) )
 
+    ! Test integer broadcast routine
+    i_buffer(1) = 9_i_def
+    call broadcast( i_buffer, 1, 0 )
+    @assertEqual( 9_i_def, i_buffer(1) )
+
+    ! Test character string broadcast routine
     str_buffer(1) = 'Hi'
     call broadcast( str_buffer, len(str_buffer(1))*size(str_buffer), 0 )
     @assertEqual( 'Hi', str_buffer(1) )
 
+    ! Test the mpi data type routines - integer, double and single
     mpi_datatype=get_mpi_datatype( integer_type, i_def )
     @assertEqual( MPI_INTEGER, mpi_datatype )
 
@@ -136,6 +162,7 @@ contains
     mpi_datatype=get_mpi_datatype( real_type, r_single )
     @assertEqual( MPI_REAL4, mpi_datatype )
 
+    ! Test the routines for getting total number of ranks and local rank number
     total_ranks=get_comm_size()
     @assertEqual( 1, total_ranks )
 

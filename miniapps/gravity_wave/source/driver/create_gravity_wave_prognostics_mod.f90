@@ -39,6 +39,7 @@ module create_gravity_wave_prognostics_mod
   use log_mod,                        only : log_event, &
                                              LOG_LEVEL_INFO, &
                                              LOG_LEVEL_ERROR
+  use pure_abstract_field_mod,        only : pure_abstract_field_type
   implicit none
 
   private
@@ -65,6 +66,8 @@ module create_gravity_wave_prognostics_mod
     type( field_type) :: pressure
 
     integer(i_def) :: buoyancy_space
+
+    class(pure_abstract_field_type), pointer  :: tmp_ptr => null()
 
     procedure(write_interface),       pointer :: tmp_write_ptr
     procedure(checkpoint_write_interface), pointer :: tmp_checkpoint_write_ptr
@@ -141,9 +144,12 @@ module create_gravity_wave_prognostics_mod
     call depository%add_field(buoyancy)
 
     ! Put pointers to the prognostic fields into the prognostic collection
-    call prognostics%add_reference_to_field(depository%get_field('wind'))
-    call prognostics%add_reference_to_field(depository%get_field('pressure'))
-    call prognostics%add_reference_to_field(depository%get_field('buoyancy'))
+    tmp_ptr => depository%get_field('wind')
+    call prognostics%add_reference_to_field(tmp_ptr)
+    tmp_ptr => depository%get_field('pressure')
+    call prognostics%add_reference_to_field(tmp_ptr)
+    tmp_ptr => depository%get_field('buoyancy')
+    call prognostics%add_reference_to_field(tmp_ptr)
 
   end subroutine create_gravity_wave_prognostics
 

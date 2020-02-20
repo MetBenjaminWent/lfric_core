@@ -29,6 +29,7 @@ module create_gungho_prognostics_mod
   use mr_indices_mod,                 only : nummr, &
                                              mr_names
   use moist_dyn_mod,                  only : num_moist_factors
+  use pure_abstract_field_mod,        only : pure_abstract_field_type
   use io_mod,                         only : xios_write_field_node, &
                                              xios_write_field_face, &
                                              checkpoint_read_xios,   &
@@ -69,7 +70,7 @@ contains
     type( field_type ), intent(inout), target :: mr(nummr)
     type( field_type ), intent(inout)         :: moist_dyn(num_moist_factors)
 
-    type( field_type ), pointer               :: tmp_ptr
+    class(pure_abstract_field_type), pointer  :: tmp_ptr => null()
 
     integer(i_def)                            :: imr
 
@@ -203,10 +204,14 @@ contains
     call depository%add_field( exner )
 
     ! Populate the prognostic field collection
-    call prognostic_fields%add_reference_to_field(depository%get_field('theta'))
-    call prognostic_fields%add_reference_to_field(depository%get_field('rho'))
-    call prognostic_fields%add_reference_to_field(depository%get_field('u'))
-    call prognostic_fields%add_reference_to_field(depository%get_field('exner'))
+    tmp_ptr => depository%get_field('theta')
+    call prognostic_fields%add_reference_to_field(tmp_ptr)
+    tmp_ptr => depository%get_field('rho')
+    call prognostic_fields%add_reference_to_field(tmp_ptr)
+    tmp_ptr => depository%get_field('u')
+    call prognostic_fields%add_reference_to_field(tmp_ptr)
+    tmp_ptr => depository%get_field('exner')
+    call prognostic_fields%add_reference_to_field(tmp_ptr)
     ! The moisture mixing ratios are always created, but only add them
     ! to the prognostics collection if they are active
     if ( use_moisture )then

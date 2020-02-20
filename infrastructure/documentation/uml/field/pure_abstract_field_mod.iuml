@@ -3,10 +3,5 @@
 ' under which the code may be used.
 
 
-class field_pointer_mod::field_pointer_type {
-  +field_ptr: field_type <<pointer>>
-
+abstract class pure_abstract_field_mod::pure_abstract_field_type {
 }
-
-
-

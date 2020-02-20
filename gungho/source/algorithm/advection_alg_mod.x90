@@ -270,7 +270,7 @@ contains
   subroutine advection_generic_field_alg( generic_fields, wind_n, wind_np1 )
 
     use field_collection_mod,     only: field_collection_type,       &
-                                        field_collection_iterator_type
+                                        field_collection_real_iterator_type
 
     implicit none
 
@@ -281,7 +281,7 @@ contains
     type(field_type) :: gf_inc
 
     ! Iterator for field collection
-    type(field_collection_iterator_type) :: iterator
+    type(field_collection_real_iterator_type) :: iterator
 
     ! One of the single fields out of the generic_fields collection
     type(field_type), pointer :: single_generic_field => null()
@@ -296,7 +296,7 @@ contains
 
     if ( generic_fields%get_length() > 0 ) then
 
-      iterator = generic_fields%get_iterator()
+      iterator = generic_fields%get_real_iterator()
 
       do
         if ( .not.iterator%has_next() ) exit

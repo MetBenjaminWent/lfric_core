@@ -17,8 +17,14 @@ module field_collection_mod_test
     use halo_routing_collection_mod,   only : halo_routing_collection_type, &
                                               halo_routing_collection
     use field_mod,                     only : field_type,field_proxy_type
-    use field_collection_mod,          only : field_collection_type
+    use field_parent_mod,              only : field_parent_type
+    use integer_field_mod,             only : integer_field_type, &
+                                              integer_field_proxy_type
+    use field_collection_mod,          only : field_collection_type, &
+                                              field_collection_iterator_type, &
+                                              field_collection_real_iterator_type
     use fs_continuity_mod,             only : W0, W2
+    use pure_abstract_field_mod,       only : pure_abstract_field_type
     use yaxt,                          only : xt_initialize, xt_finalize
     use mpi_mod,                       only : store_comm, clear_comm
     use pFUnit_Mod
@@ -105,16 +111,24 @@ contains
     implicit none
 
     class(field_collection_test_type), intent(inout) :: this
+    class(pure_abstract_field_type), pointer :: field_ptr
     type(field_type) :: test_field1
     type(field_proxy_type) :: test_field1_p
+    type(integer_field_type) :: test_field2
+    type(integer_field_proxy_type) :: test_field2_p
     type(field_type), pointer :: returned_field1
     type(field_type), pointer :: returned_field2
+    type(integer_field_type), pointer :: returned_field3
     type(field_proxy_type) :: returned_field1_p
     type(field_proxy_type) :: returned_field2_p
+    type(integer_field_proxy_type) :: returned_field3_p
     type(field_collection_type) :: test_field_collection1
     type(field_collection_type) :: test_field_collection2
     real(r_def), parameter :: tol = 1.0e-6_r_def
-    integer(i_def) :: length
+    type(field_collection_iterator_type) :: iter
+    type(field_collection_real_iterator_type) :: iter_real
+    class(field_parent_type), pointer :: fld => null()
+    integer(i_def) :: length, i
     logical(l_def) :: exists
 
     ! Create a field object with the name 'test_field1'
@@ -123,25 +137,40 @@ contains
     test_field1_p = test_field1%get_proxy()
     test_field1_p%data(1)=99.0
 
-    ! Create a field_collection and put test_field1 in it
+    ! Create an integer field object with the name 'test_field2'
+    ! and put 33 in the first dof
+    call test_field2%initialise( this%w0_fs, name='test_field2' )
+    test_field2_p = test_field2%get_proxy()
+    test_field2_p%data(1)=33
+
+    ! Create a field_collection and put test_field1 and test_field2 in it
     test_field_collection1 = field_collection_type()
     call test_field_collection1%add_field(test_field1)
+    call test_field_collection1%add_field(test_field2)
 
     ! Check that test_field1 exists in field_collection
     exists = test_field_collection1%field_exists('test_field1')
     @assertTrue(exists)
 
-    ! Extract the field called 'test_field' into test_field2
+    ! Extract the field called 'test_field1' into returned_field1
     returned_field1 => test_field_collection1%get_field('test_field1')
     returned_field1_p = returned_field1%get_proxy()
 
     ! Check that test_field2 has 99.0 in the first dof
     @assertEqual(99.0, returned_field1_p%data(1), tol)
 
+    ! Extract the field called 'test_field2' into returned_field3
+    returned_field3 => test_field_collection1%get_integer_field('test_field2')
+    returned_field3_p = returned_field3%get_proxy()
+
+    ! Check that test_field2 has 33 in the first dof
+    @assertEqual(33, returned_field3_p%data(1))
+
     ! Create a second field_collection and put a reference to the field
     ! that is stored in the first field_collection into it
     test_field_collection2 = field_collection_type()
-    call test_field_collection2%add_reference_to_field(returned_field1)
+    field_ptr => returned_field1
+    call test_field_collection2%add_reference_to_field(field_ptr)
 
     ! Change the data in the original field
     returned_field1_p%data(1)=999.0
@@ -154,7 +183,7 @@ contains
     ! Check we can remove a field from the field collection
     call test_field_collection1%remove_field("test_field1")
     length=test_field_collection1%get_length()
-    @assertEqual(0, length)
+    @assertEqual(1, length)
 
     ! Check that test_field1 no longer exists in field_collection
     exists = test_field_collection1%field_exists('test_field1')
@@ -166,6 +195,46 @@ contains
     returned_field1_p = returned_field1%get_proxy()
     @assertEqual(99.0, returned_field1_p%data(1), tol)
 
+    ! Check we can iterate over a collection
+    ! At this point, test_field_collection1 should contain:
+    ! 1. An integer field with 33 as the first data item
+    ! 2. A real field with a first data item of 99.0
+    !    - so check for that:
+    iter=test_field_collection1%get_iterator()
+    do i=1,10
+      if(.not.iter%has_next())exit
+      fld=>iter%next()
+      select type(fld)
+        type is (field_type)
+          @assertEqual(2, i)
+          test_field1_p = fld%get_proxy()
+          @assertEqual(99.0, returned_field1_p%data(1), tol)
+        type is (integer_field_type)
+          @assertEqual(1, i)
+          returned_field3_p = fld%get_proxy()
+          @assertEqual(33, returned_field3_p%data(1))
+      end select
+    end do
+    ! Test that there were only two items in the collection (so the iteration
+    ! loop exited on i==3)
+    @assertEqual(3, i)
+
+    ! Check we can iterate over just the real fields in a collection
+    ! At this point, test_field_collection1 should contain:
+    ! 1. An integer field with 33 as the first data item
+    ! 2. A real field with a first data item of 99.0
+    !    - so check the real field iterator sees just the real field:
+    iter_real=test_field_collection1%get_real_iterator()
+    do i=1,10
+      if(.not.iter_real%has_next())exit
+      returned_field1=>iter_real%next()
+      returned_field1_p = returned_field1%get_proxy()
+      @assertEqual(99.0, returned_field1_p%data(1), tol)
+    end do
+    ! Test that there was only one real field in the collection (so the
+    ! iteration loop exited on i==2)
+    @assertEqual(2, i)
+
   end subroutine test_all
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -175,6 +244,7 @@ contains
     implicit none
 
     class(field_collection_test_type), intent(inout) :: self
+    class(pure_abstract_field_type), pointer         :: field_ptr
     type(field_type)                                 :: test_field1
     type(field_type), target                         :: test_field2
     type(field_type), pointer                        :: test_field2_ptr
@@ -216,7 +286,8 @@ contains
     ! Make a pointer to another field, and add that as a reference to the collection.
     call test_field2%initialise( self % w2_fs, name='test_field2' )
     test_field2_ptr => test_field2
-    call f_collection % add_reference_to_field( test_field2_ptr )
+    field_ptr => test_field2_ptr
+    call f_collection % add_reference_to_field( field_ptr )
 
     ! Test that the copied collection didn't grow when the original grew.
     @assertEqual(f_collection % get_length(), 2)

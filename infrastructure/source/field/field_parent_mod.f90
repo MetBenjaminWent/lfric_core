@@ -18,7 +18,7 @@ module field_parent_mod
   use function_space_mod,          only: function_space_type
   use halo_routing_collection_mod, only: halo_routing_collection
   use halo_routing_mod,            only: halo_routing_type
-  use linked_list_data_mod,        only: linked_list_data_type
+  use pure_abstract_field_mod,     only: pure_abstract_field_type
   use mesh_mod,                    only: mesh_type
 
   implicit none
@@ -27,7 +27,7 @@ module field_parent_mod
 
   !> Abstract field type that is the parent of any field type in the field
   !> object hierarchy
-  type, extends(linked_list_data_type), public, abstract :: field_parent_type
+  type, extends(pure_abstract_field_type), public, abstract :: field_parent_type
     !> A pointer to the function space on which the field lives
     type( function_space_type ), pointer :: vspace => null( )
     !> Holds information about how to halo exchange a field
@@ -115,14 +115,25 @@ contains
   !> @param [inout] self the field_parent object that will be initialised
   !> @param [in] vector_space the function space that the field lives on
   !> @param [in] name The name of the field. 'none' is a reserved name
+  !> @param [in] fortran_type The Fortran type of the field data
+  !> @param [in] fortran_kind The Fortran kind of the field data
   !> @param [in] advection_flag Whether the field is to be advected
   !>
-  subroutine field_parent_initialiser(self, vector_space, name, advection_flag)
+  subroutine field_parent_initialiser( self, &
+                                       vector_space, &
+                                       fortran_type, &
+                                       fortran_kind, &
+                                       name, &
+                                       advection_flag)
 
     implicit none
 
     class(field_parent_type), intent(inout)       :: self
     type(function_space_type), target, intent(in) :: vector_space
+    !> The type of data in the field to be halo swapped
+    integer(i_def), intent(in)                    :: fortran_type
+    !> The kind of data in the field to be halo swapped
+    integer(i_def), intent(in)                    :: fortran_kind
     character(*), optional, intent(in)            :: name
     logical,      optional, intent(in)            :: advection_flag
 
@@ -137,8 +148,8 @@ contains
                                              vector_space%get_mesh_id(), &
                                              vector_space%get_element_order(), &
                                              vector_space%which(), &
-                                             real_type, &
-                                             r_def )
+                                             fortran_type, &
+                                             fortran_kind )
     end if
     ! Set the name of the field if given, otherwise default to 'none'
     if (present(name)) then

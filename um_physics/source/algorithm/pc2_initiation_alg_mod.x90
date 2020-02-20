@@ -23,7 +23,7 @@ contains
   !>         current model state fields. If certain conditions are met, the
   !>         kernel will create cloud from clear sky or break up an overcast
   !>         scene.
-  !>   
+  !>
   !>         Moisture and Cloud fields are updated accordingly and
   !>         PC2 increments to potential temperature returned.
   !>

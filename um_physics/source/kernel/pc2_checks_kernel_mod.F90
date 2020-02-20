@@ -52,7 +52,7 @@ contains
 
 !> @brief Interface to the pc2 checks code
 !> @details Performs some consistency checks as part of the PC2
-!>          as a result of combining cloud increments caculated in 
+!>          as a result of combining cloud increments caculated in
 !>          parallel without knowledge of each other.
 !>          The PC2 cloud scheme is described in UMDP 30.
 !> @param[in]  nlayers              Number of layers

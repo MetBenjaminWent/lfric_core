@@ -22,6 +22,7 @@ module io_mod
   use field_mod,                     only: field_type, field_proxy_type
   use field_collection_mod,          only: field_collection_type, &
                                            field_collection_iterator_type
+  use field_parent_mod,              only: field_parent_type
   use files_config_mod,              only: ancil_directory,       &
                                            checkpoint_stem_name,  &
                                            land_area_ancil_path,  &
@@ -39,6 +40,7 @@ module io_mod
                                            ancil_option,              &
                                            ancil_option_aquaplanet,   &
                                            ancil_option_basic_gagl
+  use integer_field_mod,             only: integer_field_type
   use orography_config_mod,          only: orog_init_option,          &
                                            orog_init_option_ancil
   use io_config_mod,                 only: diagnostic_frequency, &
@@ -1426,27 +1428,30 @@ subroutine write_checkpoint(state, timestep)
     integer(i_def), intent(in) :: timestep
 
     type( field_collection_iterator_type) :: iter
-    type( field_type ), pointer :: fld => null()
+    class( field_parent_type ), pointer :: fld => null()
 
     iter=state%get_iterator()
     do
       if(.not.iter%has_next())exit
       fld=>iter%next()
-      if (fld%can_checkpoint()) then
-        write(log_scratch_space,'(3A,I6)') &
+      select type(fld)
+        type is (field_type)
+          if (fld%can_checkpoint()) then
+            write(log_scratch_space,'(3A,I6)') &
             "Checkpointing ", trim(adjustl(fld%get_name())), " at timestep ", &
             timestep
-        call log_event(log_scratch_space,LOG_LEVEL_INFO)
-        call fld%write_checkpoint("checkpoint_"//trim(adjustl(fld%get_name())), &
+            call log_event(log_scratch_space,LOG_LEVEL_INFO)
+            call fld%write_checkpoint("checkpoint_"//trim(adjustl(fld%get_name())), &
                                   trim(ts_fname(checkpoint_stem_name,&
                                   "", trim(adjustl(fld%get_name())),timestep,"")))
-      else
+          else
 
-        call log_event( 'Checkpointing for  '// trim(adjustl(fld%get_name())) // &
+            call log_event( 'Checkpointing for  '// trim(adjustl(fld%get_name())) // &
                         ' not set up', LOG_LEVEL_INFO )
-
-      end if
-
+          end if
+        type is (integer_field_type)
+          ! todo: integer field i/o
+      end select
     end do
 
     nullify(fld)
@@ -1466,23 +1471,28 @@ subroutine read_checkpoint(state, timestep)
     integer(i_def), intent(in) :: timestep
 
     type( field_collection_iterator_type) :: iter
-    type( field_type ), pointer :: fld => null()
+    class( field_parent_type ), pointer :: fld => null()
 
     iter=state%get_iterator()
     do
       if(.not.iter%has_next())exit
       fld=>iter%next()
-      if (fld%can_checkpoint()) then
-        call log_event( &
+      select type(fld)
+        type is (field_type)
+          if (fld%can_checkpoint()) then
+            call log_event( &
           'Reading checkpoint file to restart '//trim(adjustl(fld%get_name())), &
           LOG_LEVEL_INFO)
-        call fld%read_checkpoint("restart_"//trim(adjustl(fld%get_name())), &
+            call fld%read_checkpoint("restart_"//trim(adjustl(fld%get_name())), &
                               trim(ts_fname(checkpoint_stem_name, &
                               "", trim(adjustl(fld%get_name())),timestep,"")))
-      else
-        call log_event( 'Checkpointing for  '// trim(adjustl(fld%get_name())) // &
+          else
+            call log_event( 'Checkpointing for  '// trim(adjustl(fld%get_name())) // &
                         ' not set up', LOG_LEVEL_INFO )
-      end if
+          end if
+        type is (integer_field_type)
+          ! todo: integer field i/o
+      end select
     end do
 
     nullify(fld)
@@ -1531,24 +1541,28 @@ subroutine write_state(state)
     type( field_collection_type ), intent(inout) :: state
 
     type( field_collection_iterator_type) :: iter
-    type( field_type ), pointer :: fld => null()
+    class( field_parent_type ), pointer :: fld => null()
 
     iter=state%get_iterator()
     do
       if(.not.iter%has_next())exit
       fld=>iter%next()
-      if (fld%can_write()) then
-        write(log_scratch_space,'(3A,I6)') &
-            "Writing ", trim(adjustl(fld%get_name()))
-        call log_event(log_scratch_space,LOG_LEVEL_INFO)
-        call fld%write_field(trim(adjustl(fld%get_name())))
-      else
+      select type(fld)
+        type is (field_type)
+          if (fld%can_write()) then
+            write(log_scratch_space,'(3A,I6)') &
+                "Writing ", trim(adjustl(fld%get_name()))
+            call log_event(log_scratch_space,LOG_LEVEL_INFO)
+            call fld%write_field(trim(adjustl(fld%get_name())))
+          else
 
-        call log_event( 'Write method for '// trim(adjustl(fld%get_name())) // &
+            call log_event( 'Write method for '// trim(adjustl(fld%get_name())) // &
                         ' not set up', LOG_LEVEL_INFO )
 
-      end if
-
+          end if
+        type is (integer_field_type)
+          ! todo: integer field i/o
+      end select
     end do
 
     nullify(fld)
@@ -1566,21 +1580,26 @@ subroutine read_state(state)
     type( field_collection_type ), intent(inout) :: state
 
     type( field_collection_iterator_type) :: iter
-    type( field_type ), pointer :: fld => null()
+    class( field_parent_type ), pointer :: fld => null()
 
     iter=state%get_iterator()
     do
       if(.not.iter%has_next())exit
       fld=>iter%next()
-      if (fld%can_read()) then
-        call log_event( &
-          'Reading '//trim(adjustl(fld%get_name())), &
-          LOG_LEVEL_INFO)
-        call fld%read_field(trim(adjustl(fld%get_name())))
-      else
-        call log_event( 'Read method for  '// trim(adjustl(fld%get_name())) // &
+      select type(fld)
+        type is (field_type)
+          if (fld%can_read()) then
+            call log_event( &
+              'Reading '//trim(adjustl(fld%get_name())), &
+              LOG_LEVEL_INFO)
+            call fld%read_field(trim(adjustl(fld%get_name())))
+          else
+            call log_event( 'Read method for  '// trim(adjustl(fld%get_name())) // &
                         ' not set up', LOG_LEVEL_INFO )
-      end if
+          end if
+        type is (integer_field_type)
+          ! todo: integer field i/o
+      end select
     end do
 
     nullify(fld)

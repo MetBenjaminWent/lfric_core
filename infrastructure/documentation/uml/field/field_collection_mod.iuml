@@ -18,6 +18,7 @@ class field_collection_mod::field_collection_type {
   +clear() :
   +get_field( <<in>>field_name: string ) : <<pointer>> field_type
   +get_iterator() : field_collection_iterator_type
+  +get_real_iterator() : field_collection_real_iterator_type
   +get_length() : integer
   +get_name() : string
 }

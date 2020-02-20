@@ -22,9 +22,11 @@ module gungho_diagnostics_driver_mod
                                              field_collection_iterator_type
   use gungho_model_data_mod,          only : model_data_type
   use field_mod,                      only : field_type
+  use field_parent_mod,               only : field_parent_type
   use formulation_config_mod,         only : use_moisture, &
                                              use_physics
   use fs_continuity_mod,              only : W3, Wtheta
+  use integer_field_mod,              only : integer_field_type
   use moist_dyn_mod,                  only : num_moist_factors
   use mr_indices_mod,                 only : nummr, mr_names
   use section_choice_config_mod,      only : cloud, cloud_um
@@ -73,7 +75,7 @@ contains
 
     ! A pointer used for retrieving fields from collections
     ! when iterating over them
-    type( field_type ), pointer :: field_ptr  => null()
+    class( field_parent_type ), pointer :: field_ptr  => null()
 
     character(str_def) :: name
 
@@ -124,10 +126,16 @@ contains
       iterator = cloud_fields%get_iterator()
       do
         if ( .not.iterator%has_next() ) exit
-          field_ptr => iterator%next()
-          name = trim(adjustl( field_ptr%get_name() ))
-          call write_scalar_diagnostic( trim(name), field_ptr, &
+        field_ptr => iterator%next()
+
+        select type(field_ptr)
+          type is (field_type)
+            name = trim(adjustl( field_ptr%get_name() ))
+            call write_scalar_diagnostic( trim(name), field_ptr, &
                                         timestep, mesh_id, nodal_output_on_w3 )
+          type is (integer_field_type)
+            ! todo: integer field i/o
+        end select
       end do
       field_ptr => null()
     end if
@@ -139,12 +147,17 @@ contains
       do
         if ( .not.iterator%has_next() ) exit
         field_ptr => iterator%next()
-        fs = field_ptr%which_function_space()
-        if ( fs == W3 .or. fs == Wtheta ) then
-          name = trim(adjustl( field_ptr%get_name() ))
-          call write_scalar_diagnostic( trim(name), field_ptr, &
+        select type(field_ptr)
+          type is (field_type)
+            fs = field_ptr%which_function_space()
+            if ( fs == W3 .or. fs == Wtheta ) then
+              name = trim(adjustl( field_ptr%get_name() ))
+              call write_scalar_diagnostic( trim(name), field_ptr, &
                                         timestep, mesh_id, nodal_output_on_w3 )
-        end if
+            end if
+          type is (integer_field_type)
+            ! todo: integer field i/o
+        end select
       end do
       field_ptr => null()
     end if

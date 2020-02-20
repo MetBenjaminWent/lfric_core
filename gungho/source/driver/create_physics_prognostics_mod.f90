@@ -22,6 +22,7 @@ module create_physics_prognostics_mod
   use log_mod,                        only : log_event,         &
                                              LOG_LEVEL_INFO,         &
                                              LOG_LEVEL_ERROR
+  use pure_abstract_field_mod,        only : pure_abstract_field_type
   use radiation_config_mod,           only : n_radstep
   use aerosol_config_mod,             only : c_aerosol,                        &
                                              c_aerosol_glomap_mode_climatology
@@ -774,6 +775,7 @@ contains
     logical(l_def), optional, intent(in)           :: advection_flag
     !Local variables
     type(field_type)                               :: new_field
+    class(pure_abstract_field_type), pointer       :: field_ptr => null()
 
     ! pointers for xios write interface
     procedure(write_interface), pointer   :: write_diag_behaviour => null()
@@ -809,11 +811,12 @@ contains
 
     ! Add the field to the depository
     call depository%add_field(new_field)
+    field_ptr => depository%get_field(name)
     ! Put a pointer to the field in the required collection
-    call field_collection%add_reference_to_field( depository%get_field(name) )
+    call field_collection%add_reference_to_field( field_ptr )
     ! If checkpointing the field, put a pointer to it in the prognostics collection
     if ( checkpoint_restart_flag ) then
-      call prognostic_fields%add_reference_to_field( depository%get_field(name) )
+      call prognostic_fields%add_reference_to_field( field_ptr )
     endif
 
   end subroutine add_physics_field

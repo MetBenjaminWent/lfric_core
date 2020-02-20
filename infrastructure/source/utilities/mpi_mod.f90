@@ -57,6 +57,18 @@ module mpi_mod
                     global_sum_r_def
   end interface
 
+  ! Generic interface for specific max functions
+  interface global_max
+   module procedure global_max_i_def, &
+                    global_max_r_def
+  end interface
+
+  ! Generic interface for specific min functions
+  interface global_min
+   module procedure global_min_i_def, &
+                    global_min_r_def
+  end interface
+
 contains
 
   !> Initialises MPI and returns mpi_comm_world as the communicator
@@ -169,12 +181,12 @@ contains
   end subroutine global_sum_i_def
 
 
-  !> Calculates the global minimum of a collection of local minimums
+  !> Calculates the global minimum of a collection of local real minimums
   !>
   !> @param l_min The min on the local partition
   !> @param g_min The calculated global minimum
   !>
-  subroutine global_min(l_min, g_min)
+  subroutine global_min_r_def(l_min, g_min)
     implicit none
     real(r_def), intent(in)  :: l_min
     real(r_def), intent(out) :: g_min
@@ -194,15 +206,43 @@ contains
       LOG_LEVEL_ERROR )
     end if
 
-  end subroutine global_min
+  end subroutine global_min_r_def
 
 
-  !> Calculates the global maximum of a collection of local maximums
+  !> Calculates the global minimum of a collection of local integer minimums
+  !>
+  !> @param l_min The min on the local partition
+  !> @param g_min The calculated global minimum
+  !>
+  subroutine global_min_i_def(l_min, g_min)
+    implicit none
+    integer(i_def), intent(in)  :: l_min
+    integer(i_def), intent(out) :: g_min
+
+    integer(i_def)  :: err
+
+    if(comm_set)then
+      ! Generate global min
+      call mpi_allreduce( l_min, g_min, 1, get_mpi_datatype( integer_type, i_def ), &
+                          mpi_min, comm, err )
+      if (err /= mpi_success) &
+        call log_event('Call to global_min failed with an MPI error.', &
+                       LOG_LEVEL_ERROR )
+    else
+      call log_event( &
+      'Call to global_min failed. Must call store_comm first',&
+      LOG_LEVEL_ERROR )
+    end if
+
+  end subroutine global_min_i_def
+
+
+  !> Calculates the global maximum of a collection of local real maximums
   !>
   !> @param l_min The max on the local partition
   !> @param g_max The calculated global maximum
   !>
-  subroutine global_max(l_max, g_max)
+  subroutine global_max_r_def(l_max, g_max)
     implicit none
     real(r_def), intent(in)  :: l_max
     real(r_def), intent(out) :: g_max
@@ -222,8 +262,35 @@ contains
       LOG_LEVEL_ERROR )
     end if
 
-  end subroutine global_max
+  end subroutine global_max_r_def
 
+
+  !> Calculates the global maximum of a collection of local integer maximums
+  !>
+  !> @param l_min The max on the local partition
+  !> @param g_max The calculated global maximum
+  !>
+  subroutine global_max_i_def(l_max, g_max)
+    implicit none
+    integer(i_def), intent(in)  :: l_max
+    integer(i_def), intent(out) :: g_max
+
+    integer(i_def)  :: err
+
+    if(comm_set)then
+      ! Generate global max
+      call mpi_allreduce( l_max, g_max, 1, get_mpi_datatype( integer_type, i_def ), &
+                          mpi_max, comm, err )
+      if (err /= mpi_success) &
+        call log_event('Call to global_max failed with an MPI error.', &
+                       LOG_LEVEL_ERROR )
+    else
+      call log_event( &
+      'Call to global_max failed. Must call store_comm first',&
+      LOG_LEVEL_ERROR )
+    end if
+
+  end subroutine global_max_i_def
 
 
   !> Gather integer data from all MPI tasks into a single array in all MPI tasks

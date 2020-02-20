@@ -50,8 +50,8 @@ contains
 !> @brief Interface to the cloud scheme
 !> @details The UM large-scale cloud scheme:
 !>          determines the fraction of the grid-box that is covered by cloud
-!>          and the amount of liquid and ice condensate present in those clouds. 
-!>          Here there is an interface to the Smith cloud scheme. Which is the 
+!>          and the amount of liquid and ice condensate present in those clouds.
+!>          Here there is an interface to the Smith cloud scheme. Which is the
 !>          scheme described in UMDP 29.
 !> @param[in]     nlayers       Number of layers
 !> @param[in]     theta_in_wth  predicted theta in its native space

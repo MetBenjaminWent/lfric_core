@@ -21,10 +21,11 @@ module init_ancils_mod
                                              xios_write_field_face, &
                                              xios_write_field_single_face
   use field_collection_mod,           only : field_collection_type, &
-                                             field_collection_iterator_type
+                                             field_collection_real_iterator_type
   use function_space_mod,             only : function_space_type
   use function_space_collection_mod,  only : function_space_collection
   use fs_continuity_mod,              only : W3
+  use pure_abstract_field_mod,        only : pure_abstract_field_type
 
   implicit none
 
@@ -163,6 +164,7 @@ contains
     procedure(read_interface), pointer  :: tmp_read_ptr => null()
     procedure(write_interface), pointer :: tmp_write_ptr => null()
     type(field_type), pointer           :: tgt_ptr => null()
+    class(pure_abstract_field_type), pointer  :: tmp_ptr => null()
 
     w3_space => function_space_collection%get_fs(mesh_id, fs_order, W3)
     twod_space => function_space_collection%get_fs(twod_mesh_id, fs_order, W3)
@@ -195,7 +197,8 @@ contains
     call tgt_ptr%set_write_behaviour(tmp_write_ptr)
 
     ! Add the field pointer to the ancil_fields collection
-    call ancil_fields%add_reference_to_field( tgt_ptr )
+    tmp_ptr => depository%get_field(name)
+    call ancil_fields%add_reference_to_field( tmp_ptr )
 
     ! Nullify pointers
     nullify(w3_space)
@@ -203,6 +206,7 @@ contains
     nullify(tmp_read_ptr)
     nullify(tmp_write_ptr)
     nullify(tgt_ptr)
+    nullify(tmp_ptr)
 
   end subroutine setup_ancil_field
 
@@ -214,10 +218,10 @@ contains
 
     type( field_collection_type ), intent(inout) :: fld_collection
 
-    type( field_collection_iterator_type) :: iter
+    type( field_collection_real_iterator_type) :: iter
     type( field_type ), pointer :: fld => null()
 
-    iter=fld_collection%get_iterator()
+    iter=fld_collection%get_real_iterator()
     do
       if(.not.iter%has_next())exit
       fld=>iter%next()
