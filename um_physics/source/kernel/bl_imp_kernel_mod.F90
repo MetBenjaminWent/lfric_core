@@ -338,9 +338,8 @@ contains
     !---------------------------------------
     ! LFRic modules
     !---------------------------------------
-    use init_jules_alg_mod, only:                             &
-         n_land_tile, n_sea_ice_tile, n_soil_levs,            &
-         first_land_tile, first_sea_tile, first_sea_ice_tile
+    use jules_control_init_mod, only: n_land_tile, n_sea_ice_tile, &
+         first_sea_tile, first_sea_ice_tile
 
     !---------------------------------------
     ! UM modules containing switches or global constants
@@ -506,10 +505,11 @@ contains
 
     ! profile fields on u/v points and BL levels
     real(r_um), dimension(row_length,rows,bl_levels) :: taux, tauy,          &
-         f_ngstress_u, f_ngstress_v, dtrdz_u, dtrdz_v, rhokm_u, rhokm_v
+         dtrdz_u, dtrdz_v, rhokm_u, rhokm_v
 
     ! profile fields from level 2 upwards
-    real(r_um), dimension(row_length,rows,2:bl_levels) :: rdz_u, rdz_v
+    real(r_um), dimension(row_length,rows,2:bl_levels) :: rdz_u, rdz_v,      &
+         f_ngstress_u, f_ngstress_v
 
     ! profile fields from level 0 upwards
     real(r_um), dimension(row_length,rows,0:nlayers) ::                      &
@@ -643,17 +643,20 @@ contains
       allocate(bl_diag%tke(1,1,1))
     end if
 
+    ! Needed to stop crash in tr_mix - will ultimately need passing from
+    ! bl_exp_kernel to here, but science is currently unused
+    kent = 2
+    kent_dsc = 2
+
     !-----------------------------------------------------------------------
     ! Mapping of LFRic fields into UM variables
     !-----------------------------------------------------------------------
 
     ! Land tile fractions
-    i_tile = 0
     flandg = 0.0_r_um
-    do i = first_land_tile, first_land_tile + n_land_tile - 1
-      i_tile = i_tile + 1
+    do i = 1, n_land_tile
       flandg = flandg + real(tile_fraction(map_tile(i)), r_um)
-      frac_surft(1, i_tile) = real(tile_fraction(map_tile(i)), r_um)
+      frac_surft(1, i) = real(tile_fraction(map_tile(i)), r_um)
     end do
     fland(1) = flandg(1,1)
 
@@ -733,16 +736,14 @@ contains
     end do
 
     ! Land tile temperatures
-    i_tile = 0
     tstar_land = 0.0_r_um
-    do i = first_land_tile, first_land_tile + n_land_tile - 1
-      i_tile = i_tile + 1
-      tstar_surft(1, i_tile) = real(tile_temperature(map_tile(i)), r_um)
-      tstar_land = tstar_land + frac_surft(1, i_tile) * tstar_surft(1, i_tile)
+    do i = 1, n_land_tile
+      tstar_surft(1, i) = real(tile_temperature(map_tile(i)), r_um)
+      tstar_land = tstar_land + frac_surft(1, i) * tstar_surft(1, i)
       ! sensible heat flux
-      ftl_surft(1, i_tile) = real(tile_heat_flux(map_tile(i)), r_um)
+      ftl_surft(1, i) = real(tile_heat_flux(map_tile(i)), r_um)
       ! moisture flux
-      fqw_surft(1, i_tile) = real(tile_moisture_flux(map_tile(i)), r_um)
+      fqw_surft(1, i) = real(tile_moisture_flux(map_tile(i)), r_um)
     end do
 
     ! Sea temperature
@@ -775,7 +776,7 @@ contains
       canht_pft(1, i_pft) = real(canopy_height(map_pft(i_pft)), r_um)
     end do
 
-    do i = 1, n_soil_levs
+    do i = 1, sm_levels
       ! Soil temperature (t_soil_soilt)
       t_soil_soilt(1, i) = real(soil_temperature(map_soil(i)), r_um)
     end do
@@ -784,11 +785,9 @@ contains
     lw_down = real(lw_down_surf(map_2d(1)), r_um)
 
     ! Net SW radiation on tiles
-    i_tile = 0
-    do i = first_land_tile, first_land_tile + n_land_tile - 1
-      i_tile = i_tile + 1
-      sw_surft(1, i_tile) = real(sw_down_surf(map_2d(1)) - &
-                                 sw_up_tile(map_tile(i)), r_um)
+    do i = 1, n_land_tile
+      sw_surft(1, i) = real(sw_down_surf(map_2d(1)) - &
+                            sw_up_tile(map_tile(i)), r_um)
     end do
 
     ! Carbon dioxide
@@ -800,19 +799,15 @@ contains
     sil_orog_land_gb = real(silhouette_area_orog(map_2d(1)), r_um)
 
     ! Canopy water on each tile (canopy_surft)
-    i_tile = 0
-    do i = first_land_tile, first_land_tile + n_land_tile - 1
-      i_tile = i_tile + 1
-      canopy_surft(1, i_tile) = real(canopy_water(map_tile(i)), r_um)
+    do i = 1, n_land_tile
+      canopy_surft(1, i) = real(canopy_water(map_tile(i)), r_um)
     end do
 
-    i_tile = 0
-    do i = first_land_tile, first_land_tile + n_land_tile - 1
-      i_tile = i_tile + 1
+    do i = 1, n_land_tile
       ! Lying snow mass on land tiles
-      snow_surft(1, i_tile) = real(tile_snow_mass(map_tile(i)), r_um)
+      snow_surft(1, i) = real(tile_snow_mass(map_tile(i)), r_um)
       ! Number of snow layers on tiles (nsnow_surft)
-      nsnow_surft(1, i_tile) = int(n_snow_layers(map_tile(i)), i_um)
+      nsnow_surft(1, i) = int(n_snow_layers(map_tile(i)), i_um)
     end do
 
     !-----------------------------------------------------------------------
@@ -899,8 +894,6 @@ contains
       rhokm_u(1,1,k) = rhokm_w2(map_w2(1) + k)
       rhokm_v(1,1,k) = rhokm_w2(map_w2(2) + k)
       rhokh(1,1,k) = rhokh_bl(map_w3(1) + k)
-      f_ngstress_u(1,1,k) = ngstress_w2(map_w2(1) + k)
-      f_ngstress_v(1,1,k) = ngstress_w2(map_w2(2) + k)
       bq_gb(1,1,k) = bq_bl(map_wth(1) + k)
       bt_gb(1,1,k) = bt_bl(map_wth(1) + k)
       fqw(1,1,k) = moist_flux_bl(map_w3(1) + k)
@@ -913,21 +906,21 @@ contains
     do k = 2, bl_levels
       rdz_u(1,1,k) = rdz_w2(map_w2(1) + k)
       rdz_v(1,1,k) = rdz_w2(map_w2(2) + k)
+      f_ngstress_u(1,1,k) = ngstress_w2(map_w2(1) + k)
+      f_ngstress_v(1,1,k) = ngstress_w2(map_w2(2) + k)
     end do
 
-    i_tile = 0
-    do i = first_land_tile, first_land_tile + n_land_tile - 1
-      i_tile = i_tile + 1
-      alpha1(1, i_tile) = alpha1_tile(map_tile(i))
-      ashtf_prime_surft(1, i_tile) = ashtf_prime_tile(map_tile(i))
-      dtstar_surft(1, i_tile) = dtstar_tile(map_tile(i))
-      fraca(1, i_tile) = fraca_tile(map_tile(i))
-      z0h_surft(1, i_tile) = z0h_tile(map_tile(i))
-      z0m_surft(1, i_tile) = z0m_tile(map_tile(i))
-      rhokh_surft(1, i_tile) = rhokh_tile(map_tile(i))
-      chr1p5m(1, i_tile) = chr1p5m_tile(map_tile(i))
-      resfs(1, i_tile) = resfs_tile(map_tile(i))
-      canhc_surft(1, i_tile) = canhc_tile(map_tile(i))
+    do i = 1, n_land_tile
+      alpha1(1, i) = alpha1_tile(map_tile(i))
+      ashtf_prime_surft(1, i) = ashtf_prime_tile(map_tile(i))
+      dtstar_surft(1, i) = dtstar_tile(map_tile(i))
+      fraca(1, i) = fraca_tile(map_tile(i))
+      z0h_surft(1, i) = z0h_tile(map_tile(i))
+      z0m_surft(1, i) = z0m_tile(map_tile(i))
+      rhokh_surft(1, i) = rhokh_tile(map_tile(i))
+      chr1p5m(1, i) = chr1p5m_tile(map_tile(i))
+      resfs(1, i) = resfs_tile(map_tile(i))
+      canhc_surft(1, i) = canhc_tile(map_tile(i))
     end do
     ! recalculate the total resistance factor
     resft = fraca + (1.0 - fraca) * resfs
@@ -941,7 +934,7 @@ contains
 
     i_tile = 0
     do i = 1, n_land_tile
-      do n = 1, n_soil_levs
+      do n = 1, sm_levels
         i_tile = i_tile + 1
         wt_ext_surft(1,n,i) = tile_water_extract(map_smtile(i_tile))
       end do
@@ -1138,16 +1131,14 @@ contains
     end if
 
     ! Land tile temperatures
-    i_tile = 0
     tstar_land = 0.0_r_um
-    do i = first_land_tile, first_land_tile + n_land_tile - 1
-      i_tile = i_tile + 1
-      tstar_surft(1, i_tile) = real(tile_temperature(map_tile(i)), r_um)
-      tstar_land = tstar_land + frac_surft(1, i_tile) * tstar_surft(1, i_tile)
+    do i = 1, n_land_tile
+      tstar_surft(1, i) = real(tile_temperature(map_tile(i)), r_um)
+      tstar_land = tstar_land + frac_surft(1, i) * tstar_surft(1, i)
       ! sensible heat flux
-      ftl_surft(1, i_tile) = real(tile_heat_flux(map_tile(i)), r_um)
+      ftl_surft(1, i) = real(tile_heat_flux(map_tile(i)), r_um)
       ! moisture flux
-      fqw_surft(1, i_tile) = real(tile_moisture_flux(map_tile(i)), r_um)
+      fqw_surft(1, i) = real(tile_moisture_flux(map_tile(i)), r_um)
     end do
 
     ! Sea temperature
@@ -1193,8 +1184,6 @@ contains
       rhokm_u(1,1,k) = rhokm_w2(map_w2(3) + k)
       rhokm_v(1,1,k) = rhokm_w2(map_w2(4) + k)
       rhokh(1,1,k) = rhokh_bl(map_w3(1) + k)
-      f_ngstress_u(1,1,k) = ngstress_w2(map_w2(3) + k)
-      f_ngstress_v(1,1,k) = ngstress_w2(map_w2(4) + k)
       fqw(1,1,k) = moist_flux_bl(map_w3(1) + k)
       ftl(1,1,k) = heat_flux_bl(map_w3(1) + k)
       dtrdz_u(1,1,k) = dtrdz_w2(map_w2(3) + k)
@@ -1203,12 +1192,12 @@ contains
     do k = 2, bl_levels
       rdz_u(1,1,k) = rdz_w2(map_w2(3) + k)
       rdz_v(1,1,k) = rdz_w2(map_w2(4) + k)
+      f_ngstress_u(1,1,k) = ngstress_w2(map_w2(3) + k)
+      f_ngstress_v(1,1,k) = ngstress_w2(map_w2(4) + k)
     end do
 
-    i_tile = 0
-    do i = first_land_tile, first_land_tile + n_land_tile - 1
-      i_tile = i_tile + 1
-      dtstar_surft(1, i_tile) = dtstar_tile(map_tile(i))
+    do i = 1, n_land_tile
+      dtstar_surft(1, i) = dtstar_tile(map_tile(i))
     end do
 
     dtstar_sea(1,1) = dtstar_tile(map_tile(first_sea_tile))
@@ -1395,17 +1384,15 @@ contains
       zlcl_mixed(map_2d(1)) = zlcl_mix(1,1)
 
       ! Update land tiles
-      i_tile = 0
-      do i = first_land_tile, first_land_tile + n_land_tile - 1
-        i_tile = i_tile + 1
-        tile_temperature(map_tile(i)) = real(tstar_surft(1, i_tile), r_def)
-        tile_heat_flux(map_tile(i)) = real(ftl_surft(1, i_tile), r_def)
-        tile_moisture_flux(map_tile(i)) = real(fqw_surft(1, i_tile), r_def)
-        snow_sublimation(map_tile(i)) = real(ei_surft(1, i_tile), r_def)
+      do i = 1, n_land_tile
+        tile_temperature(map_tile(i)) = real(tstar_surft(1, i), r_def)
+        tile_heat_flux(map_tile(i)) = real(ftl_surft(1, i), r_def)
+        tile_moisture_flux(map_tile(i)) = real(fqw_surft(1, i), r_def)
+        snow_sublimation(map_tile(i)) = real(ei_surft(1, i), r_def)
         ! NB - net surface heat flux
-        surf_heat_flux(map_tile(i)) = real(surf_htf_surft(1, i_tile), r_def)
-        canopy_evap(map_tile(i)) = real(ecan_surft(1, i_tile), r_def)
-        total_snowmelt(map_tile(i)) = real(melt_surft(1, i_tile), r_def)
+        surf_heat_flux(map_tile(i)) = real(surf_htf_surft(1, i), r_def)
+        canopy_evap(map_tile(i)) = real(ecan_surft(1, i), r_def)
+        total_snowmelt(map_tile(i)) = real(melt_surft(1, i), r_def)
       end do
 
       ! Update sea tile
@@ -1424,7 +1411,7 @@ contains
         tile_moisture_flux(map_tile(i)) = real(fqw_ice(1,1,i_sice), r_def)
       end do
 
-      do i = 1, n_soil_levs
+      do i = 1, sm_levels
         water_extraction(map_soil(i)) = real(ext(1, i), r_def)
       end do
 

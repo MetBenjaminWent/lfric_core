@@ -28,7 +28,13 @@ module create_physics_prognostics_mod
                                              c_aerosol_glomap_mode_climatology
   use section_choice_config_mod,      only : cloud, cloud_um,                  &
                                              aerosol, aerosol_um,              &
-                                             radiation, radiation_socrates
+                                             radiation, radiation_socrates,    &
+                                             boundary_layer,                   &
+                                             boundary_layer_um,                &
+                                             surface, surface_jules,           &
+                                             orographic_drag,                  &
+                                             orographic_drag_um,               &
+                                             convection, convection_um
   use cloud_config_mod,               only : scheme, &
                                              scheme_pc2
   use time_config_mod,                only : timestep_start, timestep_end
@@ -182,13 +188,18 @@ contains
     call add_physics_field( derived_fields, depository, prognostic_fields,     &
       'u_star',         w2_space, checkpoint_restart_flag )
 
+#ifdef UM_PHYSICS
     !========================================================================
     ! Fields owned by the radiation scheme
     !========================================================================
     radiation_fields = field_collection_type(name='radiation_fields')
 
-    ! 2D fields, need checkpointing
-    checkpoint_restart_flag = .true.
+    ! 2D fields, might need checkpointing
+    if (surface == surface_jules) then
+      checkpoint_restart_flag = .true.
+    else
+      checkpoint_restart_flag = .false.
+    end if
     call add_physics_field( radiation_fields, depository, prognostic_fields,   &
       'albedo_obs_sw', twod_space, checkpoint_restart_flag, twod=.true. )
     call add_physics_field( radiation_fields, depository, prognostic_fields,   &
@@ -300,8 +311,14 @@ contains
     !========================================================================
     orography_fields = field_collection_type(name='orography_fields')
 
-    ! 2D fields, need checkpointing
-    checkpoint_restart_flag = .true.
+    ! 2D fields, might need checkpointing
+    if (boundary_layer == boundary_layer_um .or. &
+         surface == surface_jules           .or. &
+         orographic_drag == orographic_drag_um) then
+      checkpoint_restart_flag = .true.
+    else
+      checkpoint_restart_flag = .false.
+    end if
     call add_physics_field( orography_fields, depository, prognostic_fields,   &
       'sd_orog', twod_space, checkpoint_restart_flag, twod=.true. )
     call add_physics_field( orography_fields, depository, prognostic_fields,   &
@@ -320,8 +337,12 @@ contains
     !========================================================================
     turbulence_fields = field_collection_type(name='turbulence_fields')
 
-    ! 2D fields, need checkpointing
-    checkpoint_restart_flag = .true.
+    ! 2D fields, might need checkpointing
+    if (boundary_layer == boundary_layer_um) then
+      checkpoint_restart_flag = .true.
+    else
+      checkpoint_restart_flag = .false.
+    end if
     call add_physics_field( turbulence_fields, depository, prognostic_fields,  &
       'zh',      twod_space, checkpoint_restart_flag, twod=.true. )
 
@@ -383,14 +404,18 @@ contains
     !========================================================================
     convection_fields = field_collection_type(name='convection_fields')
 
-    ! 2D fields, need checkpointing
-    checkpoint_restart_flag = .true.
+    ! 2D fields, might need checkpointing
+    if (convection == convection_um) then
+      checkpoint_restart_flag = .true.
+    else
+      checkpoint_restart_flag = .false.
+    end if
     call add_physics_field( convection_fields, depository, prognostic_fields,  &
       'conv_rain',  twod_space, checkpoint_restart_flag, twod=.true. )
     call add_physics_field( convection_fields, depository, prognostic_fields,  &
       'conv_snow',  twod_space, checkpoint_restart_flag, twod=.true. )
 
-    ! 3D fields, need checkpointing
+    ! 3D fields, might need checkpointing
     call add_physics_field(convection_fields, depository, prognostic_fields, &
       'cca', wtheta_space, checkpoint_restart_flag)
     call add_physics_field(convection_fields, depository, prognostic_fields, &
@@ -478,10 +503,12 @@ contains
     !========================================================================
     surface_fields = field_collection_type(name='surface_fields')
 
-    ! 2D fields, need checkpointing
-    checkpoint_restart_flag = .true.
-    call add_physics_field( surface_fields, depository, prognostic_fields,     &
-      'tstar',   twod_space, checkpoint_restart_flag, twod=.true. )
+    ! 2D fields, might need checkpointing
+    if (surface == surface_jules) then
+      checkpoint_restart_flag = .true.
+    else
+      checkpoint_restart_flag = .false.
+    end if
     call add_physics_field( surface_fields, depository, prognostic_fields,     &
       'z0msea',  twod_space, checkpoint_restart_flag, twod=.true. )
     call add_physics_field( surface_fields, depository, prognostic_fields,     &
@@ -489,7 +516,7 @@ contains
     call add_physics_field( surface_fields, depository, prognostic_fields,     &
       'chloro_sea', twod_space, checkpoint_restart_flag, twod=.true. )
 
-    ! Fields on surface tiles, need checkpointing
+    ! Fields on surface tiles, might need checkpointing
     call add_physics_field( surface_fields, depository, prognostic_fields,     &
       'tile_fraction', tile_space, checkpoint_restart_flag, twod=.true. )
     call add_physics_field( surface_fields, depository, prognostic_fields,     &
@@ -497,13 +524,13 @@ contains
     call add_physics_field( surface_fields, depository, prognostic_fields,     &
       'canopy_water', tile_space, checkpoint_restart_flag, twod=.true. )
 
-    ! Fields on plant functional types, need checkpointing
+    ! Fields on plant functional types, might need checkpointing
     call add_physics_field( surface_fields, depository, prognostic_fields,     &
       'leaf_area_index', pft_space, checkpoint_restart_flag, twod=.true. )
     call add_physics_field( surface_fields, depository, prognostic_fields,     &
       'canopy_height', pft_space, checkpoint_restart_flag, twod=.true. )
 
-    ! Sea-ice category fields, need checkpointing
+    ! Sea-ice category fields, might need checkpointing
     call add_physics_field( surface_fields, depository, prognostic_fields,     &
       'sea_ice_thickness', sice_space, checkpoint_restart_flag, twod=.true. )
     call add_physics_field( surface_fields, depository, prognostic_fields,     &
@@ -540,6 +567,8 @@ contains
 
     ! 2D fields
     call add_physics_field( surface_fields, depository, prognostic_fields,     &
+      'tstar',   twod_space, checkpoint_restart_flag, twod=.true. )
+    call add_physics_field( surface_fields, depository, prognostic_fields,     &
       'ustar', twod_space, checkpoint_restart_flag, twod=.true. )
     call add_physics_field(surface_fields, depository, prognostic_fields,      &
       'net_prim_prod', twod_space, checkpoint_restart_flag, twod=.true.)
@@ -554,8 +583,12 @@ contains
     !========================================================================
     soil_fields = field_collection_type(name='soil_fields')
 
-    ! 2D fields, need checkpointing
-    checkpoint_restart_flag = .true.
+    ! 2D fields, might need checkpointing
+    if (surface == surface_jules) then
+      checkpoint_restart_flag = .true.
+    else
+      checkpoint_restart_flag = .false.
+    end if
     call add_physics_field( soil_fields, depository, prognostic_fields,       &
       'soil_albedo', twod_space, checkpoint_restart_flag, twod=.true. )
     call add_physics_field( soil_fields, depository, prognostic_fields,       &
@@ -624,8 +657,12 @@ contains
     !========================================================================
     snow_fields = field_collection_type(name='snow_fields')
 
-    ! Fields on surface tiles, need checkpointing
-    checkpoint_restart_flag = .true.
+    ! Fields on surface tiles, might need checkpointing
+    if (surface == surface_jules) then
+      checkpoint_restart_flag = .true.
+    else
+      checkpoint_restart_flag = .false.
+    end if
     call add_physics_field( snow_fields, depository, prognostic_fields,  &
       'tile_snow_mass', tile_space, checkpoint_restart_flag, twod=.true. )
     call add_physics_field( snow_fields, depository, prognostic_fields,  &
@@ -735,6 +772,7 @@ contains
     checkpoint_restart_flag = .false.
     call add_physics_field( aerosol_fields, depository, prognostic_fields,     &
       'cloud_drop_no_conc', wtheta_space, checkpoint_restart_flag )
+#endif
 
   end subroutine create_physics_prognostics
 

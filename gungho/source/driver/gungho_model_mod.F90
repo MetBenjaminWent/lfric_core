@@ -39,6 +39,11 @@ module gungho_model_mod
                                          final_runtime_constants
 #ifdef UM_PHYSICS
   use planet_constants_mod,       only : set_planet_constants
+  use um_control_init_mod,        only : um_control_init
+  use um_physics_init_mod,        only : um_physics_init
+  use jules_control_init_mod,     only : jules_control_init
+  use jules_physics_init_mod,     only : jules_physics_init
+  use socrates_init_mod,          only : socrates_init
 #endif
   use convert_to_upper_mod,       only : convert_to_upper
   use mpi_mod,                    only : store_comm, &
@@ -74,6 +79,8 @@ module gungho_model_mod
   use formulation_config_mod,     only : transport_only, &
                                          use_moisture,   &
                                          use_physics
+  use section_choice_config_mod,  only : radiation,         &
+                                         radiation_socrates
   use iter_timestep_alg_mod,      only : iter_alg_init, &
                                          iter_alg_final
   use minmax_tseries_mod,         only : minmax_tseries,      &
@@ -274,6 +281,21 @@ module gungho_model_mod
 #ifdef UM_PHYSICS
     ! Set derived planet constants and presets
     call set_planet_constants()
+
+    if ( use_physics ) then
+      if (radiation == radiation_socrates) then
+        ! Initialisation for the Socrates radiation scheme
+        call socrates_init()
+      end if
+      ! Initialisation of UM high-level variables
+      call um_control_init()
+      ! Initialisation of UM physics variables
+      call um_physics_init()
+      ! Initialisation of Jules high-level variables
+      call jules_control_init()
+      ! Initialisation of Jules physics variables
+      call jules_physics_init()
+    end if
 #endif
 
   end subroutine initialise_infrastructure
@@ -444,8 +466,6 @@ module gungho_model_mod
     type( field_type), pointer :: rho => null()
     type( field_type), pointer :: exner => null()
 
-    ! Pointer for tstar_2d to allow write to dump
-    type( field_type ), pointer   :: tstar_2d => null()
     ! Pointer for setting I/O handlers on fields
     procedure(write_interface), pointer :: tmp_write_ptr => null()
 

@@ -68,7 +68,7 @@ contains
     use interp_bl_kernel_mod, only: interp_bl_kernel_type
     use bl_imp_kernel_mod, only: bl_imp_kernel_type
     use multi_to_single_kernel_mod, only: multi_to_single_kernel_type
-    use init_jules_alg_mod, only: n_surf_tile
+    use jules_control_init_mod, only: n_surf_tile
 
     implicit none
 

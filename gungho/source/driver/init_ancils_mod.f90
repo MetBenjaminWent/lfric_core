@@ -11,7 +11,7 @@ module init_ancils_mod
                                              log_scratch_space, &
                                              LOG_LEVEL_INFO
   use init_tstar_analytic_alg_mod,    only : init_tstar_analytic_alg
-
+  use update_tstar_alg_mod,           only : update_tstar_alg
   use field_mod,                      only : field_type,     &
                                              read_interface, &
                                              write_interface
@@ -37,7 +37,6 @@ module init_ancils_mod
 
 contains
 
-
   !> @details Initialises ancillary fields analytically
   !> @param[in,out] surface_fields the 2D field collection
   subroutine init_analytic_ancils(surface_fields)
@@ -48,11 +47,17 @@ contains
 
     type( field_type ), pointer ::    tstar_ptr  => null()
 
+    logical(l_def) :: put_field
+
     tstar_ptr => surface_fields%get_field('tstar')
 
     call init_tstar_analytic_alg(tstar_ptr)
 
     nullify(tstar_ptr)
+
+    ! Now update the tiled surface temperature with the calculated tstar
+    put_field = .true.
+    call update_tstar_alg(surface_fields, put_field )
 
   end subroutine init_analytic_ancils
 
@@ -71,19 +76,23 @@ contains
 
     procedure(read_interface), pointer  :: tmp_read_ptr => null()
 
+    logical(l_def) :: put_field
+
     call log_event("Reading tstar from dump", LOG_LEVEL_INFO)
 
     tstar_ptr => surface_fields%get_field('tstar')
 
-
     ! Need to set the I/O handler for read. Any ancils here
     ! are currently read from a UM2LFRic dump
-
     tmp_read_ptr => xios_read_field_single_face
     call tstar_ptr%set_read_behaviour(tmp_read_ptr)
     call tstar_ptr%read_field("read_tstar")
 
     nullify( tstar_ptr, tmp_read_ptr )
+
+    ! Now update the tiled surface temperature with the calculated tstar
+    put_field = .true.
+    call update_tstar_alg(surface_fields, put_field )
 
   end subroutine init_aquaplanet_ancils
 

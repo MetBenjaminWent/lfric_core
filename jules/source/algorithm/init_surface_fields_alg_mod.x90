@@ -1,0 +1,80 @@
+!-------------------------------------------------------------------------------
+!(c) Crown copyright 2020 Met Office. All rights reserved.
+!The file LICENCE, distributed with this code, contains details of the terms
+!under which the code may be used.
+!-------------------------------------------------------------------------------
+!>@brief Prepares the surface fields
+module init_surface_fields_alg_mod
+
+  use constants_mod,                   only: r_def
+
+  ! Derived Types
+  use field_mod,                 only: field_type
+  use field_collection_mod,      only: field_collection_type
+
+  implicit none
+
+  private
+  public :: init_surface_fields_alg
+
+contains
+
+  !> @brief   Initialises the surface fields
+  !> @details The surface fields need to be initialised so that they have a
+  !>          value when passed on to the physics at the first time step,
+  !>          in case no restart file is used.
+  !> @param[in,out] surface_fields Collection of fields for surface scheme
+  subroutine init_surface_fields_alg(surface_fields)
+
+    use initial_surface_kernel_mod, only: initial_surface_kernel_type
+
+    implicit none
+
+    ! Arguments
+    type(field_collection_type), intent(inout) :: surface_fields
+
+    ! Prognostic fields
+    type( field_type ), pointer :: z0msea              => null()
+
+    ! Ancillary fields
+    type( field_type ), pointer :: chloro_sea          => null()
+    type( field_type ), pointer :: sea_ice_thickness   => null()
+
+    type( field_type ), pointer :: tile_fraction       => null()
+    type( field_type ), pointer :: leaf_area_index     => null()
+    type( field_type ), pointer :: canopy_height       => null()
+
+    ! Progostic fields
+    type( field_type ), pointer :: tile_temperature    => null()
+    type( field_type ), pointer :: surface_conductance => null()
+    type( field_type ), pointer :: canopy_water        => null()
+
+    z0msea             => surface_fields%get_field('z0msea')
+    chloro_sea         => surface_fields%get_field('chloro_sea')
+    sea_ice_thickness  => surface_fields%get_field('sea_ice_thickness')
+
+    tile_fraction       => surface_fields%get_field('tile_fraction')
+    leaf_area_index     => surface_fields%get_field('leaf_area_index')
+    canopy_height       => surface_fields%get_field('canopy_height')
+    tile_temperature    => surface_fields%get_field('tile_temperature')
+    surface_conductance => surface_fields%get_field('surface_conductance')
+    canopy_water        => surface_fields%get_field('canopy_water')
+
+    ! Set sea surface prognostics to fixed values for use in SCM testing
+    ! or when no values are provied by the um2lfric dump
+    call invoke( setval_c(z0msea,              1.5e-4_r_def),                 &
+                 ! After #2070 these will come from ancillary files
+                 setval_c(chloro_sea,          5.0e-7_r_def),                 &
+                 setval_c(sea_ice_thickness,   0.0_r_def),                    &
+                 ! Set land prognostics to fixed values for use in SCM
+                 ! testing or when no values are provided by um2lfric
+                 setval_c(surface_conductance, 1.0_r_def),                    &
+                 setval_c(canopy_water,        0.0_r_def),                    &
+                 ! Initialise fields which vary with surface tile
+                 initial_surface_kernel_type( tile_fraction, leaf_area_index, &
+                                              canopy_height, tile_temperature)&
+                                              )
+
+  end subroutine init_surface_fields_alg
+
+end module init_surface_fields_alg_mod

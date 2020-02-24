@@ -133,14 +133,12 @@ contains
     type( field_type), pointer :: dmv_conv => null()
 
     logical :: boundary_layer_done ! Flag to indicate that boundary_layer has been calculated
-    logical :: convection_done ! Flag to indicate that convection has been calculated
 
     integer(i_def) :: i_mr
 
     if ( subroutine_timers ) call timer("fast_physics")
 
     boundary_layer_done=.false.
-    convection_done=.false.
 
     if (heldsuarez_wind_placement > 0)then
       call log_event( &
@@ -182,9 +180,6 @@ contains
         call invoke( inc_X_plus_Y(mr(imr_v), dmv_conv) )
       end if
 
-      ! Flag that convection has been done in this timestep and increments
-      ! need adding later in BL scheme
-      convection_done=.true.
     end if
 
     if (boundary_layer == boundary_layer_um .and. &
@@ -224,10 +219,6 @@ contains
     if (boundary_layer_done) then
       call invoke(inc_X_plus_Y(du, du_bl), &
                   inc_X_plus_Y(dtheta, dtheta_bl) )
-    else if (convection_done) then
-      call log_event(&
-         'fast_physics: Cannot call convection without boundary-layer.', &
-         LOG_LEVEL_ERROR )
     end if
 
     call dtheta%log_minmax(LOG_LEVEL_INFO, 'fast physics: dtheta' )

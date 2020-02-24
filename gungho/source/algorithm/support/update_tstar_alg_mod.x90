@@ -28,8 +28,9 @@ contains
   !>                                  being put or got from jules_prognostics
   subroutine update_tstar_alg(surface_fields, put_field)
 
-    use init_jules_alg_mod, only: first_sea_tile
-
+#ifdef UM_PHYSICS
+    use jules_control_init_mod, only: first_sea_tile
+#endif
     use single_to_multi_kernel_mod, only: single_to_multi_kernel_type
     use multi_to_single_kernel_mod, only: multi_to_single_kernel_type
 
@@ -44,6 +45,7 @@ contains
     type( field_type ), pointer :: tile_temperature => null()
     type( field_type ), pointer :: tstar => null()
 
+#ifdef UM_PHYSICS
     tile_temperature => surface_fields%get_field('tile_temperature')
     tstar => surface_fields%get_field('tstar')
 
@@ -58,6 +60,7 @@ contains
                                                first_sea_tile ) )
 
     end if
+#endif
 
   end subroutine update_tstar_alg
 

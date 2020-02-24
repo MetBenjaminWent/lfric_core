@@ -18,7 +18,9 @@ module slow_physics_alg_mod
                                        radiation,                              &
                                        radiation_socrates,                     &
                                        spectral_gwd,                           &
-                                       spectral_gwd_um
+                                       spectral_gwd_um,                        &
+                                       surface,                                &
+                                       surface_jules
 
   use constants_mod,    only: i_def,r_def
   use log_mod,          only: log_event,                         &
@@ -275,40 +277,32 @@ contains
 
     if ( microphysics == microphysics_um .and. &
          microphysics_placement == microphysics_placement_slow) then
-      if (use_moisture) then
 
-        ! Algorithm which calls the UM microphysics scheme
-        call log_event( 'slow_physics: Running Microphysics', LOG_LEVEL_INFO )
+      ! Algorithm which calls the UM microphysics scheme
+      call log_event( 'slow_physics: Running Microphysics', LOG_LEVEL_INFO )
 
-        call clone_bundle(mr, dmr_mphys, nummr)
-        call set_bundle_scalar(0.0_r_def, dmr_mphys, nummr)
+      call clone_bundle(mr, dmr_mphys, nummr)
+      call set_bundle_scalar(0.0_r_def, dmr_mphys, nummr)
 
-        call dtheta_mphys%initialise( vector_space = theta%get_function_space() )
-        call dcfl_pc2_mphys%initialise( vector_space = theta%get_function_space() )
-        call dcff_pc2_mphys%initialise( vector_space = theta%get_function_space() )
-        call dbcf_pc2_mphys%initialise( vector_space = theta%get_function_space() )
+      call dtheta_mphys%initialise( vector_space = theta%get_function_space() )
+      call dcfl_pc2_mphys%initialise( vector_space = theta%get_function_space() )
+      call dcff_pc2_mphys%initialise( vector_space = theta%get_function_space() )
+      call dbcf_pc2_mphys%initialise( vector_space = theta%get_function_space() )
 
-        call mphys_alg_step( mr_n, theta, exner, height_w3, height_wth,     &
-                             derived_fields, microphysics_fields,           &
-                             cloud_fields, aerosol_fields,                  &
-                             dmr_mphys, dtheta_mphys,                       &
-                             dcfl_pc2_mphys, dcff_pc2_mphys, dbcf_pc2_mphys )
+      call mphys_alg_step( mr_n, theta, exner, height_w3, height_wth,     &
+                           derived_fields, microphysics_fields,           &
+                           cloud_fields, aerosol_fields,                  &
+                           dmr_mphys, dtheta_mphys,                       &
+                           dcfl_pc2_mphys, dcff_pc2_mphys, dbcf_pc2_mphys )
 
-        ! N.B. Call to microphysics passes in mr_n, which is intent(in) and
-        !      represents the start of the timestep value of the mixing
-        !      ratios. The equivalent variable mr is just a copy of this and
-        !      is passed into slow physics as intent(inout). Variable mr is
-        !      then updated by microphysics and used to generate the slow
-        !      physics increment.
+      ! N.B. Call to microphysics passes in mr_n, which is intent(in) and
+      !      represents the start of the timestep value of the mixing
+      !      ratios. The equivalent variable mr is just a copy of this and
+      !      is passed into slow physics as intent(inout). Variable mr is
+      !      then updated by microphysics and used to generate the slow
+      !      physics increment.
 
-        microphysics_done=.true. ! Microphysics completed
-
-      else ! not use moisture
-        ! throw an error: this is just plain daft and user has made a mistake.
-        call log_event( &
-        'slow_physics: Microphysics cannot be run without moisture. Please correct', &
-         LOG_LEVEL_ERROR )
-      end if ! use moisture
+      microphysics_done=.true. ! Microphysics completed
 
     end if   ! microphysics placement slow
 
@@ -323,7 +317,7 @@ contains
       call tile_sw_direct_albedo%initialise(vector_space)
       call tile_sw_diffuse_albedo%initialise(vector_space)
       call tile_lw_albedo%initialise(vector_space)
-      if (.not.l_planet_grey_surface) then
+      if (surface == surface_jules .and. .not.l_planet_grey_surface) then
         call rad_tile_alg_step(tile_sw_direct_albedo, tile_sw_diffuse_albedo,  &
                                tile_lw_albedo, derived_fields,                 &
                                radiation_fields, orography_fields,             &
@@ -338,12 +332,10 @@ contains
                               tile_sw_direct_albedo, tile_sw_diffuse_albedo,   &
                               tile_lw_albedo)
       radiation_done=.true.
-      call dtheta_rad%log_minmax(LOG_LEVEL_INFO, 'slow physics: dtheta_rad')
 
       if (scheme == scheme_pc2) then
 
         ! PC2 code will be called with dtheta_rad as the only forcing.
-
         call pc2_rad_response_alg_step(                 & ! Current state
                                         mr_n,           & ! IN
                                         theta,          & ! IN

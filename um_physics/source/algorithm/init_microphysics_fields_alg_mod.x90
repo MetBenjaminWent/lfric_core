@@ -1,0 +1,52 @@
+!-------------------------------------------------------------------------------
+!(c) Crown copyright 2020 Met Office. All rights reserved.
+!The file LICENCE, distributed with this code, contains details of the terms
+!under which the code may be used.
+!-------------------------------------------------------------------------------
+!>@brief Prepares the microphysics fields
+module init_microphysics_fields_alg_mod
+
+  use constants_mod,                   only: r_def
+
+  ! Derived Types
+  use field_mod,                       only: field_type
+  use field_collection_mod,            only: field_collection_type
+
+  implicit none
+
+  private
+  public :: init_microphysics_fields_alg
+
+contains
+
+  !> @brief   Initialises the microphysics fields
+  !> @details The microphysics fields need to be initialised so that they have a
+  !>          value when passed on to the physics at the first time step,
+  !>          in case the microphysics scheme is off.
+  !> @param[in,out] microphysics_fields Collection of fields for mphys scheme
+  subroutine init_microphysics_fields_alg(microphysics_fields)
+
+    implicit none
+    ! Arguments
+    type(field_collection_type), intent(inout) :: microphysics_fields
+
+    ! Microphysics increments and outputs
+    type( field_type ), pointer :: ls_rain   => null()
+    type( field_type ), pointer :: ls_snow   => null()
+    type( field_type ), pointer :: dtl_mphys => null()
+    type( field_type ), pointer :: dmt_mphys => null()
+
+    dtl_mphys => microphysics_fields%get_field('dtl_mphys')
+    dmt_mphys => microphysics_fields%get_field('dmt_mphys')
+    ls_rain   => microphysics_fields%get_field('ls_rain')
+    ls_snow   => microphysics_fields%get_field('ls_snow')
+
+    ! Set microphysics output fields to zero for use when scheme is off
+    call invoke( setval_c(dtl_mphys, 0.0_r_def), &
+                 setval_c(dmt_mphys, 0.0_r_def), &
+                 setval_c(ls_rain,   0.0_r_def), &
+                 setval_c(ls_snow,   0.0_r_def) )
+
+  end subroutine init_microphysics_fields_alg
+
+end module init_microphysics_fields_alg_mod

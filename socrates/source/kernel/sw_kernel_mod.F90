@@ -191,7 +191,7 @@ subroutine sw_code(nlayers,                          &
     cloud_horizontal_rsd, cloud_vertical_decorr
   use set_thermodynamic_mod, only: set_thermodynamic
   use set_cloud_top_mod, only: set_cloud_top
-  use init_jules_alg_mod, only: n_surf_tile
+  use jules_control_init_mod, only: n_surf_tile
   use socrates_init_mod, only: n_sw_band
   use socrates_runes, only: runes, ip_source_illuminate,                    &
     ip_cloud_representation_off, ip_cloud_representation_ice_water,         &

@@ -48,13 +48,8 @@ module gungho_model_data_mod
   use map_fd_to_prognostics_alg_mod,    only : map_fd_to_prognostics
   use init_gungho_prognostics_alg_mod,  only : init_gungho_prognostics_alg
   use init_physics_prognostics_alg_mod, only : init_physics_prognostics_alg
-  use init_aerosol_alg_mod,             only : init_aerosol_alg
   use update_tstar_alg_mod,             only : update_tstar_alg
   use moist_dyn_factors_alg_mod,        only : moist_dyn_factors_alg
-  use initial_cloud_alg_mod,            only : initial_cloud_alg
-  use init_jules_alg_mod,               only : init_jules_alg
-  use init_orography_fields_alg_mod,    only : init_orography_fields_alg
-  use init_physics_incs_alg_mod,        only : init_physics_incs_alg
   use init_fd_prognostics_mod,          only : init_fd_prognostics_dump
   use init_ancils_mod,                  only : init_analytic_ancils,    &
                                                init_aquaplanet_ancils,  &
@@ -216,8 +211,6 @@ contains
 
     type( model_data_type ), intent(inout) :: model_data
 
-    logical(l_def) :: put_field
-
     ! Initialise all the physics fields here. We'll then re initialise
     ! them below if need be
     if (use_physics) then
@@ -257,15 +250,6 @@ contains
         ! Update factors for moist dynamics
         call moist_dyn_factors_alg( model_data%moist_dyn, model_data%mr )
 
-        if (use_physics) then
-          ! if no cloud scheme, reset cloud variables
-          if ( cloud == cloud_none ) then
-            call initial_cloud_alg( model_data%convection_fields, &
-                                    model_data%cloud_fields )
-          end if
-
-        end if
-
       case ( init_option_fd_start_dump )
 
         if (use_physics) then
@@ -277,13 +261,8 @@ contains
 
           ! Populate prognostics from input finite difference fields
           call map_fd_to_prognostics( model_data%prognostic_fields,          &
-                                      model_data%diagnostic_fields,          &
                                       model_data%mr,                         &
                                       model_data%moist_dyn,                  &
-                                      model_data%turbulence_fields,          &
-                                      model_data%convection_fields,          &
-                                      model_data%cloud_fields,               &
-                                      model_data%surface_fields,             &
                                       model_data%fd_fields )
 
         else
@@ -326,11 +305,6 @@ contains
                           "stopping program! ",LOG_LEVEL_ERROR)
       end select
 
-      ! All reading has been done, map the SST into the correct
-      ! location of the multi-dimensional field
-      put_field = .true.
-      call update_tstar_alg( model_data%surface_fields, put_field )
-
     end if
 
   end subroutine initialise_model_data
@@ -364,15 +338,16 @@ contains
     !===================== Write fields to dump ======================!
     if( use_physics ) then
 
-      ! All running has been done, map the SST back into the dumped field
-      put_field = .false.
-      call update_tstar_alg(surface_fields, put_field )
-
       ! Current dump writing is only relevant for physics runs at the moment
       if (write_dump) then
 
         ! For the purposes of dumping from one collection, we add a pointer
         ! to tstar to the fd_prognostics collection
+
+        ! First we need to put the SST into tstar from the tiled surface
+        ! temperature field
+        put_field = .false.
+        call update_tstar_alg(surface_fields, put_field )
 
         tmp_write_ptr => xios_write_field_single_face
         tstar_2d => surface_fields%get_field('tstar')

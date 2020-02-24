@@ -21,8 +21,6 @@ module map_fd_to_prognostics_alg_mod
                                              get_height
   use fs_continuity_mod,               only: W3
 
-  use initial_cloud_kernel_mod,        only: initial_cloud_kernel_type
-
   implicit none
 
   private
@@ -33,18 +31,10 @@ contains
   !> @details Setting FE prognostic fields from FD fields
   !> @param[in,out] prognostic_fields  Collection of prognostic fields
   !> @param[in,out] mr                 Array of moisture mixing ratios
-  !> @param[in,out] turbulence_fields Collection of fields for turbulence scheme
-  !> @param[in,out] convection_fields Collection of fields for convection scheme
-  !> @param[in,out] cloud_fields Collection of fields for cloud scheme
-  !> @param[in,out] surface_fields Collection of fields for surface scheme
   !> @param[in]     fd_fields          Collection of input Finite Difference
   !>                                    fields
-  subroutine map_fd_to_prognostics(prognostic_fields, diagnostic_fields, &
-                                   mr, moist_dyn,                        &
-                                   turbulence_fields, convection_fields, &
-                                   cloud_fields, surface_fields,         &
+  subroutine map_fd_to_prognostics(prognostic_fields, mr, moist_dyn,          &
                                    fd_fields)
-
 
     use mr_indices_mod,             only : imr_v, imr_cl, imr_ci, imr_r, &
                                            imr_s, imr_g
@@ -55,30 +45,16 @@ contains
 
     ! FE Prognostic fields
     type(field_collection_type), intent( inout ) :: prognostic_fields
-    type(field_collection_type), intent( inout ) :: diagnostic_fields
     type(field_type),            intent( inout ) :: mr(:)
     type(field_type),            intent( inout ) :: moist_dyn(num_moist_factors)
 
-    type(field_collection_type), intent(inout) :: turbulence_fields
-    type(field_collection_type), intent(inout) :: convection_fields
-    type(field_collection_type), intent(inout) :: cloud_fields
-    type(field_collection_type), intent(inout) :: surface_fields
-    type( field_collection_type), intent( inout ) :: fd_fields
+    type( field_collection_type), intent( in ) :: fd_fields
 
     !Local dereferenced fields
     type( field_type ), pointer :: theta                  => null()
     type( field_type ), pointer :: rho                    => null()
     type( field_type ), pointer :: u                      => null()
     type( field_type ), pointer :: exner                  => null()
-    type( field_type ), pointer :: cf_area                => null()
-    type( field_type ), pointer :: cf_ice                 => null()
-    type( field_type ), pointer :: cf_liq                 => null()
-    type( field_type ), pointer :: cf_bulk                => null()
-    type( field_type ), pointer :: rhcrit_in_wth          => null()
-    type( field_type ), pointer :: cca                    => null()
-    type( field_type ), pointer :: ccw                    => null()
-    type( field_type ), pointer :: zh_twod                => null()
-    type( field_type ), pointer :: z0msea_twod            => null()
 
     ! FD  fields
     type( field_type ), pointer :: ew_wind_in_w3          => null()
@@ -91,7 +67,6 @@ contains
     type( field_type ), pointer :: mcl_in_wtheta          => null()
     type( field_type ), pointer :: mcf_in_wtheta          => null()
 
-
     !FD (source) fields
     ew_wind_in_w3         => fd_fields%get_field('ew_wind_in_w3')
     ns_wind_in_w3         => fd_fields%get_field('ns_wind_in_w3')
@@ -103,25 +78,11 @@ contains
     mcl_in_wtheta         => fd_fields%get_field('mcl_in_wtheta')
     mcf_in_wtheta         => fd_fields%get_field('mcf_in_wtheta')
 
-
     !Prognostic (target) fields
     u                     => prognostic_fields%get_field('u')
     theta                 => prognostic_fields%get_field('theta')
     exner                 => prognostic_fields%get_field('exner')
     rho                   => prognostic_fields%get_field('rho')
-
-    !Cloud (target) fields
-    cf_area               => cloud_fields%get_field('area_fraction')
-    cf_ice                => cloud_fields%get_field('ice_fraction')
-    cf_liq                => cloud_fields%get_field('liquid_fraction')
-    cf_bulk               => cloud_fields%get_field('bulk_fraction')
-    rhcrit_in_wth         => cloud_fields%get_field('rh_crit')
-    cca                   => convection_fields%get_field('cca')
-    ccw                   => convection_fields%get_field('ccw')
-
-    !2d (target) fields
-    zh_twod               => turbulence_fields%get_field('zh')
-    z0msea_twod           => surface_fields%get_field('z0msea')
 
     ! Some variables should coming in from the restart file, but currently
     ! they are not output by UM2LFRIC and are set to zero or a default value
@@ -137,18 +98,9 @@ contains
                  setval_c(mr(imr_s), 0.0_r_def),      &
                  setval_c(mr(imr_g), 0.0_r_def),      &
                  setval_c(exner, 0.0_r_def),          &
-                 setval_c(zh_twod, 1000.0_r_def),     &
-                 setval_c(z0msea_twod, 1.5e-4_r_def), &
                  setval_c(upward_wind_in_wtheta, 0.0_r_def))
 
     call set_wind( u, ew_wind_in_w3, ns_wind_in_w3, upward_wind_in_wtheta )
-
-    ! Cloud variables are currently set to zero when
-    ! reading in a start file, but as above, this should be reviewed
-    ! with updates to um2lfric and/or checkpoint-restart use
-    call invoke( initial_cloud_kernel_type( cf_area, cf_ice, cf_liq, &
-                                            cf_bulk, rhcrit_in_wth,  &
-                                            cca, ccw) )
 
     ! Update factors for moist dynamics
     call moist_dyn_factors_alg( moist_dyn, mr )

@@ -12,7 +12,9 @@ module jules_extra_alg_mod
   use field_mod,                  only: field_type
   use field_collection_mod,       only: field_collection_type
   use multi_to_single_kernel_mod, only: multi_to_single_kernel_type
-  use init_jules_alg_mod,         only: n_soil_levs, n_land_tile, max_snow_levs
+  use jules_control_init_mod,     only: n_land_tile
+  use nlsizes_namelist_mod,       only: sm_levels
+  use jules_snow_mod,             only: nsmax
 
   use io_config_mod,        only: subroutine_timers
   use timer_mod,            only: timer
@@ -214,7 +216,7 @@ contains
       call ls_rain%copy_field_properties(tmp_diag)
 
       ! Soil moisture and temperature: Loop over soil levels
-      do i_soil = 1, n_soil_levs
+      do i_soil = 1, sm_levels
         call invoke(multi_to_single_kernel_type(tmp_diag, soil_moisture,       &
                                                 i_soil) )
         call tmp_diag%write_field('soil_moisture_'//trim(soil_names(i_soil)) )
@@ -248,7 +250,7 @@ contains
                                                 i_tile) )
         call tmp_diag%write_field('canopy_evap_'//trim(tile_names(i_tile)) )
 
-	do j = 1, max_snow_levs
+	do j = 1, nsmax
           i_snow = i_snow + 1
           call invoke(multi_to_single_kernel_type(tmp_diag, snow_layer_temp,   &
                                                   i_snow) )

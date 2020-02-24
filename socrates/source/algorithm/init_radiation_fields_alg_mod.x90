@@ -1,0 +1,65 @@
+!-------------------------------------------------------------------------------
+!(c) Crown copyright 2020 Met Office. All rights reserved.
+!The file LICENCE, distributed with this code, contains details of the terms
+!under which the code may be used.
+!-------------------------------------------------------------------------------
+!>@brief Prepares the radiation fields
+module init_radiation_fields_alg_mod
+
+  use constants_mod,                   only: r_def
+
+  ! Derived Types
+  use field_mod,                       only: field_type
+  use field_collection_mod,            only: field_collection_type
+
+  implicit none
+
+  private
+  public :: init_radiation_fields_alg
+
+contains
+
+  !> @brief   Initialises the radiation fields
+  !> @details The radiation fields need to be initialised so that they have a
+  !>          value when passed on to the physics at the first time step,
+  !>          if the radiation scheme is not used.
+  !> @param[in,out] radition_fields Collection of fields for radiation scheme
+  subroutine init_radiation_fields_alg(radiation_fields)
+
+    implicit none
+
+    ! Arguments
+    type(field_collection_type), intent(inout) :: radiation_fields
+
+    ! Outputs from the radiation scheme
+    type( field_type ), pointer :: sw_heating_rate   => null()
+    type( field_type ), pointer :: lw_heating_rate   => null()
+    type( field_type ), pointer :: sw_up_tile        => null()
+
+    type( field_type ), pointer :: cos_zenith_angle  => null()
+    type( field_type ), pointer :: lw_down_surf      => null()
+    type( field_type ), pointer :: sw_down_surf      => null()
+    type( field_type ), pointer :: sw_down_blue_surf => null()
+
+    sw_heating_rate   => radiation_fields%get_field('sw_heating_rate')
+    lw_heating_rate   => radiation_fields%get_field('lw_heating_rate')
+    sw_up_tile        => radiation_fields%get_field('sw_up_tile')
+
+    cos_zenith_angle  => radiation_fields%get_field('cos_zenith_angle')
+    lw_down_surf      => radiation_fields%get_field('lw_down_surf')
+    sw_down_surf      => radiation_fields%get_field('sw_down_surf')
+    sw_down_blue_surf => radiation_fields%get_field('sw_down_blue_surf')
+
+    ! Initialise the increments to 0 for use when the scheme isn't called
+    call invoke( setval_c(sw_heating_rate,   0.0_r_def),   &
+                 setval_c(lw_heating_rate,   0.0_r_def),   &
+                 setval_c(sw_up_tile,        0.0_r_def),   &
+                 ! Set these values for use in SCM testing when radiation is off
+                 setval_c(cos_zenith_angle,  1.0_r_def),   &
+                 setval_c(lw_down_surf,      380.0_r_def), &
+                 setval_c(sw_down_surf,      640.0_r_def), &
+                 setval_c(sw_down_blue_surf, 400.0_r_def) )
+
+  end subroutine init_radiation_fields_alg
+
+end module init_radiation_fields_alg_mod

@@ -16,9 +16,7 @@ module iter_timestep_alg_mod
                                        LOG_LEVEL_ERROR
 
   ! Configuration options
-  use section_choice_config_mod, only: radiation,          &
-                                       radiation_socrates, &
-                                       cloud,              &
+  use section_choice_config_mod, only: cloud,              &
                                        cloud_um
 
   use formulation_config_mod,    only: use_moisture, use_physics, dlayer_on, &
@@ -105,8 +103,6 @@ module iter_timestep_alg_mod
   ! Physics settings
 
 #ifdef UM_PHYSICS
-  use um_init_mod,                only: um_init
-  use socrates_init_mod,          only: socrates_init
   use cld_alg_mod,                only: cld_alg_step
 #endif
 
@@ -249,17 +245,6 @@ contains
     ! Set initial reference state
     call copy_bundle(state, reference_state, bundle_size)
     if (dry_static_adjust)call invoke( sort_ref_kernel_type(reference_state(igh_t) ) )
-
-#ifdef UM_PHYSICS
-    if ( use_physics ) then
-      if (radiation == radiation_socrates) then
-        ! Initialisation for the Socrates radiation scheme
-        call socrates_init()
-      end if
-      ! Initialization for the UM physics schemes (BL, cloud, mphys, conv)
-      call um_init(theta)
-    end if
-#endif
 
     ! Construct semi-implicit solver
     vector_state = field_vector_type(bundle_size)
@@ -662,23 +647,21 @@ contains
 
 #ifdef UM_PHYSICS
     if (use_physics) then
-      if (use_moisture) then
-        if ( cloud == cloud_um ) then
+      if ( cloud == cloud_um ) then
 
-          call log_event( 'iter timestep: End-of-timestep cloud update', LOG_LEVEL_INFO )
+        call log_event( 'iter timestep: End-of-timestep cloud update', LOG_LEVEL_INFO )
 
-          call invoke( setval_c(dtheta, 0.0_r_def) )
+        call invoke( setval_c(dtheta, 0.0_r_def) )
 
-          call cld_alg_step( dtheta, mr, state(igh_t), state(igh_p),         &
-                             derived_fields, turbulence_fields,              &
-                             cloud_fields,                                   &
-                             state_n(igh_t),         state_n(igh_p), mr_n,   &
-                             state_after_slow(igh_t),state_after_slow(igh_p) )
+        call cld_alg_step( dtheta, mr, state(igh_t), state(igh_p),         &
+                           derived_fields, turbulence_fields,              &
+                           cloud_fields,                                   &
+                           state_n(igh_t),         state_n(igh_p), mr_n,   &
+                           state_after_slow(igh_t),state_after_slow(igh_p) )
 
-          call invoke(inc_X_plus_Y(state(igh_t), dtheta))
+        call invoke(inc_X_plus_Y(state(igh_t), dtheta))
 
-        end if ! ( cloud == cloud_um )
-      end if ! (use moisture)
+      end if ! ( cloud == cloud_um )
     end if !(use_physics)
 #endif
 

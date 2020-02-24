@@ -3,13 +3,8 @@
 !The file LICENCE, distributed with this code, contains details of the terms
 !under which the code may be used.
 !-------------------------------------------------------------------------------
-
-!>@brief Prepares the orography fields that are used in physics schemes
-
+!>@brief Prepares the orography fields
 module init_orography_fields_alg_mod
-
-  use log_mod,              only: log_event,         &
-                                  LOG_LEVEL_INFO
 
   use constants_mod,        only: r_def
 
@@ -25,16 +20,18 @@ module init_orography_fields_alg_mod
 contains
 
   !> @brief Initialises orographic fields
-  !>
-  !> @details An algorithm for initialising orography fields
-  !>
+  !> @details The orography fields need to be initialised so that they have a
+  !>          value when passed on to the physics at the first time step,
+  !>          in case no restart file is used.
   !> @param[in,out] orography_fields Orography related fields
   subroutine init_orography_fields_alg(orography_fields)
 
     implicit none
 
+    ! Arguments
     type( field_collection_type ), intent( inout ) :: orography_fields
 
+   ! Ancillary fields
     type( field_type ), pointer :: sd_orog              => null()
     type( field_type ), pointer :: grad_xx_orog         => null()
     type( field_type ), pointer :: grad_xy_orog         => null()
@@ -42,38 +39,28 @@ contains
     type( field_type ), pointer :: silhouette_area_orog => null()
     type( field_type ), pointer :: peak_to_trough_orog  => null()
 
-    !================== Initialise orography fields ===========================!
-
     ! Standard deviation of orography
     sd_orog      => orography_fields%get_field('sd_orog')
-
     ! (dh/dx)*(dh/dx) of orography
     grad_xx_orog => orography_fields%get_field('grad_xx_orog')
-
     ! (dh/dx)*(dh/dy) of orography
     grad_xy_orog => orography_fields%get_field('grad_xy_orog')
-
     ! (dh/dy)*(dh/dy) of orography
     grad_yy_orog => orography_fields%get_field('grad_yy_orog')
-
     ! Silhouette area of orography
     silhouette_area_orog => orography_fields%get_field('silhouette_area_orog')
-
     ! Half of peak-to-trough height over root(2) of orography
     peak_to_trough_orog  => orography_fields%get_field('peak_to_trough_orog')
 
-    ! Hardcoding of fields is temporary until ancillaries can be read in.
-    ! See LFRic ticket #1848.
-    call invoke( setval_c(sd_orog, 1000.0_r_def),              &
-                 setval_c(grad_xx_orog, 1.0e-2_r_def),         &
-                 setval_c(grad_xy_orog, 1.0e-3_r_def),         &
-                 setval_c(grad_yy_orog, 1.0e-2_r_def),         &
+    ! Initialise the orography fields to fixed values for use in SCM
+    ! testing
+    ! After #2070 these will be read from ancillary files
+    call invoke( setval_c(sd_orog,              1000.0_r_def), &
+                 setval_c(grad_xx_orog,         1.0e-2_r_def), &
+                 setval_c(grad_xy_orog,         1.0e-3_r_def), &
+                 setval_c(grad_yy_orog,         1.0e-2_r_def), &
                  setval_c(silhouette_area_orog, 1.0e-1_r_def), &
-                 setval_c(peak_to_trough_orog, 200.0_r_def))
-
-    call log_event( "Initialised orography fields", LOG_LEVEL_INFO )
-
-    !==========================================================================!
+                 setval_c(peak_to_trough_orog,  200.0_r_def) )
 
   end subroutine init_orography_fields_alg
 

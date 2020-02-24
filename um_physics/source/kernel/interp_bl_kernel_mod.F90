@@ -176,10 +176,6 @@ contains
                                     0.5_r_def * rhokm_bl(map_wth(1) + k)
         rhokm_w2(map_w2(df+1) + k) = rhokm_w2(map_w2(df+1) + k) +            &
                                       0.5_r_def * rhokm_bl(map_wth(1) + k)
-        ngstress_w2(map_w2(df) + k) = ngstress_w2(map_w2(df) + k) +          &
-                                       0.5_r_def *ngstress_bl(map_wth(1) + k)
-        ngstress_w2(map_w2(df+1) + k) = ngstress_w2(map_w2(df+1) + k) +      &
-                                         0.5_r_def *ngstress_bl(map_wth(1) + k)
         dtrdz_w2(map_w2(df) + k) = dtrdz_w2(map_w2(df) + k) +                &
                                     0.5_r_def * dtrdz_uv_bl(map_w3(1) + k)
         dtrdz_w2(map_w2(df+1) + k) = dtrdz_w2(map_w2(df+1) + k) +            &
@@ -195,6 +191,10 @@ contains
                                   0.5_r_def * rdz_uv_bl(map_wth(1) + k)
         rdz_w2(map_w2(df+1) + k) = rdz_w2(map_w2(df+1) + k) +                &
                                     0.5_r_def * rdz_uv_bl(map_wth(1) + k)
+        ngstress_w2(map_w2(df) + k) = ngstress_w2(map_w2(df) + k) +          &
+                                       0.5_r_def *ngstress_bl(map_wth(1) + k)
+        ngstress_w2(map_w2(df+1) + k) = ngstress_w2(map_w2(df+1) + k) +      &
+                                         0.5_r_def *ngstress_bl(map_wth(1) + k)
       end do
     end do
 

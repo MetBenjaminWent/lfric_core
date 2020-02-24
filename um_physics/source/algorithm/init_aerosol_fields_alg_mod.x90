@@ -3,11 +3,8 @@
 !The file LICENCE, distributed with this code, contains details of the terms
 !under which the code may be used.
 !-------------------------------------------------------------------------------
-
-!>@brief Prepares the glomap aerosol fields needed when not initialising
-!>       from a restart file.
-
-module init_aerosol_alg_mod
+!>@brief Prepares the glomap aerosol fields
+module init_aerosol_fields_alg_mod
 
   use constants_mod,                   only: r_def
 
@@ -18,28 +15,25 @@ module init_aerosol_alg_mod
   implicit none
 
   private
-  public :: init_aerosol_alg
+  public :: init_aerosol_fields_alg
 
 contains
 
-  !> @brief   Prepares the glomap aerosol fields and initialises
-  !>          to starting values or from a restart file
-  !> @details An algorithm for initialising glomap aerosol fields
-  !>          for all solvers.
-  !>          The aerosol fields need to be initialised so that they have a
+  !> @brief   Initialises the aerosol fields
+  !> @details The aerosol fields need to be initialised so that they have a
   !>          value when passed on to the physics at the first time step,
   !>          in case no restart file is used.
+  !>          Also the CDNC field is given a value for use when the
+  !>          aerosol parametrization is not used.
   !> @param[in,out] aerosol_fields   aerosol related fields
-
-  subroutine init_aerosol_alg(aerosol_fields)
+  subroutine init_aerosol_fields_alg(aerosol_fields)
 
     implicit none
 
     ! Arguments
     type( field_collection_type ), intent( inout ) :: aerosol_fields
 
-    ! Prognostic fields
-
+    ! Ancillary/Prognostic fields
     type( field_type ), pointer :: nd_nuc_sol => null()
     type( field_type ), pointer :: nuc_sol_su => null()
     type( field_type ), pointer :: nuc_sol_oc => null()
@@ -61,6 +55,7 @@ contains
     type( field_type ), pointer :: ait_ins_bc => null()
     type( field_type ), pointer :: ait_ins_oc => null()
 
+    ! Output from the aerosol scheme
     type( field_type ), pointer :: cloud_drop_no_conc => null()
 
     nd_nuc_sol => aerosol_fields%get_field('nd_nuc_sol')
@@ -86,34 +81,32 @@ contains
 
     cloud_drop_no_conc => aerosol_fields%get_field('cloud_drop_no_conc')
 
-    ! ==========================================================================
-    ! Initialise fields
-    ! ==========================================================================
-
     ! Initialise GLOMAP-mode aerosol fields
     ! Values chosen to give CDNC approx 1e8 m-3
-    call invoke( setval_c(nd_nuc_sol,            0.0_r_def),                   &
-                 setval_c(nuc_sol_su,            0.0_r_def),                   &
-                 setval_c(nuc_sol_oc,            0.0_r_def),                   &
-                 setval_c(nd_ait_sol,        7.0e-19_r_def),                   &
-                 setval_c(ait_sol_su,        7.0e-12_r_def),                   &
-                 setval_c(ait_sol_bc,        7.0e-12_r_def),                   &
-                 setval_c(ait_sol_oc,        3.0e-11_r_def),                   &
-                 setval_c(nd_acc_sol,        7.0e-18_r_def),                   &
-                 setval_c(acc_sol_su,        2.0e-10_r_def),                   &
-                 setval_c(acc_sol_bc,        1.3e-11_r_def),                   &
-                 setval_c(acc_sol_oc,        3.0e-11_r_def),                   &
-                 setval_c(acc_sol_ss,        3.0e-11_r_def),                   &
-                 setval_c(nd_cor_sol,        2.0e-20_r_def),                   &
-                 setval_c(cor_sol_su,        3.0e-12_r_def),                   &
-                 setval_c(cor_sol_bc,        7.0e-14_r_def),                   &
-                 setval_c(cor_sol_oc,        7.0e-13_r_def),                   &
-                 setval_c(cor_sol_ss,         1.3e-9_r_def),                   &
-                 setval_c(nd_ait_ins,        7.0e-20_r_def),                   &
-                 setval_c(ait_ins_bc,        3.0e-12_r_def),                   &
-                 setval_c(ait_ins_oc,        7.0e-13_r_def),                   &
+    call invoke( setval_c(nd_nuc_sol,            0.0_r_def), &
+                 setval_c(nuc_sol_su,            0.0_r_def), &
+                 setval_c(nuc_sol_oc,            0.0_r_def), &
+                 ! After #2070 the following will be read from ancillary files
+                 setval_c(nd_ait_sol,        7.0e-19_r_def), &
+                 setval_c(ait_sol_su,        7.0e-12_r_def), &
+                 setval_c(ait_sol_bc,        7.0e-12_r_def), &
+                 setval_c(ait_sol_oc,        3.0e-11_r_def), &
+                 setval_c(nd_acc_sol,        7.0e-18_r_def), &
+                 setval_c(acc_sol_su,        2.0e-10_r_def), &
+                 setval_c(acc_sol_bc,        1.3e-11_r_def), &
+                 setval_c(acc_sol_oc,        3.0e-11_r_def), &
+                 setval_c(acc_sol_ss,        3.0e-11_r_def), &
+                 setval_c(nd_cor_sol,        2.0e-20_r_def), &
+                 setval_c(cor_sol_su,        3.0e-12_r_def), &
+                 setval_c(cor_sol_bc,        7.0e-14_r_def), &
+                 setval_c(cor_sol_oc,        7.0e-13_r_def), &
+                 setval_c(cor_sol_ss,         1.3e-9_r_def), &
+                 setval_c(nd_ait_ins,        7.0e-20_r_def), &
+                 setval_c(ait_ins_bc,        3.0e-12_r_def), &
+                 setval_c(ait_ins_oc,        7.0e-13_r_def), &
+                 ! Set for use if aerosol climatologies are switched off
                  setval_c(cloud_drop_no_conc,  1.0e8_r_def) )
 
-  end subroutine init_aerosol_alg
+  end subroutine init_aerosol_fields_alg
 
-end module init_aerosol_alg_mod
+end module init_aerosol_fields_alg_mod

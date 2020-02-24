@@ -141,9 +141,9 @@ subroutine rad_tile_code(nlayers,                          &
   use socrates_init_mod, only: &
     n_sw_band, sw_wavelength_short, sw_wavelength_long, sw_weight_blue, &
     n_lw_band
-  use init_jules_alg_mod, only: &
+  use jules_control_init_mod, only: &
     n_surf_tile, n_land_tile, n_sea_tile, n_sea_ice_tile, &
-    first_land_tile, first_sea_tile, first_sea_ice_tile
+    first_sea_tile, first_sea_ice_tile
   use nlsizes_namelist_mod, only: row_length, rows, land_field, ntiles
   use jules_surface_types_mod, only: ntype, npft
   use nvegparm, only: emis_nvg
@@ -249,12 +249,10 @@ subroutine rad_tile_code(nlayers,                          &
   ! ---------------------------------------------------------------------------
 
   ! Land tile fractions
-  i_tile = 0
   flandg = 0.0_r_um
-  do i = first_land_tile, first_land_tile + n_land_tile - 1
-    i_tile = i_tile + 1
+  do i = 1, n_land_tile
     flandg = flandg + real(tile_fraction(map_tile(i)), r_um)
-    frac_tile(1, i_tile) = real(tile_fraction(map_tile(i)), r_um)
+    frac_tile(1, i) = real(tile_fraction(map_tile(i)), r_um)
   end do
 
   ! Jules requires fractions with respect to the land area
@@ -269,10 +267,8 @@ subroutine rad_tile_code(nlayers,                          &
   call tilepts(land_field, frac_tile, type_pts, type_index)
 
   ! Land tile temperatures
-  i_tile = 0
-  do i = first_land_tile, first_land_tile + n_land_tile - 1
-    i_tile = i_tile + 1
-    tstar_tile(1, i_tile) = real(tile_temperature(map_tile(i)), r_um)
+  do i = 1, n_land_tile
+    tstar_tile(1, i) = real(tile_temperature(map_tile(i)), r_um)
   end do
 
   ! Sea temperature
@@ -379,11 +375,9 @@ subroutine rad_tile_code(nlayers,                          &
   albobs_nir = real(albedo_obs_nir(map_2d(1)), r_um)
 
   ! Lying snow mass on land tiles
-  i_tile = 0
-  do i = first_land_tile, first_land_tile + n_land_tile - 1
-    i_tile = i_tile + 1
-    snow_tile(1, i_tile) = real(tile_snow_mass(map_tile(i)), r_um)
-    rgrain(1, i_tile) = real(tile_snow_rgrain(map_tile(i)), r_um)
+  do i = 1, n_land_tile
+    snow_tile(1, i) = real(tile_snow_mass(map_tile(i)), r_um)
+    rgrain(1, i) = real(tile_snow_rgrain(map_tile(i)), r_um)
   end do
 
   ! Lying snow mass on sea ice categories
@@ -429,7 +423,7 @@ subroutine rad_tile_code(nlayers,                          &
   df_rtile = 0
   do i_band = 1, n_sw_band
     ! Land tile albedos
-    df_rtile = first_land_tile-1 + n_surf_tile*(i_band-1)
+    df_rtile = n_surf_tile*(i_band-1)
     do i_tile = 1, n_land_tile
       df_rtile = df_rtile + 1
       tile_sw_direct_albedo(map_rtile(df_rtile)) &
@@ -477,7 +471,7 @@ subroutine rad_tile_code(nlayers,                          &
 
   do i_band = 1, n_lw_band
     ! Land tile albedos
-    df_rtile = first_land_tile-1 + n_surf_tile*(i_band-1)
+    df_rtile = n_surf_tile*(i_band-1)
     do i_tile = 1, n_land_tile
       df_rtile = df_rtile + 1
       if (i_tile <= npft) then

@@ -309,7 +309,7 @@ contains
     !---------------------------------------
     ! LFRic modules
     !---------------------------------------
-    use init_jules_alg_mod, only: n_land_tile, first_land_tile
+    use jules_control_init_mod, only: n_land_tile
 
     !---------------------------------------
     ! UM modules containing switches or global constants
@@ -403,7 +403,7 @@ contains
     ! Local variables for the kernel
     !-----------------------------------------------------------------------
     ! loop counters etc
-    integer(i_def) :: k, i, i_tile
+    integer(i_def) :: k, i
 
     ! local switches and scalars
     integer(i_um) :: n_cumulus, n_deep, n_shallow, n_congestus, n_mid,       &
@@ -485,10 +485,8 @@ contains
     !-----------------------------------------------------------------------
 
     ! Land sea mask
-    i_tile = 0
     flandg = 0.0_r_um
-    do i = first_land_tile, first_land_tile + n_land_tile - 1
-      i_tile = i_tile + 1
+    do i = 1, n_land_tile
       flandg = flandg + real(tile_fraction(map_tile(i)), r_um)
     end do
 
