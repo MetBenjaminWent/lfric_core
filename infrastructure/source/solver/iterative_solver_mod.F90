@@ -14,7 +14,7 @@
 !> data members.
 
 module iterative_solver_mod
-  use constants_mod,        only : r_def, i_def, EPS
+  use constants_mod,        only : r_def, i_def, EPS, l_def
   use vector_mod,           only : abstract_vector_type
   use linear_operator_mod,  only : abstract_linear_operator_type
   use preconditioner_mod,   only : abstract_preconditioner_type
@@ -246,6 +246,7 @@ module iterative_solver_mod
 
   type, public, extends(abstract_iterative_solver_type) :: precondition_only_type
      private
+     logical(kind=l_def) :: d_norm
    contains
      procedure :: apply => precondition_only_solve
      procedure :: precondition_only_solve
@@ -258,12 +259,13 @@ module iterative_solver_mod
 
   ! the constructor will be in a submodule
   interface
-     module function precondition_only_constructor( lin_op, prec, r_tol, a_tol) &
+     module function precondition_only_constructor( lin_op, prec, r_tol, a_tol, diagnostic_norm) &
           result(self)
        class(abstract_linear_operator_type), target, intent(in) :: lin_op
        class(abstract_preconditioner_type),  target, intent(in) :: prec
        real(kind=r_def),                             intent(in) :: r_tol
        real(kind=r_def),                             intent(in) :: a_tol
+       logical(kind=l_def),                          intent(in) :: diagnostic_norm
        type(precondition_only_type) :: self
      end function
   end interface
@@ -1140,21 +1142,26 @@ contains
   !> @param[in] prec The preconditioner the solver will use
   !> @param[in] r_tol real, the relative tolerance halting condition
   !> @param[in] a_tol real, the absolute tolerance halting condition
-  !> @param[in] max_inter, integer the maximum number of iterations
+  !> @param[in] diagnostic_norm, logical controls printing (and computation) of residual
+  !!norm
   !> @return the constructed conjugate gradient solver
-  module function precondition_only_constructor(lin_op, prec, r_tol, a_tol) result(self)
+  module function precondition_only_constructor(lin_op, prec, r_tol, a_tol, diagnostic_norm) result(self)
     implicit none
     class(abstract_linear_operator_type), target, intent(in) :: lin_op
     class(abstract_preconditioner_type),  target, intent(in) :: prec
     real(kind=r_def),                             intent(in) :: r_tol
     real(kind=r_def),                             intent(in) :: a_tol
+    logical(kind=l_def),                          intent(in) :: diagnostic_norm
     type(precondition_only_type) :: self
 
     self%lin_op => lin_op
     self%prec   => prec
     self%r_tol  = r_tol
     self%a_tol  = a_tol
-
+    self%d_norm = diagnostic_norm
+    if( .not.self%d_norm ) then
+       call log_event("Precondition only:No diagnostic norm output", LOG_LEVEL_INFO)
+    end if
   end function
 
   !> Precondition only solve. Over-rides the abstract interface to do the actual solve.
@@ -1173,20 +1180,26 @@ contains
     class(abstract_vector_type), allocatable     :: Ax
 
 
-    call log_event("Precondition only starting", LOG_LEVEL_DEBUG)
+    call log_event("Precondition only starting", LOG_LEVEL_INFO)
     call self%prec%apply(b,x)         ! x = P^{-1}.b
 
     ! Compute initial and final error
     call b%duplicate(res)
     call res%copy(b)
-    e0 = res%norm()
+    if( self%d_norm ) then
+       e0 = res%norm()
+    end if
     call x%duplicate(Ax)
     call self%lin_op%apply(x, Ax)
     call res%axpy(-1.0_r_def, Ax)
-    e = res%norm()
-    write(log_scratch_space,'(A,3E15.8)')  &
-         "Precondition only error,init, relative: = ", e,e0,e/e0
-    call log_event(log_scratch_space,LOG_LEVEL_INFO)
+    if( self%d_norm ) then
+       e = res%norm()
+       write(log_scratch_space,'(A,3E15.8)')  &
+            "Precondition only error,init, relative: = ", e,e0,e/e0
+       call log_event(log_scratch_space,LOG_LEVEL_INFO)
+    else
+       call log_event("Precondition only: ... finished", LOG_LEVEL_INFO)
+    end if
 
   end subroutine precondition_only_solve
 

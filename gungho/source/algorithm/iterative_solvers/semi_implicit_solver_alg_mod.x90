@@ -87,7 +87,8 @@ contains
                                              si_preconditioner,                          &
                                              si_preconditioner_pressure,    &
                                              si_preconditioner_diagonal,    &
-                                             si_preconditioner_none
+                                             si_preconditioner_none,        &
+                                             si_diagnostic_norm
 
     use helmholtz_solver_config_mod,   only: si_pressure_maximum_iterations,             &
                                              helmholtz_gcrk => gcrk,                     &
@@ -104,7 +105,8 @@ contains
                                              preconditioner_none,                        &
                                              preconditioner_diagonal,                    &
                                              preconditioner_tridiagonal,                 &
-                                             preconditioner_multigrid
+                                             preconditioner_multigrid,                   &
+                                             diagnostic_norm
     implicit none
 
     ! Prognostic fields
@@ -137,7 +139,7 @@ contains
       pressure_operator = pressure_operator_type(state)
 
 
-    ! Allocate pressure solver of correct type
+      ! Allocate pressure solver of correct type
     select case( helmholtz_method )
     case (METHOD_BICGSTAB)
        allocate ( pressure_solver, &
@@ -182,7 +184,8 @@ contains
                   source = precondition_only_type( pressure_operator,         &
                                                  pressure_preconditioner,     &
                                                  si_pressure_tolerance,       &
-                                                 pressure_solver_a_tol) )
+                                                 pressure_solver_a_tol,       &
+                                                 diagnostic_norm) )
     case(METHOD_JACOBI)
        allocate ( pressure_solver,                                 &
                   source = jacobi_type( pressure_operator,         &
@@ -262,7 +265,8 @@ contains
                   source = precondition_only_type( mixed_operator,  &
                                               mixed_preconditioner, &
                                               si_tolerance,         &
-                                              mixed_solver_a_tol) )
+                                              mixed_solver_a_tol,   &
+                                              si_diagnostic_norm) )
     case(SI_METHOD_JACOBI)
        allocate ( mixed_solver, &
                   source = jacobi_type( mixed_operator,       &

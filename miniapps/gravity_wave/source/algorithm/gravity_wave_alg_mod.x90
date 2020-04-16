@@ -116,7 +116,8 @@ contains
                                              si_preconditioner,          &
                                              si_preconditioner_pressure, &
                                              si_preconditioner_diagonal, &
-                                             si_preconditioner_none
+                                             si_preconditioner_none,     &
+                                             si_diagnostic_norm
 
     use helmholtz_solver_config_mod,   only: si_pressure_maximum_iterations,             &
                                              helmholtz_gcrk => gcrk,                     &
@@ -130,7 +131,8 @@ contains
                                              method_prec_only,                           &
                                              helmholtz_preconditioner => preconditioner, &
                                              preconditioner_none,                        &
-                                             preconditioner_tridiagonal
+                                             preconditioner_tridiagonal,                 &
+                                             diagnostic_norm
     implicit none
 
     ! Mesh
@@ -303,7 +305,8 @@ contains
        gw_pressure_solver = precondition_only_type( gw_pressure_operator,       &
                                                     gw_pressure_preconditioner, &
                                                     si_pressure_tolerance,      &
-                                                    gw_pressure_solver_a_tol)
+                                                    gw_pressure_solver_a_tol,   &
+                                                    diagnostic_norm)
 
     class default
        call log_event("Can not initialise pressure solver",LOG_LEVEL_ERROR)
@@ -368,7 +371,8 @@ contains
        gw_mixed_solver = precondition_only_type( gw_mixed_operator,       &
                                                  gw_mixed_preconditioner, &
                                                  si_tolerance,            &
-                                                 gw_mixed_solver_a_tol)
+                                                 gw_mixed_solver_a_tol,   &
+                                                 si_diagnostic_norm)
     class default
        call log_event("Can not initialise mixed solver",LOG_LEVEL_ERROR)
     end select

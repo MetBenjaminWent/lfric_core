@@ -73,7 +73,8 @@ contains
                                            method_jacobi,                      &
                                            preconditioner,                     &
                                            preconditioner_diagonal,            &
-                                           preconditioner_none
+                                           preconditioner_none,                &
+                                           diagnostic_norm
     use runtime_constants_mod,       only: get_mass_matrix,                    &
                                            get_mass_matrix_diagonal,           &
                                            w0_id, w1_id, w2_id,                &
@@ -238,7 +239,8 @@ contains
          mass_matrix_solver = precondition_only_type( mass_matrix_operator,       &
                                                       mass_matrix_preconditioner, &
                                                       tolerance,                  &
-                                                      solver_a_tol)
+                                                      solver_a_tol,               &
+                                                      diagnostic_norm)
       type is ( jacobi_type )
          mass_matrix_solver = jacobi_type( mass_matrix_operator,       &
                                            mass_matrix_preconditioner, &

@@ -152,6 +152,7 @@
 &helmholtz_solver
   gcrk                           = 18
   method                         = 'prec_only'
+  diagnostic_norm                =.F
   preconditioner                 = 'multigrid'
   si_pressure_tolerance          = 1.0e-6
   si_pressure_maximum_iterations = 400
