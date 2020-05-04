@@ -360,7 +360,11 @@ contains
     call add_physics_field( turbulence_fields, depository, prognostic_fields,  &
       'cumulus', twod_space, checkpoint_restart_flag, twod=.true. )
     call add_physics_field( turbulence_fields, depository, prognostic_fields,  &
-      'zlcl_mixed',  twod_space, checkpoint_restart_flag, twod=.true. )
+      'z_lcl',  twod_space, checkpoint_restart_flag, twod=.true. )
+    call add_physics_field( turbulence_fields, depository, prognostic_fields,  &
+      'inv_depth',  twod_space, checkpoint_restart_flag, twod=.true. )
+    call add_physics_field( turbulence_fields, depository, prognostic_fields,  &
+      'qcl_at_inv_top',  twod_space, checkpoint_restart_flag, twod=.true. )
     call add_physics_field( turbulence_fields, depository, prognostic_fields,  &
       'blend_height_tq',  twod_space, checkpoint_restart_flag, twod=.true. )
     call add_physics_field( turbulence_fields, depository, prognostic_fields,  &
@@ -421,6 +425,8 @@ contains
       'conv_rain',  twod_space, checkpoint_restart_flag, twod=.true. )
     call add_physics_field( convection_fields, depository, prognostic_fields,  &
       'conv_snow',  twod_space, checkpoint_restart_flag, twod=.true. )
+    call add_physics_field( convection_fields, depository, prognostic_fields,  &
+      'dd_mf_cb',  twod_space, checkpoint_restart_flag, twod=.true. )
 
     ! 3D fields, might need checkpointing
     call add_physics_field(convection_fields, depository, prognostic_fields, &
@@ -486,8 +492,6 @@ contains
     end if
     call add_physics_field(cloud_fields, depository, prognostic_fields, &
       'area_fraction',   wtheta_space, checkpoint_restart_flag)
-    call add_physics_field(cloud_fields, depository, prognostic_fields, &
-      'rh_crit',     wtheta_space, checkpoint_restart_flag)
 
     ! 3D fields, might need advecting
     if ( scheme == scheme_pc2 ) then
@@ -506,6 +510,8 @@ contains
       advection_flag=advection_flag)
 
     checkpoint_restart_flag = .false.
+    call add_physics_field(cloud_fields, depository, prognostic_fields, &
+      'rh_crit',     wtheta_space, checkpoint_restart_flag)
     call add_physics_field(cloud_fields, depository, prognostic_fields, &
       'departure_exner_wth', wtheta_space, checkpoint_restart_flag,     &
       advection_flag=advection_flag)
@@ -703,6 +709,11 @@ contains
     ! 2D fields
     call add_physics_field( snow_fields, depository, prognostic_fields,  &
       'snow_soot', twod_space, checkpoint_restart_flag, twod=.true. )
+
+    ! Fields which don't need checkpointing
+    checkpoint_restart_flag = .false.
+    call add_physics_field( snow_fields, depository, prognostic_fields,  &
+      'snow_unload_rate', pft_space, checkpoint_restart_flag, twod=.true. )
 
     !========================================================================
     ! Fields owned by the aerosol scheme

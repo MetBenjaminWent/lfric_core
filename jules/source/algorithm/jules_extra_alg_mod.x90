@@ -131,6 +131,7 @@ contains
     type( field_type ), pointer :: snow_layer_liq_mass    => null()
     type( field_type ), pointer :: snow_layer_temp        => null()
     type( field_type ), pointer :: snow_layer_rgrain      => null()
+    type( field_type ), pointer :: snow_unload_rate       => null()
 
     type( field_type ) :: tmp_diag
 
@@ -189,10 +190,12 @@ contains
     snow_layer_liq_mass    => snow_fields%get_field('snow_layer_liq_mass')
     snow_layer_temp        => snow_fields%get_field('snow_layer_temp')
     snow_layer_rgrain      => snow_fields%get_field('snow_layer_rgrain')
+    snow_unload_rate       => snow_fields%get_field('snow_unload_rate')
 
     call invoke(jules_extra_kernel_type( ls_rain, conv_rain, ls_snow,          &
                            conv_snow, tile_fraction, leaf_area_index,          &
-                           canopy_height, soil_moist_wilt, soil_moist_crit,    &
+                           canopy_height, snow_unload_rate,                    &
+                           soil_moist_wilt, soil_moist_crit,                   &
                            soil_moist_sat, soil_cond_sat, soil_thermal_cap,    &
                            soil_thermal_cond, soil_suction_sat, clapp_horn_b,  &
                            soil_carbon_content, decrease_sath_cond,            &

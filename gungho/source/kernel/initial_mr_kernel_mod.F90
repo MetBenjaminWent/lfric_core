@@ -21,8 +21,7 @@ module initial_mr_kernel_mod
     use kernel_mod,                    only: kernel_type
     use planet_config_mod,             only: p_zero, Rd, kappa
     use formulation_config_mod,        only: set_hydrostatic_init
-    use cloud_config_mod,              only: scheme,         &
-                                             scheme_pc2
+    use section_choice_config_mod,     only: cloud, cloud_um
 
     !physics routines
     use physics_common_mod, only: qsaturation
@@ -138,8 +137,8 @@ contains
           mr_s(map_wtheta(1)) = mr_s(map_wtheta(2))
           mr_g(map_wtheta(1)) = mr_g(map_wtheta(2))
 
-          ! Reduce humidity at top of model for PC2 cases.
-          if ( scheme == scheme_pc2 ) then
+          ! Reduce humidity at top of model for cloudy cases.
+          if ( cloud == cloud_um ) then
             mr_v(map_wtheta(1)+nlayers) = 1.0e-8
             mr_v(map_wtheta(1)+nlayers-1) = 1.0e-8
           end if

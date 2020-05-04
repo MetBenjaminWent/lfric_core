@@ -36,9 +36,10 @@ module slow_physics_alg_mod
                                        radiation,          &
                                        radiation_socrates, &
                                        spectral_gwd,       &
-                                       spectral_gwd_um,                        &
-                                       surface,                                &
-                                       surface_jules
+                                       spectral_gwd_um,    &
+                                       surface,            &
+                                       surface_jules,      &
+                                       cloud, cloud_um
 
   ! PsyKAl PSYClone kernels
   use held_suarez_fv_kernel_mod,      only: held_suarez_fv_kernel_type
@@ -278,7 +279,7 @@ contains
     if ( microphysics == microphysics_um .and. &
          microphysics_placement == microphysics_placement_slow) then
 
-      ! Algorithm which calls the UM microphysics scheme
+      ! Algorithm that calls the UM microphysics scheme
       call log_event( 'slow_physics: Running Microphysics', LOG_LEVEL_INFO )
 
       call clone_bundle(mr, dmr_mphys, nummr)
@@ -342,7 +343,7 @@ contains
                                tile_lw_albedo )
       radiation_done=.true.
 
-      if (scheme == scheme_pc2) then
+      if (cloud == cloud_um .and. scheme == scheme_pc2) then
 
         ! PC2 code will be called with dtheta_rad as the only forcing.
         call pc2_rad_response_alg_step(                 & ! Current state
@@ -363,7 +364,7 @@ contains
 
     end if
 
-    ! Algorithm which calls the UM spectral gravity wave drag scheme
+    ! Algorithm that calls the UM spectral gravity wave drag scheme
     if (spectral_gwd == spectral_gwd_um .and. &
         spectral_gwd_placement == spectral_gwd_placement_slow) then
       call log_event( 'slow_physics: Running spectral gravity wave drag', LOG_LEVEL_INFO )
@@ -381,7 +382,7 @@ contains
       spectral_gwd_done=.true.
     end if
 
-    ! Algorithm which calls the UM orographic gravity wave and blocking drag scheme
+    ! Algorithm that calls the UM orographic gravity wave and blocking drag scheme
     if (orographic_drag == orographic_drag_um .and. &
         orographic_drag_placement == orographic_drag_placement_slow) then
       call log_event( 'slow_physics: Running Orographic drag', LOG_LEVEL_INFO )
@@ -422,7 +423,7 @@ contains
                   inc_X_plus_Y(du, du_hs)   )
     end if
 
-    if (scheme == scheme_pc2) then
+    if (cloud == cloud_um .and. scheme == scheme_pc2) then
         liquid_fraction => cloud_fields%get_field('liquid_fraction')
         ice_fraction    => cloud_fields%get_field('ice_fraction')
         bulk_fraction   => cloud_fields%get_field('bulk_fraction')
@@ -441,7 +442,7 @@ contains
     end if
 
     if (radiation_done) then
-      if (scheme == scheme_pc2) then
+      if (cloud == cloud_um .and. scheme == scheme_pc2) then
         call invoke(name="update_with_pc2_rad_inc",                &
                     inc_X_plus_Y(dtheta_rad,      dtheta_pc2_rad), &
                     inc_X_plus_Y(mr(imr_v),       dqv_pc2_rad),    &
@@ -463,7 +464,7 @@ contains
     end if
 
 #ifdef UM_PHYSICS
-    if (scheme == scheme_pc2) then
+    if (cloud == cloud_um .and. scheme == scheme_pc2) then
 
       departure_exner_wth => cloud_fields%get_field('departure_exner_wth')
       call invoke( setval_X(departure_exner_wth,exner_in_wth) )

@@ -30,7 +30,7 @@ module conv_gr_kernel_mod
   !>
   type, public, extends(kernel_type) :: conv_gr_kernel_type
     private
-    type(arg_type) :: meta_args(79) = (/                              &
+    type(arg_type) :: meta_args(80) = (/                              &
         arg_type(GH_INTEGER, GH_READ),                                &! outer
         arg_type(GH_FIELD,   GH_READ,      W3),                       &! rho_in_w3
         arg_type(GH_FIELD,   GH_READ,      W3),                       &! wetrho_in_w3
@@ -78,6 +78,7 @@ module conv_gr_kernel_mod
         arg_type(GH_FIELD,   GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! lowest_cv_top
         arg_type(GH_FIELD,   GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! cv_base
         arg_type(GH_FIELD,   GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! cv_top
+        arg_type(GH_FIELD,   GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! dd_mf_cb
         arg_type(GH_FIELD,   GH_READWRITE, WTHETA),                   &! massflux_up
         arg_type(GH_FIELD,   GH_READWRITE, WTHETA),                   &! massflux_down
         arg_type(GH_FIELD,   GH_READWRITE, WTHETA),                   &! entrain_up
@@ -172,6 +173,7 @@ contains
   !> @param[in,out] lowest_cv_top        level number for end of lowest convection in column
   !> @param[in,out] cv_base              level number of base of highest convection in column
   !> @param[in,out] cv_top               level number for end of highest convection in column
+  !> @param[in,out] dd_mf_cb             Downdraft massflux at cloud base (Pa/s)
   !> @param[in,out] massflux_up          convective upwards mass flux (Pa/s)
   !> @param[in,out] massflux_down        convective downwards mass flux (Pa/s)
   !> @param[in,out] entrain_up           convective upwards entrainment
@@ -264,6 +266,7 @@ contains
                           lowest_cv_top,                     &
                           cv_base,                           &
                           cv_top,                            &
+                          dd_mf_cb,                          &
                           massflux_up,                       &
                           massflux_down,                     &
                           entrain_up,                        &
@@ -294,8 +297,8 @@ contains
                           parcel_buoyancy,                   &
                           qsat_at_lcl,                       &
                           dcfl_conv,                         &
-	                  dcff_conv,                         &
-	                  dbcf_conv,                         &
+                          dcff_conv,                         &
+                          dbcf_conv,                         &
                           ndf_w3,                            &
                           undf_w3,                           &
                           map_w3,                            &
@@ -392,7 +395,8 @@ contains
                            shallow_in_col, mid_in_col,                      &
                            freeze_level, deep_prec, shallow_prec, mid_prec, &
                            deep_term, cape_timescale, conv_rain, conv_snow, &
-                           lowest_cv_base, lowest_cv_top, cv_base, cv_top
+                           lowest_cv_base, lowest_cv_top, cv_base, cv_top,  &
+                           dd_mf_cb
 
     real(kind=r_def), dimension(undf_wth), intent(inout) :: dcfl_conv
     real(kind=r_def), dimension(undf_wth), intent(inout) :: dcff_conv
@@ -439,7 +443,7 @@ contains
 
     ! single level real fields
     real(r_um), dimension(row_length,rows) ::                                &
-         p_star, ddmfx, zhpar, zh, wstar, wthvs, zlcl_uv, entrain_coef,      &
+         p_star, zhpar, zh, wstar, wthvs, zlcl_uv, entrain_coef,             &
          qsat_lcl, delthvu, flandg, uw0, vw0, it_lcca, it_cca_2d, it_cclwp,  &
          it_cclwp0, it_conv_rain, it_conv_snow, it_precip_dp, it_precip_sh,  &
          it_precip_md, it_cape_out, it_dp_cfl_limited, it_md_cfl_limited,    &
@@ -988,9 +992,9 @@ contains
     ! if required for surface exchange.
     if (isrfexcnvgust == ip_srfexwithcnv) then
       if (ccb(1,1) > 0) then
-        ddmfx(1,1)=massflux_down( map_wth(1) + ccb(1,1))
+        dd_mf_cb(map_2d(1))=massflux_down( map_wth(1) + ccb(1,1))
       else
-        ddmfx(1,1)=0.0
+        dd_mf_cb(map_2d(1))=0.0_r_def
       end if
     end if
 

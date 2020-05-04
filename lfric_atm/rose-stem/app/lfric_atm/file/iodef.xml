@@ -88,13 +88,13 @@
        <field id="checkpoint_ice_fraction" name="ice_fraction" long_name="ice_fraction"  unit="1" domain_ref="checkpoint_Wtheta" />
        <field id="checkpoint_liquid_fraction" name="liquid_fraction" long_name="liquid_fraction"  unit="1" domain_ref="checkpoint_Wtheta" />
        <field id="checkpoint_bulk_fraction" name="bulk_fraction" long_name="bulk_fraction"  unit="1" domain_ref="checkpoint_Wtheta" />
-       <field id="checkpoint_rh_crit" name="rh_crit" long_name="critical_relative_humidity"  unit="1" domain_ref="checkpoint_Wtheta" />
        <field id="checkpoint_cca" name="cca" long_name="convective_cloud_amount"  unit="1" domain_ref="checkpoint_Wtheta" />
        <field id="checkpoint_ccw" name="ccw" long_name="convective_cloud_water"  unit="kg/kg" domain_ref="checkpoint_Wtheta" />
        <field id="checkpoint_zh" name="zh" long_name="zh"  unit="m" domain_ref="checkpoint_W3_2D" />
        <field id="checkpoint_z0msea" name="z0msea" long_name="z0msea"  unit="m" domain_ref="checkpoint_W3_2D" />
        <field id="checkpoint_conv_rain" name="conv_rain" long_name="surface_convective_rainfall_rate"  unit="kg m-2 s-1" domain_ref="checkpoint_W3_2D" />
        <field id="checkpoint_conv_snow" name="conv_snow" long_name="surface_convective_snowfall_rate"  unit="kg m-2 s-1" domain_ref="checkpoint_W3_2D" />
+       <field id="checkpoint_dd_mf_cb" name="dd_mf_cb" long_name="Downdraft massflux at cloud base" unit="Pa s-1" domain_ref="checkpoint_W3_2D" />
        <field id="checkpoint_sd_orog" name="sd_orog" long_name="sd_orog"  unit="m" domain_ref="checkpoint_W3_2D" />
        <field id="checkpoint_grad_xx_orog" name="grad_xx_orog" long_name="grad_xx_orog"  unit="1" domain_ref="checkpoint_W3_2D" />
        <field id="checkpoint_grad_xy_orog" name="grad_xy_orog" long_name="grad_xy_orog"  unit="1" domain_ref="checkpoint_W3_2D" />
@@ -655,13 +655,13 @@
         <field field_ref="checkpoint_ice_fraction"/>
         <field field_ref="checkpoint_liquid_fraction"/>
         <field field_ref="checkpoint_bulk_fraction"/>
-        <field field_ref="checkpoint_rh_crit"/>
         <field field_ref="checkpoint_cca"/>
         <field field_ref="checkpoint_ccw"/>
         <field field_ref="checkpoint_zh"/>
         <field field_ref="checkpoint_z0msea"/>
         <field field_ref="checkpoint_conv_rain"/>
         <field field_ref="checkpoint_conv_snow"/>
+	<field field_ref="checkpoint_dd_mf_cb"/>
         <field field_ref="checkpoint_sd_orog"/>
         <field field_ref="checkpoint_grad_xx_orog"/>
         <field field_ref="checkpoint_grad_xy_orog"/>
@@ -768,13 +768,13 @@
        <field id="restart_ice_fraction" name="ice_fraction" long_name="ice_fraction" unit="1" operation="instant" domain_ref="checkpoint_Wtheta" />
        <field id="restart_liquid_fraction" name="liquid_fraction" long_name="liquid_fraction" unit="1" operation="instant" domain_ref="checkpoint_Wtheta" />
        <field id="restart_bulk_fraction" name="bulk_fraction" long_name="bulk_fraction" unit="1" operation="instant" domain_ref="checkpoint_Wtheta" />
-       <field id="restart_rh_crit" name="rh_crit" long_name="critical_relative_humidity" unit="1" operation="instant" domain_ref="checkpoint_Wtheta" />
        <field id="restart_cca" name="cca" long_name="convective_cloud_amount" unit="1" operation="instant" domain_ref="checkpoint_Wtheta" />
        <field id="restart_ccw" name="ccw" long_name="convective_cloud_water" unit="kg/kg" operation="instant" domain_ref="checkpoint_Wtheta" />
        <field id="restart_zh" name="zh" long_name="zh" unit="m" operation="instant" domain_ref="checkpoint_W3_2D" />
        <field id="restart_z0msea" name="z0msea" long_name="z0msea" unit="m" operation="instant" domain_ref="checkpoint_W3_2D" />
        <field id="restart_conv_rain" name="conv_rain" long_name="surface_convective_rainfall_rate" unit="kg m-2 s-1" operation="instant" domain_ref="checkpoint_W3_2D" />
        <field id="restart_conv_snow" name="conv_snow" long_name="surface_convective_snowfall_rate" unit="kg m-2 s-1" operation="instant" domain_ref="checkpoint_W3_2D" />
+       <field id="restart_dd_mf_cb" name="dd_mf_cb" long_name="Downdraft massflux at cloud base" unit="Pa s-1" operation="instant" domain_ref="checkpoint_W3_2D" />
        <field id="restart_sd_orog" name="sd_orog" long_name="sd_orog"  unit="m" operation="instant" domain_ref="checkpoint_W3_2D" />
        <field id="restart_grad_xx_orog" name="grad_xx_orog" long_name="grad_xx_orog"  unit="1" operation="instant" domain_ref="checkpoint_W3_2D" />
        <field id="restart_grad_xy_orog" name="grad_xy_orog" long_name="grad_xy_orog"  unit="1" operation="instant" domain_ref="checkpoint_W3_2D" />
@@ -1107,6 +1107,8 @@
         <field field_ref="cumulus"/>
         <field field_ref="conv_rain"/>
         <field field_ref="conv_snow"/>
+        <field field_ref="ls_rain"/>
+        <field field_ref="ls_snow"/>
         <field field_ref="deep_in_col"/>
         <field field_ref="shallow_in_col"/>
         <field field_ref="mid_in_col"/>
@@ -1204,6 +1206,40 @@
        <field id="read_mcl_in_wtheta" name="mcl_in_wtheta" long_name="cloud_liquid_water_mixing_ratio"  unit="1" grid_ref="full_level_face_grid" operation="instant" />
        <field id="read_mcf_in_wtheta" name="mcf_in_wtheta" long_name="cloud_ice_mixing_ratio"  unit="1" grid_ref="full_level_face_grid" operation="instant" />
        <field id="read_tstar" name="tstar" long_name="surface_temperature" standard_name="surface_temperature" unit="K" domain_ref="face_half_levels" operation="instant" />
+      </file>
+
+      <file id="orography_ancil" name="orography_ancil" mode="read" output_freq="1ts" convention="UGRID" cyclic="true" enabled=".FALSE.">
+       <field id="surface_altitude" name="surface_altitude" long_name="Surface altitude" unit="m" operation="once" domain_ref="face_half_levels"/>
+       <field id="sd_orog" name="m01s00i034" long_name="Standard deviation of orography" unit="1" operation="once" domain_ref="face_half_levels"/>
+       <field id="grad_xx_orog" name="m01s00i035" long_name="Orographic gradient XX component" unit="1" operation="once" domain_ref="face_half_levels"/>
+       <field id="grad_xy_orog" name="m01s00i036" long_name="Orographic gradient XY component" unit="1" operation="once" domain_ref="face_half_levels"/>
+       <field id="grad_yy_orog" name="m01s00i037" long_name="Orographic gradient YY component" unit="1" operation="once" domain_ref="face_half_levels"/>
+       <field id="peak_to_trough_orog" name="m01s00i018" long_name="Half of (peak to trough ht of orog)" unit="1" operation="once" domain_ref="face_half_levels"/>
+       <field id="silhouette_area_orog" name="m01s00i017" long_name="Silhouette orographic roughness" unit="1" operation="once" domain_ref="face_half_levels"/>
+      </file>
+
+      <file id="land_area_ancil" name="land_area_ancil" mode="read" output_freq="1ts" convention="UGRID" cyclic="true" enabled=".FALSE.">
+       <field id="land_area_fraction" name="land_area_fraction" long_name="Land area fraction" unit="1" operation="once" domain_ref="face_half_levels"/>
+      </file>
+
+      <file id="soil_ancil" name="soil_ancil" mode="read" output_freq="1ts" convention="UGRID" cyclic="true" enabled=".FALSE.">
+       <field id="soil_albedo" name="soil_albedo" long_name="Soil albedo" unit="1" operation="once" domain_ref="face_half_levels"/>
+       <field id="soil_carbon_content" name="soil_carbon_content" long_name="Soil carbon content" unit="kgC m-2" operation="once" domain_ref="face_half_levels"/>
+       <field id="soil_thermal_cond" name="soil_thermal_conductivity" long_name="Soil thermal conductivity" unit="Wm-1K-1" operation="once" domain_ref="face_half_levels"/>
+      </file>
+
+      <file id="ancil_output" name="ancil_output" mode="write" output_freq="1ts" convention="UGRID" cyclic="true" enabled=".TRUE.">
+ 	     <field id="surface_altitude_out" name="surface_altitude" long_name="Surface altitude" unit="m" domain_ref="face_half_levels" operation="once"/>
+       <field id="sd_orog_out" name="sd_orog" long_name="Standard deviation of orography" unit="1" operation="once" domain_ref="face_half_levels"/>
+       <field id="grad_xx_orog_out" name="grad_xx_orog" long_name="Orographic gradient XX component" unit="1" operation="once" domain_ref="face_half_levels"/>
+       <field id="grad_xy_orog_out" name="grad_xy_orog" long_name="Orographic gradient XY component" unit="1" operation="once" domain_ref="face_half_levels"/>
+       <field id="grad_yy_orog_out" name="grad_yy_orog" long_name="Orographic gradient YY component" unit="1" operation="once" domain_ref="face_half_levels"/>
+       <field id="peak_to_trough_orog_out" name="peak_to_trough_orog" long_name="Half of (peak to trough ht of orog)" unit="1" operation="once" domain_ref="face_half_levels"/>
+       <field id="silhouette_area_orog_out" name="silhouette_area_orog" long_name="Silhouette orographic roughness" unit="1" operation="once" domain_ref="face_half_levels"/>
+       <field id="land_area_fraction_out" name="land_area_fraction" long_name="Land area fraction" unit="1" operation="once" domain_ref="face_half_levels"/>
+       <field id="soil_albedo_out" name="soil_albedo" long_name="Soil albedo" unit="1" operation="once" domain_ref="face_half_levels"/>
+       <field id="soil_carbon_content_out" name="soil_carbon_content" long_name="Soil carbon content" unit="kgC m-2" operation="once" domain_ref="face_half_levels"/>
+       <field id="soil_thermal_cond_out" name="soil_thermal_conductivity" long_name="Soil thermal conductivity" unit="Wm-1K-1" operation="once" domain_ref="face_half_levels"/>
       </file>
 
     </file_definition>

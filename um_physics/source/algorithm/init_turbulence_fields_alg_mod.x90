@@ -32,13 +32,16 @@ contains
     type(field_collection_type), intent(inout) :: turbulence_fields
 
     ! Prognostic fields
-    type( field_type ), pointer :: zh => null()
+    type( field_type ), pointer :: zh    => null()
+    type( field_type ), pointer :: z_lcl => null()
 
     zh => turbulence_fields%get_field('zh')
+    z_lcl => turbulence_fields%get_field('z_lcl')
 
     ! Set turbulence fields to fixed values for use in SCM testing
     ! or when no values is provided by the um2lfric dump
-    call invoke( setval_c(zh, 1000.0_r_def) )
+    call invoke( setval_c(zh, 1000.0_r_def), &
+                 setval_c(z_lcl, 0.0_r_def) )
 
   end subroutine init_turbulence_fields_alg
 

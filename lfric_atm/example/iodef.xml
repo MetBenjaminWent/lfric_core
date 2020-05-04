@@ -88,13 +88,13 @@
        <field id="checkpoint_ice_fraction" name="ice_fraction" long_name="ice_fraction"  unit="1" domain_ref="checkpoint_Wtheta" />
        <field id="checkpoint_liquid_fraction" name="liquid_fraction" long_name="liquid_fraction"  unit="1" domain_ref="checkpoint_Wtheta" />
        <field id="checkpoint_bulk_fraction" name="bulk_fraction" long_name="bulk_fraction"  unit="1" domain_ref="checkpoint_Wtheta" />
-       <field id="checkpoint_rh_crit" name="rh_crit" long_name="critical_relative_humidity"  unit="1" domain_ref="checkpoint_Wtheta" />
        <field id="checkpoint_cca" name="cca" long_name="convective_cloud_amount"  unit="1" domain_ref="checkpoint_Wtheta" />
        <field id="checkpoint_ccw" name="ccw" long_name="convective_cloud_water"  unit="kg/kg" domain_ref="checkpoint_Wtheta" />
        <field id="checkpoint_zh" name="zh" long_name="zh"  unit="m" domain_ref="checkpoint_W3_2D" />
        <field id="checkpoint_z0msea" name="z0msea" long_name="z0msea"  unit="m" domain_ref="checkpoint_W3_2D" />
        <field id="checkpoint_conv_rain" name="conv_rain" long_name="surface_convective_rainfall_rate"  unit="kg m-2 s-1" domain_ref="checkpoint_W3_2D" />
        <field id="checkpoint_conv_snow" name="conv_snow" long_name="surface_convective_snowfall_rate"  unit="kg m-2 s-1" domain_ref="checkpoint_W3_2D" />
+       <field id="checkpoint_dd_mf_cb" name="dd_mf_cb" long_name="Downdraft massflux at cloud base" unit="Pa s-1" domain_ref="checkpoint_W3_2D" />
        <field id="checkpoint_sd_orog" name="sd_orog" long_name="sd_orog"  unit="m" domain_ref="checkpoint_W3_2D" />
        <field id="checkpoint_grad_xx_orog" name="grad_xx_orog" long_name="grad_xx_orog"  unit="1" domain_ref="checkpoint_W3_2D" />
        <field id="checkpoint_grad_xy_orog" name="grad_xy_orog" long_name="grad_xy_orog"  unit="1" domain_ref="checkpoint_W3_2D" />
@@ -655,13 +655,13 @@
         <field field_ref="checkpoint_ice_fraction"/>
         <field field_ref="checkpoint_liquid_fraction"/>
         <field field_ref="checkpoint_bulk_fraction"/>
-        <field field_ref="checkpoint_rh_crit"/>
         <field field_ref="checkpoint_cca"/>
         <field field_ref="checkpoint_ccw"/>
         <field field_ref="checkpoint_zh"/>
         <field field_ref="checkpoint_z0msea"/>
         <field field_ref="checkpoint_conv_rain"/>
         <field field_ref="checkpoint_conv_snow"/>
+	<field field_ref="checkpoint_dd_mf_cb"/>
         <field field_ref="checkpoint_sd_orog"/>
         <field field_ref="checkpoint_grad_xx_orog"/>
         <field field_ref="checkpoint_grad_xy_orog"/>
@@ -768,13 +768,13 @@
        <field id="restart_ice_fraction" name="ice_fraction" long_name="ice_fraction" unit="1" operation="instant" domain_ref="checkpoint_Wtheta" />
        <field id="restart_liquid_fraction" name="liquid_fraction" long_name="liquid_fraction" unit="1" operation="instant" domain_ref="checkpoint_Wtheta" />
        <field id="restart_bulk_fraction" name="bulk_fraction" long_name="bulk_fraction" unit="1" operation="instant" domain_ref="checkpoint_Wtheta" />
-       <field id="restart_rh_crit" name="rh_crit" long_name="critical_relative_humidity" unit="1" operation="instant" domain_ref="checkpoint_Wtheta" />
        <field id="restart_cca" name="cca" long_name="convective_cloud_amount" unit="1" operation="instant" domain_ref="checkpoint_Wtheta" />
        <field id="restart_ccw" name="ccw" long_name="convective_cloud_water" unit="kg/kg" operation="instant" domain_ref="checkpoint_Wtheta" />
        <field id="restart_zh" name="zh" long_name="zh" unit="m" operation="instant" domain_ref="checkpoint_W3_2D" />
        <field id="restart_z0msea" name="z0msea" long_name="z0msea" unit="m" operation="instant" domain_ref="checkpoint_W3_2D" />
        <field id="restart_conv_rain" name="conv_rain" long_name="surface_convective_rainfall_rate" unit="kg m-2 s-1" operation="instant" domain_ref="checkpoint_W3_2D" />
        <field id="restart_conv_snow" name="conv_snow" long_name="surface_convective_snowfall_rate" unit="kg m-2 s-1" operation="instant" domain_ref="checkpoint_W3_2D" />
+       <field id="restart_dd_mf_cb" name="dd_mf_cb" long_name="Downdraft massflux at cloud base" unit="Pa s-1" operation="instant" domain_ref="checkpoint_W3_2D" />
        <field id="restart_sd_orog" name="sd_orog" long_name="sd_orog"  unit="m" operation="instant" domain_ref="checkpoint_W3_2D" />
        <field id="restart_grad_xx_orog" name="grad_xx_orog" long_name="grad_xx_orog"  unit="1" operation="instant" domain_ref="checkpoint_W3_2D" />
        <field id="restart_grad_xy_orog" name="grad_xy_orog" long_name="grad_xy_orog"  unit="1" operation="instant" domain_ref="checkpoint_W3_2D" />
@@ -1107,6 +1107,8 @@
         <field field_ref="cumulus"/>
         <field field_ref="conv_rain"/>
         <field field_ref="conv_snow"/>
+        <field field_ref="ls_rain"/>
+        <field field_ref="ls_snow"/>
         <field field_ref="deep_in_col"/>
         <field field_ref="shallow_in_col"/>
         <field field_ref="mid_in_col"/>

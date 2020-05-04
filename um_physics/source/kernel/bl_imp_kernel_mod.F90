@@ -35,7 +35,7 @@ module bl_imp_kernel_mod
   !>
   type, public, extends(kernel_type) :: bl_imp_kernel_type
     private
-    type(arg_type) :: meta_args(80) = (/                              &
+    type(arg_type) :: meta_args(82) = (/                              &
         arg_type(GH_INTEGER, GH_READ),                                &! outer
         arg_type(GH_FIELD,   GH_READ,      WTHETA),                   &! theta_in_wth
         arg_type(GH_FIELD,   GH_READ,      W3),                       &! wetrho_in_w3
@@ -108,7 +108,9 @@ module bl_imp_kernel_mod
         arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_2),&! resfs_tile
         arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_2),&! canhc_tile
         arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_5),&! tile_water_extract
-        arg_type(GH_FIELD,   GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! zlcl_mixed
+        arg_type(GH_FIELD,   GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1),&! z_lcl
+        arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! inv_depth
+        arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! qcl_at_inv_top
         arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! blend_height_tq
         arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! blend_height_uv
         arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! ustar
@@ -204,7 +206,9 @@ contains
   !> @param[in]     resfs_tile           Combined aerodynamic resistance
   !> @param[in]     canhc_tile           Canopy heat capacity on tiles
   !> @param[in]     tile_water_extract   Extraction of water from each tile
-  !> @param[out]    zlcl_mixed           Height of the LCL
+  !> @param[in,out] z_lcl                Height of the LCL
+  !> @param[in]     inv_depth            Depth of BL top inversion layer
+  !> @param[in]     qcl_at_inv_top       Cloud water at top of inversion
   !> @param[in]     blend_height_tq      Blending height for wth levels
   !> @param[in]     blend_height_uv      Blending height for w3 levels
   !> @param[in]     ustar                Friction velocity
@@ -312,7 +316,9 @@ contains
                          resfs_tile,                         &
                          canhc_tile,                         &
                          tile_water_extract,                 &
-                         zlcl_mixed,                         &
+                         z_lcl,                              &
+                         inv_depth,                          &
+                         qcl_at_inv_top,                     &
                          blend_height_tq,                    &
                          blend_height_uv,                    &
                          ustar,                              &
@@ -462,7 +468,9 @@ contains
     real(kind=r_def), intent(in) :: silhouette_area_orog(undf_2d)
     real(kind=r_def), intent(in) :: sw_down_surf(undf_2d)
     real(kind=r_def), intent(in) :: lw_down_surf(undf_2d)
-    real(kind=r_def), intent(out):: zlcl_mixed(undf_2d)
+    real(kind=r_def), intent(inout) :: z_lcl(undf_2d)
+    real(kind=r_def), intent(in) :: inv_depth(undf_2d)
+    real(kind=r_def), intent(in) :: qcl_at_inv_top(undf_2d)
 
     real(kind=r_def), intent(in) :: soil_temperature(undf_soil)
     real(kind=r_def), intent(out):: water_extraction(undf_soil)
@@ -525,7 +533,7 @@ contains
          dtstar_sea, ice_fract, tstar_sice, dtstar_sice, alpha1_sea,         &
          ashtf_prime_sea, bl_type_1, bl_type_2, bl_type_3, bl_type_4,        &
          bl_type_5, bl_type_6, bl_type_7, chr1p5m_sice, flandg, rhokh_sea,   &
-         u_s, z0hssi, z0mssi, zhnl, zlcl_mix
+         u_s, z0hssi, z0mssi, zhnl, zlcl_mix, zlcl, dzh, qcl_inv_top
 
     ! single level real fields on u/v points
     real(r_um), dimension(row_length,rows) :: u_0, v_0, rhokm_u_land,        &
@@ -592,9 +600,9 @@ contains
 
     real(r_um), dimension(row_length,rows,0:nlayers,tr_vars) :: free_tracers
 
-    real(r_um), dimension(row_length,rows) :: ti_sicat, zlcl, dzh,           &
+    real(r_um), dimension(row_length,rows) :: ti_sicat,                      &
          xx_cos_theta_latitude, ls_rain, ls_snow, conv_rain, conv_snow,      &
-         qcl_inv_top, co2_emits, co2flux, tscrndcl_ssi, tstbtrans,           &
+         co2_emits, co2flux, tscrndcl_ssi, tstbtrans,                        &
          sum_eng_fluxes, sum_moist_flux, drydep2, olr, surf_ht_flux_land,    &
          theta_star_surf, qv_star_surf, snowmelt, uwind_wav,                 &
          vwind_wav, sstfrz, aresist, resist_b, rho_aresist, rib_gb,          &
@@ -621,7 +629,7 @@ contains
 
     real(r_um), dimension(land_field,ntiles) :: catch_surft,                 &
          tscrndcl_surft, epot_surft, aresist_surft, dust_emiss_frac,         &
-         gc_surft, resist_b_surft, rho_aresist_surft, u_s_std_surft
+         gc_surft, resist_b_surft, u_s_std_surft
 
     real(r_um), dimension(land_field,ntiles,ndivh) :: u_s_t_dry_tile,        &
          u_s_t_tile
@@ -966,6 +974,9 @@ contains
     smc_soilt(1) = soil_moist_avail(map_2d(1))
     zhnl(1,1) = zh_nonloc(map_2d(1))
     zh(1,1) = zh_2d(map_2d(1))
+    zlcl(1,1) = real(z_lcl(map_2d(1)), r_um)
+    dzh(1,1) = real(inv_depth(map_2d(1)), r_um)
+    qcl_inv_top(1,1) = real(qcl_at_inv_top(map_2d(1)), r_um)
     zlcl_mix = 0.0_r_um
 
     bl_type_1(1,1) = bl_types(map_bl(1))
@@ -1384,7 +1395,7 @@ contains
     ! update BL prognostics
     if (outer == outer_iterations) then
 
-      zlcl_mixed(map_2d(1)) = zlcl_mix(1,1)
+      z_lcl(map_2d(1)) = zlcl_mix(1,1)
 
       ! Update land tiles
       do i = 1, n_land_tile

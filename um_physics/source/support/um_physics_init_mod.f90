@@ -12,12 +12,38 @@ module um_physics_init_mod
   use aerosol_config_mod,        only : c_aerosol,                        &
                                         c_aerosol_glomap_mode_climatology
 
-  use blayer_config_mod,         only : flux_bc_opt_in => flux_bc_opt
+  use blayer_config_mod,         only : a_ent_shr, cbl_opt,                   &
+                                        cbl_opt_conventional,                 &
+                                        cbl_opt_standard,                     &
+                                        dyn_diag, dyn_diag_zi_l_sea,          &
+                                        dyn_diag_ri_based, dyn_diag_zi_l_cu,  &
+                                        flux_bc_opt_in => flux_bc_opt,        &
+                                        flux_bc_opt_interactive,              &
+                                        flux_bc_opt_specified_scalars,        &
+                                        fric_heating_in => fric_heating,      &
+                                        free_atm_mix, free_atm_mix_to_sharp,  &
+                                        free_atm_mix_ntml_corrected,          &
+                                        free_atm_mix_free_trop_layer,         &
+                                        new_kcloudtop, reduce_fa_mix,         &
+                                        reduce_fa_mix_inv_and_cu_lcl,         &
+                                        reduce_fa_mix_inv_only,               &
+                                        relax_sc_over_cu_in=>relax_sc_over_cu,&
+                                        sbl_opt, sbl_opt_sharpest,            &
+                                        sbl_opt_sharp_sea_mes_land,           &
+                                        sg_orog_mixing_in => sg_orog_mixing,  &
+                                        sg_orog_mixing_none,                  &
+                                        sg_orog_mixing_shear_plus_lambda,     &
+                                        zhloc_depth_fac_in => zhloc_depth_fac
 
-  use cloud_config_mod,          only : scheme,       &
-                                        scheme_smith, &
-                                        scheme_pc2,   &
-                                        rh_crit
+  use cloud_config_mod,          only : scheme, scheme_smith, scheme_pc2,     &
+                                        rh_crit, rh_crit_opt,                 &
+                                        rh_crit_opt_namelist, rh_crit_opt_tke,&
+                                        cff_spread_rate_in => cff_spread_rate,&
+                                        falliceshear_method_in =>             &
+                                        falliceshear_method,                  &
+                                        falliceshear_method_real,             &
+                                        falliceshear_method_constant,         &
+                                        subgrid_qv, ice_width_in => ice_width
 
   use convection_config_mod,     only : cv_scheme,                    &
                                         cv_scheme_gregory_rowntree,   &
@@ -27,6 +53,13 @@ module um_physics_init_mod
   use extrusion_config_mod,      only : domain_top, number_of_layers
 
   use formulation_config_mod,    only : use_moisture
+
+  use microphysics_config_mod,   only : a_ratio_exp_in => a_ratio_exp, &
+                                        a_ratio_fac_in => a_ratio_fac, &
+                                        droplet_tpr, shape_rime,       &
+                                        qcl_rime,                      &
+                                        ndrop_surf_in => ndrop_surf,   &
+                                        z_surf_in => z_surf
 
   use mixing_config_mod,         only : smagorinsky,                &
                                         mixing_method => method,    &
@@ -101,10 +134,13 @@ contains
          a_ent_shr_nml, alpha_cd, puns, pstb, nl_bl_levels, kprof_cu,      &
          non_local_bl, flux_bc_opt, i_bl_vn_9c, sharp_sea_mes_land,        &
          lem_conven, to_sharp_across_1km, off, on, DynDiag_Ribased,        &
-         blend_allpoints, ng_stress
+         blend_allpoints, ng_stress, lem_std, interactive_fluxes,          &
+         specified_fluxes_only, DynDiag_ZL_corrn, except_disc_inv,         &
+         ntml_level_corrn, free_trop_layers, sharpest, sg_shear_enh_lambda,&
+         l_new_kcloudtop, buoy_integ, l_reset_dec_thres, DynDiag_ZL_CuOnly
     use cloud_inputs_mod, only: i_cld_vn, forced_cu, i_rhcpt, i_cld_area,  &
          rhcrit, ice_fraction_method,falliceshear_method, cff_spread_rate, &
-         l_subgrid_qv, ice_width, smith_orig, i_eacf,                      &
+         l_subgrid_qv, ice_width, min_liq_overlap, i_eacf, not_mixph,      &
          i_pc2_checks_cld_frac_method, l_ensure_min_in_cloud_qcf,          &
          l_simplify_pc2_init_logic, dbsdtbs_turb_0,                        &
          i_pc2_erosion_method, check_run_cloud, forced_cu_fac,             &
@@ -147,12 +183,18 @@ contains
         di_input, dic_input, i_mcr_iter, l_diff_icevt,                       &
         l_mcr_qrain, l_psd, l_rain, l_warm_new, timestep_mp_in, x1r, x2r,    &
         l_mcr_qcf2, sediment_loc, i_mcr_iter_tstep, all_sed_start,           &
-        check_run_precip, graupel_option, no_graupel
+        check_run_precip, graupel_option, no_graupel, a_ratio_exp,           &
+        a_ratio_fac, l_droplet_tpr, qclrime, l_shape_rime, ndrop_surf,       &
+        z_surf
     use pc2_constants_mod, only: i_cld_off, i_cld_smith, i_cld_pc2,        &
-         rhcpt_off, acf_off, real_shear,                                   &
-         pc2eros_exp_rh,pc2eros_hybrid_allfaces,pc2eros_hybrid_sidesonly
+         rhcpt_off, acf_off, real_shear, rhcpt_tke_based,                  &
+         pc2eros_exp_rh,pc2eros_hybrid_allfaces,pc2eros_hybrid_sidesonly,  &
+         original_but_wrong, acf_cusack, cbl_and_cu
     use rad_input_mod, only: two_d_fsd_factor
-    use science_fixes_mod, only: l_fix_mphys_diags_iter
+    use science_fixes_mod, only: l_fix_mphys_diags_iter, l_fix_drop_settle, &
+         l_pc2_homog_turb_q_neg, l_fix_ccb_cct, l_fix_conv_precip_evap,     &
+         l_fix_dyndiag, l_fix_pc2_cnv_mix_phase, l_fix_riming,              &
+         l_fix_tidy_rainfracs, l_fix_zh
     use tuning_segments_mod, only: bl_segment_size, precip_segment_size, &
          ussp_seg_size
     use turb_diff_ctl_mod, only: visc_m, visc_h, max_diff, delta_smag,   &
@@ -198,37 +240,100 @@ contains
         call log_event( log_scratch_space, LOG_LEVEL_ERROR )
       end if
 
-      a_ent_shr_nml    = 5.0_r_um
+      a_ent_shr_nml = real(a_ent_shr, r_um)
       allocate(alpha_cd(bl_levels))
-      alpha_cd         = 1.5_r_um
-      alpha_cd(1)      = 2.0_r_um
-      ! Not GA7 - should be on - needs testing
-      bl_res_inv       = off
-      cbl_op           = lem_conven
-      ! Not GA7 - should be on - needs testing
-      entr_smooth_dec  = off
-      flux_bc_opt      = flux_bc_opt_in
-      flux_grad        = off
-      fric_heating     = on
-      i_bl_vn          = i_bl_vn_9c
-      idyndiag         = DynDiag_Ribased
-      keep_ri_fa       = on
-      ! Not GA7 - should be buoy_integ - needs testing
-      kprof_cu         = off
-      ! l_bl_mix_qcf = .true should be set here, but code doesn't exist
-      ! l_reset_dec_thres=.true. should be set here - needs testing
-      lambda_min_nml   = 40.0_r_um
-      local_fa         = to_sharp_across_1km
-      pstb             = 2.0_r_um
-      puns             = 0.5_r_um
-      relax_sc_over_cu = off
-      ritrans          = 0.1_r_um
-      sbl_op           = sharp_sea_mes_land
-      sg_orog_mixing   = off
-      ! Not GA7 - should be 6km
-      nl_bl_levels     = bl_levels
-      ! Not GA7 - should be 0.4 - needs testing
-      zhloc_depth_fac  = 0.3_r_um
+      alpha_cd      = 1.5_r_um
+      alpha_cd(1)   = 2.0_r_um
+      bl_res_inv    = on
+
+      select case (cbl_opt)
+        case(cbl_opt_conventional)
+          cbl_op = lem_conven
+        case(cbl_opt_standard)
+          cbl_op = lem_std
+      end select
+
+      entr_smooth_dec = on
+
+      select case (flux_bc_opt_in)
+        case(flux_bc_opt_interactive)
+          flux_bc_opt = interactive_fluxes
+        case(flux_bc_opt_specified_scalars)
+          flux_bc_opt = specified_fluxes_only
+      end select
+
+      flux_grad = off
+
+      if (fric_heating_in) then
+        fric_heating = on
+      else
+        fric_heating = off
+      end if
+
+      i_bl_vn = i_bl_vn_9c
+
+      select case (dyn_diag)
+        case(dyn_diag_zi_l_sea)
+          idyndiag = DynDiag_ZL_corrn
+        case(dyn_diag_zi_l_cu)
+          idyndiag = DynDiag_ZL_CuOnly
+        case(dyn_diag_ri_based)
+          idyndiag = DynDiag_Ribased
+      end select
+
+      select case (reduce_fa_mix)
+        case(reduce_fa_mix_inv_and_cu_lcl)
+          keep_ri_fa = on
+        case(reduce_fa_mix_inv_only)
+          keep_ri_fa = except_disc_inv
+      end select
+
+      kprof_cu = buoy_integ
+      ! l_bl_mix_qcf = .true should be set here, but code is complicated
+      !  to implement in LFRic, and since it moves to false at GA8
+      !  we don't plan on implementing it...
+      l_new_kcloudtop   = new_kcloudtop
+      l_reset_dec_thres = .true.
+      lambda_min_nml    = 40.0_r_um
+
+      select case (free_atm_mix)
+        case(free_atm_mix_to_sharp)
+          local_fa = to_sharp_across_1km
+        case(free_atm_mix_ntml_corrected)
+          local_fa = ntml_level_corrn
+        case(free_atm_mix_free_trop_layer)
+          local_fa = free_trop_layers
+      end select
+
+      pstb = 2.0_r_um
+      puns = 0.5_r_um
+
+      if (relax_sc_over_cu_in) then
+        relax_sc_over_cu = on
+      else
+        relax_sc_over_cu = off
+      end if
+
+      ritrans = 0.1_r_um
+
+      select case (sbl_opt)
+        case(sbl_opt_sharpest)
+          sbl_op = sharpest
+        case(sbl_opt_sharp_sea_mes_land)
+          sbl_op = sharp_sea_mes_land
+      end select
+
+      select case (sg_orog_mixing_in)
+        case(sg_orog_mixing_none)
+          sg_orog_mixing = off
+        case(sg_orog_mixing_shear_plus_lambda)
+          sg_orog_mixing = sg_shear_enh_lambda
+      end select
+
+      ! Not GA7 - should be 6km - I think we'll leave like this for now
+      ! as it should help stability - reducing it is just for optimisation
+      nl_bl_levels    = bl_levels
+      zhloc_depth_fac = real(zhloc_depth_fac_in, r_um)
 
     end if
 
@@ -343,6 +448,8 @@ contains
       case(cv_scheme_lambert_lewis)
         i_convection_vn   = i_cv_llcs
         non_local_bl      = off
+        ng_stress         = off
+        bl_res_inv        = off
         if ( scheme == scheme_pc2 ) then
           ! If pc2, we detrain some cloud
           llcs_cloud_precip = llcs_opt_crit_condens
@@ -371,12 +478,6 @@ contains
     ! ----------------------------------------------------------------
     ! UM cloud scheme settings - contained in UM module cloud_inputs_mod
     ! ----------------------------------------------------------------
-
-    ! Options needed regardless of whether the cloud scheme is called
-    i_cld_area = acf_off
-    ! Not GA7 - should be 2 - needs testing
-    forced_cu = off
-
     if ( cloud == cloud_um ) then
 
       if ( .not. use_moisture ) then
@@ -386,37 +487,48 @@ contains
       end if
 
       ! Options needed by all cloud schemes
-      ! Not GA7 - should be 1e-5 - needs testing
-      cff_spread_rate            = 1.0e-3_r_um
-      falliceshear_method        = real_shear
-      i_eacf                     = off
-      ! Not GA7 - should be 2 - needs coding
-      i_rhcpt                    = rhcpt_off
-      ice_fraction_method        = smith_orig
-      ice_width                  = 0.02_r_um
+      cff_spread_rate = real(cff_spread_rate_in, r_um)
+      select case (falliceshear_method_in)
+        case(falliceshear_method_constant)
+          falliceshear_method = original_but_wrong
+        case(falliceshear_method_real)
+          falliceshear_method = real_shear
+      end select
+      select case (rh_crit_opt)
+        case(rh_crit_opt_namelist)
+          i_rhcpt = rhcpt_off
+        case(rh_crit_opt_tke)
+          i_rhcpt = rhcpt_tke_based
+      end select
+      ice_fraction_method = min_liq_overlap
+      ice_width           = real(ice_width_in, r_um)
       ! l_add_cca_to_mcica=.true. needs adding - not currently coded
-      ! l_od_cld_filter=.true. should be here - not currently coded
+      ! l_od_cld_filter=.true. should be here - only for diagnostics
       ! ...tau_thresh=0.01 should be set here if so
-      l_subgrid_qv               = .true.
+      l_subgrid_qv               = subgrid_qv
       rhcrit(1:number_of_layers) = real(rh_crit, r_um)
 
       ! Options which are bespoke to the choice of scheme
       select case (scheme)
 
       case(scheme_smith)
-        i_cld_vn = i_cld_smith
+        i_cld_vn   = i_cld_smith
+        forced_cu  = off
+        i_cld_area = acf_cusack
+        i_eacf     = not_mixph
 
       case(scheme_pc2)
-        i_cld_vn = i_cld_pc2
+        i_cld_vn                     = i_cld_pc2
         allicetdegc                  = -20.0_r_um
         dbsdtbs_turb_0               = 1.50e-4_r_um
+        forced_cu                    = cbl_and_cu
         forced_cu_fac                = 0.5_r_um
+        i_cld_area                   = acf_off
         i_pc2_checks_cld_frac_method = 2
         i_pc2_conv_coupling          = 3
         i_pc2_erosion_method         = pc2eros_hybrid_sidesonly
-        l_ensure_min_in_cloud_qcf    = .true.
-        ! Not GA7, should be false
-        l_simplify_pc2_init_logic    = .true.
+        l_ensure_min_in_cloud_qcf    = .false.
+        l_simplify_pc2_init_logic    = .false.
         starticetkelvin              = 263.15_r_um
 
       case default
@@ -431,7 +543,8 @@ contains
 
     else ! cloud /= cloud_um
       ! Set switch for no cloud scheme in UM
-      i_cld_vn = i_cld_off
+      i_cld_vn  = i_cld_off
+      forced_cu = off
     end if
 
     ! ----------------------------------------------------------------
@@ -457,6 +570,8 @@ contains
       ! Electric namelist options
       electric_method = no_lightning
 
+      a_ratio_exp    = real(a_ratio_exp_in, r_um)
+      a_ratio_fac    = real(a_ratio_fac_in, r_um)
       ai             = 2.5700e-2_r_um
       ar             = 1.00_r_um
       bi             = 2.00_r_um
@@ -468,16 +583,21 @@ contains
       graupel_option = no_graupel
       i_mcr_iter     = i_mcr_iter_tstep
       l_diff_icevt   = .true.
+      l_droplet_tpr  = droplet_tpr
       ! l_fsd_generator should be set here - code doesn't yet exist
       l_mcr_qrain    = .true.
       l_psd          = .true.
       l_rain         = .true.
+      l_shape_rime   = shape_rime
       ! l_subgrid_qcl_mp should be set here - needs coding??
       l_warm_new     = .true.
+      ndrop_surf     = real(ndrop_surf_in, r_um)
+      qclrime        = real(qcl_rime, r_um)
       sediment_loc   = all_sed_start
       timestep_mp_in = 120
       x1r            = 2.2000e-1_r_um
       x2r            = 2.2000_r_um
+      z_surf         = real(z_surf_in, r_um)
 
       ! Domain top used in microphysics - contained in mphys_bypass_mod
       mphys_mod_top  = real(domain_top, r_um)
@@ -485,8 +605,7 @@ contains
       ! Options for the subgrid cloud variability parametrization used
       ! in microphysics but living elsewhere in the UM
       ! ... contained in rad_input_mod
-      ! Not GA7 - should be 1.5
-      two_d_fsd_factor = 1.414_r_um
+      two_d_fsd_factor = 1.5_r_um
       ! ... contained in fsd_parameters_mod
       fsd_eff_lam      = delta_lambda
       fsd_eff_phi      = delta_phi
@@ -501,7 +620,6 @@ contains
     ! ----------------------------------------------------------------
     if ( spectral_gwd == spectral_gwd_um ) then
 
-      ! Namelist value 1.2 is not GA7 - should be 1.3
       cgw_scale_factor = real(cgw_scale_factor_in, r_um)
       l_add_cgw = add_cgw_in
       ussp_launch_factor = real(ussp_launch_factor_in, r_um)
@@ -521,9 +639,17 @@ contains
     ! ----------------------------------------------------------------
     ! Temporary logicals used to fix bugs in the UM - contained in science_fixes
     ! ----------------------------------------------------------------
-    ! l_fix_drop_settle=.true. should be set here - needs testing
+    l_fix_drop_settle      = .true.
     l_fix_mphys_diags_iter = .true.
-    ! l_pc2_homog_turb_q_neg=.true. should be set here - needs testing
+    l_pc2_homog_turb_q_neg = .true.
+    ! The following aren't strictly GA7, but seem sensible to include
+    l_fix_ccb_cct           = .true.
+    l_fix_conv_precip_evap  = .true.
+    l_fix_dyndiag           = .true.
+    l_fix_pc2_cnv_mix_phase = .true.
+    l_fix_riming            = .true.
+    l_fix_tidy_rainfracs    = .true.
+    l_fix_zh                = .true.
 
     ! ----------------------------------------------------------------
     ! Segment sizes for UM physics - contained in tuning_segments_mod

@@ -16,30 +16,31 @@ def load_cube_by_varname(filename, var):
    variable_constraint = iris.Constraint(cube_func=(lambda c: c.var_name == var))
    return iris.load_cube(filename, constraint=variable_constraint)
 
-def do_plot(datapath, plotpath='.'):
+def do_plot(datapath, plotfield, plotpath='.'):
     ''' Do the plotting using data from datapath. Send output to plotpath '''
 
-
-
-    lfric = load_cube_by_varname(datapath, 'theta')
+    lfric = load_cube_by_varname(datapath, plotfield)
     lfric = lfric[:, :, 0]
 
     plt.figure(figsize=(15, 10))
     for n, time in enumerate([0, 10, 20, 30, 40, 47]):
         plt.subplot(2, 3, n+1)
-        plt.plot(lfric.data[time, 1:],
-                 lfric.coord('full_levels').points[1:],
-                 label='LFRic',
-                 linewidth=2)
+        try:
+           # first try wtheta fields
+           plt.plot(lfric.data[time, :],
+                    lfric.coord('full_levels').points[:],
+                    linewidth=2)
+        except:
+           # then w3 fields
+           plt.plot(lfric.data[time, :],
+                    lfric.coord('half_levels').points[:],
+                    linewidth=2)
 
-        plt.legend(loc='best')
-        plt.xlabel('theta')
+        plt.xlabel(plotfield)
         plt.ylabel('Model Level Number')
-        plt.xlim([290, 315])
-
         plt.title('Timestep = '+str(time+1))
 
-    plt.savefig(plotpath+'/lfric_scm_theta.png', bbox_inches='tight')
+    plt.savefig(plotpath+'/'+plotfield+'.png', bbox_inches='tight')
 
 
 if __name__ == "__main__":
@@ -50,4 +51,8 @@ if __name__ == "__main__":
     except ValueError:
         print("Usage: {0} <datapath> <plotpath>".format(sys.argv[0]))
         exit(1)
-    do_plot(datapath, plotpath)
+    do_plot(datapath, 'theta', plotpath)
+    do_plot(datapath, 'm_v',   plotpath)
+    do_plot(datapath, 'm_cl',  plotpath)
+    do_plot(datapath, 'm_ci',  plotpath)
+    do_plot(datapath, 'u1',    plotpath)

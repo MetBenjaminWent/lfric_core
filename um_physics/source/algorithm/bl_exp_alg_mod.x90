@@ -45,7 +45,7 @@ contains
   !>@param[in]     cloud_fields        Fields for cloud scheme
   !>@param[in,out] surface_fields      Fields for surface scheme
   !>@param[in,out] soil_fields         Fields for soil hydrology scheme
-  !>@param[in]     snow_fields         Fields for snow scheme
+  !>@param[in]     snow_fields         (in,out) Fields for snow scheme
   !>@param[in]     height_w3         Height in w3
   !>@param[in]     height_wth        Height in wth
   !>@param[in]     delta             Edge length on wtheta points
@@ -96,6 +96,9 @@ contains
     type( field_type ), pointer :: blend_height_uv => null()
     type( field_type ), pointer :: bl_types        => null()
     type( field_type ), pointer :: zh_nonloc       => null()
+    type( field_type ), pointer :: z_lcl           => null()
+    type( field_type ), pointer :: inv_depth       => null()
+    type( field_type ), pointer :: qcl_at_inv_top  => null()
     type( field_type ), pointer :: rhokm_bl        => null()
     type( field_type ), pointer :: rhokh_bl        => null()
     type( field_type ), pointer :: ngstress_bl     => null()
@@ -126,6 +129,7 @@ contains
     type( field_type ), pointer :: thv_flux         => null()
     type( field_type ), pointer :: parcel_buoyancy  => null()
     type( field_type ), pointer :: qsat_at_lcl      => null()
+    type( field_type ), pointer :: dd_mf_cb         => null()
 
     type( field_type ), pointer :: cf_bulk => null()
     type( field_type ), pointer :: rh_crit => null()
@@ -184,6 +188,7 @@ contains
     type( field_type ), pointer :: snow_layer_ice_mass  => null()
     type( field_type ), pointer :: snow_layer_liq_mass  => null()
     type( field_type ), pointer :: snow_layer_temp      => null()
+    type( field_type ), pointer :: snow_unload_rate     => null()
 
     ! local variables
     type( field_type ) :: gross_prim_prod
@@ -207,6 +212,9 @@ contains
     blend_height_tq => turbulence_fields%get_field('blend_height_tq')
     blend_height_uv => turbulence_fields%get_field('blend_height_uv')
     zh_nonloc       => turbulence_fields%get_field('zh_nonloc')
+    z_lcl           => turbulence_fields%get_field('z_lcl')
+    inv_depth       => turbulence_fields%get_field('inv_depth')
+    qcl_at_inv_top  => turbulence_fields%get_field('qcl_at_inv_top')
     bl_types        => turbulence_fields%get_field('bl_types')
     rhokm_bl        => turbulence_fields%get_field('rhokm_bl')
     rhokh_bl        => turbulence_fields%get_field('rhokh_bl')
@@ -240,6 +248,7 @@ contains
     thv_flux         => convection_fields%get_field('thv_flux')
     parcel_buoyancy  => convection_fields%get_field('parcel_buoyancy')
     qsat_at_lcl      => convection_fields%get_field('qsat_at_lcl')
+    dd_mf_cb         => convection_fields%get_field('dd_mf_cb')
 
     ! Unpack cloud fields
     cf_bulk => cloud_fields%get_field('bulk_fraction')
@@ -304,6 +313,7 @@ contains
     snow_layer_ice_mass  => snow_fields%get_field('snow_layer_ice_mass')
     snow_layer_liq_mass  => snow_fields%get_field('snow_layer_liq_mass')
     snow_layer_temp      => snow_fields%get_field('snow_layer_temp')
+    snow_unload_rate     => snow_fields%get_field('snow_unload_rate')
 
     ! BL diagnostics
     call zh%copy_field_properties(gross_prim_prod)
@@ -330,7 +340,7 @@ contains
                            tile_heat_flux, tile_moisture_flux,                 &
                            gross_prim_prod, net_prim_prod,                     &
                            cos_zenith_angle, sw_up_tile, sw_down_surf,         &
-                           lw_down_surf, sw_down_blue_surf,                    &
+                           lw_down_surf, sw_down_blue_surf, dd_mf_cb,          &
                            dtl_mphys, dmt_mphys,                               &
                            sw_heating_rate, lw_heating_rate,                   &
                            cf_bulk, rh_crit, visc_m, visc_h,                   &
@@ -342,10 +352,12 @@ contains
                            chr1p5m_tile, resfs_tile, canhc_tile,               &
                            tile_water_extract,                                 &
                            blend_height_tq, blend_height_uv, ustar,            &
-                           soil_moist_avail, zh_nonloc, shallow_flag,          &
+                           soil_moist_avail, zh_nonloc, z_lcl, inv_depth,      &
+                           qcl_at_inv_top, shallow_flag,                       &
                            uw0_flux, vw0_flux, lcl_height, parcel_top,         &
                            level_parcel_top, wstar, thv_flux,                  &
-                           parcel_buoyancy, qsat_at_lcl, bl_types) )
+                           parcel_buoyancy, qsat_at_lcl, bl_types,             &
+                           snow_unload_rate) )
 
     ! output BL diagnostics
     if (write_diag .and. use_xios_io) then

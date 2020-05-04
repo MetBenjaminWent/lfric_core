@@ -71,7 +71,8 @@ module gungho_model_mod
   use runtime_constants_mod,      only : create_runtime_constants, &
                                          final_runtime_constants
   use section_choice_config_mod,  only : radiation,         &
-                                         radiation_socrates
+                                         radiation_socrates,&
+                                         surface, surface_jules
   use time_config_mod,            only : timestep_start
   use timer_mod,                  only : timer, output_timer, init_timer
   use timestepping_config_mod,    only : method,               &
@@ -287,8 +288,10 @@ module gungho_model_mod
       call um_physics_init()
       ! Initialisation of Jules high-level variables
       call jules_control_init()
-      ! Initialisation of Jules physics variables
-      call jules_physics_init()
+      if (surface == surface_jules) then
+        ! Initialisation of Jules physics variables
+        call jules_physics_init()
+      end if
     end if
 #endif
 

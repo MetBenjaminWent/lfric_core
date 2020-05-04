@@ -22,7 +22,9 @@ module bl_exp_kernel_mod
   use constants_mod,          only : i_def, i_um, r_def, r_um
   use fs_continuity_mod,      only : W3, Wtheta
   use kernel_mod,             only : kernel_type
-  use blayer_config_mod,      only : fixed_flux_e, fixed_flux_h
+  use blayer_config_mod,      only : fixed_flux_e, fixed_flux_h, flux_bc_opt, &
+                                     flux_bc_opt_specified_scalars
+  use cloud_config_mod,       only : rh_crit_opt, rh_crit_opt_tke
   use mixing_config_mod,      only : smagorinsky
   use timestepping_config_mod, only: outer_iterations
 
@@ -37,7 +39,7 @@ module bl_exp_kernel_mod
   !>
   type, public, extends(kernel_type) :: bl_exp_kernel_type
     private
-    type(arg_type) :: meta_args(108) = (/                           &
+    type(arg_type) :: meta_args(113) = (/                           &
         arg_type(GH_FIELD, GH_READ,      WTHETA),                   &! theta_in_wth
         arg_type(GH_FIELD, GH_READ,      W3),                       &! rho_in_w3
         arg_type(GH_FIELD, GH_READ,      W3),                       &! wetrho_in_w3
@@ -99,12 +101,13 @@ module bl_exp_kernel_mod
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! sw_down_surf
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! lw_down_surf
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! sw_down_surf_blue
+        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! dd_mf_cb
         arg_type(GH_FIELD, GH_READ,      WTHETA),                   &! dtl_mphys
         arg_type(GH_FIELD, GH_READ,      WTHETA),                   &! dmt_mphys
         arg_type(GH_FIELD, GH_READ,      WTHETA),                   &! sw_heating_rate
         arg_type(GH_FIELD, GH_READ,      WTHETA),                   &! lw_heating_rate
         arg_type(GH_FIELD, GH_READ,      WTHETA),                   &! cf_bulk
-        arg_type(GH_FIELD, GH_READWRITE, WTHETA),                   &! rh_crit_wth
+        arg_type(GH_FIELD, GH_READWRITE, WTHETA),                   &! rh_crit
         arg_type(GH_FIELD, GH_WRITE,     WTHETA),                   &! visc_m_blend
         arg_type(GH_FIELD, GH_WRITE,     WTHETA),                   &! visc_h_blend
         arg_type(GH_FIELD, GH_WRITE,     WTHETA),                   &! rhokm_bl
@@ -135,6 +138,9 @@ module bl_exp_kernel_mod
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! ustar
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! soil_moist_avail
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! zh_nonloc
+        arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! z_lcl
+        arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! inv_depth
+        arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! qcl_at_inv_top
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! shallow_flag
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! uw0_flux
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! vw0_flux
@@ -145,7 +151,8 @@ module bl_exp_kernel_mod
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! thv_flux
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! parcel_buoyancy
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! qsat_at_lcl
-        arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_8) &! bl_types
+        arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_8),&! bl_types
+        arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_3) &! snow_unload_rate
         /)
     integer :: iterates_over = CELLS
   contains
@@ -223,12 +230,13 @@ contains
   !> @param[in]     sw_down_surf         Downwelling SW radiation at surface
   !> @param[in]     lw_down_surf         Downwelling LW radiation at surface
   !> @param[in]     sw_down_surf_blue    Photosynthetically active SW down
+  !> @param[in]     dd_mf_cb             Downdraft massflux at cloud base (Pa/s)
   !> @param[in]     dtl_mphys            Microphysics liq temperature increment
   !> @param[in]     dmt_mphys            Microphysics total water increment
   !> @param[in]     sw_heating_rate      Shortwave radiation heating rate
   !> @param[in]     lw_heating_rate      Longwave radiation heating rate
   !> @param[in]     cf_bulk              Bulk cloud fraction
-  !> @param[in,out] rh_crit_wth          Critical rel humidity
+  !> @param[in,out] rh_crit              Critical rel humidity
   !> @param[out]    visc_m_blend         Blended BL-Smag diffusion coefficient for momentum
   !> @param[out]    visc_h_blend         Blended BL-Smag diffusion coefficient for scalars
   !> @param[out]    rhokm_bl             Momentum eddy diffusivity on BL levels
@@ -259,10 +267,13 @@ contains
   !> @param[out]    ustar                Friction velocity
   !> @param[out]    soil_moist_avail     Available soil moisture for evaporation
   !> @param[out]    zh_nonloc            Depth of non-local BL scheme
+  !> @param[out]    z_lcl                Height of the LCL (wtheta levels)
+  !> @param[out]    inv_depth            Depth of BL top inversion layer
+  !> @param[out]    qcl_at_inv_top       Cloud water at top of inversion
   !> @param[out]    shallow_flag         Indicator of shallow convection
   !> @param[out]    uw0_flux             'Zonal' surface momentum flux
   !> @param[out]    vw0 flux             'Meridional' surface momentum flux
-  !> @param[out]    lcl_height           Height of lifting condensation level
+  !> @param[out]    lcl_height           Height of lifting condensation level (w3 levels)
   !> @param[out]    parcel_top           Height of surface based parcel ascent
   !> @param[out]    level_parcel_top     Model level of parcel_top
   !> @param[out]    wstar_2d             BL velocity scale
@@ -270,6 +281,7 @@ contains
   !> @param[out]    parcel_buoyancy      Integral of parcel buoyancy
   !> @param[out]    qsat_at_lcl          Saturation specific hum at LCL
   !> @param[out]    bl_types             Diagnosed BL types
+  !> @param[out]    snow_unload_rate     Unloading of snow from PFTs by wind
   !> @param[in]     ndf_wth              Number of DOFs per cell for potential temperature space
   !> @param[in]     undf_wth             Number of unique DOFs for potential temperature space
   !> @param[in]     map_wth              Dofmap for the cell at the base of the column for potential temperature space
@@ -362,12 +374,13 @@ contains
                          sw_down_surf,                          &
                          lw_down_surf,                          &
                          sw_down_surf_blue,                     &
+                         dd_mf_cb,                              &
                          dtl_mphys,                             &
                          dmt_mphys,                             &
                          sw_heating_rate,                       &
                          lw_heating_rate,                       &
                          cf_bulk,                               &
-                         rh_crit_wth,                           &
+                         rh_crit,                               &
                          visc_m_blend,                          &
                          visc_h_blend,                          &
                          rhokm_bl,                              &
@@ -398,6 +411,9 @@ contains
                          ustar,                                 &
                          soil_moist_avail,                      &
                          zh_nonloc,                             &
+                         z_lcl,                                 &
+                         inv_depth,                             &
+                         qcl_at_inv_top,                        &
                          shallow_flag,                          &
                          uw0_flux,                              &
                          vw0_flux,                              &
@@ -409,6 +425,7 @@ contains
                          parcel_buoyancy,                       &
                          qsat_at_lcl,                           &
                          bl_types,                              &
+                         snow_unload_rate,                      &
                          ndf_wth,                               &
                          undf_wth,                              &
                          map_wth,                               &
@@ -441,7 +458,6 @@ contains
     use atm_fields_bounds_mod, only: tdims
     use atm_step_local, only: dim_cs1, dim_cs2, land_pts_trif, npft_trif,    &
          co2_dim_len, co2_dim_row
-    use bl_option_mod, only: flux_bc_opt, specified_fluxes_only
     use cv_run_mod, only: i_convection_vn, i_convection_vn_6a,               &
                           cldbase_opt_dp, cldbase_opt_md
     use dust_parameters_mod, only: ndiv, ndivh
@@ -455,6 +471,7 @@ contains
     use timestep_mod, only: timestep
 
     ! spatially varying fields used from modules
+    use jules_internal, only: unload_backgrnd_pft
     use level_heights_mod, only: r_theta_levels, r_rho_levels, eta_theta_levels
     use ozone_vars, only: o3_gb
     use prognostics, only: snowdepth_surft, nsnow_surft, ds_surft, sice_surft, &
@@ -497,7 +514,7 @@ contains
     integer(kind=i_def), intent(in) :: map_surf(ndf_surf)
     integer(kind=i_def), intent(in) :: map_bl(ndf_bl)
 
-    real(kind=r_def), dimension(undf_wth), intent(inout):: rh_crit_wth
+    real(kind=r_def), dimension(undf_wth), intent(inout):: rh_crit
 
     real(kind=r_def), dimension(undf_wth), intent(out)  :: visc_h_blend,       &
                                                            visc_m_blend,       &
@@ -541,6 +558,9 @@ contains
                                                            ustar,              &
                                                            soil_moist_avail,   &
                                                            zh_nonloc,          &
+                                                           z_lcl,              &
+                                                           inv_depth,          &
+                                                           qcl_at_inv_top,     &
                                                            shallow_flag,       &
                                                            uw0_flux,           &
                                                            vw0_flux,           &
@@ -577,6 +597,7 @@ contains
     real(kind=r_def), intent(in) :: sw_down_surf(undf_2d)
     real(kind=r_def), intent(in) :: lw_down_surf(undf_2d)
     real(kind=r_def), intent(in) :: sw_down_surf_blue(undf_2d)
+    real(kind=r_def), intent(in) :: dd_mf_cb(undf_2d)
     real(kind=r_def), intent(out) :: gross_prim_prod(undf_2d)
     real(kind=r_def), intent(out) :: net_prim_prod(undf_2d)
     real(kind=r_def), intent(out) :: soil_respiration(undf_2d)
@@ -600,6 +621,7 @@ contains
     real(kind=r_def), intent(out) :: tile_water_extract(undf_smtile)
 
     real(kind=r_def), dimension(undf_bl),   intent(out)  :: bl_types
+    real(kind=r_def), dimension(undf_pft),  intent(out)  :: snow_unload_rate
     real(kind=r_def), dimension(undf_surf), intent(out)  :: rhokm_surf
     real(kind=r_def), dimension(undf_tile), intent(out)  :: alpha1_tile,      &
                                                             ashtf_prime_tile, &
@@ -776,7 +798,7 @@ contains
     l_extra_call=.false.
     l_jules_call=.false.
     ! surface forcing
-    if ( flux_bc_opt == specified_fluxes_only ) then
+    if ( flux_bc_opt == flux_bc_opt_specified_scalars ) then
       flux_e(:,:)=fixed_flux_e
       flux_h(:,:)=fixed_flux_h
     end if
@@ -1087,7 +1109,7 @@ contains
     ! surface roughness
     z0msea(1,1) = z0msea_2d(map_2d(1))
     ! downdraft at cloud base
-    ddmfx = 0.0
+    ddmfx = dd_mf_cb(map_2d(1))
 
     !-----------------------------------------------------------------------
     ! Things saved from other parametrization schemes on this timestep
@@ -1299,6 +1321,9 @@ contains
     ustar(map_2d(1)) = u_s(1,1)
     soil_moist_avail(map_2d(1)) = smc_soilt(1)
     zh_nonloc(map_2d(1)) = zhnl(1,1)
+    z_lcl(map_2d(1)) = real(zlcl(1,1), r_def)
+    inv_depth(map_2d(1)) = real(dzh(1,1), r_def)
+    qcl_at_inv_top(map_2d(1)) = real(qcl_inv_top(1,1), r_def)
     if ( l_shallow(1,1) ) then
       shallow_flag(map_2d(1)) = 1.0_r_def
     else
@@ -1321,6 +1346,11 @@ contains
     bl_types(map_bl(5)) = bl_type_5(1,1)
     bl_types(map_bl(6)) = bl_type_6(1,1)
     bl_types(map_bl(7)) = bl_type_7(1,1)
+
+    do i = 1, npft
+      ! Unloading rate of snow from plant functional types
+      snow_unload_rate(map_pft(i)) = real(unload_backgrnd_pft(1, i), r_def)
+    end do
 
     do i = 1, n_land_tile
       ! Land tile temperatures
@@ -1381,6 +1411,13 @@ contains
     else
       cumulus_2d(map_2d(1)) = 0.0_r_def
     endif
+
+    if (rh_crit_opt == rh_crit_opt_tke) then
+      do k = 1, nlayers
+        rh_crit(map_wth(1)+k) = real(rhcpt(1,1,k), r_def)
+      end do
+      rh_crit(map_wth(1)) = rh_crit(map_wth(1)+1)
+    end if
 
     ! deallocate diagnostics deallocated in atmos_physics2
     call dealloc_bl_expl(bl_diag)

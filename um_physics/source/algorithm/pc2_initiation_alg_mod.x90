@@ -75,9 +75,6 @@ contains
     type( field_type )                :: dcff_pc2_inc
     type( field_type )                :: dbcf_pc2_inc
 
-    ! Temporary updated theta after initiation, used for call to PC2 checks
-    type( field_type ) :: tmp_theta
-
     ! Temporary unpacked fields from collections
     type( field_type ), pointer :: exner_n_wth  => null()
 
@@ -102,7 +99,7 @@ contains
     area_fraction   => cloud_fields%get_field('area_fraction')
     rh_crit         => cloud_fields%get_field('rh_crit')
 
-    zlcl_mixed      => turbulence_fields%get_field('zlcl_mixed')
+    zlcl_mixed      => turbulence_fields%get_field('z_lcl')
     r_cumulus       => turbulence_fields%get_field('cumulus')
 
     call theta%copy_field_properties(dqv_pc2_inc)

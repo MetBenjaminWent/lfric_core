@@ -28,7 +28,7 @@ module jules_extra_kernel_mod
   !>
   type, public, extends(kernel_type) :: jules_extra_kernel_type
     private
-    type(arg_type) :: meta_args(51) = (/                             &
+    type(arg_type) :: meta_args(52) = (/                             &
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! ls_rain
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! conv_rain
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! ls_snow
@@ -36,6 +36,7 @@ module jules_extra_kernel_mod
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_2), & ! tile_fraction
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_3), & ! leaf_area_index
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_3), & ! canopy_height
+        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_3), & ! snow_unload_rate
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_4), & ! soil_moist_wilt
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_4), & ! soil_moist_crit
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_4), & ! soil_moist_sat
@@ -104,6 +105,7 @@ contains
   !> @param[in]     tile_fraction          Surface tile fractions
   !> @param[in]     leaf_area_index        Leaf Area Index
   !> @param[in]     canopy_height          Canopy height (m)
+  !> @param[in]     snow_unload_rate       Unloading of snow from PFTs by wind
   !> @param[in]     soil_moist_wilt        Volumetric soil moist at wilting pt
   !> @param[in]     soil_moist_crit        Volumetric soil moist at critical pt
   !> @param[in]     soil_moist_sat         Volumetric soil moist at saturation
@@ -172,6 +174,7 @@ contains
                tile_fraction,              &
                leaf_area_index,            &
                canopy_height,              &
+               snow_unload_rate,           &
                soil_moist_wilt,            &
                soil_moist_crit,            &
                soil_moist_sat,             &
@@ -250,6 +253,7 @@ contains
     use UM_ParCore, only: nproc
 
     ! Spatially varying fields used from modules
+    use jules_internal, only: unload_backgrnd_pft
     use p_s_parms, only: bexp_soilt, sathh_soilt, hcap_soilt, hcon_soilt,     &
                          satcon_soilt, smvccl_soilt, smvcwt_soilt,            &
                          smvcst_soilt
@@ -289,6 +293,7 @@ contains
 
     real(kind=r_def), intent(in)    :: leaf_area_index(undf_pft)
     real(kind=r_def), intent(in)    :: canopy_height(undf_pft)
+    real(kind=r_def), intent(in)    :: snow_unload_rate(undf_pft)
 
     real(kind=r_def), intent(in)    :: soil_moist_wilt(undf_soil)
     real(kind=r_def), intent(in)    :: soil_moist_crit(undf_soil)
@@ -487,6 +492,8 @@ contains
       lai_pft(1, i_pft) = real(leaf_area_index(map_pft(i_pft)), r_um)
       ! Canopy height
       canht_pft(1, i_pft) = real(canopy_height(map_pft(i_pft)), r_um)
+      ! Unloading rate of snow from plant functional types
+      unload_backgrnd_pft(1, i_pft) = real(snow_unload_rate(map_pft(i_pft)), r_um)
     end do
 
     ! Get catch_snow_surft and catch_surft from call to sparm

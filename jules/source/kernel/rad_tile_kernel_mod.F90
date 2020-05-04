@@ -212,7 +212,7 @@ subroutine rad_tile_code(nlayers,                          &
 
 
   ! Local variables for the kernel
-  integer(i_def) :: i, i_tile, i_pft, i_sice, i_band, i_basis, n
+  integer(i_def) :: i, i_tile, i_pft, i_sice, i_band, n
   integer(i_def) :: df_rtile
 
   ! Inputs to surf_couple_radiation

@@ -108,7 +108,9 @@ contains
     type( field_type ), pointer :: blend_height_uv  => null()
     type( field_type ), pointer :: zh_nonloc  => null()
     type( field_type ), pointer :: bl_types  => null()
-    type( field_type ), pointer :: zlcl_mixed => null()
+    type( field_type ), pointer :: z_lcl => null()
+    type( field_type ), pointer :: inv_depth => null()
+    type( field_type ), pointer :: qcl_at_inv_top => null()
     type( field_type ), pointer :: dt_bl => null()
     type( field_type ), pointer :: dmv_bl => null()
     type( field_type ), pointer :: rhokm_bl => null()
@@ -200,7 +202,9 @@ contains
     blend_height_uv => turbulence_fields%get_field('blend_height_uv')
     zh_nonloc => turbulence_fields%get_field('zh_nonloc')
     bl_types => turbulence_fields%get_field('bl_types')
-    zlcl_mixed => turbulence_fields%get_field('zlcl_mixed')
+    z_lcl => turbulence_fields%get_field('z_lcl')
+    inv_depth => turbulence_fields%get_field('inv_depth')
+    qcl_at_inv_top => turbulence_fields%get_field('qcl_at_inv_top')
     dt_bl => turbulence_fields%get_field('dt_bl')
     dmv_bl => turbulence_fields%get_field('dmv_bl')
     rhokm_bl => turbulence_fields%get_field('rhokm_bl')
@@ -324,7 +328,8 @@ contains
                            alpha1_tile, ashtf_prime_tile, dtstar_tile,         &
                            fraca_tile, z0h_tile, z0m_tile, rhokh_tile,         &
                            chr1p5m_tile, resfs_tile, canhc_tile,               &
-                           tile_water_extract, zlcl_mixed,                     &
+                           tile_water_extract, z_lcl, inv_depth,               &
+                           qcl_at_inv_top,                                     &
                            blend_height_tq, blend_height_uv, ustar,            &
                            soil_moist_avail, zh_nonloc, zh, bl_types),         &
 

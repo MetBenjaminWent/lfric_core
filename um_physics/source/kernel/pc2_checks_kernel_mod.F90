@@ -142,9 +142,6 @@ subroutine pc2_checks_code( nlayers,                   &
                   cfl_work, cff_work, bcf_work,            &
                   t_work, theta_work, pressure
 
-    real(r_um), dimension(row_length,rows,model_levels) :: &
-         dtdt, dqdt, dldt, dpdt,rhcpt
-
     integer(i_um) :: k
 
     integer(i_um), parameter :: nSCMDpkgs=15
