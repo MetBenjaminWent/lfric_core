@@ -48,6 +48,9 @@ module field_vector_mod
      procedure, public  :: norm => norm_field_vector
      !> Compute the dot product of two field_vectors returns a real scalar
      !> @param[in] x field_vector to dot self with
+     procedure, public  :: field_norm => field_norm_field_vector
+     !> Compute the dot product of two field_vectors returns a real scalar
+     !> @param[in] x field_vector to dot self with
      procedure, public  :: dot => dot_field_vector
      !> multiply a field vector by a scalar
      !> @param [in] scalar real
@@ -63,15 +66,19 @@ module field_vector_mod
      !> param[in] source, the vector to be copied
      ! copies a new field_vector when called on abstract type
      procedure, public  :: copy => field_vector_type_assign
+     !> Return the size of a vector of this type
+     procedure, public  :: vector_size => get_size_field_vector
 
 !   private procedure of the type which either implement the vector API
      procedure, private :: set_field_vector_scalar
      procedure, private :: axpy_field_vector
      procedure, private :: norm_field_vector
+     procedure, private :: field_norm_field_vector
      procedure, private :: dot_field_vector
      procedure, private :: aypx_field_vector
      procedure, private :: scale_field_vector
      procedure, private :: duplicate_field_vector
+     procedure, private :: get_size_field_vector
 !   infractructure procedures
      procedure, private :: field_vector_type_assign
      generic            :: assignment(=) => field_vector_type_assign
@@ -100,6 +107,17 @@ contains
     end do
     normal = sqrt(normal)
   end function norm_field_vector
+
+  ! compute the norm of a field in the vector
+  function field_norm_field_vector(self, n) result(normal)
+    implicit none
+    class(field_vector_type), intent(in) :: self
+    integer(kind=i_def),      intent(in) :: n
+    real(kind=r_def)    :: normal
+
+    call invoke( X_innerproduct_X(normal, self%vector(n)) )
+    normal = sqrt(normal)
+  end function field_norm_field_vector
 
   ! compute the dot of inner product of a field vector
   function dot_field_vector(self, x) result(dot_prod)
@@ -318,5 +336,14 @@ contains
        call log_event(log_scratch_space,LOG_LEVEL_ERROR)
     end select
   end subroutine field_vector_type_assign
+
+  ! Return the size of the field vector
+  function get_size_field_vector(self) result(n_fields)
+    implicit none
+    class(field_vector_type), intent(in) :: self
+    integer(kind=i_def) :: n_fields
+
+    n_fields = size(self%vector)
+  end function get_size_field_vector
 
 end module field_vector_mod

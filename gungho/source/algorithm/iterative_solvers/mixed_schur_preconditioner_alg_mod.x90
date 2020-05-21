@@ -91,9 +91,11 @@ module mixed_schur_preconditioner_alg_mod
   use constants_mod,                   only: i_def, r_def
   use preconditioner_mod,              only: abstract_preconditioner_type
   use iterative_solver_mod,            only: abstract_iterative_solver_type
-  use field_indices_mod,               only: igh_u, igh_t, igh_d, igh_p
+  use field_indices_mod,               only: igh_u, igh_t, igh_d, igh_p, &
+                                             igh_uv, igh_w
   use io_config_mod,                   only: subroutine_timers
   use timer_mod,                       only: timer
+  use mixed_solver_config_mod,         only: split_w
   use log_mod,                         only: log_event,       &
                                              LOG_LEVEL_ERROR, &
                                              LOG_LEVEL_INFO,  &
@@ -180,6 +182,8 @@ contains
                                                   result(self)
 
     use function_space_mod,            only: function_space_type
+    use function_space_collection_mod, only: function_space_collection
+    use fs_continuity_mod,             only: W2, W2v, W2h
 
     implicit none
 
@@ -188,11 +192,14 @@ contains
       pressure_solver
     type(mixed_schur_preconditioner_type)  :: self
 
+    integer(i_def)                          :: p, mesh_id
+
     call log_event( 'Constructing approximate Schur mixed preconditioner...', &
                     LOG_LEVEL_INFO )
 
-    ! r_u with theta eliminated
-    call self%rhs_u%initialise( vector_space = state%vector(igh_u)%get_function_space() )
+    p = state%vector(igh_t)%get_element_order()
+    mesh_id =  state%vector(igh_t)%get_mesh_id()
+    call self%rhs_u%initialise( vector_space = function_space_collection%get_fs( mesh_id, p, W2 ) )
 
     ! Helmholtz rhs
     call self%rhs_p%initialise( vector_space = state%vector(igh_p)%get_function_space() )
@@ -235,10 +242,18 @@ contains
     type is(field_vector_type)
        select type(y)
        type is(field_vector_type)
-          call invoke( setval_c( y%vector(igh_u), 0.0_r_def ),  &
-                       setval_c( y%vector(igh_t), 0.0_r_def ),  &
-                       setval_c( y%vector(igh_d), 0.0_r_def ),  &
-                       setval_c( y%vector(igh_p), 0.0_r_def ) )
+         if (split_w)then
+           call invoke( setval_c( y%vector(igh_uv), 0.0_r_def ),  &
+                        setval_c( y%vector(igh_w), 0.0_r_def ),  &
+                        setval_c( y%vector(igh_t), 0.0_r_def ),  &
+                        setval_c( y%vector(igh_d), 0.0_r_def ),  &
+                        setval_c( y%vector(igh_p), 0.0_r_def ) )
+         else
+           call invoke( setval_c( y%vector(igh_u), 0.0_r_def ),  &
+                        setval_c( y%vector(igh_t), 0.0_r_def ),  &
+                        setval_c( y%vector(igh_d), 0.0_r_def ),  &
+                        setval_c( y%vector(igh_p), 0.0_r_def ) )
+         end if
 
           ! STEP 1: Build RHS for Helmholtz system
           call self%build_pressure_rhs(x)
@@ -292,25 +307,39 @@ contains
     use enforce_bc_kernel_mod,        only: enforce_bc_kernel_type
     use finite_element_config_mod,    only: element_order
     use helmholtz_solver_config_mod,  only: normalise
+    use function_space_collection_mod,only: function_space_collection
+    use fs_continuity_mod,            only: W2, W2h, W2v
+    use combine_w2_field_kernel_mod,  only: combine_w2_field_kernel_type
+    use split_w2_field_kernel_mod,    only: split_w2_field_kernel_type
     implicit none
-    class(mixed_schur_preconditioner_type), intent(inout) :: self
-    type(field_vector_type),                intent(in)    :: rhs0
+    class( mixed_schur_preconditioner_type ), intent( inout ) :: self
+    type( field_vector_type ),                intent( in )    :: rhs0
 
-    type(operator_type), pointer :: m3_rho_star => null(),    &
-                                    m3_inv => null(),         &
-                                    p2theta => null(),        &
-                                    ptheta2 => null(),        &
-                                    p3theta => null(),        &
-                                    compound_div => null()
-    type(field_type),    pointer :: mt_lumped_inv => null(),  &
-                                    u_normalisation => null(),&
-                                    h_diag => null(),         &
-                                    Hb_lumped_inv => null()
-    type(field_type)             :: r_p, u_term
-    real(kind=r_def), parameter  :: minus_one = -1.0_r_def
+    type( operator_type ), pointer :: m3_rho_star => null(),    &
+                                      m3_inv => null(),         &
+                                      p2theta => null(),        &
+                                      ptheta2 => null(),        &
+                                      p3theta => null(),        &
+                                      compound_div => null()
+    type( field_type ),    pointer :: mt_lumped_inv => null(),  &
+                                      u_normalisation => null(),&
+                                      h_diag => null(),         &
+                                      Hb_lumped_inv => null()
+    type( field_type )             :: r_p, u_term
+    real( kind=r_def ), parameter  :: minus_one = -1.0_r_def
+    type( field_type )             :: rhs_uvw, rhs_uv, rhs_w
 
-    call r_p%initialise(vector_space = rhs0%vector(igh_p)%get_function_space())
-    call u_term%initialise(vector_space = rhs0%vector(igh_u)%get_function_space())
+    integer( i_def )               :: p, mesh_id
+
+    call rhs_uvw%initialise( vector_space = self%rhs_u%get_function_space() )
+    if ( split_w )then
+      call invoke( combine_w2_field_kernel_type( rhs_uvw, rhs0%vector( igh_uv ), rhs0%vector( igh_w ) ) )
+    else
+      call invoke( setval_X( rhs_uvw, rhs0%vector( igh_u ) ) )
+    end if
+
+    call r_p%initialise( vector_space = rhs0%vector( igh_p )%get_function_space() )
+    call u_term%initialise( vector_space = self%rhs_u%get_function_space() )
 
     p2theta         => get_p2theta()
     ptheta2         => get_ptheta2v()
@@ -321,13 +350,13 @@ contains
     u_normalisation => get_normalisation(w2_id)
     Hb_lumped_inv   => get_Hb_lumped_inv()
     ! rhs_u = rhs_u + UNORM*P02*rhs_t
-    call invoke( name = "Compute helmholtz R_u",                                     &
-                 setval_c(self%rhs_u, 0.0_r_def),                                    &
-                 matrix_vector_kernel_type(self%rhs_u, rhs0%vector(igh_t), p2theta), &
-                 inc_X_times_Y(self%rhs_u, u_normalisation),                         &
-                 inc_X_plus_Y(self%rhs_u, rhs0%vector(igh_u)),                       &
-                 enforce_bc_kernel_type(self%rhs_u),                                 &
-                 X_times_Y(u_term, self%rhs_u, Hb_lumped_inv) )
+    call invoke( name = "Compute helmholtz R_u",                                         &
+                 setval_c( self%rhs_u, 0.0_r_def ),                                      &
+                 matrix_vector_kernel_type( self%rhs_u, rhs0%vector( igh_t ), p2theta ), &
+                 inc_X_times_Y( self%rhs_u, u_normalisation ),                           &
+                 inc_X_plus_Y( self%rhs_u, rhs_uvw ),                                    &
+                 enforce_bc_kernel_type( self%rhs_u ),                                   &
+                 X_times_Y( u_term, self%rhs_u, Hb_lumped_inv ) )
 
     ! Compute H(u_term)
     ! r_pi = M3^-1*(rhs_pi + P03*M0^-1*rhs_t + M3rho*M3^-1*rhs_r)
@@ -380,25 +409,32 @@ contains
     use operator_mod,                only: operator_type
     use enforce_bc_kernel_mod,       only: enforce_bc_kernel_type
     use timestepping_config_mod,     only: tau_r, dt
+    use combine_w2_field_kernel_mod, only: combine_w2_field_kernel_type
+    use split_w2_field_kernel_mod,   only: split_w2_field_kernel_type
+    use function_space_collection_mod,only: function_space_collection
+    use fs_continuity_mod,            only: W2, W2h, W2v
 
     implicit none
-    class(mixed_schur_preconditioner_type), intent(inout) :: self
-    type(field_vector_type),                intent(inout) :: state
-    type(field_vector_type),                intent(in)    :: rhs
-    type(field_type),                       intent(in)    :: exner_inc
+    class( mixed_schur_preconditioner_type ), intent( inout ) :: self
+    type( field_vector_type ),                intent( inout ) :: state
+    type( field_vector_type ),                intent( in )    :: rhs
+    type( field_type ),                       intent( in )    :: exner_inc
 
-    type(field_type),    pointer :: rho_at_u => null(),        &
-                                    t_normalisation => null(), &
-                                    u_normalisation => null(), &
-                                    Hb_lumped_inv => null()
-    type(operator_type), pointer :: div_star => null(), &
-                                    ptheta2 => null(),  &
-                                    div => null(),      &
-                                    m3_inv => null()
-    type(field_type)             :: u_inc, theta_inc, rho_inc, &
-                                    ru_inc, rr_inc, flux
-    real(r_def), parameter       :: minus_one = -1.0_r_def
-    real(r_def)                  :: tau_dt
+    type( field_type ),    pointer :: rho_at_u => null(),        &
+                                      t_normalisation => null(), &
+                                      u_normalisation => null(), &
+                                      Hb_lumped_inv => null()
+    type( operator_type ), pointer :: div_star => null(), &
+                                      ptheta2 => null(),  &
+                                      div => null(),      &
+                                      m3_inv => null()
+    type( field_type )             :: u_inc, theta_inc, rho_inc, &
+                                      ru_inc, rr_inc, flux
+    real( r_def ), parameter       :: minus_one = -1.0_r_def
+    real( r_def )                  :: tau_dt
+    type( field_type )             :: uv_inc, w_inc
+
+    integer( i_def )               :: p, mesh_id
 
     if ( subroutine_timers ) call timer('Schur back substitute')
 
@@ -414,14 +450,14 @@ contains
     Hb_lumped_inv => get_Hb_lumped_inv()
 
     ! Create increment fields
-    call u_inc%initialise( vector_space = state%vector(igh_u)%get_function_space() )
+    call u_inc%initialise( vector_space = self%rhs_u%get_function_space() )
     call theta_inc%initialise( vector_space = state%vector(igh_t)%get_function_space() )
     call rho_inc%initialise( vector_space = state%vector(igh_d)%get_function_space() )
 
-    call ru_inc%initialise( vector_space = state%vector(igh_u)%get_function_space() )
+    call ru_inc%initialise( vector_space = self%rhs_u%get_function_space() )
     call rr_inc%initialise( vector_space = state%vector(igh_d)%get_function_space() )
 
-    call flux%initialise( vector_space = state%vector(igh_u)%get_function_space() )
+    call flux%initialise( vector_space = self%rhs_u%get_function_space() )
 
     tau_dt = -tau_r*dt
     call invoke( name = "Compute increments",                                 &
@@ -443,15 +479,32 @@ contains
                  dg_matrix_vector_kernel_type(rho_inc, rr_inc, m3_inv),       &
                  inc_aX_plus_Y(tau_dt, rho_inc, rhs%vector(igh_d)),           &
     ! Increment state array
-                 inc_X_plus_Y(state%vector(igh_u), u_inc),                    &
                  inc_X_plus_Y(state%vector(igh_t), theta_inc),                &
                  inc_X_plus_Y(state%vector(igh_d), rho_inc),                  &
                  inc_X_plus_Y(state%vector(igh_p), exner_inc) )
 
+
+    p = self%rhs_u%get_element_order()
+    mesh_id = self%rhs_u%get_mesh_id()
+    call uv_inc%initialise( vector_space = function_space_collection%get_fs( mesh_id, p, W2h ) )
+    call w_inc%initialise( vector_space = function_space_collection%get_fs( mesh_id, p, W2v ) )
+
+    call invoke( setval_c( uv_inc, 0.0_r_def ),                     &
+                 setval_c( w_inc, 0.0_r_def ),                      &
+                 split_w2_field_kernel_type( uv_inc, w_inc, u_inc ) &
+                 )
+    if ( split_w )then
+      call invoke( split_w2_field_kernel_type( state%vector( igh_uv ), state%vector( igh_w ), u_inc ) )
+    else
+      call invoke( setval_X( state%vector( igh_u ), u_inc ) )
+    end if
+
+    call uv_inc%log_minmax(LOG_LEVEL_DEBUG, 'uv increment     ')
+    call w_inc%log_minmax(LOG_LEVEL_DEBUG, 'w increment     ')
     call exner_inc%log_minmax(LOG_LEVEL_DEBUG, 'exner increment ')
-    call u_inc    %log_minmax(LOG_LEVEL_DEBUG, 'u increment     ')
+    call u_inc%log_minmax(LOG_LEVEL_DEBUG, 'u increment     ')
     call theta_inc%log_minmax(LOG_LEVEL_DEBUG, 'theta increment ')
-    call rho_inc  %log_minmax(LOG_LEVEL_DEBUG, 'rho increment   ')
+    call rho_inc%log_minmax(LOG_LEVEL_DEBUG, 'rho increment   ')
 
     nullify( div_star, ptheta2, div, m3_inv, rho_at_u, &
              t_normalisation, u_normalisation )
@@ -469,4 +522,3 @@ contains
   end subroutine destroy_mixed_schur_preconditioner
 
 end module mixed_schur_preconditioner_alg_mod
-

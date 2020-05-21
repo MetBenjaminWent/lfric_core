@@ -14,10 +14,12 @@ class field_vector_mod::field_vector_type{
    ~<<renamed>>axpy_field_vector() 
    ~<<renamed>>aypx_field_vector() 
    ~<<renamed>>norm_field_vetor() 
+   ~<<renamed>>field_norm_field_vetor() 
    ~<<renamed>>dot_field() 
    ~<<renamed>>scale_field_vector() 
    ~<<renamed>>duplicate_field_vetor() 
    ~<<renamed>>field_vector_type_assign() 
+   ~<<renamed>>get_size_field_vector()
   <<assignment(=)>>+field_vector_type_assign()
   <<create>>+field_vector_constructor(<<in>>nfields:integer):field_vector_type
   <<destroy>>+field_vector_destroy(<<inout>>self:field_vector_type)

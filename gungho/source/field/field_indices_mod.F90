@@ -16,6 +16,8 @@ module field_indices_mod
   integer, parameter :: igh_t = 2  ! potential temperature
   integer, parameter :: igh_d = 3  ! density
   integer, parameter :: igh_p = 4  ! exner pressure
+  integer, parameter :: igh_uv = igh_u ! uv wind if split - must be the same as igh_u
+  integer, parameter :: igh_w= 5   ! w wind if split
 
   ! For gravity wave mini app
   integer, parameter :: igw_u = 1  ! wind

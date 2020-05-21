@@ -29,7 +29,8 @@ module iter_timestep_alg_mod
   use io_config_mod,             only: subroutine_timers,                    &
                                        write_conservation_diag
   use mixed_solver_config_mod,   only: guess_np1,                            &
-                                       reference_reset_freq
+                                       reference_reset_freq,                 &
+                                       split_w
   use timestepping_config_mod,   only: dt, alpha,                            &
                                        outer_iterations, inner_iterations,   &
                                        spinup_period, spinup_alpha, spinup_winds
@@ -53,6 +54,10 @@ module iter_timestep_alg_mod
                                        copy_bundle,       &
                                        set_bundle_scalar, &
                                        bundle_ax
+
+  use function_space_collection_mod, only: function_space_collection
+  use fs_continuity_mod,         only: W2v, W2h
+
   ! PsyKAl PSYClone kernels
   use project_pressure_kernel_mod,        only: project_pressure_kernel_type
   use sort_ref_kernel_mod,                only: sort_ref_kernel_type
@@ -60,6 +65,8 @@ module iter_timestep_alg_mod
   use matrix_vector_kernel_mod,           only: matrix_vector_kernel_type
   use moist_dyn_factors_kernel_mod,       only: moist_dyn_factors_kernel_type
   use enforce_lower_bound_kernel_mod,     only: enforce_lower_bound_kernel_type
+  use split_w2_field_kernel_mod,          only: split_w2_field_kernel_type
+  use combine_w2_field_kernel_mod,        only: combine_w2_field_kernel_type
 
   ! Derived Types
   use field_mod,                 only: field_type
@@ -98,7 +105,8 @@ module iter_timestep_alg_mod
   use moist_dyn_mod,              only: num_moist_factors, gas_law
 
   ! Field indices
-  use field_indices_mod,          only: igh_u, igh_t, igh_d, igh_p
+  use field_indices_mod,          only: igh_u, igh_t, igh_d, igh_p, &
+                                        igh_w, igh_uv
 
   ! Mixing settings
   use mixing_config_mod,          only: viscosity, smagorinsky
@@ -137,6 +145,8 @@ module iter_timestep_alg_mod
   type( field_type ) :: visc_h ! Smagorinsky diffusion coefficient for scalars
   logical            :: helmholtz_solve
 
+  type( field_type) :: uv, w, r_uv, r_w
+
   public :: iter_alg_init
   public :: iter_alg_step
   public :: iter_alg_final
@@ -161,6 +171,8 @@ contains
     ! Prognostic fields
     type( field_type ), intent( inout ) :: u, rho, theta, exner
     type( field_type ), intent( inout ) :: mr(nummr)
+
+    integer(i_def) :: p ! element order for u
 
     !--------------------------------------------------------------------
     ! Allocate internal state field arrays
@@ -250,13 +262,28 @@ contains
     if (dry_static_adjust)call invoke( sort_ref_kernel_type(reference_state(igh_t) ) )
 
     ! Construct semi-implicit solver
-    vector_state = field_vector_type(bundle_size)
-    vector_rhs   = field_vector_type(bundle_size)
-    call vector_state%import_field(u,     igh_u)
-    call vector_state%import_field(theta, igh_t)
-    call vector_state%import_field(rho,   igh_d)
-    call vector_state%import_field(exner, igh_p)
-    call semi_implicit_solver_alg_init(vector_state)
+    if ( split_w )then
+      p  = u%get_element_order()
+      call uv%initialise( function_space_collection%get_fs( mesh_id, p, W2h ) )
+      call w%initialise( function_space_collection%get_fs( mesh_id, p, W2v ) )
+      call r_uv%initialise( function_space_collection%get_fs( mesh_id, p, W2h ) )
+      call r_w%initialise( function_space_collection%get_fs( mesh_id, p, W2v ) )
+      call invoke( setval_c( uv, 0.0_r_def ), &
+                   setval_c( w,  0.0_r_def ), &
+                   split_w2_field_kernel_type( uv, w, u ) )
+      vector_state = field_vector_type( bundle_size+1 )
+      vector_rhs   = field_vector_type( bundle_size+1 )
+      call vector_state%import_field( uv, igh_uv )
+      call vector_state%import_field( w, igh_w )
+    else
+      vector_state = field_vector_type( bundle_size )
+      vector_rhs   = field_vector_type( bundle_size )
+      call vector_state%import_field( u, igh_u )
+    end if
+    call vector_state%import_field( theta, igh_t )
+    call vector_state%import_field( rho,   igh_d )
+    call vector_state%import_field( exner, igh_p )
+    call semi_implicit_solver_alg_init( vector_state )
 
     call log_event( "iter_timestep: initialised timestepping algorithm", LOG_LEVEL_INFO )
 
@@ -642,19 +669,40 @@ contains
             'Residual in equation of state:  ',sqrt(si_err(igh_p))
           call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
-          call vector_rhs%import_field(rhs_np1(igh_u), igh_u)
-          call vector_rhs%import_field(rhs_np1(igh_t), igh_t)
-          call vector_rhs%import_field(rhs_np1(igh_d), igh_d)
-          call vector_rhs%import_field(rhs_np1(igh_p), igh_p)
-          call vector_state%import_field(state(igh_u), igh_u)
-          call vector_state%import_field(state(igh_t), igh_t)
-          call vector_state%import_field(state(igh_d), igh_d)
-          call vector_state%import_field(state(igh_p), igh_p)
-          call semi_implicit_solver_alg_step(vector_state, vector_rhs)
-          call vector_state%export_field(state(igh_u), igh_u)
-          call vector_state%export_field(state(igh_t), igh_t)
-          call vector_state%export_field(state(igh_d), igh_d)
-          call vector_state%export_field(state(igh_p), igh_p)
+
+          if ( split_w )then
+            call invoke( setval_c( uv, 0.0_r_def ), &
+                         setval_c( w,  0.0_r_def ), &
+                         split_w2_field_kernel_type( uv, w, state( igh_u ) ), &
+                         setval_c( r_uv, 0.0_r_def ), &
+                         setval_c( r_w,  0.0_r_def ), &
+                         split_w2_field_kernel_type( r_uv, r_w, rhs_np1( igh_u ) ) )
+            call vector_rhs%import_field( r_uv, igh_uv )
+            call vector_rhs%import_field( r_w, igh_w )
+            call vector_state%import_field( uv, igh_uv )
+            call vector_state%import_field( w, igh_w )
+          else
+            call vector_rhs%import_field( rhs_np1( igh_u ), igh_u )
+            call vector_state%import_field( state( igh_u ), igh_u )
+          end if
+          call vector_rhs%import_field( rhs_np1( igh_t ), igh_t )
+          call vector_rhs%import_field( rhs_np1( igh_d ), igh_d )
+          call vector_rhs%import_field( rhs_np1( igh_p ), igh_p )
+          call vector_state%import_field( state( igh_t ), igh_t )
+          call vector_state%import_field( state( igh_d ), igh_d )
+          call vector_state%import_field( state( igh_p ), igh_p )
+          call semi_implicit_solver_alg_step( vector_state, vector_rhs )
+
+          if ( split_w )then
+            call invoke( combine_w2_field_kernel_type( state( igh_u ),                &
+                                                       vector_state%vector( igh_uv ), &
+                                                       vector_state%vector( igh_w ) ) )
+          else
+            call vector_state%export_field( state( igh_u ), igh_u )
+          end if
+          call vector_state%export_field( state( igh_t ), igh_t )
+          call vector_state%export_field( state( igh_d ), igh_d )
+          call vector_state%export_field( state( igh_p ), igh_p )
 
           ! Recompute exner from eos
           if (exner_from_eos) then

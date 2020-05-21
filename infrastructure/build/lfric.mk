@@ -203,7 +203,7 @@ launch-test-suite:
 	          $(CLEAN_OPT) $(QUIET_ARG) \
 	          --define-suite=RDEF_PRECISION=$(RDEF_PRECISION) \
                   $(VERBOSE_ARG) \
-	          --group=$(SUITE_GROUP) ; \
+	          --group=$(SUITE_GROUP); \
 	done
 
 ##############################################################################

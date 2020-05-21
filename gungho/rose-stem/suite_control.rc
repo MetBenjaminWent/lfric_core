@@ -309,7 +309,7 @@
             'run_application("gungho", "robert5m",
                              resolutions=[("BiP200x4-5x5",0.625)],
                              checkkgo=False,
-                             env={"crun":8, "nrun":216,
+                             env={"crun":4, "nrun":216,
                                   "directives":{"default":{"mpi_parts":20,"panel_decomp":' + row + ',
                                                            "threads":1,
                                                            "wallclock":"01:30:00"} } },

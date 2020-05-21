@@ -242,6 +242,43 @@ module iterative_solver_mod
      end subroutine gcr_solve
   end interface
 
+  !! --- BLOCK_GCR type declarations and interfaces --- !!
+  ! BLOCK_GCR breaks the API and will be removed in ticket #???
+  type, public, extends(abstract_iterative_solver_type) :: block_gcr_type
+     private
+     integer(kind=i_def) :: gcrk
+   contains
+     procedure :: apply => block_gcr_solve
+     procedure :: block_gcr_solve
+  end type block_gcr_type
+
+  ! overload the default structure constructor
+  interface block_gcr_type
+     module procedure block_gcr_constructor
+  end interface
+
+  interface
+     module function block_gcr_constructor( lin_op, prec, gcrk, r_tol, a_tol, max_iter) &
+          result(self)
+       class(abstract_linear_operator_type), target, intent(in) :: lin_op
+       class(abstract_preconditioner_type),  target, intent(in) :: prec
+       integer(kind=i_def),                          intent(in) :: gcrk
+       real(kind=r_def),                             intent(in) :: r_tol
+       real(kind=r_def),                             intent(in) :: a_tol
+       integer(kind=i_def),                          intent(in) :: max_iter
+       type(block_gcr_type) :: self
+     end function block_gcr_constructor
+  end interface
+
+  interface
+     module subroutine block_gcr_solve(self, x, b)
+       class(block_gcr_type),        intent(inout) :: self
+       class(abstract_vector_type),  intent(inout) :: x
+       class(abstract_vector_type),  intent(inout) :: b
+     end subroutine block_gcr_solve
+  end interface
+
+
   !! ---  Precondition only type declaration and interfaces --- !!
 
   type, public, extends(abstract_iterative_solver_type) :: precondition_only_type
@@ -1131,6 +1168,183 @@ contains
 
   end subroutine gcr_solve
 end submodule gcr_smod
+
+submodule(iterative_solver_mod) block_gcr_smod
+contains
+  !> constructs a <code>block_gcr_type</code> solver
+  !! sets the values for the solver such as the residual (r_tol) and
+  !! points the linear operator and preconditioner at those passed in.
+  !> @param[in] lin_op The linear operator the solver will use
+  !> @param[in] prec The preconditioner the solver will use
+  !> @param[in] gcrk integer, number of internal vectors to use known as the restart value
+  !> @param[in] r_tol real, the relative tolerance halting condition
+  !> @param[in] a_tol real, the absolute tolerance halting condition
+  !> @param[in] max_iter, integer the maximum number of iterations
+  !> @return the constructed GCR solver
+  module function block_gcr_constructor( lin_op, prec, gcrk, r_tol, a_tol, max_iter) &
+       result(self)
+    implicit none
+    class(abstract_linear_operator_type), target, intent(in) :: lin_op
+    class(abstract_preconditioner_type),  target, intent(in) :: prec
+    integer(kind=i_def),                          intent(in) :: gcrk
+    real(kind=r_def),                             intent(in) :: r_tol
+    real(kind=r_def),                             intent(in) :: a_tol
+    integer(kind=i_def),                          intent(in) :: max_iter
+    type(block_gcr_type) :: self
+
+    self%lin_op => lin_op
+    self%prec   => prec
+    self%gcrk   = gcrk
+    self%r_tol  = r_tol
+    self%a_tol  = a_tol
+    self%max_iter    = max_iter
+  end function
+
+  !> block_gcr_solve. Over-rides the abstract interface to do the actual solve.
+  !> @todo NB This breaks the API through use of field_norms.  Ticket #??? will address this.
+  !> @detail The solver implements right-preconditioning, i.e. is solving A.M{-1}.M.x = b
+  !>         as 1)  A.M{-1}.y = b
+  !>            2)  M{-1}y = x
+  !> @param[inout] b an abstract vector which will be an actual vector of unkown extended type
+  !! This the "RHS" or boundary conditions,
+  !> @param[inout] x an abstract vector which is the solution
+  !> @param[self] The solver which has pointers to the lin_op and preconditioner
+  module subroutine block_gcr_solve(self, x, b)
+    implicit none
+    class(block_gcr_type),              intent(inout) :: self
+    class(abstract_vector_type),  intent(inout) :: x
+    class(abstract_vector_type),  intent(inout) :: b
+
+    ! temporary vectors
+    class(abstract_vector_type), allocatable :: dx
+    class(abstract_vector_type), allocatable :: Ax
+    class(abstract_vector_type), allocatable :: res
+    class(abstract_vector_type), allocatable, dimension(:) :: v, Pv
+
+    ! temporary scalars
+    real(kind=r_def) :: alpha, beta
+    real(kind=r_def) :: err, aerr, sc_err, init_err
+
+    ! iterators
+    integer(kind=i_def) :: iv, ivj, iv_final, iter
+
+    ! diagnostics
+    real(kind=r_def), allocatable, dimension(:) :: initial_error, final_error, relative_error, scaled_error
+    integer(kind=i_def)                         :: n_fields, n
+
+    logical, allocatable :: converged(:)
+
+    n_fields = x%vector_size()
+    allocate( initial_error(n_fields), final_error(n_fields), &
+              relative_error(n_fields), scaled_error(n_fields), &
+              converged(n_fields))
+
+
+    call x%duplicate(dx)
+    call x%duplicate(res)
+    call x%duplicate(Ax)
+
+    ! initial guess
+    call dx%set_scalar(0.0_r_def)
+    call self%prec%apply( b, dx )
+    call self%lin_op%apply( dx, Ax )
+    !res = b - Ax
+    call res%copy(b)
+    call res%axpy(-1.0_r_def, Ax)
+
+    ! if the input field has error smaller than the product of absolute and relative
+    ! tolerance, then use this for the initial error.  This will ensure convergence
+    ! in a single iteration.
+    do n = 1,n_fields
+      initial_error(n) = max(b%field_norm(n), self%a_tol*self%r_tol)
+    end do
+    init_err = sum(initial_error)
+
+
+    write( log_scratch_space, '(A,E15.8,":",E15.8)' ) &
+         "BLOCK_GCR starting ... ||b|| = ", b%norm(),init_err
+    call log_event(log_scratch_space, LOG_LEVEL_INFO)
+
+    allocate(v(self%gcrk), source=x)
+    allocate(Pv(self%gcrk), source=x)
+
+    converged(:)=.false.
+    ! initialisation complete, lets go to work.
+    do iter = 1, self%max_iter
+       do iv = 1, self%gcrk
+
+          ! apply the preconditioner
+          call self%prec%apply( res, Pv(iv) )
+          ! apply the operator
+          call self%lin_op%apply( Pv(iv), v(iv) )
+
+          do ivj = 1, iv-1
+            alpha = v(iv)%dot(v(ivj))
+            call v(iv)%axpy(-alpha, v(ivj))
+            call Pv(iv)%axpy(-alpha, Pv(ivj))
+          end do
+          alpha = v(iv)%norm()
+          beta  = 1.0_r_def/alpha
+          call v(iv)%scale(beta)
+          call Pv(iv)%scale(beta)
+          alpha = res%dot(v(iv))
+          call dx%axpy(alpha, Pv(iv))
+          call res%axpy(-alpha, v(iv))
+
+          iv_final = iv
+          do n = 1,n_fields
+            final_error(n) = res%field_norm(n)
+          end do
+          aerr = sum(final_error)
+          err = sum(final_error/initial_error)
+          do n = 1,n_fields
+            if (final_error(n)/initial_error(n) < self%r_tol &
+               .or. final_error(n) < self%a_tol )then
+              ! This field is converged
+              converged(n) = .true.
+            end if
+          end do
+          if (all(converged))then
+            exit
+          else
+            converged(:)=.false.
+          end if
+
+          relative_error = final_error/initial_error
+          do n = 1,n_fields
+            write( log_scratch_space, '(A, I2, 3E16.8)') 'Intermediate BLOCK_GCR errors (I/F/R): ', &
+               n, initial_error(n), final_error(n), relative_error(n)
+            call log_event( log_scratch_space, LOG_LEVEL_DEBUG )
+          end do
+        end do
+        write( log_scratch_space, '(A, I2, A, I2, A, E12.4, A, E15.8, A, E15.8)' ) &
+             "BLOCK_GCR solver_algorithm: [",iter,",",iv_final, &
+             "], iters, init=", init_err, " final=", err, " abs=", aerr
+        call log_event( log_scratch_space, LOG_LEVEL_INFO )
+        if (all(converged)) exit
+    end do
+
+    relative_error = final_error/initial_error
+    do n = 1,n_fields
+      write( log_scratch_space, '(A, I2, 3E16.8)') 'BLOCK_GCR field errors (Init/Final/Rel): ', &
+        n, initial_error(n), final_error(n), relative_error(n)
+      call log_event( log_scratch_space, LOG_LEVEL_INFO )
+    end do
+
+    if( (iter >= self%max_iter .and. err > self%r_tol ) &
+         .or. ieee_is_nan(err) ) then
+       write( log_scratch_space, '(A, I3, A, E15.8)')    &
+            "BLOCK_GCR solver_algorithm: NOT converged in ", &
+            self%max_iter, " iters, Res=", err
+       call log_event( log_scratch_space, LOG_LEVEL_ERROR )
+    end if
+
+    call x%axpy(1.0_r_def, dx)
+
+    deallocate(v ,Pv)
+
+  end subroutine block_gcr_solve
+end submodule block_gcr_smod
 
 !  Submodule with procedures for Precondition only !!
 submodule(iterative_solver_mod) precondition_only_smod

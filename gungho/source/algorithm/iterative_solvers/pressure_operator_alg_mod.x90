@@ -86,18 +86,24 @@ contains
   function pressure_operator_constructor(state) result(self)
     use function_space_mod, only: function_space_type
     use field_indices_mod,  only: igh_u, igh_p
+    use fs_continuity_mod,  only: W2
+    use function_space_collection_mod, only: function_space_collection
     implicit none
 
     type(pressure_operator_type)        :: self
     type(field_vector_type), intent(in) :: state
     type(function_space_type), pointer  :: wp => null(), &
                                            wu => null()
+    integer(i_def)                      :: p, mesh_id
 
     call log_event( 'Constructing pressure operator...', LOG_LEVEL_INFO )
 
     ! Get needed function spaces
-    wu => state%vector(igh_u)%get_function_space()
     wp => state%vector(igh_p)%get_function_space()
+
+    p = state%vector(igh_u)%get_element_order()
+    mesh_id = state%vector(igh_u)%get_mesh_id()
+    wu => function_space_collection%get_fs( mesh_id, p, W2 )
 
     ! Temporaries required in operator application
     call self%grad_p%initialise(vector_space = wu, name='grad_p')

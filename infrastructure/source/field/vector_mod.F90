@@ -33,6 +33,10 @@ module vector_mod
      procedure (norm_interface),          deferred :: norm
      !> Compute the dot product of two vectors returns a real scalar
      !> @param[in] x vector to dot self with
+     procedure (field_norm_interface),    deferred :: field_norm
+     !> Compute the dot product of two fields in the vector returns a real scalar
+     !> @param[in] x vector to dot self with
+     !> @param[in] n index of field to norm
      procedure (dot_interface),           deferred :: dot
      !> multiply a vector by a scalar
      !> @param [in] scalar real
@@ -43,6 +47,9 @@ module vector_mod
      !> copy a vector of this type
      !> param[in] source, the vector to be copied
      procedure (copy_interface),          deferred :: copy
+     !> Return the size of the vector
+     procedure (vector_size_interface),   deferred :: vector_size
+
   end type abstract_vector_type
 
   abstract interface
@@ -94,6 +101,19 @@ module vector_mod
   end interface
 
   abstract interface
+     !> Compute norm of the field vector, returns a real scalar
+     !! n = sqrt( sum_i( v_i*v_i ))
+     function field_norm_interface(self, n) result(normal)
+       import :: abstract_vector_type
+       import :: r_def
+       import :: i_def
+       class(abstract_vector_type), intent(in) :: self
+       integer(kind=i_def),         intent(in) :: n
+       real(kind=r_def)                        :: normal
+     end function  field_norm_interface
+  end interface
+
+  abstract interface
      !> Compute the dot product of two vectors returns a real scalar
      !> @param[in] x vector to dot self with
      function dot_interface(self, x) result(dot_prod)
@@ -136,4 +156,14 @@ module vector_mod
      end subroutine copy_interface
   end interface
 
+  abstract interface
+     !> Return the size of the vectoy
+     !> param[in] source, the vector to be copied
+     function vector_size_interface(self) result(n_fields)
+       import :: abstract_vector_type
+       import :: i_def
+       class(abstract_vector_type), intent(in) :: self
+       integer(i_def)                          :: n_fields
+     end function vector_size_interface
+  end interface
 end module vector_mod
