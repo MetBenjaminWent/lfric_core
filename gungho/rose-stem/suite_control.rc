@@ -291,11 +291,11 @@
                      publish=True )',
     'run_application( "gungho", "transport-rk", resolutions=[("C12",7200.0),("C24",3600.0),("C48",1800.0),("C96",900.0)],
                       env={"crun":1, "nrun":{"default":144,("C12",7200.0):144, ("C24",3600.0):288, ("C48",1800.0):576, ("C96",900.0):1152 },
-                           "directives":{"default":{"mpi_parts":6,"threads":1,"wallclock":"00:30:00"} } },
-                           plotstr="errors.py diagDynamo $NODAL_DATA_DIR rho:theta T000144:T000288:T000576:T001152 -1 -91 0 0.1 $PLOT_DIR")',
+                           "directives":{"default":{"mpi_parts":6,"threads":1,"wallclock":"00:30:00","use_xios":"False"} } },
+                           plotstr="errors.py diagGungho $NODAL_DATA_DIR rho:theta T000144:T000288:T000576:T001152 -1 -91 0 0.1 $PLOT_DIR")',
     'run_application( "gungho", "transport-rk-bip", resolutions=[("BiP300x4-1000x2000",50.0)],
                       env={"crun":1, "nrun":{"default":600},"directives":{"default":{"mpi_parts":6,"panel_decomp":\'row\',
-                                                                                     "threads":1,"wallclock":"00:15:00"} } },
+                                                                                     "threads":1,"wallclock":"00:15:00","use_xios":"False"} } },
                            plotstr="cartesian_mountain_adv_plot.py $NODAL_DATA_DIR 300 4 theta:rho 1 T000100:T000200:T000300:T000400:T000500:T000600 lines $PLOT_DIR")',
     'run_application("gungho", "dcmip200_realorog",
                      resolutions=[("C48",600.0)],
@@ -471,7 +471,7 @@
                                   support_meshes=["C96","C48","C24"],
                                   checkkgo=False,
                                   env={"crun":1, "nrun":96,
-                                       "directives":{"default":{"mpi_parts":216,"threads":1,"use_xios":"False","wallclock":"00:40:00"} } 
+                                       "directives":{"default":{"mpi_parts":216,"threads":1,"use_xios":"False","wallclock":"00:40:00"} }
                                       }
                                  )',
                  'run_application("gungho",
@@ -480,7 +480,7 @@
                                   support_meshes=["C96","C48","C24"],
                                   checkkgo=False,
                                   env={"crun":1, "nrun":96,
-                                       "directives":{"default":{"mpi_parts":36,"threads":6,"use_xios":"False","wallclock":"00:40:00"} } 
+                                       "directives":{"default":{"mpi_parts":36,"threads":6,"use_xios":"False","wallclock":"00:40:00"} }
                                       }
                                  )',
                  'run_application("gungho",
@@ -489,7 +489,7 @@
                                   support_meshes=["C96","C48","C24"],
                                   checkkgo=False,
                                   env={"crun":1, "nrun":96,
-                                       "directives":{"default":{"mpi_parts":24,"threads":9,"use_xios":"False","wallclock":"00:45:00"} } 
+                                       "directives":{"default":{"mpi_parts":24,"threads":9,"use_xios":"False","wallclock":"00:45:00"} }
                                       }
                                  )',
                  'run_application("gungho",
@@ -512,7 +512,7 @@
                                   support_meshes=["C96","C48","C24"],
                                   checkkgo=False,
                                   env={"crun":1, "nrun":96,
-                                       "directives":{"default":{"mpi_parts":72,"threads":6,"use_xios":"False","wallclock":"00:25:00"} } 
+                                       "directives":{"default":{"mpi_parts":72,"threads":6,"use_xios":"False","wallclock":"00:25:00"} }
                                       }
                                  )',
                  'run_application("gungho",
@@ -521,7 +521,7 @@
                                   support_meshes=["C96","C48","C24"],
                                   checkkgo=False,
                                   env={"crun":1, "nrun":96,
-                                       "directives":{"default":{"mpi_parts":48,"threads":9,"use_xios":"False","wallclock":"00:25:00"} } 
+                                       "directives":{"default":{"mpi_parts":48,"threads":9,"use_xios":"False","wallclock":"00:25:00"} }
                                       }
                                  )',
                  'run_application("gungho",
@@ -530,7 +530,7 @@
                                   support_meshes=["C96","C48","C24"],
                                   checkkgo=False,
                                   env={"crun":1, "nrun":96,
-                                       "directives":{"default":{"mpi_parts":864,"threads":1,"use_xios":"False","wallclock":"00:20:00"} } 
+                                       "directives":{"default":{"mpi_parts":864,"threads":1,"use_xios":"False","wallclock":"00:20:00"} }
                                       }
                                  )',
                  'run_application("gungho",
@@ -539,7 +539,7 @@
                                   support_meshes=["C96","C48","C24"],
                                   checkkgo=False,
                                   env={"crun":1, "nrun":96,
-                                       "directives":{"default":{"mpi_parts":144,"threads":6,"use_xios":"False","wallclock":"00:20:00"} } 
+                                       "directives":{"default":{"mpi_parts":144,"threads":6,"use_xios":"False","wallclock":"00:20:00"} }
                                       }
                                  )',
                  'run_application("gungho",
@@ -548,7 +548,7 @@
                                   support_meshes=["C96","C48","C24"],
                                   checkkgo=False,
                                   env={"crun":1, "nrun":96,
-                                       "directives":{"default":{"mpi_parts":96,"threads":9,"use_xios":"False","wallclock":"00:20:00"} } 
+                                       "directives":{"default":{"mpi_parts":96,"threads":9,"use_xios":"False","wallclock":"00:20:00"} }
                                       }
                                  )',
               ],

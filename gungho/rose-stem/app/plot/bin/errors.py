@@ -45,8 +45,8 @@ def make_figure(plotpath, field, component, timestep, plotlong, plotlat,
     # Sort levels in asscending order, this is needed for high order spaces
     sorted_levels = sorted(levels)
     l2h = np.zeros(len(levels))
-    for i in xrange(len(levels)):
-        for j in xrange(len(levels)):
+    for i in range(len(levels)):
+        for j in range(len(levels)):
             if (sorted_levels[i] == levels[j]):
                 l2h[i] = j
 
@@ -74,11 +74,15 @@ def make_figure(plotpath, field, component, timestep, plotlong, plotlat,
     y2d = np.linspace(ymin, ymax, ny)
     zi = np.zeros([ny, nx, len(levels)])
     zi = np.zeros([ny, nx, len(levels)])
+    zp = np.zeros([ny, nx, len(levels)])
     xi, yi = np.meshgrid(x2d, y2d)
-    for p in xrange(len(levels)):
+    for p in range(len(levels)):
         pp = int(l2h[p])
         p_data = data.loc[data['level'] == levels[p]]
         zi[:, :, p] = griddata((p_data['x'].values, p_data['y'].values),
+                               p_data[val_col].values, (xi, yi),
+                               method='linear')
+        zp[:, :, p] = griddata((p_data['x'].values, p_data['y'].values),
                                p_data[val_col].values, (xi, yi),
                                method='linear')
 
@@ -90,6 +94,7 @@ def make_figure(plotpath, field, component, timestep, plotlong, plotlat,
 
     e_min = float(err_range)
     cc = np.linspace(-e_min, e_min, 13)
+    ccp = np.linspace(-0.2, 1.2, 15)
     c_map = cm.summer
 
     # xz plot
@@ -144,15 +149,28 @@ def make_figure(plotpath, field, component, timestep, plotlong, plotlat,
 
     # xy plot
     if int(plotlevel) >= 0 and int(plotlevel) < nz:
-        fig = plt.figure(figsize=(10, 5))
+        slice_fig = plt.figure(figsize=(10, 12))
+        ax1 = slice_fig.add_subplot(2, 1, 1)
         xi, yi = np.meshgrid(x2d, y2d)
         dz = zi[:, :, int(plotlevel)]
-        cf = plt.contourf(xi*r2d, yi*r2d, dz, cc, cmap=c_map)
+        cf = ax1.contourf(xi*r2d, yi*r2d, dz, cc, cmap=c_map)
         plt.colorbar(cf, cmap=c_map)
-        cl = plt.contour(xi * r2d, yi * r2d, dz, cc, linewidths=0.5,
+        cl = ax1.contour(xi * r2d, yi * r2d, dz, cc, linewidths=0.5,
                          colors='k')
-        plt.xlabel('Longitude')
-        plt.ylabel('Latitude')
+        ax1.set_xlabel('Longitude')
+        ax1.set_ylabel('Latitude')
+        ax1.set_title('Error')
+
+        ax2 = slice_fig.add_subplot(2, 1, 2)
+        xi, yi = np.meshgrid(x2d, y2d)
+        dz = zp[:, :, int(plotlevel)]
+        cf = ax2.contourf(xi*r2d, yi*r2d, dz, ccp, cmap=c_map)
+        plt.colorbar(cf, cmap=c_map)
+        cl = ax2.contour(xi * r2d, yi * r2d, dz, ccp, linewidths=0.5,
+                         colors='k')
+        ax2.set_xlabel('Longitude')
+        ax2.set_ylabel('Latitude')
+        ax2.set_title('Field')
         if (field != 'u' and field != 'xi'):
             out_file_name = plotpath + "/" "slice_xy_" + field + "_" \
                 + timestep + ".png"
