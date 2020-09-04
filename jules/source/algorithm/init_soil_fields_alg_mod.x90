@@ -49,7 +49,6 @@ contains
     type( field_type ), pointer :: clapp_horn_b        => null()
     type( field_type ), pointer :: soil_carbon_content => null()
     type( field_type ), pointer :: mean_topog_index    => null()
-    type( field_type ), pointer :: decrease_sath_cond  => null()
     type( field_type ), pointer :: a_sat_frac          => null()
     type( field_type ), pointer :: c_sat_frac          => null()
     type( field_type ), pointer :: a_wet_frac          => null()
@@ -61,7 +60,6 @@ contains
     type( field_type ), pointer :: unfrozen_soil_moisture => null()
     type( field_type ), pointer :: frozen_soil_moisture   => null()
     type( field_type ), pointer :: soil_sat_frac          => null()
-    type( field_type ), pointer :: soil_wet_frac          => null()
     type( field_type ), pointer :: water_table            => null()
     type( field_type ), pointer :: wetness_under_soil     => null()
 
@@ -76,7 +74,6 @@ contains
     clapp_horn_b        => soil_fields%get_field('clapp_horn_b')
     soil_carbon_content => soil_fields%get_field('soil_carbon_content')
     mean_topog_index    => soil_fields%get_field('mean_topog_index')
-    decrease_sath_cond  => soil_fields%get_field('decrease_sath_cond')
     a_sat_frac          => soil_fields%get_field('a_sat_frac')
     c_sat_frac          => soil_fields%get_field('c_sat_frac')
     a_wet_frac          => soil_fields%get_field('a_wet_frac')
@@ -87,13 +84,12 @@ contains
     unfrozen_soil_moisture => soil_fields%get_field('unfrozen_soil_moisture')
     frozen_soil_moisture   => soil_fields%get_field('frozen_soil_moisture')
     soil_sat_frac          => soil_fields%get_field('soil_sat_frac')
-    soil_wet_frac          => soil_fields%get_field('soil_wet_frac')
     water_table            => soil_fields%get_field('water_table')
     wetness_under_soil     => soil_fields%get_field('wetness_under_soil')
 
     ! Set volumetric soil moisture at saturation to zero below the ice tile
     ! or a sensible value elsewhere, since this is what Jules expects
-    ! After #2070 this will come from an ancillary
+    ! For use in SCM or when no ancil is read
     if (surf_tile_fracs(ice) > 0.0_r_def) then
       call invoke(setval_c(soil_moist_sat, 0.0_r_def))
     else
@@ -101,7 +97,7 @@ contains
     end if
 
     ! Set soil ancillaries to fixed values for use in SCM testing
-    ! After #2070 these will come from ancillary files
+    ! or if no ancil is read
     call invoke( setval_c(soil_albedo, 0.1065_r_def),                       &
                  setval_c(soil_moist_wilt, 0.226216_r_def),                 &
                  setval_c(soil_moist_crit, 0.340808_r_def),                 &
@@ -112,8 +108,6 @@ contains
                  setval_c(clapp_horn_b, 9.3080_r_def),                      &
                  setval_c(soil_carbon_content, 12.1_r_def),                 &
                  setval_c(mean_topog_index, 1.0_r_def),                     &
-                 ! This is set to 1 in um-recon, so copy here
-                 setval_c(decrease_sath_cond, 1.0_r_def),                   &
                  ! These need calculating as per calc_fit_fsat in um-recon
                  setval_c(a_sat_frac, 1.0_r_def),                           &
                  setval_c(c_sat_frac, 1.0_r_def),                           &
@@ -122,7 +116,6 @@ contains
                  ! Set soil prognostics to fixed values for use in SCM
                  ! testing or when no values are provided by um2lfric
                  setval_c(soil_sat_frac, 1.0_r_def),                        &
-                 setval_c(soil_wet_frac, 1.0_r_def),                        &
                  setval_c(water_table, 1.0_r_def),                          &
                  setval_c(wetness_under_soil, 1.0_r_def),                   &
                  ! Initialise fields which vary with soil level

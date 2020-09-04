@@ -47,7 +47,7 @@ module io_mod
 ! This will likely change once #1552 is on trunk
 integer(i_def), public, parameter :: tile_order = 2 ! Enough space for 27 tiles
 integer(i_def), public, parameter :: pft_order  = 1 ! Enough space for 8 plant functional types
-integer(i_def), public, parameter :: sice_order = 1 ! Enough space for 8 sea ice categories
+integer(i_def), public, parameter :: sice_order = 0 ! Single NWP sea-ice category for now
 integer(i_def), public, parameter :: soil_order = 1 ! Enough space for 8 soil levels
 integer(i_def), public, parameter :: snow_order = 2 ! Enough space for 9 tiles and 3 snow layers, i.e. 27
 

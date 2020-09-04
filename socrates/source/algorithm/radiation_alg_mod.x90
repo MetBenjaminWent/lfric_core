@@ -9,6 +9,11 @@ module radiation_alg_mod
 
 use field_mod,               only: field_type
 use field_collection_mod,    only: field_collection_type
+use function_space_mod,             only : function_space_type
+use function_space_collection_mod,  only : function_space_collection
+use fs_continuity_mod,              only : W3
+use write_methods_mod,              only : write_field_single_face
+use field_parent_mod,               only : write_interface
 use mr_indices_mod,          only: nummr, imr_v, imr_cl, imr_ci
 use constants_mod,           only: r_def
 use timestepping_config_mod, only: dt
@@ -18,9 +23,8 @@ use sw_kernel_mod,           only: sw_kernel_type
 use lw_kernel_mod,           only: lw_kernel_type
 use io_config_mod,           only: subroutine_timers
 use timer_mod,               only: timer
-use multi_to_single_kernel_mod, only: multi_to_single_kernel_type
-use jules_control_init_mod,  only: first_sea_tile
-use jules_surface_types_mod, only: soil
+use high_to_multi_kernel_mod, only: high_to_multi_kernel_type
+use jules_control_init_mod, only: n_surf_tile
 
 implicit none
 private
@@ -93,6 +97,7 @@ subroutine radiation_alg_step(dtheta_rad, theta, exner, mr,                    &
   type( field_type ), pointer :: sw_up_blue_tile     => null()
   type( field_type ), pointer :: sw_heating_rate     => null()
   type( field_type ), pointer :: lw_heating_rate     => null()
+  type( field_type ), pointer :: ozone               => null()
 
   type( field_type ), pointer :: lw_down_surf_rts        => null()
   type( field_type ), pointer :: sw_down_surf_rts        => null()
@@ -113,6 +118,8 @@ subroutine radiation_alg_step(dtheta_rad, theta, exner, mr,                    &
 
   ! Local diagnostic fields
   type( field_type ) :: cloud_cover_rts, tmp_diag
+  type(function_space_type), pointer  :: tmp_space => null()
+  procedure(write_interface), pointer :: write_diag_behaviour => null()
 
   tile_fraction    => surface_fields%get_field('tile_fraction')
   tile_temperature => surface_fields%get_field('tile_temperature')
@@ -129,6 +136,7 @@ subroutine radiation_alg_step(dtheta_rad, theta, exner, mr,                    &
   sw_direct_blue_surf => radiation_fields%get_field('sw_direct_blue_surf')
   sw_heating_rate     => radiation_fields%get_field('sw_heating_rate')
   lw_heating_rate     => radiation_fields%get_field('lw_heating_rate')
+  ozone               => radiation_fields%get_field('ozone')
 
   lw_down_surf_rts        => radiation_fields%get_field('lw_down_surf_rts')
   sw_down_surf_rts        => radiation_fields%get_field('sw_down_surf_rts')
@@ -172,7 +180,7 @@ subroutine radiation_alg_step(dtheta_rad, theta, exner, mr,                    &
                  cos_zenith_angle_rts, lit_fraction_rts,                    &
                  stellar_irradiance_rts,                                    &
                  mr(imr_v), mr(imr_cl), mr(imr_ci),                         &
-                 area_fraction, liquid_fraction, ice_fraction,              &
+                 area_fraction, liquid_fraction, ice_fraction, ozone,       &
                  tile_fraction,                                             &
                  tile_sw_direct_albedo, tile_sw_diffuse_albedo,             &
                  latitude, longitude, timestep ) )
@@ -185,7 +193,7 @@ subroutine radiation_alg_step(dtheta_rad, theta, exner, mr,                    &
                  theta, theta_in_w3, exner, exner_in_wth, rho_in_wth,       &
                  height_w3, height_wth,                                     &
                  mr(imr_v), mr(imr_cl), mr(imr_ci),                         &
-                 area_fraction, liquid_fraction, ice_fraction,              &
+                 area_fraction, liquid_fraction, ice_fraction, ozone,       &
                  tile_fraction, tile_temperature,                           &
                  tile_lw_albedo,                                            &
                  latitude, longitude, timestep ) )
@@ -224,16 +232,16 @@ subroutine radiation_alg_step(dtheta_rad, theta, exner, mr,                    &
 
     call cloud_cover_rts%write_field('cloud_cover_rts')
 
-    ! Create temporary array for diagostic output
-    call sw_down_surf%copy_field_properties(tmp_diag)
+    ! Make a 2D multi-data field for temporary diagnostic output
+    ! This can be removed when the fields themselves are made multi-data
+    tmp_space => function_space_collection%get_fs( sw_down_surf%get_mesh_id(), &
+                                                   0, W3, n_surf_tile )
+    call tmp_diag%initialise(tmp_space)
+    write_diag_behaviour => write_field_single_face
+    call tmp_diag%set_write_behaviour(write_diag_behaviour)
 
-    ! Bare soil tile
-    call invoke(multi_to_single_kernel_type(tmp_diag, sw_up_tile, soil))
-    call tmp_diag%write_field('sw_up_soil')
-
-    ! Sea tile
-    call invoke(multi_to_single_kernel_type(tmp_diag, sw_up_tile, first_sea_tile))
-    call tmp_diag%write_field('sw_up_sea')
+    call invoke(high_to_multi_kernel_type(tmp_diag, sw_up_tile, n_surf_tile))
+    call tmp_diag%write_field('sw_up_tile')
 
   end if
 

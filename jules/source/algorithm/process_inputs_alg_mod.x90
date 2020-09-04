@@ -1,0 +1,255 @@
+!-----------------------------------------------------------------------------
+! (C) Crown copyright 2020 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
+!>@brief Processing of ancillary files
+module process_inputs_alg_mod
+
+  use field_collection_mod, only : field_collection_type
+  use field_mod,            only : field_type
+
+  use section_choice_config_mod,  only: surface, surface_jules
+  use process_surface_kernel_mod, only: process_surface_kernel_type
+  use process_soil_kernel_mod,    only: process_soil_kernel_type
+  use log_mod,                    only: LOG_LEVEL_INFO
+  use nlsizes_namelist_mod,       only: sm_levels
+  use jules_control_init_mod,     only: n_land_tile, first_sea_tile, &
+                                        first_sea_ice_tile
+  use jules_surface_types_mod,    only: npft
+  use jules_physics_init_mod,     only: snow_lev_tile
+  use multi_to_high_kernel_mod,   only: multi_to_high_kernel_type
+  use multi_to_single_kernel_mod, only: multi_to_single_kernel_type
+  use single_to_multi_kernel_mod, only: single_to_multi_kernel_type
+
+  ! xios output
+  use high_to_multi_kernel_mod,   only: high_to_multi_kernel_type
+  use io_config_mod,      only: write_diag, use_xios_io
+
+  implicit none
+
+  private
+  public :: process_inputs_alg
+
+contains
+
+  !> @details Processes ancils that don't match exactly what the model
+  !>          expects into the fields it does
+  !> @param[in] ancil_fields   (in)     Ancil fields read in
+  !> @param[in] fd_fields      (in)     um2lfric fields read in
+  !> @param[in] surface_fields (in,out) Surface field collection to update
+  !> @param[in] soil_fields    (in,out) Soil field collection to update
+  !> @param[in] snow_fields    (in,out) Snow field collection to update
+  subroutine process_inputs_alg(ancil_fields, fd_fields, &
+                                surface_fields, soil_fields, snow_fields)
+
+    implicit none
+
+    type( field_collection_type ), intent(in) :: ancil_fields
+    type( field_collection_type ), intent(in) :: fd_fields
+    type( field_collection_type ), intent(in) :: surface_fields
+    type( field_collection_type ), intent(in) :: soil_fields
+    type( field_collection_type ), intent(in) :: snow_fields
+
+    type( field_type ), pointer :: land_area_fraction => null()
+    type( field_type ), pointer :: land_tile_fraction => null()
+    type( field_type ), pointer :: sea_ice_fraction   => null()
+    type( field_type ), pointer :: tile_fraction      => null()
+
+    type( field_type ), pointer :: tstar            => null()
+    type( field_type ), pointer :: tstar_sea        => null()
+    type( field_type ), pointer :: tstar_sea_ice    => null()
+    type( field_type ), pointer :: land_tile_temp   => null()
+    type( field_type ), pointer :: tile_temperature => null()
+
+    type( field_type ), pointer :: canopy_water => null()
+    type( field_type ), pointer :: can_water_in => null()
+
+    type( field_type ), pointer :: leaf_area_index    => null()
+    type( field_type ), pointer :: canopy_height      => null()
+    type( field_type ), pointer :: leaf_area_index_in => null()
+    type( field_type ), pointer :: canopy_height_in   => null()
+
+    type( field_type ), pointer :: soil_moist_sat    => null()
+    type( field_type ), pointer :: mean_topog_index  => null()
+    type( field_type ), pointer :: stdev_topog_index => null()
+    type( field_type ), pointer :: a_sat_frac        => null()
+    type( field_type ), pointer :: c_sat_frac        => null()
+    type( field_type ), pointer :: a_wet_frac        => null()
+    type( field_type ), pointer :: c_wet_frac        => null()
+
+    type( field_type ), pointer :: soil_suction_sat => null()
+    type( field_type ), pointer :: clapp_horn_b     => null()
+    type( field_type ), pointer :: soil_temperature => null()
+    type( field_type ), pointer :: soil_temp_in     => null()
+    type( field_type ), pointer :: soil_moisture    => null()
+    type( field_type ), pointer :: soil_moist_in    => null()
+    type( field_type ), pointer :: unfrozen_soil_moisture => null()
+    type( field_type ), pointer :: frozen_soil_moisture   => null()
+
+    type( field_type ), pointer :: tile_snow_mass       => null()
+    type( field_type ), pointer :: tile_snow_rgrain     => null()
+    type( field_type ), pointer :: n_snow_layers        => null()
+    type( field_type ), pointer :: snow_depth           => null()
+    type( field_type ), pointer :: snow_under_canopy    => null()
+    type( field_type ), pointer :: snowpack_density     => null()
+    type( field_type ), pointer :: tile_snow_mass_in    => null()
+    type( field_type ), pointer :: tile_snow_rgrain_in  => null()
+    type( field_type ), pointer :: n_snow_layers_in     => null()
+    type( field_type ), pointer :: snow_depth_in        => null()
+    type( field_type ), pointer :: snow_under_canopy_in => null()
+    type( field_type ), pointer :: snowpack_density_in  => null()
+
+    type( field_type ), pointer :: snow_layer_thickness => null()
+    type( field_type ), pointer :: snow_layer_ice_mass  => null()
+    type( field_type ), pointer :: snow_layer_liq_mass  => null()
+    type( field_type ), pointer :: snow_layer_temp      => null()
+    type( field_type ), pointer :: snow_layer_rgrain    => null()
+    type( field_type ), pointer :: snow_layer_thickness_in => null()
+    type( field_type ), pointer :: snow_layer_ice_mass_in  => null()
+    type( field_type ), pointer :: snow_layer_liq_mass_in  => null()
+    type( field_type ), pointer :: snow_layer_temp_in      => null()
+    type( field_type ), pointer :: snow_layer_rgrain_in    => null()
+
+    if (surface == surface_jules) then
+      land_area_fraction => ancil_fields%get_field('land_area_fraction')
+      land_tile_fraction => ancil_fields%get_field('land_tile_fraction')
+      sea_ice_fraction   => ancil_fields%get_field('sea_ice_fraction')
+      tile_fraction      => surface_fields%get_field('tile_fraction')
+
+      tstar            => fd_fields%get_field('tstar')
+      tstar_sea        => fd_fields%get_field('tstar_sea')
+      tstar_sea_ice    => fd_fields%get_field('tstar_sea_ice')
+      land_tile_temp   => fd_fields%get_field('land_tile_temp')
+      tile_temperature => surface_fields%get_field('tile_temperature')
+
+      can_water_in     => fd_fields%get_field('can_water_in')
+      canopy_water     => surface_fields%get_field('canopy_water')
+
+      leaf_area_index    => surface_fields%get_field('leaf_area_index')
+      canopy_height      => surface_fields%get_field('canopy_height')
+      leaf_area_index_in => ancil_fields%get_field('leaf_area_index_in')
+      canopy_height_in   => ancil_fields%get_field('canopy_height_in')
+
+      soil_moist_sat    => soil_fields%get_field('soil_moist_sat')
+      mean_topog_index  => soil_fields%get_field('mean_topog_index')
+      stdev_topog_index => ancil_fields%get_field('stdev_topog_index')
+      a_sat_frac        => soil_fields%get_field('a_sat_frac')
+      c_sat_frac        => soil_fields%get_field('c_sat_frac')
+      a_wet_frac        => soil_fields%get_field('a_wet_frac')
+      c_wet_frac        => soil_fields%get_field('c_wet_frac')
+
+      soil_suction_sat => soil_fields%get_field('soil_suction_sat')
+      clapp_horn_b     => soil_fields%get_field('clapp_horn_b')
+      soil_temperature => soil_fields%get_field('soil_temperature')
+      soil_temp_in     => fd_fields%get_field('soil_temp_in')
+      soil_moisture    => soil_fields%get_field('soil_moisture')
+      soil_moist_in    => fd_fields%get_field('soil_moist_in')
+      unfrozen_soil_moisture => soil_fields%get_field('unfrozen_soil_moisture')
+      frozen_soil_moisture   => soil_fields%get_field('frozen_soil_moisture')
+
+      tile_snow_mass       => snow_fields%get_field('tile_snow_mass')
+      tile_snow_rgrain     => snow_fields%get_field('tile_snow_rgrain')
+      n_snow_layers        => snow_fields%get_field('n_snow_layers')
+      snow_depth           => snow_fields%get_field('snow_depth')
+      snow_under_canopy    => snow_fields%get_field('snow_under_canopy')
+      snowpack_density     => snow_fields%get_field('snowpack_density')
+      tile_snow_mass_in    => fd_fields%get_field('tile_snow_mass_in')
+      tile_snow_rgrain_in  => fd_fields%get_field('tile_snow_rgrain_in')
+      n_snow_layers_in     => fd_fields%get_field('n_snow_layers_in')
+      snow_depth_in        => fd_fields%get_field('snow_depth_in')
+      snow_under_canopy_in => fd_fields%get_field('snow_under_canopy_in')
+      snowpack_density_in  => fd_fields%get_field('snowpack_density_in')
+
+      snow_layer_thickness => snow_fields%get_field('snow_layer_thickness')
+      snow_layer_ice_mass  => snow_fields%get_field('snow_layer_ice_mass')
+      snow_layer_liq_mass  => snow_fields%get_field('snow_layer_liq_mass')
+      snow_layer_temp      => snow_fields%get_field('snow_layer_temp')
+      snow_layer_rgrain    => snow_fields%get_field('snow_layer_rgrain')
+      snow_layer_thickness_in => fd_fields%get_field('snow_layer_thickness_in')
+      snow_layer_ice_mass_in  => fd_fields%get_field('snow_layer_ice_mass_in')
+      snow_layer_liq_mass_in  => fd_fields%get_field('snow_layer_liq_mass_in')
+      snow_layer_temp_in      => fd_fields%get_field('snow_layer_temp_in')
+      snow_layer_rgrain_in    => fd_fields%get_field('snow_layer_rgrain_in')
+
+      ! Surface fields
+      call invoke(process_surface_kernel_type( land_area_fraction,            &
+                                               land_tile_fraction,            &
+                                               sea_ice_fraction,              &
+                                               tile_fraction,                 &
+                                               tstar,                         &
+                                               tile_temperature),             &
+                  multi_to_high_kernel_type(tile_temperature,                 &
+                                   land_tile_temp, n_land_tile, 200.0_r_def), &
+                  single_to_multi_kernel_type(tile_temperature, tstar_sea,    &
+                                              first_sea_tile ),               &
+                  single_to_multi_kernel_type(tile_temperature, tstar_sea_ice,&
+                                              first_sea_ice_tile ),           &
+                  multi_to_high_kernel_type(canopy_water,                     &
+                                      can_water_in, n_land_tile, -1.0_r_def), &
+                  multi_to_high_kernel_type(canopy_height,                    &
+                                         canopy_height_in, npft, -1.0_r_def), &
+                  multi_to_high_kernel_type(leaf_area_index,                  &
+                                       leaf_area_index_in, npft, -1.0_r_def), &
+      ! Soil fields
+                  multi_to_high_kernel_type(soil_temperature,                 &
+                                      soil_temp_in, sm_levels, 200.0_r_def),  &
+                  multi_to_high_kernel_type(soil_moisture,                    &
+                                      soil_moist_in, sm_levels, -1.0_r_def),  &
+                  process_soil_kernel_type( soil_moist_sat,                   &
+                                            mean_topog_index,                 &
+                                            stdev_topog_index,                &
+                                            a_sat_frac,                       &
+                                            c_sat_frac,                       &
+                                            a_wet_frac,                       &
+                                            c_wet_frac,                       &
+                                            clapp_horn_b,                     &
+                                            soil_suction_sat,                 &
+                                            soil_temperature,                 &
+                                            soil_moisture,                    &
+                                            unfrozen_soil_moisture,           &
+                                            frozen_soil_moisture),            &
+      ! Snow fields
+                  multi_to_high_kernel_type(tile_snow_mass,                   &
+                                 tile_snow_mass_in, n_land_tile, 0.0_r_def),  &
+                  multi_to_high_kernel_type(n_snow_layers,                    &
+                                  n_snow_layers_in, n_land_tile, 0.0_r_def),  &
+                  multi_to_high_kernel_type(snow_depth,                       &
+                                     snow_depth_in, n_land_tile, 0.0_r_def),  &
+                  multi_to_high_kernel_type(tile_snow_rgrain,                 &
+                               tile_snow_rgrain_in, n_land_tile, 0.0_r_def),  &
+                  multi_to_high_kernel_type(snow_under_canopy,                &
+                              snow_under_canopy_in, n_land_tile, 0.0_r_def),  &
+                  multi_to_high_kernel_type(snowpack_density,                 &
+                               snowpack_density_in, n_land_tile, 0.0_r_def),  &
+                  multi_to_high_kernel_type(snow_layer_thickness,             &
+                         snow_layer_thickness_in, snow_lev_tile, 0.0_r_def),  &
+                  multi_to_high_kernel_type(snow_layer_ice_mass,              &
+                          snow_layer_ice_mass_in, snow_lev_tile, 0.0_r_def),  &
+                  multi_to_high_kernel_type(snow_layer_liq_mass,              &
+                          snow_layer_liq_mass_in, snow_lev_tile, 0.0_r_def),  &
+                  multi_to_high_kernel_type(snow_layer_temp,                  &
+                              snow_layer_temp_in, snow_lev_tile, 0.0_r_def),  &
+                  multi_to_high_kernel_type(snow_layer_rgrain,                &
+                            snow_layer_rgrain_in, snow_lev_tile, 0.0_r_def) )
+
+      call land_area_fraction%log_minmax(LOG_LEVEL_INFO, 'sum of surface tiles')
+
+      if (use_xios_io .and. write_diag) then
+        ! Soil diagnostics
+        call invoke(high_to_multi_kernel_type(soil_moist_in, unfrozen_soil_moisture, &
+                                              sm_levels) )
+        call soil_moist_in%write_field('init_unfrozen_soil_moisture')
+        call invoke(high_to_multi_kernel_type(soil_moist_in, soil_moisture, &
+                                              sm_levels) )
+        call soil_moist_in%write_field('init_soil_moisture')
+        call invoke(high_to_multi_kernel_type(soil_temp_in, soil_temperature, &
+                                              sm_levels) )
+        call soil_temp_in%write_field('init_soil_temperature')
+      end if
+
+    end if
+
+  end subroutine process_inputs_alg
+
+end module process_inputs_alg_mod

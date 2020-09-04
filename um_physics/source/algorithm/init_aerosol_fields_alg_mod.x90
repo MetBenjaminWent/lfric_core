@@ -86,7 +86,7 @@ contains
     call invoke( setval_c(nd_nuc_sol,            0.0_r_def), &
                  setval_c(nuc_sol_su,            0.0_r_def), &
                  setval_c(nuc_sol_oc,            0.0_r_def), &
-                 ! After #2070 the following will be read from ancillary files
+                 ! Set values for use in SCM or when no ancil file is read
                  setval_c(nd_ait_sol,        7.0e-19_r_def), &
                  setval_c(ait_sol_su,        7.0e-12_r_def), &
                  setval_c(ait_sol_bc,        7.0e-12_r_def), &

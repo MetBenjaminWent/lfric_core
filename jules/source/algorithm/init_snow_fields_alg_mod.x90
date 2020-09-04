@@ -61,29 +61,33 @@ contains
     snow_layer_temp      => snow_fields%get_field('snow_layer_temp')
     snow_layer_rgrain    => snow_fields%get_field('snow_layer_rgrain')
 
-    ! Set snow prognostics to fixed values for use in SCM testing or when
-    ! no values are provided by the um2lfric dump
+    ! Set snow prognostics to fixed values for use in SCM snow test job
     if (test == test_snow) then ! Testing with snow present
       call invoke( setval_c(tile_snow_mass, 50.0_r_def),                    &
                    setval_c(n_snow_layers,  3.0_r_def),                     &
-                   setval_c(snow_depth,     2.0_r_def) )
-    else ! All other tests without snow
+                   setval_c(snow_depth,     2.0_r_def),                     &
+                   ! Initialise fields which vary with snow layer
+                   initial_snow_kernel_type( snow_layer_thickness,          &
+                                             snow_layer_ice_mass,           &
+                                             snow_layer_temp ) )
+    else ! Set prognostics to 0 for other tests without snow
+         ! (except temperature, which must be nonzero)
       call invoke( setval_c(tile_snow_mass, 0.0_r_def),                     &
                    setval_c(n_snow_layers,  0.0_r_def),                     &
-                   setval_c(snow_depth,     0.0_r_def) )
+                   setval_c(snow_depth,     0.0_r_def),                     &
+                   setval_c(snow_layer_thickness, 0.0_r_def),               &
+                   setval_c(snow_layer_ice_mass, 0.0_r_def),                &
+                   setval_c(snow_layer_temp, 273.0_r_def) )
     end if
 
+    ! Set prognostics whose values are independent of the test above to
+    ! those used in the test_snow job
     call invoke( setval_c(tile_snow_rgrain, 69.0_r_def),                    &
                  setval_c(snow_soot, 0.0_r_def),                            &
                  setval_c(snow_under_canopy, 0.0_r_def),                    &
                  setval_c(snowpack_density, 100.0_r_def),                   &
                  setval_c(snow_layer_liq_mass, 0.0_r_def),                  &
-                 setval_c(snow_layer_rgrain, 69.0_r_def),                   &
-                 ! Initialise fields which vary with snow layer
-                 initial_snow_kernel_type( snow_layer_thickness,            &
-                                           snow_layer_ice_mass,             &
-                                           snow_layer_temp )                &
-                                           )
+                 setval_c(snow_layer_rgrain, 69.0_r_def) )
 
   end subroutine init_snow_fields_alg
 

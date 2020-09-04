@@ -30,7 +30,6 @@ module gungho_model_data_mod
                                                init_option_fe_start_dump,   &
                                                ancil_option,                &
                                                ancil_option_none,           &
-                                               ancil_option_analytic,       &
                                                ancil_option_aquaplanet,     &
                                                ancil_option_basic_gagl,     &
                                                ancil_option_prototype_gagl
@@ -40,11 +39,9 @@ module gungho_model_data_mod
   use read_methods_mod,                 only : read_checkpoint,  &
                                                read_state
   use write_methods_mod,                only : write_checkpoint, &
-                                               write_state,      &
-                                               write_field_single_face
+                                               write_state
   use create_gungho_prognostics_mod,    only : create_gungho_prognostics
   use create_physics_prognostics_mod,   only : create_physics_prognostics
-  use create_fd_prognostics_mod,        only : create_fd_prognostics
   use section_choice_config_mod,        only : cloud, cloud_none
   use map_fd_to_prognostics_alg_mod,    only : map_fd_to_prognostics
   use init_gungho_prognostics_alg_mod,  only : init_gungho_prognostics_alg
@@ -52,9 +49,11 @@ module gungho_model_data_mod
   use update_tstar_alg_mod,             only : update_tstar_alg
   use moist_dyn_factors_alg_mod,        only : moist_dyn_factors_alg
   use init_fd_prognostics_mod,          only : init_fd_prognostics_dump
-  use init_ancils_mod,                  only : init_analytic_ancils,    &
-                                               init_aquaplanet_ancils,  &
-                                               create_fd_ancils
+#ifdef UM_PHYSICS
+  use create_fd_prognostics_mod,        only : create_fd_prognostics
+  use init_ancils_mod,                  only : create_fd_ancils
+  use process_inputs_alg_mod,           only : process_inputs_alg
+#endif
   use linked_list_mod,                  only : linked_list_type
   use variable_fields_mod,              only : init_variable_fields
 
@@ -121,6 +120,8 @@ module gungho_model_data_mod
 
   ! Set these to select how to initialize model prognostic fields
   integer(i_def) :: prognostic_init_choice, ancil_choice
+
+  logical(l_def) :: put_field
 
   public model_data_type, create_model_data, finalise_model_data, &
          initialise_model_data, output_model_data
@@ -194,19 +195,26 @@ contains
                                        model_data%soil_fields,         &
                                        model_data%snow_fields,         &
                                        model_data%aerosol_fields )
+
+#ifdef UM_PHYSICS
+      ! Create FD prognostic fields
+      select case ( prognostic_init_choice )
+        case ( init_option_fd_start_dump )
+          call create_fd_prognostics(mesh_id, twod_mesh_id, &
+                                     model_data%fd_fields,  &
+                                     model_data%depository)
+      end select
+
+      ! Create and populate collection of fields to be read from ancillary files
+      select case ( ancil_choice )
+        case ( ancil_option_basic_gagl, ancil_option_prototype_gagl )
+          call create_fd_ancils( model_data%depository,   &
+                                 model_data%ancil_fields, &
+                                 mesh_id, twod_mesh_id ,  &
+                                 model_data%ancil_times_list )
+      end select
+#endif
     end if
-
-    ! Create FD prognostic fields
-    select case ( prognostic_init_choice )
-      case ( init_option_fd_start_dump )
-        if (use_physics) call create_fd_prognostics(mesh_id, model_data%fd_fields)
-    end select
-
-    ! Create and populate collection of fields to be read from ancillary files
-    if (use_physics) call create_fd_ancils( model_data%depository,   &
-                                            model_data%ancil_fields, &
-                                            mesh_id, twod_mesh_id ,  &
-                                            model_data%ancil_times_list )
 
   end subroutine create_model_data
 
@@ -302,18 +310,22 @@ contains
           call log_event( "Gungho: No ancillaries to be read for this run.", LOG_LEVEL_INFO )
         case ( ancil_option_aquaplanet )
           call log_event( "Gungho: Reading ancillaries from aquaplanet dump ", LOG_LEVEL_INFO )
-          call init_aquaplanet_ancils( model_data%surface_fields )
-        case ( ancil_option_analytic )
-          call log_event( "Gungho: Setting ancillaries from analytic representation ", LOG_LEVEL_INFO )
-          call init_analytic_ancils( model_data%surface_fields )
-        case ( ancil_option_basic_gagl )
-          call log_event( "Gungho: Reading basic GA/GL ancils ", LOG_LEVEL_INFO )
-          call read_state( model_data%ancil_fields )
-        case ( ancil_option_prototype_gagl )
-          call log_event( "Gungho: Reading prototype GA/GL ancils ", LOG_LEVEL_INFO )
+          ! Update the tiled surface temperature with the calculated tstar
+          put_field = .true.
+          call update_tstar_alg(model_data%surface_fields, &
+                                model_data%fd_fields, put_field )
+        case ( ancil_option_basic_gagl, ancil_option_prototype_gagl )
+          call log_event( "Gungho: Reading basic/proto GA/GL ancils ", LOG_LEVEL_INFO )
           call read_state( model_data%ancil_fields )
           call init_variable_fields( model_data%ancil_times_list, &
                                      clock, model_data%ancil_fields )
+#ifdef UM_PHYSICS
+          call process_inputs_alg( model_data%ancil_fields,   &
+                                   model_data%fd_fields,      &
+                                   model_data%surface_fields, &
+                                   model_data%soil_fields,    &
+                                   model_data%snow_fields)
+#endif
         case default
           ! No valid ancil option selected
           call log_event("Gungho: No valid ancillary initialisation option selected, "// &
@@ -338,16 +350,10 @@ contains
     type( model_data_type ), intent(inout), target :: model_data
     class(clock_type),       intent(in)            :: clock
 
-    type( field_collection_type ), pointer :: surface_fields => null()
     type( field_collection_type ), pointer :: fd_fields => null()
     type( field_collection_type ), pointer :: prognostic_fields => null()
 
-    type( field_type ), pointer            :: tstar_2d => null()
-    procedure(write_interface), pointer    :: tmp_write_ptr => null()
-    logical(l_def)                         :: put_field
-
     ! Get pointers to field collections for use downstream
-    surface_fields => model_data%surface_fields
     fd_fields => model_data%fd_fields
     prognostic_fields => model_data%prognostic_fields
 
@@ -357,26 +363,10 @@ contains
       ! Current dump writing is only relevant for physics runs at the moment
       if (write_dump) then
 
-        ! For the purposes of dumping from one collection, we add a pointer
-        ! to tstar to the fd_prognostics collection
-
-        ! First we need to put the SST into tstar from the tiled surface
-        ! temperature field
-        put_field = .false.
-        call update_tstar_alg(surface_fields, put_field )
-
-        tmp_write_ptr => write_field_single_face
-        tstar_2d => surface_fields%get_field('tstar')
-        call tstar_2d%set_write_behaviour(tmp_write_ptr)
-
-        call fd_fields%add_field(tstar_2d)
-
-        call log_event("Gungho: writing FD fields to dump", LOG_LEVEL_INFO)
+        call log_event("Gungho: writing FD fields to dump is not yet supported", LOG_LEVEL_ERROR)
 
         ! Write prognostic fields to dump
         call write_state(fd_fields)
-
-        nullify(tmp_write_ptr, tstar_2d)
 
       end if
 

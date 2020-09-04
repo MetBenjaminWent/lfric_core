@@ -65,14 +65,11 @@ subroutine rad_tile_alg_step(tile_sw_direct_albedo, tile_sw_diffuse_albedo,   &
   type( field_type ), pointer :: tile_temperature   => null()
   type( field_type ), pointer :: chloro_sea         => null()
   type( field_type ), pointer :: sea_ice_thickness  => null()
-  type( field_type ), pointer :: sea_ice_pond_frac  => null()
-  type( field_type ), pointer :: sea_ice_pond_depth => null()
   type( field_type ), pointer :: z0msea             => null()
 
   type( field_type ), pointer :: soil_albedo         => null()
   type( field_type ), pointer :: soil_roughness      => null()
 
-  type( field_type ), pointer :: albedo_obs_sw       => null()
   type( field_type ), pointer :: albedo_obs_vis      => null()
   type( field_type ), pointer :: albedo_obs_nir      => null()
   type( field_type ), pointer :: cos_zenith_angle    => null()
@@ -95,14 +92,11 @@ subroutine rad_tile_alg_step(tile_sw_direct_albedo, tile_sw_diffuse_albedo,   &
   tile_temperature     => surface_fields%get_field('tile_temperature')
   chloro_sea           => surface_fields%get_field('chloro_sea')
   sea_ice_thickness    => surface_fields%get_field('sea_ice_thickness')
-  sea_ice_pond_frac    => surface_fields%get_field('sea_ice_pond_frac')
-  sea_ice_pond_depth   => surface_fields%get_field('sea_ice_pond_depth')
   z0msea               => surface_fields%get_field('z0msea')
 
   soil_albedo          => soil_fields%get_field('soil_albedo')
   soil_roughness       => soil_fields%get_field('soil_roughness')
 
-  albedo_obs_sw        => radiation_fields%get_field('albedo_obs_sw')
   albedo_obs_vis       => radiation_fields%get_field('albedo_obs_vis')
   albedo_obs_nir       => radiation_fields%get_field('albedo_obs_nir')
   cos_zenith_angle     => radiation_fields%get_field('cos_zenith_angle')
@@ -123,7 +117,6 @@ subroutine rad_tile_alg_step(tile_sw_direct_albedo, tile_sw_diffuse_albedo,   &
                                    sd_orog, &
                                    soil_albedo, &
                                    soil_roughness, &
-                                   albedo_obs_sw, &
                                    albedo_obs_vis, &
                                    albedo_obs_nir, &
                                    tile_temperature, &
@@ -132,8 +125,6 @@ subroutine rad_tile_alg_step(tile_sw_direct_albedo, tile_sw_diffuse_albedo,   &
                                    snow_soot, &
                                    chloro_sea, &
                                    sea_ice_thickness, &
-                                   sea_ice_pond_frac, &
-                                   sea_ice_pond_depth, &
                                    u1_in_w3, &
                                    u2_in_w3, &
                                    height_w3, &

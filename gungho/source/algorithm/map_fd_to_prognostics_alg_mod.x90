@@ -20,6 +20,8 @@ module map_fd_to_prognostics_alg_mod
   use runtime_constants_mod,           only: get_coordinates, &
                                              get_height
   use fs_continuity_mod,               only: W3
+  use initialization_config_mod,       only: ancil_option,                &
+                                             ancil_option_aquaplanet
 
   implicit none
 
@@ -62,10 +64,10 @@ contains
     type( field_type ), pointer :: dry_rho_in_w3          => null()
     type( field_type ), pointer :: upward_wind_in_wtheta  => null()
     type( field_type ), pointer :: theta_in_wtheta        => null()
-    type( field_type ), pointer :: ozone_in_wtheta        => null()
     type( field_type ), pointer :: mv_in_wtheta           => null()
     type( field_type ), pointer :: mcl_in_wtheta          => null()
     type( field_type ), pointer :: mcf_in_wtheta          => null()
+    type( field_type ), pointer :: mr_in_wtheta           => null()
 
     !FD (source) fields
     ew_wind_in_w3         => fd_fields%get_field('ew_wind_in_w3')
@@ -73,10 +75,10 @@ contains
     dry_rho_in_w3         => fd_fields%get_field('dry_rho_in_w3')
     upward_wind_in_wtheta => fd_fields%get_field('upward_wind_in_wtheta')
     theta_in_wtheta       => fd_fields%get_field('theta_in_wtheta')
-    ozone_in_wtheta       => fd_fields%get_field('ozone_in_wtheta')
     mv_in_wtheta          => fd_fields%get_field('mv_in_wtheta')
     mcl_in_wtheta         => fd_fields%get_field('mcl_in_wtheta')
     mcf_in_wtheta         => fd_fields%get_field('mcf_in_wtheta')
+    mr_in_wtheta          => fd_fields%get_field('mr_in_wtheta')
 
     !Prognostic (target) fields
     u                     => prognostic_fields%get_field('u')
@@ -89,12 +91,16 @@ contains
     ! This will need to be reviewed if this becomes a checkpoint-restart
     ! routine and/or um2lfric is updated for GA/GL physics
 
+    if (ancil_option == ancil_option_aquaplanet) then
+      call invoke(setval_c(mr_in_wtheta, 0.0_r_def))
+    end if
+
     call invoke( setval_x(theta, theta_in_wtheta),    &
                  setval_x(rho, dry_rho_in_w3),        &
                  setval_x(mr(imr_v), mv_in_wtheta),   &
                  setval_x(mr(imr_cl), mcl_in_wtheta), &
                  setval_x(mr(imr_ci), mcf_in_wtheta), &
-                 setval_c(mr(imr_r), 0.0_r_def),      &
+                 setval_x(mr(imr_r), mr_in_wtheta),   &
                  setval_c(mr(imr_s), 0.0_r_def),      &
                  setval_c(mr(imr_g), 0.0_r_def),      &
                  setval_c(exner, 0.0_r_def),          &

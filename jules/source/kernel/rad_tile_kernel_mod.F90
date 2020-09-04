@@ -33,7 +33,7 @@ public :: rad_tile_code
 ! Contains the metadata needed by the PSy layer.
 type, extends(kernel_type) :: rad_tile_kernel_type
   private
-  type(arg_type) :: meta_args(25) = (/                          &
+  type(arg_type) :: meta_args(22) = (/                          &
        arg_type(GH_FIELD, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1), & ! tile_sw_direct_albedo
        arg_type(GH_FIELD, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1), & ! tile_sw_diffuse_albedo
        arg_type(GH_FIELD, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1), & ! tile_lw_albedo
@@ -43,7 +43,6 @@ type, extends(kernel_type) :: rad_tile_kernel_type
        arg_type(GH_FIELD, GH_READ,  ANY_DISCONTINUOUS_SPACE_4), & ! sd_orog
        arg_type(GH_FIELD, GH_READ,  ANY_DISCONTINUOUS_SPACE_4), & ! soil_albedo
        arg_type(GH_FIELD, GH_READ,  ANY_DISCONTINUOUS_SPACE_4), & ! soil_roughness
-       arg_type(GH_FIELD, GH_READ,  ANY_DISCONTINUOUS_SPACE_4), & ! albedo_obs_sw
        arg_type(GH_FIELD, GH_READ,  ANY_DISCONTINUOUS_SPACE_4), & ! albedo_obs_vis
        arg_type(GH_FIELD, GH_READ,  ANY_DISCONTINUOUS_SPACE_4), & ! albedo_obs_nir
        arg_type(GH_FIELD, GH_READ,  ANY_DISCONTINUOUS_SPACE_2), & ! tile_temperature
@@ -52,8 +51,6 @@ type, extends(kernel_type) :: rad_tile_kernel_type
        arg_type(GH_FIELD, GH_READ,  ANY_DISCONTINUOUS_SPACE_4), & ! snow_soot
        arg_type(GH_FIELD, GH_READ,  ANY_DISCONTINUOUS_SPACE_4), & ! chloro_sea
        arg_type(GH_FIELD, GH_READ,  ANY_DISCONTINUOUS_SPACE_5), & ! sea_ice_thickness
-       arg_type(GH_FIELD, GH_READ,  ANY_DISCONTINUOUS_SPACE_5), & ! sea_ice_pond_frac
-       arg_type(GH_FIELD, GH_READ,  ANY_DISCONTINUOUS_SPACE_5), & ! sea_ice_pond_depth
        arg_type(GH_FIELD, GH_READ,  W3),                        & ! u1_in_w3
        arg_type(GH_FIELD, GH_READ,  W3),                        & ! u2_in_w3
        arg_type(GH_FIELD, GH_READ,  W3),                        & ! height_w3
@@ -80,7 +77,6 @@ contains
 ! @param[in]  sd_orog                Standard deviation of orography
 ! @param[in]  soil_albedo            Snow-free soil albedo
 ! @param[in]  soil_roughness         Bare soil surface roughness length
-! @param[in]  albedo_obs_sw          Observed snow-free shortwave albedo
 ! @param[in]  albedo_obs_vis         Observed snow-free visible albedo
 ! @param[in]  albedo_obs_nir         Observed snow-free near-IR albedo
 ! @param[in]  tile_temperature       Surface tile temperatures
@@ -89,8 +85,6 @@ contains
 ! @param[in]  snow_soot              Snow soot content (kg/kg)
 ! @param[in]  chloro_sea             Chlorophyll content of the sea
 ! @param[in]  sea_ice_thickness      Sea ice thickness (m)
-! @param[in]  sea_ice_pond_frac      Meltpond fraction on sea ice
-! @param[in]  sea_ice_pond_depth     Meltpond depth on sea ice (m)
 ! @param[in]  u1_in_w3               'Zonal' wind in density space
 ! @param[in]  u2_in_w3               'Meridional' wind in density space
 ! @param[in]  height_w3              Height of w3 levels above surface
@@ -121,7 +115,6 @@ subroutine rad_tile_code(nlayers,                          &
                          sd_orog,                          &
                          soil_albedo,                      &
                          soil_roughness,                   &
-                         albedo_obs_sw,                    &
                          albedo_obs_vis,                   &
                          albedo_obs_nir,                   &
                          tile_temperature,                 &
@@ -130,8 +123,6 @@ subroutine rad_tile_code(nlayers,                          &
                          snow_soot,                        &
                          chloro_sea,                       &
                          sea_ice_thickness,                &
-                         sea_ice_pond_frac,                &
-                         sea_ice_pond_depth,               &
                          u1_in_w3,                         &
                          u2_in_w3,                         &
                          height_w3,                        &
@@ -194,7 +185,6 @@ subroutine rad_tile_code(nlayers,                          &
   real(r_def), intent(in) :: sd_orog(undf_2d)
   real(r_def), intent(in) :: soil_albedo(undf_2d)
   real(r_def), intent(in) :: soil_roughness(undf_2d)
-  real(r_def), intent(in) :: albedo_obs_sw(undf_2d)
   real(r_def), intent(in) :: albedo_obs_vis(undf_2d)
   real(r_def), intent(in) :: albedo_obs_nir(undf_2d)
   real(r_def), intent(in) :: snow_soot(undf_2d)
@@ -203,8 +193,6 @@ subroutine rad_tile_code(nlayers,                          &
   real(r_def), intent(in) :: cos_zenith_angle(undf_2d)
 
   real(r_def), intent(in) :: sea_ice_thickness(undf_sice)
-  real(r_def), intent(in) :: sea_ice_pond_frac(undf_sice)
-  real(r_def), intent(in) :: sea_ice_pond_depth(undf_sice)
 
   real(r_def), intent(in) :: u1_in_w3(undf_w3)
   real(r_def), intent(in) :: u2_in_w3(undf_w3)
@@ -337,9 +325,6 @@ subroutine rad_tile_code(nlayers,                          &
   do i_sice = 1, n_sea_ice_tile
     ! Sea-ice thickness
     ice_thick_cat(1,1,i_sice) = real(sea_ice_thickness(map_sice(i_sice)),r_um)
-    ! Sea-ice meltponds
-    pond_frac_cat(1,1,i_sice) = real(sea_ice_pond_frac(map_sice(i_sice)),r_um)
-    pond_depth_cat(1,1,i_sice) = real(sea_ice_pond_depth(map_sice(i_sice)),r_um)
   end do
 
   ! Leaf area index
@@ -376,7 +361,6 @@ subroutine rad_tile_code(nlayers,                          &
   chloro = real(chloro_sea(map_2d(1)), r_um)
 
   ! Observed albedo
-  albobs_sw = real(albedo_obs_sw(map_2d(1)), r_um)
   albobs_vis = real(albedo_obs_vis(map_2d(1)), r_um)
   albobs_nir = real(albedo_obs_nir(map_2d(1)), r_um)
 

@@ -9,14 +9,14 @@
 module jules_physics_init_mod
 
   ! Other LFRic modules used
-  use constants_mod,          only : r_um
-  use jules_control_init_mod, only : n_sea_ice_tile
+  use constants_mod,          only : r_um, i_def
+  use jules_control_init_mod, only : n_sea_ice_tile, n_land_tile
   use surface_config_mod,     only : use_hydrology,                            &
                                      fixed_sea_albedo_in => fixed_sea_albedo,  &
                                      non_iso_scatter, sea_alb_method,          &
                                      sea_alb_method_barker, sea_alb_method_jin,&
                                      sea_alb_method_fixed, sea_alb_var_chl,    &
-                                     blue_sky_alb, sea_surf_alg,               &
+                                     blue_sky_alb, sea_surf_alg, albedo_obs,   &
                                      sea_surf_alg_coare,                       &
                                      sea_surf_alg_surf_div,                    &
                                      alb_sice_melt, dt_ice_albedo,             &
@@ -24,7 +24,7 @@ module jules_physics_init_mod
                                      emis_sice_in => emis_sice,                &
                                      therm_cond_sice, therm_cond_sice_snow,    &
                                      iceformdrag_lupkes, stability_lupkes,     &
-                                     sice_heatflux, tstar_sice_new,            &
+                                     sice_heatflux,                            &
                                      basal_melting, basal_melting_none,        &
                                      basal_melting_instant, grain_growth,      &
                                      grain_growth_marshall,                    &
@@ -52,8 +52,17 @@ module jules_physics_init_mod
 
   implicit none
 
+  ! Decrease in saturated hydraulic conductivity with depth (m-1)
+  ! This is a 2D field in the UM/Jules, but is spatially and temporally
+  ! invariant, so we instead declare it as a parameter here
+  real(kind=r_um), parameter :: decrease_sath_cond = 1.0_r_um
+
+  ! The total size of snow arrays on snow levels (nsmax) and land tiles
+  ! (n_land_tile)
+  integer(kind=i_def), protected :: snow_lev_tile
+
   private
-  public :: jules_physics_init
+  public :: jules_physics_init, decrease_sath_cond, snow_lev_tile
 
 contains
 
@@ -71,7 +80,6 @@ contains
 
     ! Jules modules containing things that need setting
     use allocate_jules_arrays_mod, only: allocate_jules_arrays
-    use c_elevate, only: surf_hgt_surft
     use c_kappai, only: kappai, kappai_snow, kappa_seasurf
     use c_z0h_z0m, only: z0h_z0m
     use jules_hydrology_mod, only: l_hydrology, check_jules_hydrology,      &
@@ -79,7 +87,8 @@ contains
     use jules_radiation_mod, only: i_sea_alb_method,                        &
          l_embedded_snow, l_mask_snow_orog,                                 &
          l_spec_alb_bs, l_spec_albedo, l_spec_sea_alb, fixed_sea_albedo,    &
-         check_jules_radiation, l_niso_direct, l_sea_alb_var_chl
+         check_jules_radiation, l_niso_direct, l_sea_alb_var_chl,           &
+         l_albedo_obs
     use jules_science_fixes_mod, only: l_dtcanfix, l_fix_alb_ice_thick,     &
          l_fix_albsnow_ts, l_fix_ctile_orog, l_fix_wind_snow
     use jules_sea_seaice_mod, only: nice_use, iseasurfalg, emis_sea,        &
@@ -146,11 +155,10 @@ contains
       case(sea_alb_method_fixed)
         i_sea_alb_method = 4
     end select
-    ! l_albedo_obs should be specified here but this requires ancils
+    l_albedo_obs = albedo_obs
     l_embedded_snow  = .true.
     l_mask_snow_orog = .true.
     l_niso_direct    = non_iso_scatter
-    ! l_sea_alb_var_chl should be true but this requires ancils
     l_sea_alb_var_chl = sea_alb_var_chl
     l_spec_alb_bs    = blue_sky_alb
     l_spec_albedo    = .true.
@@ -186,7 +194,9 @@ contains
     l_iceformdrag_lupkes = iceformdrag_lupkes
     l_stability_lupkes   = stability_lupkes
     l_sice_heatflux      = sice_heatflux
-    l_tstar_sice_new     = tstar_sice_new
+    ! Code has not been included to support this being false as configurations
+    ! should be moving to the new code
+    l_tstar_sice_new     = .true.
     nice                 = n_sea_ice_tile
     nice_use             = n_sea_ice_tile
     seasalinityfactor    = 0.98_r_um
@@ -239,6 +249,9 @@ contains
     snow_hcon              = 0.1495_r_um
     unload_rate_u(1:npft)  = (/ 0.0,2.31e-6,0.0,0.0,0.0 /)
 
+    ! Set the LFRic dimension
+    snow_lev_tile = nsmax * n_land_tile
+
     ! Check the contents of the Jules snow parameters module
     ! This module sets some derived parameters
     call check_jules_snow()
@@ -283,7 +296,6 @@ contains
       case(fd_stability_dep_surf_ri)
         fd_stab_dep = 1
     end select
-    ! formdrag = 1 should be set here - needs ancils
     select case (formdrag_in)
       case(formdrag_none)
         formdrag = no_drag
@@ -432,11 +444,6 @@ contains
     else
       diff_frac = 0.0_r_um
     end if
-
-    ! ----------------------------------------------------------------
-    ! Tile elevation settings - contained in c_elevate
-    ! ----------------------------------------------------------------
-    surf_hgt_surft = 0.0_r_um
 
   end subroutine jules_physics_init
 

@@ -204,11 +204,14 @@ contains
       checkpoint_restart_flag = .false.
     end if
     call add_physics_field( radiation_fields, depository, prognostic_fields,   &
-      'albedo_obs_sw', twod_space, checkpoint_restart_flag, twod=.true. )
-    call add_physics_field( radiation_fields, depository, prognostic_fields,   &
       'albedo_obs_vis', twod_space, checkpoint_restart_flag, twod=.true. )
     call add_physics_field( radiation_fields, depository, prognostic_fields,   &
       'albedo_obs_nir', twod_space, checkpoint_restart_flag, twod=.true. )
+
+    ! 3D fields, might need checkpointing
+    checkpoint_restart_flag = .true.
+    call add_physics_field( radiation_fields, depository, prognostic_fields,   &
+      'ozone', wtheta_space, checkpoint_restart_flag )
 
     ! 2D fields, don't need checkpointing
     checkpoint_restart_flag = .false.
@@ -552,9 +555,7 @@ contains
     call add_physics_field( surface_fields, depository, prognostic_fields,     &
       'sea_ice_thickness', sice_space, checkpoint_restart_flag, twod=.true. )
     call add_physics_field( surface_fields, depository, prognostic_fields,     &
-      'sea_ice_pond_frac', sice_space, checkpoint_restart_flag, twod=.true. )
-    call add_physics_field( surface_fields, depository, prognostic_fields,     &
-      'sea_ice_pond_depth', sice_space, checkpoint_restart_flag, twod=.true. )
+      'sea_ice_temperature', sice_space, checkpoint_restart_flag, twod=.true. )
 
     ! Fields on surface tiles, don't need checkpointing
     checkpoint_restart_flag = .false.
@@ -585,8 +586,6 @@ contains
 
     ! 2D fields
     call add_physics_field( surface_fields, depository, prognostic_fields,     &
-      'tstar',   twod_space, checkpoint_restart_flag, twod=.true. )
-    call add_physics_field( surface_fields, depository, prognostic_fields,     &
       'ustar', twod_space, checkpoint_restart_flag, twod=.true. )
     call add_physics_field(surface_fields, depository, prognostic_fields,      &
       'net_prim_prod', twod_space, checkpoint_restart_flag, twod=.true.)
@@ -616,8 +615,6 @@ contains
     call add_physics_field( soil_fields, depository, prognostic_fields,       &
       'soil_carbon_content', twod_space, checkpoint_restart_flag, twod=.true. )
     call add_physics_field(soil_fields, depository, prognostic_fields,        &
-      'decrease_sath_cond', twod_space, checkpoint_restart_flag, twod=.true.)
-    call add_physics_field(soil_fields, depository, prognostic_fields,        &
       'mean_topog_index', twod_space, checkpoint_restart_flag, twod=.true.)
     call add_physics_field(soil_fields, depository, prognostic_fields,        &
       'a_sat_frac', twod_space, checkpoint_restart_flag, twod=.true.)
@@ -630,27 +627,25 @@ contains
     call add_physics_field(soil_fields, depository, prognostic_fields,        &
       'soil_sat_frac', twod_space, checkpoint_restart_flag, twod=.true.)
     call add_physics_field(soil_fields, depository, prognostic_fields,        &
-      'soil_wet_frac', twod_space, checkpoint_restart_flag, twod=.true.)
-    call add_physics_field(soil_fields, depository, prognostic_fields,        &
       'water_table', twod_space, checkpoint_restart_flag, twod=.true.)
     call add_physics_field(soil_fields, depository, prognostic_fields,        &
       'wetness_under_soil', twod_space, checkpoint_restart_flag, twod=.true.)
+    call add_physics_field( soil_fields, depository, prognostic_fields,       &
+      'soil_moist_wilt', twod_space, checkpoint_restart_flag, twod=.true. )
+    call add_physics_field( soil_fields, depository, prognostic_fields,       &
+      'soil_moist_crit', twod_space, checkpoint_restart_flag, twod=.true. )
+    call add_physics_field( soil_fields, depository, prognostic_fields,       &
+      'soil_moist_sat', twod_space, checkpoint_restart_flag, twod=.true. )
+    call add_physics_field( soil_fields, depository, prognostic_fields,       &
+      'soil_cond_sat', twod_space, checkpoint_restart_flag, twod=.true. )
+    call add_physics_field( soil_fields, depository, prognostic_fields,       &
+      'soil_thermal_cap', twod_space, checkpoint_restart_flag, twod=.true. )
+    call add_physics_field( soil_fields, depository, prognostic_fields,       &
+      'soil_suction_sat', twod_space, checkpoint_restart_flag, twod=.true. )
+    call add_physics_field( soil_fields, depository, prognostic_fields,       &
+      'clapp_horn_b', twod_space, checkpoint_restart_flag, twod=.true. )
 
     ! Fields on soil levels
-    call add_physics_field( soil_fields, depository, prognostic_fields,       &
-      'soil_moist_wilt', soil_space, checkpoint_restart_flag, twod=.true. )
-    call add_physics_field( soil_fields, depository, prognostic_fields,       &
-      'soil_moist_crit', soil_space, checkpoint_restart_flag, twod=.true. )
-    call add_physics_field( soil_fields, depository, prognostic_fields,       &
-      'soil_moist_sat', soil_space, checkpoint_restart_flag, twod=.true. )
-    call add_physics_field( soil_fields, depository, prognostic_fields,       &
-      'soil_cond_sat', soil_space, checkpoint_restart_flag, twod=.true. )
-    call add_physics_field( soil_fields, depository, prognostic_fields,       &
-      'soil_thermal_cap', soil_space, checkpoint_restart_flag, twod=.true. )
-    call add_physics_field( soil_fields, depository, prognostic_fields,       &
-      'soil_suction_sat', soil_space, checkpoint_restart_flag, twod=.true. )
-    call add_physics_field( soil_fields, depository, prognostic_fields,       &
-      'clapp_horn_b', soil_space, checkpoint_restart_flag, twod=.true. )
     call add_physics_field( soil_fields, depository, prognostic_fields,       &
       'soil_temperature', soil_space, checkpoint_restart_flag, twod=.true. )
     call add_physics_field( soil_fields, depository, prognostic_fields,       &

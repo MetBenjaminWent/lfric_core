@@ -125,6 +125,10 @@
                      resolutions=[("BiP4x4-10000x10000",600.0)] ,
 		     env={"crun":1, "nrun":48},
                      plotstr="plot_scm.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR")',
+    'run_application("lfric_atm", "scm_bl_seaice",
+                     resolutions=[("BiP4x4-10000x10000",600.0)],
+                     env={"crun":1, "nrun":48},
+                     plotstr="plot_scm.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR")',
     'run_application("lfric_atm", "scm_bl_llcs",
                      resolutions=[("BiP4x4-10000x10000",600.0)] ,
 		     env={"crun":1, "nrun":48},
@@ -170,8 +174,7 @@
                                                  "threads":1,
                                                  "wallclock":"00:10:00"},
                                          },
-                            },
-                            resolutions=[("C12",300.0)]
+                            }
                            )',
     'run_application("lfric_atm", "aquaplanet",
                      resolutions=[("C12",300.0)],
@@ -182,7 +185,6 @@
                                        },
                          },
                      plotstr="plot_map.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR"
-
                      )',
     'run_application("lfric_atm", "aquaplanet_simple",
                      resolutions=[("C12",300.0)],
@@ -193,7 +195,25 @@
                                        },
                          },
                      plotstr="plot_map.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR"
-
+                     )',
+    'run_with_restart_check("lfric_atm", "basic_gagl_short", 2,
+                            resolutions=[("C12",300.0)],
+                            env={"crun":1, "nrun":2,
+                            "directives":{"C12":{"mpi_parts":6,
+                                                 "threads":1,
+                                                 "wallclock":"00:10:00"},
+                                         },
+                            }
+                           )',
+    'run_application("lfric_atm", "basic_gagl",
+                     resolutions=[("C12",300.0)],
+                     env={"crun":2, "nrun":72,
+                          "directives":{"C12":{"mpi_parts":6,
+                                               "threads":1,
+                                               "wallclock":"00:12:00"},
+                                       },
+                         },
+                     plotstr="plot_map.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR"
                      )',
     'check_compilers("lfric_atm", "scm_dry_bl", "fast-debug",
                      resolution=("BiP4x4-10000x10000",600.0))',
@@ -213,7 +233,16 @@
                                        },
                          },
                      plotstr="plot_map.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR"
-
+                     )',
+    'run_application("lfric_atm", "basic_gagl",
+                     resolutions=[("C12",300.0)],
+                     env={"crun":2, "nrun":72,
+                          "directives":{"C12":{"mpi_parts":6,
+                                               "threads":1,
+                                               "wallclock":"00:12:00"},
+                                       },
+                         },
+                     plotstr="plot_map.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR"
                      )',
     'publish_commit'
   ],
@@ -231,7 +260,16 @@
                                        },
                          },
                      plotstr="plot_map.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR"
-
+                     )',
+    'run_application("lfric_atm", "basic_gagl",
+                     resolutions=[("C12",300.0)],
+                     env={"crun":2, "nrun":72,
+                          "directives":{"C12":{"mpi_parts":6,
+                                               "threads":1,
+                                               "wallclock":"00:12:00"},
+                                       },
+                         },
+                     plotstr="plot_map.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR"
                      )',
     'check_compilers("lfric_atm", "scm_dry_bl", "full-debug",
                      resolution=("BiP4x4-10000x10000",600.0),

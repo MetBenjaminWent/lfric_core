@@ -118,6 +118,7 @@ contains
     type( field_type ), pointer :: sw_down_surf      => null()
     type( field_type ), pointer :: sw_down_blue_surf => null()
     type( field_type ), pointer :: sw_up_tile        => null()
+    type( field_type ), pointer :: ozone             => null()
 
     type( field_type ), pointer :: shallow_flag     => null()
     type( field_type ), pointer :: uw0_flux         => null()
@@ -141,6 +142,7 @@ contains
     type( field_type ), pointer :: tile_fraction       => null()
     type( field_type ), pointer :: leaf_area_index     => null()
     type( field_type ), pointer :: canopy_height       => null()
+    type( field_type ), pointer :: sea_ice_temperature => null()
     type( field_type ), pointer :: tile_temperature    => null()
     type( field_type ), pointer :: surface_conductance => null()
     type( field_type ), pointer :: canopy_water        => null()
@@ -236,6 +238,7 @@ contains
     sw_down_surf      => radiation_fields%get_field('sw_down_surf')
     sw_down_blue_surf => radiation_fields%get_field('sw_down_blue_surf')
     sw_up_tile        => radiation_fields%get_field('sw_up_tile')
+    ozone             => radiation_fields%get_field('ozone')
 
     ! Convection fields
     shallow_flag     => convection_fields%get_field('shallow_flag')
@@ -268,6 +271,7 @@ contains
     tile_fraction       => surface_fields%get_field('tile_fraction')
     leaf_area_index     => surface_fields%get_field('leaf_area_index')
     canopy_height       => surface_fields%get_field('canopy_height')
+    sea_ice_temperature => surface_fields%get_field('sea_ice_temperature')
     tile_temperature    => surface_fields%get_field('tile_temperature')
     surface_conductance => surface_fields%get_field('surface_conductance')
     canopy_water        => surface_fields%get_field('canopy_water')
@@ -330,7 +334,8 @@ contains
                            soil_moist_wilt, soil_moist_crit, soil_moist_sat,   &
                            soil_thermal_cond, soil_suction_sat, clapp_horn_b,  &
                            soil_carbon_content, soil_respiration,              &
-                           thermal_cond_wet_soil, tile_temperature,            &
+                           thermal_cond_wet_soil, sea_ice_temperature,         &
+                           tile_temperature,                                   &
                            tile_snow_mass, n_snow_layers, snow_depth,          &
                            snow_layer_thickness, snow_layer_ice_mass,          &
                            snow_layer_liq_mass, snow_layer_temp,               &
@@ -342,7 +347,7 @@ contains
                            cos_zenith_angle, sw_up_tile, sw_down_surf,         &
                            lw_down_surf, sw_down_blue_surf, dd_mf_cb,          &
                            dtl_mphys, dmt_mphys,                               &
-                           sw_heating_rate, lw_heating_rate,                   &
+                           sw_heating_rate, lw_heating_rate, ozone,            &
                            cf_bulk, rh_crit, visc_m, visc_h,                   &
                            rhokm_bl, rhokm_surf, rhokh_bl, ngstress_bl,        &
                            bq_bl, bt_bl, moist_flux_bl, heat_flux_bl,          &

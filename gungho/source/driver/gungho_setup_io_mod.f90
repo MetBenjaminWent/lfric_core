@@ -23,6 +23,7 @@ module gungho_setup_io_mod
                                            albedo_nir_ancil_path,     &
                                            albedo_vis_ancil_path,     &
                                            hydtop_ancil_path,         &
+                                           plant_func_ancil_path,     &
                                            sea_ancil_path,            &
                                            sea_ice_ancil_path,        &
                                            soil_ancil_path,           &
@@ -33,7 +34,8 @@ module gungho_setup_io_mod
                                            init_option_fd_start_dump, &
                                            ancil_option,              &
                                            ancil_option_aquaplanet,   &
-                                           ancil_option_basic_gagl
+                                           ancil_option_basic_gagl,   &
+                                           ancil_option_prototype_gagl
   use io_config_mod,                 only: diagnostic_frequency,      &
                                            checkpoint_write,          &
                                            checkpoint_read,           &
@@ -81,8 +83,7 @@ module gungho_setup_io_mod
 
       ! Setup dump file for end timestep
       call tmp_file%init_xios_file( "lfric_fd_dump", dump_fname, &
-                                    clock%get_last_step(), &
-                                    field_group_id="physics_fd_fields" )
+                                    clock%get_last_step())
       call files_list%insert_item(tmp_file)
     end if
 
@@ -94,8 +95,7 @@ module gungho_setup_io_mod
                               trim(start_dump_filename)
 
       ! Setup dump file
-      call tmp_file%init_xios_file( "read_lfric_fd_dump", path=dump_fname, &
-                                    field_group_id="physics_fd_fields" )
+      call tmp_file%init_xios_file( "read_lfric_fd_dump", path=dump_fname)
       call files_list%insert_item(tmp_file)
     end if
 
@@ -113,10 +113,10 @@ module gungho_setup_io_mod
       call tmp_file%init_xios_file("soil_ancil", path=ancil_fname)
       call files_list%insert_item(tmp_file)
 
-      ! Set aerosol ancil filename from namelist
+      ! Set plant func ancil filename from namelist
       write(ancil_fname,'(A)') trim(ancil_directory)//'/'// &
-                               trim(aerosols_ancil_path)
-      call tmp_file%init_xios_file("aerosols_ancil", path=ancil_fname)
+                               trim(plant_func_ancil_path)
+      call tmp_file%init_xios_file("plant_func_ancil", path=ancil_fname)
       call files_list%insert_item(tmp_file)
 
       ! Set sea ancil filename from namelist
@@ -153,6 +153,14 @@ module gungho_setup_io_mod
       write(ancil_fname,'(A)') trim(ancil_directory)//'/'// &
                                trim(surface_frac_ancil_path)
       call tmp_file%init_xios_file("surface_frac_ancil", path=ancil_fname)
+      call files_list%insert_item(tmp_file)
+    end if
+
+    if( ancil_option == ancil_option_prototype_gagl ) then
+      ! Set aerosol ancil filename from namelist
+      write(ancil_fname,'(A)') trim(ancil_directory)//'/'// &
+                               trim(aerosols_ancil_path)
+      call tmp_file%init_xios_file("aerosols_ancil", path=ancil_fname)
       call files_list%insert_item(tmp_file)
     end if
 

@@ -53,8 +53,7 @@ contains
     peak_to_trough_orog  => orography_fields%get_field('peak_to_trough_orog')
 
     ! Initialise the orography fields to fixed values for use in SCM
-    ! testing
-    ! After #2070 these will be read from ancillary files
+    ! testing or when no ancil file is read
     call invoke( setval_c(sd_orog,              1000.0_r_def), &
                  setval_c(grad_xx_orog,         1.0e-2_r_def), &
                  setval_c(grad_xy_orog,         1.0e-3_r_def), &

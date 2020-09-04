@@ -36,4 +36,5 @@ extract:
 	   && fcm make -C $(SCRATCH_DIR) -f $(PROJECT_DIR)/fcm-make/extract.cfg
 	# Note that if wanting to modify UM source this should be done via the
 	# UM repository either through a working copy or branch
+	$Qrsync -acvz $(SCRATCH_DIR)/preprocess-recon/ $(WORKING_DIR)/science/
 	$Qrsync -acvz $(SCRATCH_DIR)/preprocess-atmos/ $(WORKING_DIR)/science/

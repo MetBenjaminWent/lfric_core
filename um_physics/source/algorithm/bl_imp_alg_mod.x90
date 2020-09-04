@@ -8,16 +8,21 @@
 
 module bl_imp_alg_mod
 
-  use constants_mod,           only: i_def, str_short
-  use field_mod,               only: field_type
-  use field_collection_mod,    only: field_collection_type
-  use mr_indices_mod,          only: nummr, imr_v, imr_cl, imr_ci
-  use timestepping_config_mod, only: outer_iterations
+  use constants_mod,                 only: i_def
+  use field_mod,                     only: field_type
+  use field_collection_mod,          only: field_collection_type
+  use function_space_mod,            only: function_space_type
+  use function_space_collection_mod, only: function_space_collection
+  use fs_continuity_mod,             only: W3
+  use write_methods_mod,             only: write_field_single_face
+  use field_parent_mod,              only: write_interface
+  use mr_indices_mod,                only: nummr, imr_v, imr_cl, imr_ci
+  use timestepping_config_mod,       only: outer_iterations
 
-  use io_config_mod,        only: subroutine_timers
-  use timer_mod,            only: timer
+  use io_config_mod, only: subroutine_timers
+  use timer_mod,     only: timer
   ! xios output
-  use io_config_mod,      only: write_diag, use_xios_io
+  use io_config_mod, only: write_diag, use_xios_io
 
   use map_fd_to_prognostics_alg_mod, only: set_wind
 
@@ -69,7 +74,7 @@ contains
 
     use interp_bl_kernel_mod, only: interp_bl_kernel_type
     use bl_imp_kernel_mod, only: bl_imp_kernel_type
-    use multi_to_single_kernel_mod, only: multi_to_single_kernel_type
+    use high_to_multi_kernel_mod, only: high_to_multi_kernel_type
     use jules_control_init_mod, only: n_surf_tile
 
     implicit none
@@ -142,6 +147,8 @@ contains
     type( field_type ), pointer :: tile_fraction        => null()
     type( field_type ), pointer :: leaf_area_index      => null()
     type( field_type ), pointer :: canopy_height        => null()
+    type( field_type ), pointer :: sea_ice_thickness   => null()
+    type( field_type ), pointer :: sea_ice_temperature => null()
     type( field_type ), pointer :: tile_temperature   => null()
     type( field_type ), pointer :: canopy_water       => null()
     type( field_type ), pointer :: tile_heat_flux => null()
@@ -169,19 +176,10 @@ contains
     type( field_type ), pointer :: n_snow_layers      => null()
 
     type( field_type ) :: tmp_diag
+    type(function_space_type), pointer  :: tmp_space => null()
+    procedure(write_interface), pointer :: write_diag_behaviour => null()
     type( field_type ) :: rhokm_w2, rhokm_surf_w2, ngstress_w2, dtrdz_w2, &
                           rdz_w2, du_conv_w2, dw_conv
-
-    ! Local scalars
-    integer(i_def) :: i_tile
-
-    ! Surface tile names
-    ! This method of naming and outputting diagnostics is temporary, pending
-    ! a proper solution for multi-dimensional fields (#1552)
-    character(str_short) :: tile_names(11) = &
-         [character(len=8):: 'brd_leaf', 'ndl_leaf', 'c3_grass', 'c4_grass', &
-                             'shrub', 'urban', 'lake', 'soil', 'ice',        &
-                             'sea', 'sea_ice']
 
     if ( subroutine_timers ) call timer("bl_imp_alg_step")
 
@@ -244,6 +242,8 @@ contains
     tile_fraction   => surface_fields%get_field('tile_fraction')
     leaf_area_index => surface_fields%get_field('leaf_area_index')
     canopy_height   => surface_fields%get_field('canopy_height')
+    sea_ice_thickness => surface_fields%get_field('sea_ice_thickness')
+    sea_ice_temperature => surface_fields%get_field('sea_ice_temperature')
     tile_temperature   => surface_fields%get_field('tile_temperature')
     canopy_water       => surface_fields%get_field('canopy_water')
     tile_heat_flux => surface_fields%get_field('tile_heat_flux')
@@ -316,6 +316,7 @@ contains
                            height_w3, height_wth, ntml, cumulus,               &
                            tile_fraction, leaf_area_index, canopy_height,      &
                            peak_to_trough_orog, silhouette_area_orog,          &
+                           sea_ice_thickness, sea_ice_temperature,             &
                            tile_temperature, tile_snow_mass, n_snow_layers,    &
                            canopy_water, soil_temperature,                     &
                            tile_heat_flux, tile_moisture_flux,                 &
@@ -352,18 +353,30 @@ contains
       call dmv_bl%write_field('dmv_bl')
       call zh%write_field('zh')
 
-      call zh%copy_field_properties(tmp_diag)
-      do i_tile = 1, n_surf_tile
-        call invoke(multi_to_single_kernel_type(tmp_diag, tile_temperature, &
-                                                i_tile) )
-        call tmp_diag%write_field('tstar_'//trim(tile_names(i_tile)) )
-        call invoke(multi_to_single_kernel_type(tmp_diag, tile_heat_flux, &
-                                                i_tile) )
-        call tmp_diag%write_field('ftl_'//trim(tile_names(i_tile)) )
-        call invoke(multi_to_single_kernel_type(tmp_diag, tile_moisture_flux, &
-                                                i_tile) )
-        call tmp_diag%write_field('fqw_'//trim(tile_names(i_tile)) )
-      end do
+      ! Make a 2D multi-data field for temporary diagnostic output
+      ! (this can be removed when the fields themselves are multi-data)
+      tmp_space => function_space_collection%get_fs( zh%get_mesh_id(), 0, &
+                                                     W3, n_surf_tile )
+      call tmp_diag%initialise(tmp_space)
+      write_diag_behaviour => write_field_single_face
+      call tmp_diag%set_write_behaviour(write_diag_behaviour)
+
+      ! Surface diagnostics
+      call invoke( high_to_multi_kernel_type(tmp_diag, tile_heat_flux, &
+                                             n_surf_tile) )
+      call tmp_diag%write_field('tile_heat_flux')
+      call invoke( high_to_multi_kernel_type(tmp_diag, tile_moisture_flux, &
+                                             n_surf_tile) )
+      call tmp_diag%write_field('tile_moisture_flux')
+      call invoke( high_to_multi_kernel_type(tmp_diag, tile_temperature, &
+                                             n_surf_tile) )
+      call tmp_diag%write_field('tile_temperature')
+      call invoke( high_to_multi_kernel_type(tmp_diag, tile_fraction, &
+                                             n_surf_tile) )
+      call tmp_diag%write_field('tile_fraction')
+      call invoke( high_to_multi_kernel_type(tmp_diag, canopy_evap, &
+                                             n_surf_tile) )
+      call tmp_diag%write_field('canopy_evap')
 
     end if
 

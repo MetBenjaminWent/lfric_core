@@ -32,7 +32,7 @@ public :: lw_code
 ! Contains the metadata needed by the PSy layer.
 type, extends(kernel_type) :: lw_kernel_type
   private
-  type(arg_type) :: meta_args(26) = (/                             &
+  type(arg_type) :: meta_args(27) = (/                             &
     arg_type(GH_FIELD,   GH_WRITE,     Wtheta),                    & ! lw_heating_rate
     arg_type(GH_FIELD,   GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1), & ! lw_down_surf
     arg_type(GH_FIELD,   GH_WRITE,     ANY_DISCONTINUOUS_SPACE_2), & ! lw_up_tile
@@ -53,6 +53,7 @@ type, extends(kernel_type) :: lw_kernel_type
     arg_type(GH_FIELD,   GH_READ,      Wtheta),                    & ! area_fraction
     arg_type(GH_FIELD,   GH_READ,      Wtheta),                    & ! liquid_fraction
     arg_type(GH_FIELD,   GH_READ,      Wtheta),                    & ! ice_fraction
+    arg_type(GH_FIELD,   GH_READ,      Wtheta),                    & ! ozone
     arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_2), & ! tile_fraction
     arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_2), & ! tile_temperature
     arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_3), & ! tile_lw_albedo
@@ -91,6 +92,7 @@ contains
 !> @param[in]     area_fraction           Total cloud area fraction field
 !> @param[in]     liquid_fraction         Liquid cloud fraction field
 !> @param[in]     ice_fraction            Ice cloud fraction field
+!> @param[in]     ozone                   Ozone field
 !> @param[in]     tile_fraction           Surface tile fractions
 !> @param[in]     tile_temperature        Surface tile temperature
 !> @param[in]     tile_lw_albedo          LW tile albedos
@@ -133,6 +135,7 @@ subroutine lw_code(nlayers,                          &
                    area_fraction,                    &
                    liquid_fraction,                  &
                    ice_fraction,                     &
+                   ozone,                            &
                    tile_fraction,                    &
                    tile_temperature,                 &
                    tile_lw_albedo,                   &
@@ -205,7 +208,7 @@ subroutine lw_code(nlayers,                          &
   real(r_def), dimension(undf_w3),  intent(in) :: theta_in_w3, exner, height_w3
   real(r_def), dimension(undf_wth), intent(in) :: theta, exner_in_wth, &
     rho_in_wth, height_wth, mv, mcl, mci, &
-    area_fraction, liquid_fraction, ice_fraction
+    area_fraction, liquid_fraction, ice_fraction, ozone
   real(r_def), dimension(undf_tile),  intent(in) :: tile_fraction
   real(r_def), dimension(undf_tile),  intent(in) :: tile_temperature
   real(r_def), dimension(undf_rtile), intent(in) :: tile_lw_albedo
@@ -346,6 +349,7 @@ subroutine lw_code(nlayers,                          &
       density_1d             = rho_in_wth(wth_1:wth_nlayers),                  &
       t_level_1d             = t_layer_boundaries,                             &
       h2o_1d                 = mv(wth_1:wth_nlayers),                          &
+      o3_1d                  = ozone(wth_1:wth_nlayers),                       &
       co2_mix_ratio          = co2_mix_ratio,                                  &
       n2o_mix_ratio          = n2o_mix_ratio,                                  &
       ch4_mix_ratio          = ch4_mix_ratio,                                  &

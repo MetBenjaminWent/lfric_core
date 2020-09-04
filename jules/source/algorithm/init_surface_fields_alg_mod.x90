@@ -39,6 +39,7 @@ contains
     ! Ancillary fields
     type( field_type ), pointer :: chloro_sea          => null()
     type( field_type ), pointer :: sea_ice_thickness   => null()
+    type( field_type ), pointer :: sea_ice_temperature => null()
 
     type( field_type ), pointer :: tile_fraction       => null()
     type( field_type ), pointer :: leaf_area_index     => null()
@@ -49,9 +50,10 @@ contains
     type( field_type ), pointer :: surface_conductance => null()
     type( field_type ), pointer :: canopy_water        => null()
 
-    z0msea             => surface_fields%get_field('z0msea')
-    chloro_sea         => surface_fields%get_field('chloro_sea')
-    sea_ice_thickness  => surface_fields%get_field('sea_ice_thickness')
+    z0msea              => surface_fields%get_field('z0msea')
+    chloro_sea          => surface_fields%get_field('chloro_sea')
+    sea_ice_thickness   => surface_fields%get_field('sea_ice_thickness')
+    sea_ice_temperature => surface_fields%get_field('sea_ice_temperature')
 
     tile_fraction       => surface_fields%get_field('tile_fraction')
     leaf_area_index     => surface_fields%get_field('leaf_area_index')
@@ -63,9 +65,10 @@ contains
     ! Set sea surface prognostics to fixed values for use in SCM testing
     ! or when no values are provied by the um2lfric dump
     call invoke( setval_c(z0msea,              1.5e-4_r_def),                 &
-                 ! After #2070 these will come from ancillary files
+                 ! Ancillary fields for use in SCM or if no ancil read
                  setval_c(chloro_sea,          5.0e-7_r_def),                 &
-                 setval_c(sea_ice_thickness,   0.0_r_def),                    &
+                 setval_c(sea_ice_thickness,   1.0_r_def),                    &
+                 setval_c(sea_ice_temperature, 260.0_r_def),                  &
                  ! Set land prognostics to fixed values for use in SCM
                  ! testing or when no values are provided by um2lfric
                  setval_c(surface_conductance, 1.0_r_def),                    &

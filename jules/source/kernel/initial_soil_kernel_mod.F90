@@ -67,12 +67,12 @@ contains
     real(kind=r_def), intent(out) :: unfrozen_soil_moisture(undf_soil)
     real(kind=r_def), intent(out) :: frozen_soil_moisture(undf_soil)
 
+    ! Prognostics set to fixed value for SCM testing or when no values are
+    ! provided by um2lfric dump
+    ! N.B. the number of values here matches sm_levels set in
+    ! jules_control_init
     if (test == test_snow) then ! Testing with snow present
 
-      ! Prognostics set to fixed value for SCM testing or when no values are
-      ! provided by um2lfric dump
-      ! N.B. the number of values here matches sm_levels set in
-      ! jules_control_init
       soil_temperature(map_soil(1)) = 270.0_r_def
       soil_temperature(map_soil(2)) = 270.0_r_def
       soil_temperature(map_soil(3)) = 275.0_r_def
@@ -95,10 +95,6 @@ contains
 
     else ! All other tests without snow
 
-      ! Prognostics set to fixed value for SCM testing or when no values are
-      ! provided by um2lfric dump
-      ! N.B. the number of values here matches sm_levels set in
-      ! jules_control_init
       soil_temperature(map_soil(1)) = 285.0_r_def
       soil_temperature(map_soil(2)) = 280.0_r_def
       soil_temperature(map_soil(3)) = 275.0_r_def

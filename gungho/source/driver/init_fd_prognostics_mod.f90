@@ -37,7 +37,7 @@ contains
 
     type(field_collection_type), intent(inout) :: fd_field_collection
 
-    call read_state(fd_field_collection)
+    call read_state(fd_field_collection,prefix='read_')
 
 
     call log_event( "Physics: Initialised FD prognostic fields from UM2LFRic dump", LOG_LEVEL_INFO )

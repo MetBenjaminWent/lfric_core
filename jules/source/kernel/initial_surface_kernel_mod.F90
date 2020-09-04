@@ -80,14 +80,12 @@ contains
     !Internal variables
     integer(kind=i_def) :: i
 
-    ! Set from a namelist variable, but after #2070 this will be
-    ! from an ancillary file
+    ! Set from a namelist variable for SCM or when no ancil read
     do i = 1, n_surf_tile
       tile_fraction(map_tile(i)) = surf_tile_fracs(i)
     end do
 
-    ! Fixed values for SCM testing, but after #2070 these will be from
-    ! an ancillary file
+    ! Fixed values for SCM testing or if no ancil is read in
     ! N.B. the number of values here matches npft set in jules_control_init
     leaf_area_index(map_pft(1)) = 5.0_r_def
     leaf_area_index(map_pft(2)) = 4.0_r_def
@@ -101,19 +99,17 @@ contains
     canopy_height(map_pft(4)) =  1.26_r_def
     canopy_height(map_pft(5)) =  1.59_r_def
 
+    ! Prognostic set to fixed value for SCM testing or when no values are
+    ! provided by um2lfric dump
     if (test == test_snow) then ! Testing with snow present
 
       do i = 1, n_land_tile
-        ! Prognostic set to fixed value for SCM testing or when no values are
-        ! provided by um2lfric dump
         tile_temperature(map_tile(i)) = 270.0_r_def
       end do
 
     else ! All other tests without snow
 
       do i = 1, n_land_tile
-        ! Prognostic set to fixed value for SCM testing or when no values are
-        ! provided by um2lfric dump
         tile_temperature(map_tile(i)) = 295.0_r_def
       end do
 
@@ -122,7 +118,7 @@ contains
     tile_temperature(map_tile(first_sea_tile)) = 300.0_r_def
 
     do i = first_sea_ice_tile, first_sea_ice_tile + n_sea_ice_tile - 1
-      tile_temperature(map_tile(i)) = 273.0_r_def
+      tile_temperature(map_tile(i)) = 265.0_r_def
     end do
 
   end subroutine initial_surface_code

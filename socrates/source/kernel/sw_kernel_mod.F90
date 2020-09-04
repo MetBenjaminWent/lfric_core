@@ -32,7 +32,7 @@ public :: sw_code
 ! Contains the metadata needed by the PSy layer.
 type, extends(kernel_type) :: sw_kernel_type
   private
-  type(arg_type) :: meta_args(37) = (/                             &
+  type(arg_type) :: meta_args(38) = (/                             &
     arg_type(GH_FIELD,   GH_WRITE,     Wtheta),                    & ! sw_heating_rate
     arg_type(GH_FIELD,   GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1), & ! sw_down_surf
     arg_type(GH_FIELD,   GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1), & ! sw_direct_surf
@@ -64,6 +64,7 @@ type, extends(kernel_type) :: sw_kernel_type
     arg_type(GH_FIELD,   GH_READ,      Wtheta),                    & ! area_fraction
     arg_type(GH_FIELD,   GH_READ,      Wtheta),                    & ! liquid_fraction
     arg_type(GH_FIELD,   GH_READ,      Wtheta),                    & ! ice_fraction
+    arg_type(GH_FIELD,   GH_READ,      Wtheta),                    & ! ozone
     arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_2), & ! tile_fraction
     arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_3), & ! tile_sw_direct_albedo
     arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_3), & ! tile_sw_diffuse_albedo
@@ -113,6 +114,7 @@ contains
 ! @param[in]    area_fraction           Total cloud area fraction field
 ! @param[in]    liquid_fraction         Liquid cloud fraction field
 ! @param[in]    ice_fraction            Ice cloud fraction field
+! @param[in]    ozone                   Ozone field
 ! @param[in]    tile_fraction           Surface tile fractions
 ! @param[in]    tile_sw_direct_albedo   SW direct tile albedos
 ! @param[in]    tile_sw_diffuse_albedo  SW diffuse tile albedos
@@ -166,6 +168,7 @@ subroutine sw_code(nlayers,                          &
                    area_fraction,                    &
                    liquid_fraction,                  &
                    ice_fraction,                     &
+                   ozone,                            &
                    tile_fraction,                    &
                    tile_sw_direct_albedo,            &
                    tile_sw_diffuse_albedo,           &
@@ -236,7 +239,7 @@ subroutine sw_code(nlayers,                          &
   real(r_def), dimension(undf_w3),   intent(in) :: exner, height_w3
   real(r_def), dimension(undf_wth),  intent(in) :: theta, exner_in_wth, &
     rho_in_wth, height_wth, mv, mcl, mci, &
-    area_fraction, liquid_fraction, ice_fraction
+    area_fraction, liquid_fraction, ice_fraction, ozone
   real(r_def), dimension(undf_2d), intent(in) :: &
     cos_zenith_angle, lit_fraction, &
     cos_zenith_angle_rts, lit_fraction_rts, stellar_irradiance_rts
@@ -374,6 +377,7 @@ subroutine sw_code(nlayers,                          &
       mass_1d                = d_mass,                                         &
       density_1d             = rho_in_wth(wth_1:wth_nlayers),                  &
       h2o_1d                 = mv(wth_1:wth_nlayers),                          &
+      o3_1d                  = ozone(wth_1:wth_nlayers),                       &
       co2_mix_ratio          = co2_mix_ratio,                                  &
       n2o_mix_ratio          = n2o_mix_ratio,                                  &
       ch4_mix_ratio          = ch4_mix_ratio,                                  &

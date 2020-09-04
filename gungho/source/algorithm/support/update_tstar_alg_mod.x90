@@ -23,10 +23,11 @@ contains
   !>          single level tstar field required for IO (checkpoint-restarting)
   !>          with or from the correct data in the tile_temperature array
   !>          that is used in the science code
-  !> @param[in,out] surface_fields Collection of fields for surface scheme
-  !> @param[in]     put_field         Logical controlling whether field is
-  !>                                  being put or got from jules_prognostics
-  subroutine update_tstar_alg(surface_fields, put_field)
+  !> @param[in] (in,out) surface_fields Fields for surface scheme
+  !> @param[in] (in,out) fd_fields      FD fields from um2lfric dump
+  !> @param[in]          put_field      Logical controlling whether field is
+  !>                                    being put or got from surface_fields
+  subroutine update_tstar_alg(surface_fields, fd_fields, put_field)
 
 #ifdef UM_PHYSICS
     use jules_control_init_mod, only: first_sea_tile
@@ -37,7 +38,8 @@ contains
 
     implicit none
 
-    type(field_collection_type), intent(inout) :: surface_fields
+    type(field_collection_type), intent(in) :: surface_fields
+    type(field_collection_type), intent(in) :: fd_fields
 
     logical(kind=l_def) :: put_field
 
@@ -47,7 +49,7 @@ contains
 
 #ifdef UM_PHYSICS
     tile_temperature => surface_fields%get_field('tile_temperature')
-    tstar => surface_fields%get_field('tstar')
+    tstar => fd_fields%get_field('tstar')
 
     if ( put_field) then
       ! Put tstar into tile_temperature

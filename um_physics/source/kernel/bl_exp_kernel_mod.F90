@@ -18,7 +18,8 @@ module bl_exp_kernel_mod
                                      ANY_DISCONTINUOUS_SPACE_5, &
                                      ANY_DISCONTINUOUS_SPACE_6, &
                                      ANY_DISCONTINUOUS_SPACE_7, &
-                                     ANY_DISCONTINUOUS_SPACE_8
+                                     ANY_DISCONTINUOUS_SPACE_8, &
+                                     ANY_DISCONTINUOUS_SPACE_9
   use constants_mod,          only : i_def, i_um, r_def, r_um
   use fs_continuity_mod,      only : W3, Wtheta
   use kernel_mod,             only : kernel_type
@@ -39,7 +40,7 @@ module bl_exp_kernel_mod
   !>
   type, public, extends(kernel_type) :: bl_exp_kernel_type
     private
-    type(arg_type) :: meta_args(113) = (/                           &
+    type(arg_type) :: meta_args(115) = (/                           &
         arg_type(GH_FIELD, GH_READ,      WTHETA),                   &! theta_in_wth
         arg_type(GH_FIELD, GH_READ,      W3),                       &! rho_in_w3
         arg_type(GH_FIELD, GH_READ,      W3),                       &! wetrho_in_w3
@@ -69,15 +70,16 @@ module bl_exp_kernel_mod
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! silhouette_area_orog
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! soil_albedo
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! soil_roughness
-        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_4),&! soil_moist_wilt
-        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_4),&! soil_moist_crit
-        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_4),&! soil_moist_sat
+        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! soil_moist_wilt
+        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! soil_moist_crit
+        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! soil_moist_sat
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! soil_thermal_cond
-        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_4),&! soil_suction_sat
-        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_4),&! clapp_horn_b
+        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! soil_suction_sat
+        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! clapp_horn_b
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! soil_carbon_content
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! soil_respiration
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! thermal_cond_wet_soil
+        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_4),&! sea_ice_temperature
         arg_type(GH_FIELD, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_2),&! tile_temperature
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_2),&! tile_snow_mass
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_2),&! n_snow_layers
@@ -88,10 +90,10 @@ module bl_exp_kernel_mod
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_5),&! snow_layer_temp
         arg_type(GH_FIELD, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1),&! surface_conductance
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_2),&! canopy_water
-        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_4),&! soil_temperature
-        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_4),&! soil_moisture
-        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_4),&! unfrozen_soil_moisture
-        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_4),&! frozen_soil_moisture
+        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_6),&! soil_temperature
+        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_6),&! soil_moisture
+        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_6),&! unfrozen_soil_moisture
+        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_6),&! frozen_soil_moisture
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_2),&! tile_heat_flux
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_2),&! tile_moisture_flux
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! gross_prim_prod
@@ -106,12 +108,13 @@ module bl_exp_kernel_mod
         arg_type(GH_FIELD, GH_READ,      WTHETA),                   &! dmt_mphys
         arg_type(GH_FIELD, GH_READ,      WTHETA),                   &! sw_heating_rate
         arg_type(GH_FIELD, GH_READ,      WTHETA),                   &! lw_heating_rate
+        arg_type(GH_FIELD, GH_READ,      WTHETA),                   &! ozone
         arg_type(GH_FIELD, GH_READ,      WTHETA),                   &! cf_bulk
         arg_type(GH_FIELD, GH_READWRITE, WTHETA),                   &! rh_crit
         arg_type(GH_FIELD, GH_WRITE,     WTHETA),                   &! visc_m_blend
         arg_type(GH_FIELD, GH_WRITE,     WTHETA),                   &! visc_h_blend
         arg_type(GH_FIELD, GH_WRITE,     WTHETA),                   &! rhokm_bl
-        arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_6),&! rhokm_surf
+        arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_7),&! rhokm_surf
         arg_type(GH_FIELD, GH_WRITE,     W3),                       &! rhokh_bl
         arg_type(GH_FIELD, GH_WRITE,     WTHETA),                   &! ngstress_bl
         arg_type(GH_FIELD, GH_WRITE,     WTHETA),                   &! bq_bl
@@ -132,7 +135,7 @@ module bl_exp_kernel_mod
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_2),&! chr1p5m_tile
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_2),&! resfs_tile
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_2),&! canhc_tile
-        arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_7),&! tile_water_extract
+        arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_8),&! tile_water_extract
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! blend_height_tq
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! blend_height_uv
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! ustar
@@ -151,7 +154,7 @@ module bl_exp_kernel_mod
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! thv_flux
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! parcel_buoyancy
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! qsat_at_lcl
-        arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_8),&! bl_types
+        arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_9),&! bl_types
         arg_type(GH_FIELD, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_3) &! snow_unload_rate
         /)
     integer :: iterates_over = CELLS
@@ -207,6 +210,7 @@ contains
   !> @param[in]     soil_carbon_content  Soil carbon content
   !> @param[out]    soil_respiration     Soil respiration  (kg m-2 s-1)
   !> @param[out]    thermal_cond_wet_soil Thermal conductivity of wet soil (W m-1 K-1)
+  !> @param[in]     sea_ice_temperature  Bulk temperature of sea-ice (K)
   !> @param[in,out] tile_temperature     Surface tile temperatures
   !> @param[in]     tile_snow_mass       Snow mass on tiles (kg/m2)
   !> @param[in]     n_snow_layers        Number of snow layers on tiles
@@ -235,6 +239,7 @@ contains
   !> @param[in]     dmt_mphys            Microphysics total water increment
   !> @param[in]     sw_heating_rate      Shortwave radiation heating rate
   !> @param[in]     lw_heating_rate      Longwave radiation heating rate
+  !> @param[in]     ozone                Ozone field
   !> @param[in]     cf_bulk              Bulk cloud fraction
   !> @param[in,out] rh_crit              Critical rel humidity
   !> @param[out]    visc_m_blend         Blended BL-Smag diffusion coefficient for momentum
@@ -297,12 +302,15 @@ contains
   !> @param[in]     ndf_pft              Number of DOFs per cell for PFTs
   !> @param[in]     undf_pft             Number of total DOFs for PFTs
   !> @param[in]     map_pft              Dofmap for cell for PFTs
-  !> @param[in]     ndf_soil             Number of DOFs per cell for soil levels
-  !> @param[in]     undf_soil            Number of total DOFs for soil levels
-  !> @param[in]     map_soil             Dofmap for cell for soil levels
+  !> @param[in]     ndf_sice             Number of DOFs per cell for sice
+  !> @param[in]     undf_sice            Number of total DOFs for sice
+  !> @param[in]     map_sice             Dofmap for cell for sice
   !> @param[in]     ndf_snow             Number of DOFs per cell for snow
   !> @param[in]     undf_snow            Number of total DOFs for snow
   !> @param[in]     map_snow             Dofmap for cell for snow
+  !> @param[in]     ndf_soil             Number of DOFs per cell for soil levels
+  !> @param[in]     undf_soil            Number of total DOFs for soil levels
+  !> @param[in]     map_soil             Dofmap for cell for soil levels
   !> @param[in]     ndf_surf             Number of DOFs per cell for surface variables
   !> @param[in]     undf_surf            Number of unique DOFs for surface variables
   !> @param[in]     map_surf             Dofmap for the cell at the base of the column for surface variables
@@ -351,6 +359,7 @@ contains
                          soil_carbon_content,                   &
                          soil_respiration,                      &
                          thermal_cond_wet_soil,                 &
+                         sea_ice_temperature,                   &
                          tile_temperature,                      &
                          tile_snow_mass,                        &
                          n_snow_layers,                         &
@@ -379,6 +388,7 @@ contains
                          dmt_mphys,                             &
                          sw_heating_rate,                       &
                          lw_heating_rate,                       &
+                         ozone,                                 &
                          cf_bulk,                               &
                          rh_crit,                               &
                          visc_m_blend,                          &
@@ -437,8 +447,9 @@ contains
                          map_2d,                                &
                          ndf_tile, undf_tile, map_tile,         &
                          ndf_pft, undf_pft, map_pft,            &
-                         ndf_soil, undf_soil, map_soil,         &
+                         ndf_sice, undf_sice, map_sice,         &
                          ndf_snow, undf_snow, map_snow,         &
+                         ndf_soil, undf_soil, map_soil,         &
                          ndf_surf, undf_surf, map_surf,         &
                          ndf_smtile, undf_smtile, map_smtile,   &
                          ndf_bl, undf_bl, map_bl)
@@ -458,6 +469,7 @@ contains
     use atm_fields_bounds_mod, only: tdims
     use atm_step_local, only: dim_cs1, dim_cs2, land_pts_trif, npft_trif,    &
          co2_dim_len, co2_dim_row
+    use c_kappai, only: kappai, de
     use cv_run_mod, only: i_convection_vn, i_convection_vn_6a,               &
                           cldbase_opt_dp, cldbase_opt_md
     use dust_parameters_mod, only: ndiv, ndivh
@@ -471,6 +483,7 @@ contains
     use timestep_mod, only: timestep
 
     ! spatially varying fields used from modules
+    use fluxes, only: sw_sea, sw_sicat
     use jules_internal, only: unload_backgrnd_pft
     use level_heights_mod, only: r_theta_levels, r_rho_levels, eta_theta_levels
     use ozone_vars, only: o3_gb
@@ -505,6 +518,8 @@ contains
     integer(kind=i_def), intent(in) :: map_pft(ndf_pft)
     integer(kind=i_def), intent(in) :: ndf_soil, undf_soil
     integer(kind=i_def), intent(in) :: map_soil(ndf_soil)
+    integer(kind=i_def), intent(in) :: ndf_sice, undf_sice
+    integer(kind=i_def), intent(in) :: map_sice(ndf_sice)
     integer(kind=i_def), intent(in) :: ndf_snow, undf_snow
     integer(kind=i_def), intent(in) :: map_snow(ndf_snow)
     integer(kind=i_def), intent(in) :: ndf_smtile, undf_smtile
@@ -546,7 +561,7 @@ contains
                                                            dtl_mphys,dmt_mphys,&
                                                            sw_heating_rate,    &
                                                            lw_heating_rate,    &
-                                                           cf_bulk
+                                                           cf_bulk, ozone
 
     real(kind=r_def), dimension(undf_2d), intent(inout) :: zh_2d,              &
                                                            z0msea_2d
@@ -585,6 +600,8 @@ contains
     real(kind=r_def), intent(in) :: leaf_area_index(undf_pft)
     real(kind=r_def), intent(in) :: canopy_height(undf_pft)
 
+    real(kind=r_def), intent(in) :: sea_ice_temperature(undf_sice)
+
     real(kind=r_def), intent(in) :: sd_orog_2d(undf_2d)
     real(kind=r_def), intent(in) :: peak_to_trough_orog(undf_2d)
     real(kind=r_def), intent(in) :: silhouette_area_orog(undf_2d)
@@ -603,11 +620,11 @@ contains
     real(kind=r_def), intent(out) :: soil_respiration(undf_2d)
     real(kind=r_def), intent(out) :: thermal_cond_wet_soil(undf_2d)
 
-    real(kind=r_def), intent(in) :: soil_moist_wilt(undf_soil)
-    real(kind=r_def), intent(in) :: soil_moist_crit(undf_soil)
-    real(kind=r_def), intent(in) :: soil_moist_sat(undf_soil)
-    real(kind=r_def), intent(in) :: soil_suction_sat(undf_soil)
-    real(kind=r_def), intent(in) :: clapp_horn_b(undf_soil)
+    real(kind=r_def), intent(in) :: soil_moist_wilt(undf_2d)
+    real(kind=r_def), intent(in) :: soil_moist_crit(undf_2d)
+    real(kind=r_def), intent(in) :: soil_moist_sat(undf_2d)
+    real(kind=r_def), intent(in) :: soil_suction_sat(undf_2d)
+    real(kind=r_def), intent(in) :: clapp_horn_b(undf_2d)
     real(kind=r_def), intent(in) :: soil_temperature(undf_soil)
     real(kind=r_def), intent(in) :: soil_moisture(undf_soil)
     real(kind=r_def), intent(in) :: unfrozen_soil_moisture(undf_soil)
@@ -677,7 +694,7 @@ contains
          qsat_lcl, delthvu, dtstar_sice, alpha1_sea, ashtf_prime_sea,        &
          bl_type_1, bl_type_2, bl_type_3, bl_type_4, bl_type_5, bl_type_6,   &
          bl_type_7, chr1p5m_sice, flandg, rhokh_sea, u_0_px, u_s, uw0,       &
-         v_0_px, vw0, z0hssi, z0mssi, zhnl
+         v_0_px, vw0, z0hssi, z0mssi, zhnl, ti_sice
 
     ! single level integer fields
     integer(i_um), dimension(row_length,rows) :: ntml, ntpar, k_blend_tq,    &
@@ -688,8 +705,8 @@ contains
 
     ! fields on sea-ice categories
     real(r_um), dimension(row_length,rows,nice_use) ::                       &
-         tstar_sice_sicat, fqw_ice, ftl_ice, ice_fract_ncat, alpha1_sice,    &
-         ashtf_prime, rhokh_sice
+         tstar_sice_ncat, fqw_ice, ftl_ice, ice_fract_ncat, alpha1_sice,     &
+         ashtf_prime, rhokh_sice, k_sice_ncat, ti_sice_ncat
 
     ! field on land points and soil levels
     real(r_um), dimension(land_field,sm_levels) :: soil_layer_moisture,      &
@@ -748,7 +765,7 @@ contains
     real(r_um), dimension(row_length,rows,0:nlayers) :: conv_prog_precip
 
     real(r_um), dimension(row_length,rows) ::                                &
-         ti_sicat, z0h_scm, z0m_scm, soil_clay, soil_sand, dust_mrel1,       &
+         z0h_scm, z0m_scm, soil_clay, soil_sand, dust_mrel1,                 &
          dust_mrel2, dust_mrel3, dust_mrel4, dust_mrel5, dust_mrel6,         &
          zhpar_shcu, flandfac, fseafac, cdr10m, t1_sd, q1_sd, qcl_inv_top,   &
          w_max, deep_flag, past_precip, past_conv_ht, ql_ad, cin_undilute,   &
@@ -765,8 +782,7 @@ contains
     logical, dimension(row_length,rows) :: no_cumulus, l_congestus,          &
                                            l_congestus2, l_mid
 
-    real(r_um), dimension(row_length,rows,nice_use) ::                       &
-         k_sice_sicat, ti_cat_sicat, radnet_sice
+    real(r_um), dimension(row_length,rows,nice_use) :: radnet_sice
 
     real(r_um), dimension(row_length,rows,ndiv) :: dust_flux, r_b_dust
 
@@ -906,18 +922,32 @@ contains
     ! Sea-ice temperatures
     i_sice = 0
     tstar_sice = 0.0_r_um
-    do i = first_sea_ice_tile, first_sea_ice_tile + n_sea_ice_tile - 1
-      i_sice = i_sice + 1
-      tstar_sice_sicat(1, 1, i_sice) = real(tile_temperature(map_tile(i)), r_um)
-      tstar_sice = tstar_sice &
-                 + ice_fract_ncat(1,1,i_sice) * tstar_sice_sicat(1,1,i_sice)
-    end do
+    if (ice_fract(1, 1) > 0.0_r_um) then
+      do i = first_sea_ice_tile, first_sea_ice_tile + n_sea_ice_tile - 1
+        i_sice = i_sice + 1
+        tstar_sice_ncat(1, 1, i_sice) = real(tile_temperature(map_tile(i)), r_um)
+        tstar_sice = tstar_sice &
+                   + ice_fract_ncat(1,1,i_sice) * tstar_sice_ncat(1,1,i_sice) &
+                   / ice_fract
+      end do
+    end if
 
     ! Sea & Sea-ice temperature
     tstar_ssi = (1.0_r_um - ice_fract) * tstar_sea + ice_fract * tstar_sice
 
     ! Grid-box mean surface temperature
     tstar = flandg * tstar_land + (1.0_r_um - flandg) * tstar_ssi
+
+    ! Sea-ice conductivity and bulk temperature
+    ti_sice = 0.0_r_um
+    if (ice_fract(1, 1) > 0.0_r_um) then
+      do i = 1, n_sea_ice_tile
+        k_sice_ncat(1, 1, i) = 2.0_r_um * kappai / de
+        ti_sice_ncat(1, 1, i) = real(sea_ice_temperature(map_sice(i)), r_um)
+        ti_sice = ti_sice &
+                + ice_fract_ncat(1,1,i) * ti_sice_ncat(1,1,i) / ice_fract
+      end do
+    end if
 
     do i_pft = 1, npft
       ! Leaf area index
@@ -937,15 +967,15 @@ contains
 
     do i = 1, sm_levels
       ! Volumetric soil moisture at wilting point (smvcwt_soilt)
-      smvcwt_soilt(1, i) = real(soil_moist_wilt(map_soil(i)), r_um)
+      smvcwt_soilt(1, i) = real(soil_moist_wilt(map_2d(1)), r_um)
       ! Volumetric soil moisture at critical point (smvccl_soilt)
-      smvccl_soilt(1, i) = real(soil_moist_crit(map_soil(i)), r_um)
+      smvccl_soilt(1, i) = real(soil_moist_crit(map_2d(1)), r_um)
       ! Volumetric soil moisture at saturation (smvcst_soilt)
-      smvcst_soilt(1, i) = real(soil_moist_sat(map_soil(i)), r_um)
+      smvcst_soilt(1, i) = real(soil_moist_sat(map_2d(1)), r_um)
       ! Saturated soil water suction (sathh_soilt)
-      sathh_soilt(1, 1, i) = real(soil_suction_sat(map_soil(i)), r_um)
+      sathh_soilt(1, 1, i) = real(soil_suction_sat(map_2d(1)), r_um)
       ! Clapp and Hornberger b coefficient (bexp_soilt)
-      bexp_soilt(1, 1, i) = real(clapp_horn_b(map_soil(i)), r_um)
+      bexp_soilt(1, 1, i) = real(clapp_horn_b(map_2d(1)), r_um)
       ! Soil temperature (t_soil_soilt)
       t_soil_soilt(1, i) = real(soil_temperature(map_soil(i)), r_um)
       ! Soil moisture content (kg m-2, soil_layer_moisture)
@@ -963,7 +993,8 @@ contains
     cs_pool_gb_um = real(soil_carbon_content(map_2d(1)), r_um)
 
     ! Soil ancils dependant on smvcst_soilt (soil moisture saturation limit)
-    if( smvcst_soilt(1,1) > 0.0_r_um )then
+    if ( smvcst_soilt(1,1) > 0.0_r_um .and. &
+         smvcst_soilt(1,1) < 1.0e10_r_um ) then
       l_soil_point = .true.
     else
       l_soil_point = .false.
@@ -981,11 +1012,23 @@ contains
                             sw_up_tile(map_tile(i)), r_um)
     end do
 
+    ! Net SW on open sea
+    sw_sea(1) = real(sw_down_surf(map_2d(1)) - &
+                     sw_up_tile(map_tile(first_sea_tile)), r_um)
+
+    ! Net SW on sea-ice
+    i_sice = 0
+    do i = first_sea_ice_tile, first_sea_ice_tile + n_sea_ice_tile - 1
+      i_sice = i_sice + 1
+      sw_sicat(1, i_sice) = real(sw_down_surf(map_2d(1)) - &
+                                 sw_up_tile(map_tile(i)), r_um)
+    end do
+
     ! photosynthetically active downwelling SW radiation
     photosynth_act_rad = real(sw_down_surf_blue(map_2d(1)), r_um)
 
     ! Ozone
-    o3_gb = 0.0_r_um
+    o3_gb = real(ozone(map_wth(1)), r_um)
 
     ! Carbon dioxide
     co2 = co2_mmr
@@ -1199,7 +1242,7 @@ contains
          hcon_soilt, smvccl_soilt, smvcwt_soilt, smvcst_soilt,          &
          sthf_soilt, sthu_soilt, sil_orog_land_gb,                      &
     !-------------------------------------------------------------------------
-         ho2r2_orog_gb, sd_orog, ice_fract_ncat, k_sice_sicat,          &
+         ho2r2_orog_gb, sd_orog, ice_fract_ncat, k_sice_ncat,           &
          land_index, photosynth_act_rad,                                &
          soil_clay,soil_sand,dust_mrel1,dust_mrel2,                     &
          dust_mrel3,dust_mrel4,dust_mrel5,dust_mrel6,                   &
@@ -1214,14 +1257,14 @@ contains
     !     IN: input from the wave model
          charnock_w,                                                    &
     !     IN everything not covered so far
-         t_soil_soilt, ti_sicat,                                        &
-         ti_cat_sicat,tstar,zh_prev,ddmfx,bulk_cloud_fraction,zhpar,zlcl, &
+         t_soil_soilt, ti_sice,                                           &
+         ti_sice_ncat,tstar,zh_prev,ddmfx,bulk_cloud_fraction,zhpar,zlcl, &
     !     IN SCM namelist data
          L_spec_z0, z0m_scm, z0h_scm, flux_e, flux_h, ustar_in,         &
     !     SCM diagnostics and STASH
          nSCMDpkgs, L_SCMDiags, BL_diag, sf_diag,                       &
     !     INOUT data
-         gs_gb,z0msea,w,etadot,tstar_sea,tstar_sice_sicat,zh,dzh,       &
+         gs_gb,z0msea,w,etadot,tstar_sea,tstar_sice_ncat,zh,dzh,        &
          cumulus, ntml,ntpar,l_shallow,                                 &
     !     INOUT additional variables for JULES
          g_leaf_acc_pft,npp_acc_pft,resp_w_acc_pft,resp_s_acc_gb_um,    &
@@ -1374,7 +1417,7 @@ contains
     do i = first_sea_ice_tile, first_sea_ice_tile + n_sea_ice_tile - 1
       i_sice = i_sice + 1
       ! sea-ice temperature
-      tile_temperature(map_tile(i)) = real(tstar_sice_sicat(1,1,i_sice), r_def)
+      tile_temperature(map_tile(i)) = real(tstar_sice_ncat(1,1,i_sice), r_def)
       ! sea-ice heat flux
       tile_heat_flux(map_tile(i)) = real(ftl_ice(1,1,i_sice), r_def)
       ! sea-ice moisture flux

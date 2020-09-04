@@ -28,7 +28,7 @@ module jules_extra_kernel_mod
   !>
   type, public, extends(kernel_type) :: jules_extra_kernel_type
     private
-    type(arg_type) :: meta_args(52) = (/                             &
+    type(arg_type) :: meta_args(50) = (/                             &
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! ls_rain
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! conv_rain
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! ls_snow
@@ -37,16 +37,15 @@ module jules_extra_kernel_mod
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_3), & ! leaf_area_index
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_3), & ! canopy_height
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_3), & ! snow_unload_rate
-        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_4), & ! soil_moist_wilt
-        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_4), & ! soil_moist_crit
-        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_4), & ! soil_moist_sat
-        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_4), & ! soil_cond_sat
-        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_4), & ! soil_thermal_cap
+        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! soil_moist_wilt
+        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! soil_moist_crit
+        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! soil_moist_sat
+        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! soil_cond_sat
+        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! soil_thermal_cap
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! soil_thermal_cond
-        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_4), & ! soil_suction_sat
-        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_4), & ! clapp_horn_b
+        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! soil_suction_sat
+        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! clapp_horn_b
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! soil_carbon_content
-        arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! decrease_sath_cond
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! mean_topog_index
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! a_sat_frac
         arg_type(GH_FIELD, GH_READ,      ANY_DISCONTINUOUS_SPACE_1), & ! c_sat_frac
@@ -78,7 +77,6 @@ module jules_extra_kernel_mod
         arg_type(GH_FIELD, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_5), & ! snow_layer_rgrain
         arg_type(GH_FIELD, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_2), & ! total_snowmelt
         arg_type(GH_FIELD, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1), & ! soil_sat_frac
-        arg_type(GH_FIELD, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1), & ! soil_wet_frac
         arg_type(GH_FIELD, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1), & ! water_table
         arg_type(GH_FIELD, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1)  & ! wetness_under_soil
         /)
@@ -115,7 +113,6 @@ contains
   !> @param[in]     soil_suction_sat       Saturated soil water suction (m)
   !> @param[in]     clapp_horn_b           Clapp and Hornberger b coefficient
   !> @param[in]     soil_carbon_content    Soil carbon content (kg m-2)
-  !> @param[in]     decrease_sath_cond     Decrease in saturated hydraulic conductivity with depth (m-1)
   !> @param[in]     mean_topog_index       Mean topographic index
   !> @param[in]     a_sat_frac             a gridbox saturated fraction
   !> @param[in]     c_sat_frac             c gridbox saturated fraction
@@ -147,7 +144,6 @@ contains
   !> @param[in,out] snow_layer_rgrain      Grain radius of snow layer (microns)
   !> @param[in,out] total_snowmelt         Surface plus canopy snowmelt rate (kg m-2 s-1)
   !> @param[in,out] soil_sat_frac          Soil saturated fraction
-  !> @param[in,out] soil_wet_frac          Soil wet fraction
   !> @param[in,out] water_table            Water table depth (m)
   !> @param[in,out] wetness_under_soil     Soil wetness below soil column
   !> @param[in]     ndf_2d                 Total DOFs per cell for 2D fields
@@ -184,7 +180,6 @@ contains
                soil_suction_sat,           &
                clapp_horn_b,               &
                soil_carbon_content,        &
-               decrease_sath_cond,         &
                mean_topog_index,           &
                a_sat_frac,                 &
                c_sat_frac,                 &
@@ -216,7 +211,6 @@ contains
                snow_layer_rgrain,          &
                total_snowmelt,             &
                soil_sat_frac,              &
-               soil_wet_frac,              &
                water_table,                &
                wetness_under_soil,         &
                ndf_2d,                     &
@@ -241,6 +235,7 @@ contains
     !---------------------------------------
     use jules_control_init_mod, only: &
          nsurft => n_land_tile, n_land_tile
+    use jules_physics_init_mod, only: decrease_sath_cond
 
     ! Module imports for surf_couple_extra JULESvn5.4
     use ancil_info, only: nsoilt, l_soil_point, soil_pts, lice_pts
@@ -295,18 +290,17 @@ contains
     real(kind=r_def), intent(in)    :: canopy_height(undf_pft)
     real(kind=r_def), intent(in)    :: snow_unload_rate(undf_pft)
 
-    real(kind=r_def), intent(in)    :: soil_moist_wilt(undf_soil)
-    real(kind=r_def), intent(in)    :: soil_moist_crit(undf_soil)
-    real(kind=r_def), intent(in)    :: soil_moist_sat(undf_soil)
-    real(kind=r_def), intent(in)    :: soil_cond_sat(undf_soil)
-    real(kind=r_def), intent(in)    :: soil_thermal_cap(undf_soil)
-    real(kind=r_def), intent(in)    :: soil_suction_sat(undf_soil)
-    real(kind=r_def), intent(in)    :: clapp_horn_b(undf_soil)
+    real(kind=r_def), intent(in)    :: soil_moist_wilt(undf_2d)
+    real(kind=r_def), intent(in)    :: soil_moist_crit(undf_2d)
+    real(kind=r_def), intent(in)    :: soil_moist_sat(undf_2d)
+    real(kind=r_def), intent(in)    :: soil_cond_sat(undf_2d)
+    real(kind=r_def), intent(in)    :: soil_thermal_cap(undf_2d)
+    real(kind=r_def), intent(in)    :: soil_suction_sat(undf_2d)
+    real(kind=r_def), intent(in)    :: clapp_horn_b(undf_2d)
     real(kind=r_def), intent(in)    :: water_extraction(undf_soil)
 
     real(kind=r_def), intent(in)    :: soil_thermal_cond(undf_2d)
     real(kind=r_def), intent(in)    :: soil_carbon_content(undf_2d)
-    real(kind=r_def), intent(in)    :: decrease_sath_cond(undf_2d)
     real(kind=r_def), intent(in)    :: mean_topog_index(undf_2d)
     real(kind=r_def), intent(in)    :: a_sat_frac(undf_2d)
     real(kind=r_def), intent(in)    :: c_sat_frac(undf_2d)
@@ -337,7 +331,6 @@ contains
     real(kind=r_def), intent(inout) :: frozen_soil_moisture(undf_soil)
 
     real(kind=r_def), intent(inout) :: soil_sat_frac(undf_2d)
-    real(kind=r_def), intent(inout) :: soil_wet_frac(undf_2d)
     real(kind=r_def), intent(inout) :: water_table(undf_2d)
     real(kind=r_def), intent(inout) :: wetness_under_soil(undf_2d)
 
@@ -508,7 +501,7 @@ contains
     cs_ch4_soilt = cs_pool_gb_um
 
     ! Decrease in saturated conductivity of soil with depth
-    fexp_soilt = real(decrease_sath_cond(map_2d(1)), r_um)
+    fexp_soilt = decrease_sath_cond
 
     ! Mean grid box topographic index
     ti_mean_soilt = real(mean_topog_index(map_2d(1)), r_um)
@@ -535,22 +528,22 @@ contains
     end do
 
     ! Soil ancillaries and prognostics
-    satcon_soilt(1, 1, 0) = real(soil_cond_sat(map_soil(1)), r_um)
+    satcon_soilt(1, 1, 0) = real(soil_cond_sat(map_2d(1)), r_um)
     do i = 1, sm_levels
     ! Volumetric soil moisture at wilting point (smvcwt_soilt)
-      smvcwt_soilt(1, 1, i) = real(soil_moist_wilt(map_soil(i)), r_um)
+      smvcwt_soilt(1, 1, i) = real(soil_moist_wilt(map_2d(1)), r_um)
     ! Volumetric soil moisture at critical point (smvccl_soilt)
-      smvccl_soilt(1, 1, i) = real(soil_moist_crit(map_soil(i)), r_um)
+      smvccl_soilt(1, 1, i) = real(soil_moist_crit(map_2d(1)), r_um)
     ! Volumetric soil moisture at saturation (smvcst_soilt)
-      smvcst_soilt(1, 1, i) = real(soil_moist_sat(map_soil(i)), r_um)
+      smvcst_soilt(1, 1, i) = real(soil_moist_sat(map_2d(1)), r_um)
     ! Saturated soil conductivity (satcon_soilt)
-      satcon_soilt(1, 1, i) = real(soil_cond_sat(map_soil(i)), r_um)
+      satcon_soilt(1, 1, i) = real(soil_cond_sat(map_2d(1)), r_um)
     ! Soil thermal capacity (hcap_soilt)
-      hcap_soilt(1, 1, i) = real(soil_thermal_cap(map_soil(i)), r_um)
+      hcap_soilt(1, 1, i) = real(soil_thermal_cap(map_2d(1)), r_um)
     ! Saturated soil water suction (sathh_soilt)
-      sathh_soilt(1, 1, i) = real(soil_suction_sat(map_soil(i)), r_um)
+      sathh_soilt(1, 1, i) = real(soil_suction_sat(map_2d(1)), r_um)
     ! Clapp and Hornberger b coefficient (bexp_soilt)
-      bexp_soilt(1, 1, i) = real(clapp_horn_b(map_soil(i)), r_um)
+      bexp_soilt(1, 1, i) = real(clapp_horn_b(map_2d(1)), r_um)
     ! Soil temperature (t_soil_soilt)
       t_soil_soilt(1, 1, i) = real(soil_temperature(map_soil(i)), r_um)
     ! Soil moisture content (kg m-2, soil_layer_moisture/smcl_soilt)
@@ -569,7 +562,8 @@ contains
 
     ! Soil and land ice ancils dependant on smvcst_soilt
     ! (soil moisture saturation limit)
-    if( smvcst_soilt(1, 1, 1) > 0.0_r_um )then
+    if ( smvcst_soilt(1, 1, 1) > 0.0_r_um .and. &
+         smvcst_soilt(1, 1, 1) < 1.0e10_r_um ) then
       soil_pts = 1
       soil_index = 1
       l_soil_point = .true.
@@ -629,9 +623,6 @@ contains
 
     ! Soil saturated fraction
     fsat_soilt = real(soil_sat_frac(map_2d(1)), r_um)
-
-    ! Soil wetness fraction
-    fwetl_soilt = real(soil_wet_frac(map_2d(1)), r_um)
 
     ! Water table depth
     zw_soilt = real(water_table(map_2d(1)), r_um)
@@ -743,9 +734,6 @@ contains
 
     ! Soil saturated fraction
     soil_sat_frac(map_2d(1)) = real(fsat_soilt(1,1), r_def)
-
-    ! Soil wetness fraction
-    soil_wet_frac(map_2d(1)) = real(fwetl_soilt(1,1), r_def)
 
     ! Water table depth
     water_table(map_2d(1)) = real(zw_soilt(1,1), r_def)

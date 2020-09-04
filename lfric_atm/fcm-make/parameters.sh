@@ -8,6 +8,6 @@ export jules_sources=
 export keys_atmos_extra=LFRIC=lfric
 export socrates_rev=um11.7
 export socrates_sources=
-export steplist="extract preprocess-atmos"
+export steplist="extract preprocess-atmos preprocess-recon"
 export um_rev=vn11.7
 export um_sources=

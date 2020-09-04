@@ -16,7 +16,8 @@ module bl_imp_kernel_mod
                                      ANY_DISCONTINUOUS_SPACE_3, &
                                      ANY_DISCONTINUOUS_SPACE_4, &
                                      ANY_DISCONTINUOUS_SPACE_5, &
-                                     ANY_DISCONTINUOUS_SPACE_6
+                                     ANY_DISCONTINUOUS_SPACE_6, &
+                                     ANY_DISCONTINUOUS_SPACE_7
   use section_choice_config_mod, only : cloud, cloud_um
   use cloud_config_mod,       only : scheme, scheme_smith, scheme_pc2
   use constants_mod,          only : i_def, i_um, r_def, r_um
@@ -40,7 +41,7 @@ module bl_imp_kernel_mod
   !>
   type, public, extends(kernel_type) :: bl_imp_kernel_type
     private
-    type(arg_type) :: meta_args(81) = (/                              &
+    type(arg_type) :: meta_args(83) = (/                              &
         arg_type(GH_INTEGER, GH_READ),                                &! outer
         arg_type(GH_FIELD,   GH_READ,      WTHETA),                   &! theta_in_wth
         arg_type(GH_FIELD,   GH_READ,      W3),                       &! wetrho_in_w3
@@ -62,11 +63,13 @@ module bl_imp_kernel_mod
         arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_3),&! canopy_height
         arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! peak_to_trough_orog
         arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! silhouette_area_orog
+        arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_4),&! sea_ice_thickness
+        arg_type(GH_FIELD,   GH_READWRITE, ANY_DISCONTINUOUS_SPACE_4),&! sea_ice_temperature
         arg_type(GH_FIELD,   GH_READWRITE, ANY_DISCONTINUOUS_SPACE_2),&! tile_temperature
         arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_2),&! tile_snow_mass
         arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_2),&! n_snow_layers
         arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_2),&! canopy_water
-        arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_4),&! soil_temperature
+        arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_5),&! soil_temperature
         arg_type(GH_FIELD,   GH_READWRITE, ANY_DISCONTINUOUS_SPACE_2),&! tile_heat_flux
         arg_type(GH_FIELD,   GH_READWRITE, ANY_DISCONTINUOUS_SPACE_2),&! tile_moisture_flux
         arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_2),&! sw_up_tile
@@ -75,7 +78,7 @@ module bl_imp_kernel_mod
         arg_type(GH_FIELD,   GH_WRITE,     ANY_DISCONTINUOUS_SPACE_2),&! snow_sublimation  (kg m-2 s-1)
         arg_type(GH_FIELD,   GH_WRITE,     ANY_DISCONTINUOUS_SPACE_2),&! surf_heat_flux (W m-2)
         arg_type(GH_FIELD,   GH_WRITE,     ANY_DISCONTINUOUS_SPACE_2),&! canopy_evap (kg m-2 s-1)
-        arg_type(GH_FIELD,   GH_WRITE,     ANY_DISCONTINUOUS_SPACE_4),&! water_extraction (kg m-2 s-1)
+        arg_type(GH_FIELD,   GH_WRITE,     ANY_DISCONTINUOUS_SPACE_5),&! water_extraction (kg m-2 s-1)
         arg_type(GH_FIELD,   GH_WRITE,     ANY_DISCONTINUOUS_SPACE_2),&! total_snowmelt (kg m-2 s-1)
         arg_type(GH_FIELD,   GH_WRITE,     WTHETA),                   &! dtheta_bl
         arg_type(GH_FIELD,   GH_INC,       W2),                       &! du_bl_w2
@@ -111,7 +114,7 @@ module bl_imp_kernel_mod
         arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_2),&! chr1p5m_tile
         arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_2),&! resfs_tile
         arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_2),&! canhc_tile
-        arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_5),&! tile_water_extract
+        arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_6),&! tile_water_extract
         arg_type(GH_FIELD,   GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1),&! z_lcl
         arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! inv_depth
         arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! qcl_at_inv_top
@@ -121,7 +124,7 @@ module bl_imp_kernel_mod
         arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! soil_moist_avail
         arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! zh_nonloc
         arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! zh_2d
-        arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_6) &! bl_types
+        arg_type(GH_FIELD,   GH_READ,      ANY_DISCONTINUOUS_SPACE_7) &! bl_types
         /)
     integer :: iterates_over = CELLS
   contains
@@ -159,6 +162,8 @@ contains
   !> @param[in]     canopy_height        Canopy height
   !> @param[in]     peak_to_trough_orog  Half of peak-to-trough height over root(2) of orography
   !> @param[in]     silhouette_area_orog Silhouette area of orography
+  !> @param[in]     sea_ice_thickness    Depth of sea-ice (m)
+  !> @param[in,out] sea_ice_temperature  Bulk temperature of sea-ice (K)
   !> @param[in,out] tile_temperature     Surface tile temperatures
   !> @param[in]     tile_snow_mass       Snow mass on tiles (kg/m2)
   !> @param[in]     n_snow_layers        Number of snow layers on tiles
@@ -237,6 +242,9 @@ contains
   !> @param[in]     ndf_pft              Number of DOFs per cell for PFTs
   !> @param[in]     undf_pft             Number of total DOFs for PFTs
   !> @param[in]     map_pft              Dofmap for cell for PFTs
+  !> @param[in]     ndf_sice             Number of DOFs per cell for sice levels
+  !> @param[in]     undf_sice            Number of total DOFs for sice levels
+  !> @param[in]     map_sice             Dofmap for cell for sice levels
   !> @param[in]     ndf_soil             Number of DOFs per cell for soil levels
   !> @param[in]     undf_soil            Number of total DOFs for soil levels
   !> @param[in]     map_soil             Dofmap for cell for soil levels
@@ -268,6 +276,8 @@ contains
                          canopy_height,                      &
                          peak_to_trough_orog,                &
                          silhouette_area_orog,               &
+                         sea_ice_thickness,                  &
+                         sea_ice_temperature,                &
                          tile_temperature,                   &
                          tile_snow_mass,                     &
                          n_snow_layers,                      &
@@ -342,6 +352,7 @@ contains
                          map_2d,                             &
                          ndf_tile, undf_tile, map_tile,      &
                          ndf_pft, undf_pft, map_pft,         &
+                         ndf_sice, undf_sice, map_sice,      &
                          ndf_soil, undf_soil, map_soil,      &
                          ndf_smtile, undf_smtile, map_smtile,&
                          ndf_bl, undf_bl, map_bl)
@@ -361,6 +372,7 @@ contains
     use atm_fields_bounds_mod, only: udims, vdims, udims_s, vdims_s,        &
          pdims
     use atm_step_local, only: dim_cs1, dim_cs2
+    use c_kappai, only: kappai, de
     use dust_parameters_mod, only: ndiv, ndivh
     use jules_sea_seaice_mod, only: nice_use
     use jules_surface_types_mod, only: npft, ntype, lake, nnvg
@@ -372,6 +384,7 @@ contains
     use rad_input_mod, only: co2_mmr
 
     ! spatially varying fields used from modules
+    use fluxes, only: sw_sicat
     use level_heights_mod, only: r_theta_levels, r_rho_levels, eta_theta_levels
     use prognostics, only: nsnow_surft
 
@@ -401,6 +414,8 @@ contains
     integer(kind=i_def), intent(in) :: map_tile(ndf_tile)
     integer(kind=i_def), intent(in) :: ndf_pft, undf_pft
     integer(kind=i_def), intent(in) :: map_pft(ndf_pft)
+    integer(kind=i_def), intent(in) :: ndf_sice, undf_sice
+    integer(kind=i_def), intent(in) :: map_sice(ndf_sice)
     integer(kind=i_def), intent(in) :: ndf_soil, undf_soil
     integer(kind=i_def), intent(in) :: map_soil(ndf_soil)
     integer(kind=i_def), intent(in) :: ndf_smtile, undf_smtile
@@ -465,6 +480,9 @@ contains
 
     real(kind=r_def), intent(in) :: leaf_area_index(undf_pft)
     real(kind=r_def), intent(in) :: canopy_height(undf_pft)
+
+    real(kind=r_def), intent(in) :: sea_ice_thickness(undf_sice)
+    real(kind=r_def), intent(inout) :: sea_ice_temperature(undf_sice)
 
     real(kind=r_def), intent(in) :: peak_to_trough_orog(undf_2d)
     real(kind=r_def), intent(in) :: silhouette_area_orog(undf_2d)
@@ -532,7 +550,7 @@ contains
     ! single level real fields
     real(r_um), dimension(row_length,rows) ::                                &
          p_star, lw_down, tstar, tstar_sea, zh, tstar_land, tstar_ssi,       &
-         dtstar_sea, ice_fract, tstar_sice, dtstar_sice, alpha1_sea,         &
+         dtstar_sea, ice_fract, tstar_sice, alpha1_sea,                      &
          ashtf_prime_sea, bl_type_1, bl_type_2, bl_type_3, bl_type_4,        &
          bl_type_5, bl_type_6, bl_type_7, chr1p5m_sice, flandg, rhokh_sea,   &
          u_s, z0hssi, z0mssi, zhnl, zlcl_mix, zlcl, dzh, qcl_inv_top
@@ -551,8 +569,9 @@ contains
 
     ! fields on sea-ice categories
     real(r_um), dimension(row_length,rows,nice_use) ::                       &
-         tstar_sice_sicat, fqw_ice, ftl_ice, ice_fract_ncat, alpha1_sice,    &
-         ashtf_prime, rhokh_sice
+         tstar_sice_ncat, fqw_ice, ftl_ice, ice_fract_ncat, alpha1_sice,     &
+         ashtf_prime, rhokh_sice, k_sice_ncat, ti_sice_ncat, di_sice_ncat,   &
+         dtstar_sice
 
     ! field on land points and soil levels
     real(r_um), dimension(land_field,sm_levels) :: t_soil_soilt, ext
@@ -602,7 +621,7 @@ contains
 
     real(r_um), dimension(row_length,rows,0:nlayers,tr_vars) :: free_tracers
 
-    real(r_um), dimension(row_length,rows) :: ti_sicat,                      &
+    real(r_um), dimension(row_length,rows) :: ti_sice,                       &
          xx_cos_theta_latitude, ls_rain, ls_snow, conv_rain, conv_snow,      &
          co2_emits, co2flux, tscrndcl_ssi, tstbtrans,                        &
          sum_eng_fluxes, sum_moist_flux, drydep2, olr, surf_ht_flux_land,    &
@@ -618,8 +637,7 @@ contains
 
     integer(i_um), dimension(row_length,rows) :: ccb0, cct0, kent, kent_dsc
 
-    real(r_um), dimension(row_length,rows,nice_use) ::                       &
-         k_sice_sicat, ti_cat_sicat, radnet_sice, di_ncat_sicat
+    real(r_um), dimension(row_length,rows,nice_use) :: radnet_sice
 
     real(r_um), dimension(row_length,rows,ndiv) :: dust_flux, r_b_dust
 
@@ -778,22 +796,32 @@ contains
     ! Sea-ice temperatures
     i_sice = 0
     tstar_sice = 0.0_r_um
-    do i = first_sea_ice_tile, first_sea_ice_tile + n_sea_ice_tile - 1
-      i_sice = i_sice + 1
-      tstar_sice_sicat(1, 1, i_sice) = real(tile_temperature(map_tile(i)), r_um)
-      tstar_sice = tstar_sice &
-                 + ice_fract_ncat(1,1,i_sice) * tstar_sice_sicat(1,1,i_sice)
-      ! sea-ice heat flux
-      ftl_ice(1,1,i_sice) = real(tile_heat_flux(map_tile(i)), r_um)
-      ! sea-ice moisture flux
-      fqw_ice(1,1,i_sice) = real(tile_moisture_flux(map_tile(i)), r_um)
-    end do
+    if (ice_fract(1, 1) > 0.0_r_um) then
+      do i = first_sea_ice_tile, first_sea_ice_tile + n_sea_ice_tile - 1
+        i_sice = i_sice + 1
+        tstar_sice_ncat(1, 1, i_sice) = real(tile_temperature(map_tile(i)), r_um)
+        tstar_sice = tstar_sice &
+                   + ice_fract_ncat(1,1,i_sice) * tstar_sice_ncat(1,1,i_sice) &
+                   / ice_fract
+        ! sea-ice heat flux
+        ftl_ice(1,1,i_sice) = real(tile_heat_flux(map_tile(i)), r_um)
+        ! sea-ice moisture flux
+        fqw_ice(1,1,i_sice) = real(tile_moisture_flux(map_tile(i)), r_um)
+      end do
+    end if
 
     ! Sea & Sea-ice temperature
     tstar_ssi = (1.0_r_um - ice_fract) * tstar_sea + ice_fract * tstar_sice
 
     ! Grid-box mean surface temperature
     tstar = flandg * tstar_land + (1.0_r_um - flandg) * tstar_ssi
+
+    ! Sea-ice conductivity, bulk temperature and thickness
+    do i = 1, n_sea_ice_tile
+      k_sice_ncat(1, 1, i) = 2.0_r_um * kappai / de
+      ti_sice_ncat(1, 1, i) = real(sea_ice_temperature(map_sice(i)), r_um)
+      di_sice_ncat(1, 1, i) = real(sea_ice_thickness(map_sice(i)), r_um)
+    end do
 
     do i_pft = 1, npft
       ! Leaf area index
@@ -814,6 +842,14 @@ contains
     do i = 1, n_land_tile
       sw_surft(1, i) = real(sw_down_surf(map_2d(1)) - &
                             sw_up_tile(map_tile(i)), r_um)
+    end do
+
+    ! Net SW on sea-ice
+    i_sice = 0
+    do i = first_sea_ice_tile, first_sea_ice_tile + n_sea_ice_tile - 1
+      i_sice = i_sice + 1
+      sw_sicat(1, i_sice) = real(sw_down_surf(map_2d(1)) - &
+                                 sw_up_tile(map_tile(i)), r_um)
     end do
 
     ! Carbon dioxide
@@ -976,9 +1012,9 @@ contains
       i_sice = i_sice + 1
       alpha1_sice(1,1,i_sice) = alpha1_tile(map_tile(i))
       ashtf_prime(1,1,i_sice) = ashtf_prime_tile(map_tile(i))
-      rhokh_sice(1,1,1) = rhokh_tile(map_tile(i))
+      rhokh_sice(1,1,i_sice) = rhokh_tile(map_tile(i))
+      dtstar_sice(1,1,i_sice) = dtstar_tile(map_tile(i))
     end do
-    dtstar_sice(1,1) = dtstar_tile(map_tile(first_sea_ice_tile))
     z0hssi(1,1) = z0h_tile(map_tile(first_sea_ice_tile))
     z0mssi(1,1) = z0m_tile(map_tile(first_sea_ice_tile))
     chr1p5m_sice(1,1) = chr1p5m_tile(map_tile(first_sea_ice_tile))
@@ -1064,7 +1100,7 @@ contains
           , exner_theta_levels                                          &
     ! IN ancillary fields and fields needed to be kept from tstep to tstep
           , sil_orog_land_gb, ho2r2_orog_gb                             &
-          , ice_fract, di_ncat_sicat, ice_fract_ncat, k_sice_sicat      &
+          , ice_fract, di_sice_ncat, ice_fract_ncat, k_sice_ncat        &
           , u_0, v_0, land_index, cca_3d, lcbase, ccb0, cct0            &
           , ls_rain, ls_snow, conv_rain, conv_snow                      &
     ! IN variables required from BDY_LAYR
@@ -1100,10 +1136,10 @@ contains
           , STASHwork3, STASHwork9                                      &
     ! SCM Diagnostics (dummy in full UM) & BL diags
           , nSCMDpkgs, L_SCMDiags, bl_diag, sf_diag                     &
-    ! INOUT (Note ti_cat_sicat and ti_sicat are IN only if l_sice_multilayers=T)
+    ! INOUT (Note ti_sice_ncat and ti_sice are IN if l_sice_multilayers=T)
           , TScrnDcl_SSI, TScrnDcl_surft, tStbTrans                     &
           , cca0, fqw, ftl, taux, tauy, rhokh                           &
-          , fqw_ice,ftl_ice,dtstar_surft,dtstar_sea,dtstar_sice,ti_cat_sicat &
+          , fqw_ice,ftl_ice,dtstar_surft,dtstar_sea,dtstar_sice,ti_sice_ncat &
           , area_cloud_fraction, bulk_cloud_fraction                    &
           , t_latest, q_latest, qcl_latest, qcf_latest                  &
           , cf_latest, cfl_latest, cff_latest                           &
@@ -1120,13 +1156,13 @@ contains
           , co2, ozone_tracer                                           &
     ! INOUT additional variables for JULES
           , tstar_surft, fqw_surft, epot_surft, ftl_surft               &
-          , radnet_sice,olr,tstar_sice_sicat,tstar_ssi                  &
+          , radnet_sice,olr,tstar_sice_ncat,tstar_ssi                   &
           , tstar_sea,taux_land,taux_ssi,tauy_land,tauy_ssi,Error_code  &
     ! OUT fields
           , surf_ht_flux_land, zlcl_mix                                 &
           , theta_star_surf, qv_star_surf                               &
     ! OUT additional variables for JULES
-          , tstar, ti_sicat, ext, snowmelt,tstar_land,tstar_sice, ei_surft &
+          , tstar, ti_sice, ext, snowmelt,tstar_land,tstar_sice, ei_surft &
           , ecan_surft, melt_surft, surf_htf_surft                      &
     ! OUT fields for coupling to the wave model
           , uwind_wav, vwind_wav                                        &
@@ -1189,22 +1225,30 @@ contains
     ! Sea-ice temperatures
     i_sice = 0
     tstar_sice = 0.0_r_um
-    do i = first_sea_ice_tile, first_sea_ice_tile + n_sea_ice_tile - 1
-      i_sice = i_sice + 1
-      tstar_sice_sicat(1, 1, i_sice) = real(tile_temperature(map_tile(i)), r_um)
-      tstar_sice = tstar_sice &
-                 + ice_fract_ncat(1,1,i_sice) * tstar_sice_sicat(1,1,i_sice)
-      ! sea-ice heat flux
-      ftl_ice(1,1,i_sice) = real(tile_heat_flux(map_tile(i)), r_um)
-      ! sea-ice moisture flux
-      fqw_ice(1,1,i_sice) = real(tile_moisture_flux(map_tile(i)), r_um)
-    end do
+    if (ice_fract(1, 1) > 0.0_r_um) then
+      do i = first_sea_ice_tile, first_sea_ice_tile + n_sea_ice_tile - 1
+        i_sice = i_sice + 1
+        tstar_sice_ncat(1, 1, i_sice) = real(tile_temperature(map_tile(i)), r_um)
+        tstar_sice = tstar_sice &
+                   + ice_fract_ncat(1,1,i_sice) * tstar_sice_ncat(1,1,i_sice) &
+                   / ice_fract
+        ! sea-ice heat flux
+        ftl_ice(1,1,i_sice) = real(tile_heat_flux(map_tile(i)), r_um)
+        ! sea-ice moisture flux
+        fqw_ice(1,1,i_sice) = real(tile_moisture_flux(map_tile(i)), r_um)
+      end do
+    end if
 
     ! Sea & Sea-ice temperature
     tstar_ssi = (1.0_r_um - ice_fract) * tstar_sea + ice_fract * tstar_sice
 
     ! Grid-box mean surface temperature
     tstar = flandg * tstar_land + (1.0_r_um - flandg) * tstar_ssi
+
+    ! Sea-ice conductivity, bulk temperature and thickness
+    do i = 1, n_sea_ice_tile
+      ti_sice_ncat(1, 1, i) = real(sea_ice_temperature(map_sice(i)), r_um)
+    end do
 
     ! Things passed from other parametrization schemes on this timestep
 
@@ -1244,7 +1288,11 @@ contains
 
     dtstar_sea(1,1) = dtstar_tile(map_tile(first_sea_tile))
 
-    dtstar_sice(1,1) = dtstar_tile(map_tile(first_sea_ice_tile))
+    i_sice = 0
+    do i = first_sea_ice_tile, first_sea_ice_tile + n_sea_ice_tile - 1
+      i_sice = i_sice + 1
+      dtstar_sice(1,1,i_sice) = dtstar_tile(map_tile(i))
+    end do
 
     ! Re-call the scheme
     call bdy_expl3 (                                                 &
@@ -1302,7 +1350,7 @@ contains
           , exner_theta_levels                                          &
     ! IN ancillary fields and fields needed to be kept from tstep to tstep
           , sil_orog_land_gb, ho2r2_orog_gb                             &
-          , ice_fract, di_ncat_sicat, ice_fract_ncat, k_sice_sicat      &
+          , ice_fract, di_sice_ncat, ice_fract_ncat, k_sice_ncat        &
           , u_0, v_0, land_index, cca_3d, lcbase, ccb0, cct0            &
           , ls_rain, ls_snow, conv_rain, conv_snow                      &
     ! IN variables required from BDY_LAYR
@@ -1338,10 +1386,10 @@ contains
           , STASHwork3, STASHwork9                                      &
     ! SCM Diagnostics (dummy in full UM) & BL diags
           , nSCMDpkgs, L_SCMDiags, bl_diag, sf_diag                     &
-    ! INOUT (Note ti_cat_sicat and ti_sicat are IN only if l_sice_multilayers=T)
+    ! INOUT (Note ti_sice_ncat and ti_sice are IN if l_sice_multilayers=T)
           , TScrnDcl_SSI, TScrnDcl_surft, tStbTrans                     &
           , cca0, fqw, ftl, taux, tauy, rhokh                           &
-          , fqw_ice,ftl_ice,dtstar_surft,dtstar_sea,dtstar_sice,ti_cat_sicat &
+          , fqw_ice,ftl_ice,dtstar_surft,dtstar_sea,dtstar_sice,ti_sice_ncat &
           , area_cloud_fraction, bulk_cloud_fraction                    &
           , t_latest, q_latest, qcl_latest, qcf_latest                  &
           , cf_latest, cfl_latest, cff_latest                           &
@@ -1358,13 +1406,13 @@ contains
           , co2, ozone_tracer                                           &
     ! INOUT additional variables for JULES
           , tstar_surft, fqw_surft, epot_surft, ftl_surft               &
-          , radnet_sice,olr,tstar_sice_sicat,tstar_ssi                  &
+          , radnet_sice,olr,tstar_sice_ncat,tstar_ssi                   &
           , tstar_sea,taux_land,taux_ssi,tauy_land,tauy_ssi,Error_code  &
     ! OUT fields
           , surf_ht_flux_land, zlcl_mix                                 &
           , theta_star_surf, qv_star_surf                               &
     ! OUT additional variables for JULES
-          , tstar, ti_sicat, ext, snowmelt,tstar_land,tstar_sice, ei_surft &
+          , tstar, ti_sice, ext, snowmelt,tstar_land,tstar_sice, ei_surft &
           , ecan_surft, melt_surft, surf_htf_surft                      &
     ! OUT fields for coupling to the wave model
           , uwind_wav, vwind_wav                                        &
@@ -1469,9 +1517,14 @@ contains
       i_sice = 0
       do i = first_sea_ice_tile, first_sea_ice_tile + n_sea_ice_tile - 1
         i_sice = i_sice + 1
-        tile_temperature(map_tile(i)) = real(tstar_sice_sicat(1,1,i_sice), r_def)
+        tile_temperature(map_tile(i)) = real(tstar_sice_ncat(1,1,i_sice), r_def)
         tile_heat_flux(map_tile(i)) = real(ftl_ice(1,1,i_sice), r_def)
         tile_moisture_flux(map_tile(i)) = real(fqw_ice(1,1,i_sice), r_def)
+      end do
+
+      ! Sea-ice bulk temperature
+      do i = 1, n_sea_ice_tile
+        sea_ice_temperature(map_sice(i)) = real(ti_sice_ncat(1, 1, i), r_def)
       end do
 
       do i = 1, sm_levels

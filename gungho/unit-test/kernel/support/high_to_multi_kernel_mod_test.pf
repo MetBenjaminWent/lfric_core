@@ -1,0 +1,126 @@
+!-----------------------------------------------------------------------------
+! (c) Crown copyright 2020 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
+
+! Test the high_to_multi_kernel
+
+module high_to_multi_kernel_mod_test
+
+  use constants_mod, only : r_def, i_def
+  use pFUnit_Mod
+
+  implicit none
+
+  private
+  public:: test_of_high_to_multi
+
+  @TestCase
+  type, extends(MPITestCase), public :: high_to_multi_test_type
+    private
+    real(r_def), allocatable ::               &
+      multi_field(:), answer_multi_field(:), &
+      high_field(:)
+
+  contains
+    procedure setUp
+    procedure tearDown
+    procedure test_of_high_to_multi
+  end type high_to_multi_test_type
+
+contains
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine setUp( this )
+
+    implicit none
+
+    class(high_to_multi_test_type), intent(inout) :: this
+
+    integer(kind=i_def) :: undf_multi
+    integer(kind=i_def) :: undf_high
+
+    undf_multi = 3_i_def
+    undf_high  = 5_i_def
+
+    allocate( this%multi_field(undf_multi) )
+    allocate( this%answer_multi_field(undf_multi) )
+    allocate( this%high_field(undf_high) )
+
+
+  end subroutine setUp
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine tearDown( this )
+
+    implicit none
+
+    class(high_to_multi_test_type), intent(inout) :: this
+
+    deallocate( this%multi_field, this%answer_multi_field, &
+                this%high_field)
+
+  end subroutine tearDown
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  @Test( npes=[1] )
+  subroutine test_of_high_to_multi( this )
+
+    use high_to_multi_kernel_mod, only : high_to_multi_code
+
+    implicit none
+
+    class(high_to_multi_test_type), intent(inout) :: this
+
+    real(kind=r_def), parameter :: tol = 1.0e-14_r_def
+
+    integer(kind=i_def) :: ndata, nlayers, i, high_dim
+
+    integer(kind=i_def)              :: ndf_multi, undf_multi
+    integer(kind=i_def), allocatable :: map_multi(:)
+    integer(kind=i_def)              :: ndf_high, undf_high
+    integer(kind=i_def), allocatable :: map_high(:)
+
+    ndata = 3_i_def
+
+    ndf_multi  = ndata
+    undf_multi = ndata
+    allocate(map_multi(ndf_multi))
+    do i=1_i_def, ndf_multi
+      map_multi(i) = i
+    end do
+
+    high_dim = 5_i_def
+
+    ndf_high  = high_dim
+    undf_high = high_dim
+    allocate(map_high(ndf_high))
+    do i=1_i_def, ndf_high
+      map_high(i) = i
+    end do
+
+    ! Set input data
+    this%high_field(map_high(1)) = 3.0_r_def
+    this%high_field(map_high(2)) = 1.0_r_def
+    this%high_field(map_high(3)) = 0.0_r_def
+
+    ! Set answers
+    this%answer_multi_field(map_multi(1))   = 3.0_r_def
+    this%answer_multi_field(map_multi(1)+1) = 1.0_r_def
+    this%answer_multi_field(map_multi(1)+2) = 0.0_r_def
+    this%multi_field(:) = -9.0_r_def
+
+    call high_to_multi_code(nlayers,                          &
+                            this%multi_field(:),              &
+                            this%high_field(:),               &
+                            ndata,                            &
+                            ndf_multi, undf_multi, map_multi, &
+                            ndf_high, undf_high, map_high)
+
+
+    @assertEqual( this%answer_multi_field(:), this%multi_field(:), tol )
+
+  end subroutine test_of_high_to_multi
+
+end module high_to_multi_kernel_mod_test

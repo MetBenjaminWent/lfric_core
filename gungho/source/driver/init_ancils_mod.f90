@@ -11,8 +11,6 @@ module init_ancils_mod
                                              log_scratch_space, &
                                              LOG_LEVEL_INFO,    &
                                              LOG_LEVEL_ERROR
-  use init_tstar_analytic_alg_mod,    only : init_tstar_analytic_alg
-  use update_tstar_alg_mod,           only : update_tstar_alg
   use field_mod,                      only : field_type
   use field_parent_mod,               only : read_interface, &
                                              write_interface
@@ -34,74 +32,15 @@ module init_ancils_mod
   use fs_continuity_mod,              only : W3
   use pure_abstract_field_mod,        only : pure_abstract_field_type
   use time_axis_mod,                  only : time_axis_type, update_interface
+  use jules_control_init_mod,         only: n_land_tile
+  use jules_surface_types_mod,        only: npft
 
   implicit none
 
-  private  :: setup_ancil_field
-  public   :: init_analytic_ancils,     &
-              init_aquaplanet_ancils,   &
-              create_fd_ancils
+  public   :: create_fd_ancils,         &
+              setup_ancil_field
 
 contains
-
-  !> @details Initialises ancillary fields analytically
-  !> @param[in,out] surface_fields the 2D field collection
-  subroutine init_analytic_ancils(surface_fields)
-
-    implicit none
-
-    type( field_collection_type ), intent( inout ) :: surface_fields
-
-    type( field_type ), pointer ::    tstar_ptr  => null()
-
-    logical(l_def) :: put_field
-
-    tstar_ptr => surface_fields%get_field('tstar')
-
-    call init_tstar_analytic_alg(tstar_ptr)
-
-    nullify(tstar_ptr)
-
-    ! Now update the tiled surface temperature with the calculated tstar
-    put_field = .true.
-    call update_tstar_alg(surface_fields, put_field )
-
-  end subroutine init_analytic_ancils
-
-  !> @details Initialises ancillary fields from
-  !>          an aquaplanet dump
-  !> @param[in,out] surface_fields the 2D field collection
-  subroutine init_aquaplanet_ancils(surface_fields)
-
-    implicit none
-
-    type( field_collection_type ), intent( inout ) :: surface_fields
-
-    ! local variables
-    ! Pointer to the 2D tstar in the surface field collection
-    type( field_type ), pointer ::    tstar_ptr  => null()
-
-    procedure(read_interface), pointer  :: tmp_read_ptr => null()
-
-    logical(l_def) :: put_field
-
-    call log_event("Reading tstar from dump", LOG_LEVEL_INFO)
-
-    tstar_ptr => surface_fields%get_field('tstar')
-
-    ! Need to set the I/O handler for read. Any ancils here
-    ! are currently read from a UM2LFRic dump
-    tmp_read_ptr => read_field_single_face
-    call tstar_ptr%set_read_behaviour(tmp_read_ptr)
-    call tstar_ptr%read_field("read_tstar")
-
-    nullify( tstar_ptr, tmp_read_ptr )
-
-    ! Now update the tiled surface temperature with the calculated tstar
-    put_field = .true.
-    call update_tstar_alg(surface_fields, put_field )
-
-  end subroutine init_aquaplanet_ancils
 
   !> @details Organises fields to be read from ancils into ancil_fields
   !           collection then reads them.
@@ -154,24 +93,40 @@ contains
       !=====  SURFACE ANCILS  =====
       call setup_ancil_field("land_area_fraction", depository, ancil_fields, &
                               mesh_id, twod_mesh_id, twod=.true.)
-      call setup_ancil_field("tile_fraction_data", depository, ancil_fields, &
-                              mesh_id, twod_mesh_id, twod=.true., ndata=9)
+      call setup_ancil_field("land_tile_fraction", depository, ancil_fields, &
+                              mesh_id, twod_mesh_id, twod=.true., ndata=n_land_tile)
+      call setup_ancil_field("canopy_height_in", depository, ancil_fields, &
+                              mesh_id, twod_mesh_id, twod=.true., ndata=npft)
+      call setup_ancil_field("leaf_area_index_in", depository, ancil_fields, &
+                              mesh_id, twod_mesh_id, twod=.true., ndata=npft)
 
       call init_time_axis("sea_time", sea_time_axis)
       call setup_ancil_field("chloro_sea", depository, ancil_fields, mesh_id, &
                               twod_mesh_id, twod=.true., time_axis=sea_time_axis)
       call sea_time_axis%set_update_behaviour(tmp_update_ptr)
+      call ancil_times_list%insert_item(sea_time_axis)
+
+      !=====  SEA ICE ANCILS  =====
+      call init_time_axis("sea_ice_time", sea_ice_time_axis)
+      call setup_ancil_field("sea_ice_thickness", depository, ancil_fields, &
+                mesh_id, twod_mesh_id, twod=.true., time_axis=sea_ice_time_axis)
+      call setup_ancil_field("sea_ice_fraction", depository, ancil_fields, &
+                mesh_id, twod_mesh_id, twod=.true., time_axis=sea_ice_time_axis)
+      call sea_ice_time_axis%set_update_behaviour(tmp_update_ptr)
+      call ancil_times_list%insert_item(sea_ice_time_axis)
 
       !=====  RADIATION ANCILS  =====
       call init_time_axis("albedo_vis_time", albedo_vis_time_axis)
       call setup_ancil_field("albedo_obs_vis", depository, ancil_fields, mesh_id, &
                         twod_mesh_id, twod=.true., time_axis=albedo_vis_time_axis)
       call albedo_vis_time_axis%set_update_behaviour(tmp_update_ptr)
+      call ancil_times_list%insert_item(albedo_vis_time_axis)
 
       call init_time_axis("albedo_nir_time", albedo_nir_time_axis)
       call setup_ancil_field("albedo_obs_nir", depository, ancil_fields, mesh_id, &
                         twod_mesh_id, twod=.true., time_axis=albedo_nir_time_axis)
       call albedo_nir_time_axis%set_update_behaviour(tmp_update_ptr)
+      call ancil_times_list%insert_item(albedo_nir_time_axis)
 
       !=====  SOIL ANCILS  =====
       call setup_ancil_field("soil_albedo", depository, ancil_fields, mesh_id, &
@@ -180,7 +135,23 @@ contains
                               mesh_id, twod_mesh_id, twod=.true.)
       call setup_ancil_field("soil_thermal_cond", depository, ancil_fields, &
                               mesh_id, twod_mesh_id, twod=.true.)
+      call setup_ancil_field("soil_moist_wilt", depository, ancil_fields, &
+                              mesh_id, twod_mesh_id, twod=.true.)
+      call setup_ancil_field("soil_moist_crit", depository, ancil_fields, &
+                              mesh_id, twod_mesh_id, twod=.true.)
+      call setup_ancil_field("soil_moist_sat", depository, ancil_fields, &
+                              mesh_id, twod_mesh_id, twod=.true.)
+      call setup_ancil_field("soil_cond_sat", depository, ancil_fields, &
+                              mesh_id, twod_mesh_id, twod=.true.)
+      call setup_ancil_field("soil_thermal_cap", depository, ancil_fields, &
+                              mesh_id, twod_mesh_id, twod=.true.)
+      call setup_ancil_field("soil_suction_sat", depository, ancil_fields, &
+                              mesh_id, twod_mesh_id, twod=.true.)
+      call setup_ancil_field("clapp_horn_b", depository, ancil_fields, &
+                              mesh_id, twod_mesh_id, twod=.true.)
       call setup_ancil_field("mean_topog_index", depository, ancil_fields, &
+                              mesh_id, twod_mesh_id, twod=.true.)
+      call setup_ancil_field("stdev_topog_index", depository, ancil_fields, &
                               mesh_id, twod_mesh_id, twod=.true.)
 
       !=====  OROGRAPHY ANCILS  =====
@@ -237,19 +208,7 @@ contains
       call setup_ancil_field("nd_cor_sol", depository, ancil_fields, mesh_id, &
                              twod_mesh_id, time_axis=aerosol_time_axis)
       call aerosol_time_axis%set_update_behaviour(tmp_update_ptr)
-
-      !=====  SEA ICE ANCILS  =====
-      call init_time_axis("sea_ice_time", sea_ice_time_axis)
-      call setup_ancil_field("sea_ice_thickness", depository, ancil_fields, &
-                mesh_id, twod_mesh_id, twod=.true., time_axis=sea_ice_time_axis)
-      call sea_ice_time_axis%set_update_behaviour(tmp_update_ptr)
-
-      ! Insert the created time axis objects into a list
-      call ancil_times_list%insert_item(sea_time_axis)
-      call ancil_times_list%insert_item(sea_ice_time_axis)
       call ancil_times_list%insert_item(aerosol_time_axis)
-      call ancil_times_list%insert_item(albedo_vis_time_axis)
-      call ancil_times_list%insert_item(albedo_nir_time_axis)
     end if
 
     ! Now the field collection is set up, the fields will be initialised in
@@ -282,7 +241,7 @@ contains
 
     ! Local variables
     type(field_type)          :: new_field
-    integer(i_def)            :: ndat = 1
+    integer(i_def)            :: ndat
     integer(i_def), parameter :: fs_order = 0
 
     ! Pointers
@@ -296,6 +255,8 @@ contains
     ! Set field ndata if argument is present, else leave as default value
     if (present(ndata)) then
       ndat = ndata
+    else
+      ndat = 1
     end if
 
     ! Set up function spaces for field initialisation
@@ -306,6 +267,9 @@ contains
 
     ! If field does not yet exist, then create it
     if ( .not. depository%field_exists( name ) ) then
+      write(log_scratch_space,'(3A,I6)') &
+           "Creating new field for ", trim(name)
+      call log_event(log_scratch_space,LOG_LEVEL_INFO)
       if (present(twod)) then
         call new_field%initialise( twod_space, name=trim(name) )
       else
