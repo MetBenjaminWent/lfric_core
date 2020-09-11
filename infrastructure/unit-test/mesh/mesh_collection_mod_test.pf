@@ -8,7 +8,7 @@
 !>
 module mesh_collection_mod_test
 
-    use constants_mod,        only : i_def, r_def, str_def
+    use constants_mod,        only : i_def, r_def, str_def, l_def
     use extrusion_mod,        only : uniform_extrusion_type
     use global_mesh_mod,      only : global_mesh_type
     use partition_mod,        only : partition_type
@@ -17,7 +17,10 @@ module mesh_collection_mod_test
                                    , global_mesh_collection
     use mesh_collection_mod,  only : mesh_collection_type,                  &
                                      mesh_collection
-    use mesh_mod,             only : mesh_type, PLANE_BI_PERIODIC
+    use mesh_mod,             only : mesh_type, PLANE_BI_PERIODIC, PLANE
+
+    use yaxt,       only: xt_initialize, xt_finalize
+    use mpi_mod,    only: store_comm, clear_comm
     use pFUnit_Mod
 
   implicit none
@@ -26,7 +29,7 @@ module mesh_collection_mod_test
   public :: test_all
 
   @TestCase
-  type, extends(TestCase), public ::mesh_collection_test_type
+  type, extends(MPITestCase), public ::mesh_collection_test_type
     private
     type(global_mesh_type), pointer :: global_mesh => null()
     type(partition_type)            :: partition
@@ -46,11 +49,25 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine setUp( this )
 
+    use feign_config_mod,  only: feign_development_config
+
     implicit none
 
     class(mesh_collection_test_type), intent(inout) :: this
 
     integer(i_def) :: global_test_mesh_id
+    logical(l_def) :: test_log = .true.
+
+    ! Initialise YAXT
+    call xt_initialize(this%getMpiCommunicator())
+    !Store the MPI communicator for later use
+    call store_comm(this%getMpiCommunicator())
+
+    call feign_development_config(                              &
+             implement_consolidated_multigrid = test_log,       &
+             single_mesh_input='data/mesh_C32_MG.nc',           &
+             spawn_2d_mesh=.false., spawn_shifted_mesh=.false., &
+             spawn_double_level_mesh=.false. )
 
     ! Create top level collections
     global_mesh_collection = global_mesh_collection_type()
@@ -67,16 +84,24 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine tearDown( this )
 
+    use configuration_mod, only: final_configuration
+
     implicit none
 
     class(mesh_collection_test_type), intent(inout) :: this
 
     call global_mesh_collection%clear()
+    call final_configuration()
+
+    ! Finalise YAXT
+    call xt_finalize()
+    ! Clear the stored MPI communicator
+    call clear_comm()
 
   end subroutine tearDown
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  @test
+  @test( npes=[1] )
   subroutine test_all( this )
 
     implicit none
@@ -88,6 +113,18 @@ contains
 
     integer(i_def) :: mesh_id, mesh_test_id
     integer(i_def) :: ncells_2d_with_ghost, num_layers
+
+    character(str_def) :: mesh_name
+    character(str_def), allocatable :: test_character_array(:)
+    integer(i_def)                  :: test_integer_A
+    integer(i_def)                  :: test_integer_B
+    character(str_def)              :: test_character
+
+    type(mesh_type), pointer :: test_mesh_A => null()
+    type(mesh_type), pointer :: test_mesh_B => null()
+
+    integer(i_def) :: i
+    type(mesh_type), pointer :: mesh_by_name => null()
 
     ! Create a mesh collection
     mesh_collection = mesh_collection_type()
@@ -121,6 +158,19 @@ contains
 
     num_layers = mesh%get_nlayers()
     @assertEqual ( 5, num_layers )
+
+    !-----------------------------------------------------------------------
+    ! Check the names of the meshes
+    test_character_array = mesh_collection % get_mesh_names()
+    mesh_name = mesh%get_mesh_name()
+    @assertTrue( mesh_name == test_character_array(1) )
+
+    ! Check you can extract mesh by name
+    mesh_by_name => mesh_collection % get_mesh(mesh_name)
+    @assertAssociated( mesh_by_name )
+
+    ! Check it's the same mesh as the one extracted by id
+    @assertTrue(associated( mesh_by_name, mesh ))
 
     call mesh_collection%clear()
 

@@ -3,6 +3,7 @@
 ' should have received as part of this distribution.
 
 class global_mesh_mod::global_mesh_type {
+  -mesh_name: string
   -mesh_class: string
   -periodic_x: logical
   -periodic_y: logical
@@ -18,7 +19,9 @@ class global_mesh_mod::global_mesh_type {
   -nedges: integer
   -nverts: integer
   -nverts_per_cell: integer
-  -vert_cell_owner: integer[  ] <<allocatable>>
+  -ntarget_meshes: integer
+  -target_global_mesh_names: string[] <<allocatable>>
+  -vert_cell_owner: integer[] <<allocatable>>
   -vert_coords: real[::] <<allocatable>>
   -vert_on_cell_2d: integer[::] <<allocatable>>
   -global_mesh_maps: global_mesh_map_collection_type <<allocatable>>
@@ -28,7 +31,9 @@ class global_mesh_mod::global_mesh_type {
   +<<destroy>> global_mesh_destructor()
   +clear()
 
-
+  +get_mesh_name(): string
+  +get_target_mesh_names(): string[] <<allocatable>>
+  +get_nmaps(): integer
   +get_all_cells_next(): integer[::]
   +get_edge_on_all_cells(): integer[::]
   +get_vert_on_all_cells(): integer[::]

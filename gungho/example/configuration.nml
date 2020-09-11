@@ -209,6 +209,7 @@
   n_presmooth = 2
   n_postsmooth = 2
   n_coarsesmooth = 4
+  chain_mesh_tags='','','',''
 /
 
 &domain_size

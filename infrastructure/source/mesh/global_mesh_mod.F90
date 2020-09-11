@@ -18,13 +18,19 @@ module global_mesh_mod
   use linked_list_data_mod,           only: linked_list_data_type
   use log_mod,                        only: log_event, log_scratch_space, &
                                             LOG_LEVEL_ERROR, LOG_LEVEL_TRACE
+
+  use development_config_mod, only : implement_consolidated_multigrid
+
   implicit none
 
   private
 
   type, extends(linked_list_data_type), public :: global_mesh_type
+
     private
 
+  ! Tag name of mesh
+    character(str_def) :: mesh_name
   ! Type of mesh that the global mesh describes
     character(str_def) :: mesh_class
   ! Periodic in E-W direction
@@ -63,10 +69,15 @@ module global_mesh_mod
     integer(i_def)       :: nedges_per_cell
   ! maximum number of cells around a vertex
     integer(i_def)       :: max_cells_per_vertex
+
+  ! Target of global mesh name
+    integer(i_def) :: ntarget_meshes
+    character(str_def), allocatable :: target_global_mesh_names(:)
   ! Collection of global mesh maps in global cell ids
     type(global_mesh_map_collection_type), allocatable :: global_mesh_maps
 
   contains
+    procedure, public :: get_mesh_name
     procedure, public :: get_mesh_class
     procedure, public :: get_mesh_periodicity
     procedure, public :: get_cell_id
@@ -90,6 +101,8 @@ module global_mesh_mod
     procedure, public :: get_edge_cell_owner
     procedure, public :: add_global_mesh_map
     procedure, public :: get_global_mesh_map
+    procedure, public :: get_target_mesh_names
+    procedure, public :: get_nmaps
     procedure, public :: clear
 
     final :: global_mesh_destructor
@@ -153,6 +166,7 @@ contains
     ! loop counter over entities (vertices or edges)
     integer(i_def) :: ientity
 
+    self%mesh_name = trim(global_mesh_name)
     allocate( ncdf_quad_type :: file_handler )
     call ugrid_2d%set_file_handler( file_handler )
     call ugrid_2d%set_from_file_read( trim(global_mesh_name), trim(filename) )
@@ -164,10 +178,12 @@ contains
               num_edges_per_face     = num_edges_per_face, &
               num_nodes_per_edge     = num_nodes_per_edge, &
               max_num_faces_per_node = max_num_faces_per_node )
-    call ugrid_2d%get_metadata(mesh_class=self%mesh_class, &
-                               periodic_x=self%periodic_x, &
-                               periodic_y=self%periodic_y )
-
+    call ugrid_2d%get_metadata                          &
+            ( mesh_class        = self%mesh_class,      &
+              periodic_x        = self%periodic_x,      &
+              periodic_y        = self%periodic_y,      &
+              nmaps             = self%ntarget_meshes,  &
+              target_mesh_names = self%target_global_mesh_names )
 
     global_mesh_id_counter = global_mesh_id_counter + 1
 
@@ -265,6 +281,7 @@ contains
     ! The feigner in the mesh unit test sets geometry to spherical,
     ! so make the global mesh used in the mesh unit tests consistent
     self%mesh_class = 'sphere'
+    self%mesh_name  = 'cubed-sphere:unit-test'
 
     ! Returns global_mesh_object of size 3x3 quad reference cell.
     ! As per reference cell, direction of numbering is anti-clockwise
@@ -527,6 +544,24 @@ contains
 
   end function get_mesh_class
 
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !> @brief  Returns mesh tag name.
+  !> @return mesh_name  Tag name of mesh that identifies it in the
+  !>                    UGRID file that it was read in from.
+  !>
+  function get_mesh_name( self ) result ( mesh_name )
+
+    implicit none
+
+    class(global_mesh_type), intent(in) :: self
+
+    character(str_def) :: mesh_name
+
+    mesh_name = self%mesh_name
+
+  end function get_mesh_name
+
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> @brief  Returns values for the X and Y periodicity.
   !>
@@ -639,8 +674,8 @@ contains
   !---------------------------------------------------------------------------
   !> @brief Gets the cells that are incident on a particular edge.
   !>
-  !> @param[in] edge_number Number of the edge being queried.
-  !> @param[out] cells Cells either side of the given edge.
+  !> @param[in]  edge_number  Number of the edge being queried.
+  !> @param[out] cells        Cells either side of the given edge.
   !>
   subroutine get_cell_on_edge( self, edge_number, cells)
 
@@ -670,6 +705,53 @@ contains
   nverts = self%nverts
 
   end function get_nverts
+
+  !---------------------------------------------------------------------------
+  !> @brief Retruns the number of intergrid maps that exist for this mesh
+  !>        where this mesh is the source mesh.
+  !>
+  !> @return Number of intergrid maps present in the UGRID file which use
+  !>         this mesh as the source mesh.
+  !>
+  function get_nmaps( self ) result (nmaps)
+
+  implicit none
+
+  class(global_mesh_type), intent(in) :: self
+
+  integer(i_def) :: nmaps
+
+  nmaps = self%ntarget_meshes
+
+  end function get_nmaps
+
+  !---------------------------------------------------------------------------
+  !> @brief   Gets the array of names of target meshes.
+  !> @details The global mesh may have intergrid maps contained within the
+  !>          mesh inputs file. These maps provide a cell mapping from this
+  !>          mesh (source) to another mesh (target) in the mesh inputs file.
+  !>          The returned array of mesh names are the names of the meshes
+  !>          that this global mesh has maps to.
+  !>
+  !> @param[out] target_mesh_names  String array of target mesh topology names.
+  !>
+  subroutine get_target_mesh_names( self, target_mesh_names)
+
+    implicit none
+
+    class(global_mesh_type), intent(in) :: self
+
+    character(str_def), intent(out), &
+                            allocatable :: target_mesh_names(:)
+
+    if (self%ntarget_meshes > 0) then
+      allocate( target_mesh_names(self%ntarget_meshes) )
+      target_mesh_names = self%target_global_mesh_names
+    else
+
+    end if
+
+  end subroutine get_target_mesh_names
 
   !---------------------------------------------------------------------------
   !> @brief Gets the total number of edges in the global domain.

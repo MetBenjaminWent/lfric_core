@@ -83,7 +83,7 @@ contains
     integer(i_def)      :: test_edge_cells_y
     integer(i_def)      :: test_nmaps
 
-    character(str_def), allocatable :: test_maps_mesh_names(:)
+    character(str_def), allocatable :: test_target_mesh_names(:)
     integer(i_def),     allocatable :: test_maps_edge_cells_x(:)
     integer(i_def),     allocatable :: test_maps_edge_cells_y(:)
 
@@ -202,7 +202,7 @@ contains
 
     call csgen%clear()
 
-    if ( allocated(test_maps_mesh_names)   ) deallocate(test_maps_mesh_names)
+    if ( allocated(test_target_mesh_names) ) deallocate(test_target_mesh_names)
     if ( allocated(test_maps_edge_cells_x) ) deallocate(test_maps_edge_cells_x)
     if ( allocated(test_maps_edge_cells_y) ) deallocate(test_maps_edge_cells_y)
     nullify(global_mesh_maps)
@@ -234,7 +234,7 @@ contains
     integer(i_def)      :: test_edge_cells_y
     integer(i_def)      :: test_nmaps
 
-    character(str_def), allocatable :: test_maps_mesh_names(:)
+    character(str_def), allocatable :: test_target_mesh_names(:)
     integer(i_def),     allocatable :: test_maps_edge_cells_x(:)
     integer(i_def),     allocatable :: test_maps_edge_cells_y(:)
 
@@ -366,7 +366,7 @@ contains
 
     call csgen%clear()
 
-    if ( allocated(test_maps_mesh_names)   ) deallocate(test_maps_mesh_names)
+    if ( allocated(test_target_mesh_names) ) deallocate(test_target_mesh_names)
     if ( allocated(test_maps_edge_cells_x) ) deallocate(test_maps_edge_cells_x)
     if ( allocated(test_maps_edge_cells_y) ) deallocate(test_maps_edge_cells_y)
     nullify(global_mesh_maps)
@@ -413,12 +413,13 @@ contains
 
     ! Further test of the rotation of the mesh
     ! Create a new mesh as above, but with rotation of North to (0,45)
-    csgen_rot = gencube_ps_type( mesh_name, edge_cells, nsmooth,             &
-                                 do_rotate=.true.,                           &
-                                 lat_north=lat_north, lon_north=lon_north,   &
-                                 rotate_angle=rotate_angle,                  &
-                                 target_mesh_names=target_mesh_names,        &
-                                 target_edge_cells=target_edge_cells )
+    csgen_rot = gencube_ps_type(                              &
+                    mesh_name, edge_cells, nsmooth,           &
+                    do_rotate=.true.,                         &
+                    lat_north=lat_north, lon_north=lon_north, &
+                    rotate_angle=rotate_angle,                &
+                    target_mesh_names=target_mesh_names,      &
+                    target_edge_cells=target_edge_cells )
 
     ! Generate the mesh and connectivity
     call csgen_rot%generate()
@@ -451,12 +452,13 @@ contains
 
     ! Further test of the rotation of the mesh
     ! Create a new mesh as above, but with rotation about pole of 45 degrees
-    csgen_rot = gencube_ps_type( mesh_name, edge_cells, nsmooth,             &
-                                 do_rotate=.true.,                           &
-                                 lat_north=lat_north, lon_north=lon_north,   &
-                                 rotate_angle=rotate_angle,                  &
-                                 target_mesh_names=target_mesh_names,        &
-                                 target_edge_cells=target_edge_cells )
+    csgen_rot = gencube_ps_type(                              &
+                    mesh_name, edge_cells, nsmooth,           &
+                    do_rotate=.true.,                         &
+                    lat_north=lat_north, lon_north=lon_north, &
+                    rotate_angle=rotate_angle,                &
+                    target_mesh_names=target_mesh_names,      &
+                    target_edge_cells=target_edge_cells )
 
     ! Generate the mesh and connectivity
     call csgen_rot%generate()
@@ -491,12 +493,13 @@ contains
 
     ! Further test of the rotation of the mesh
     ! Create a new mesh as above, but with rotation of North to (0,0)
-        csgen_rot = gencube_ps_type( mesh_name, edge_cells, nsmooth,             &
-                                 do_rotate=.true.,                           &
-                                 lat_north=lat_north, lon_north=lon_north,   &
-                                 rotate_angle=rotate_angle,                  &
-                                 target_mesh_names=target_mesh_names,        &
-                                 target_edge_cells=target_edge_cells )
+    csgen_rot = gencube_ps_type(                                &
+                    mesh_name, edge_cells, nsmooth,             &
+                    do_rotate=.true.,                           &
+                    lat_north=lat_north, lon_north=lon_north,   &
+                    rotate_angle=rotate_angle,                  &
+                    target_mesh_names=target_mesh_names,        &
+                    target_edge_cells=target_edge_cells )
 
     call csgen_rot%generate()
 

@@ -168,6 +168,7 @@ viscosity_mu=0.0,
 l_multigrid=.false.,
 multigrid_chain_nitems=1,
 ugrid='prime',
+chain_mesh_tags='',
 /
 &orbit
 arg_periapsis=1.796767421,

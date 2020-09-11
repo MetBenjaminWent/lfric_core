@@ -300,7 +300,7 @@ contains
     integer(i_def)      :: test_edge_cells_y
     integer(i_def)      :: test_nmaps
 
-    character(str_def), allocatable :: test_maps_mesh_names(:)
+    character(str_def), allocatable :: test_target_mesh_names(:)
     integer(i_def),     allocatable :: test_maps_edge_cells_x(:)
     integer(i_def),     allocatable :: test_maps_edge_cells_y(:)
 
@@ -331,7 +331,7 @@ contains
                                 edge_cells_x        = test_edge_cells_x,       &
                                 edge_cells_y        = test_edge_cells_y,       &
                                 nmaps               = test_nmaps,              &
-                                maps_mesh_names     = test_maps_mesh_names,    &
+                                target_mesh_names   = test_target_mesh_names,  &
                                 maps_edge_cells_x   = test_maps_edge_cells_x,  &
                                 maps_edge_cells_y   = test_maps_edge_cells_y )
 
@@ -342,10 +342,10 @@ contains
     @assertEqual( edge_cells_x, test_edge_cells_x )
     @assertEqual( edge_cells_y, test_edge_cells_y )
     @assertEqual( nmaps, test_nmaps )
-    @assertEqual( trim(target_mesh_names(1)), trim(test_maps_mesh_names(1)) )
+    @assertEqual( trim(target_mesh_names(1)), trim(test_target_mesh_names(1)) )
     @assertEqual( target_edge_cells_x, test_maps_edge_cells_x )
     @assertEqual( target_edge_cells_y, test_maps_edge_cells_y )
-    @assertEqual( nmaps, size(test_maps_mesh_names   ) )
+    @assertEqual( nmaps, size(test_target_mesh_names   ) )
     @assertEqual( nmaps, size(test_maps_edge_cells_x ) )
     @assertEqual( nmaps, size(test_maps_edge_cells_y ) )
 
@@ -433,7 +433,7 @@ contains
     @assertEqual( 2,  global_mesh_map%get_target_id() )
 
     call mesh_gen%clear()
-    if ( allocated(test_maps_mesh_names)   ) deallocate( test_maps_mesh_names )
+    if ( allocated(test_target_mesh_names) ) deallocate( test_target_mesh_names )
     if ( allocated(test_maps_edge_cells_x) ) deallocate( test_maps_edge_cells_x )
     if ( allocated(test_maps_edge_cells_y) ) deallocate( test_maps_edge_cells_y )
 

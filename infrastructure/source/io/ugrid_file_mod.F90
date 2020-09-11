@@ -25,10 +25,11 @@ module ugrid_file_mod
 !>           strategies, which extend this abstract type.
 !-------------------------------------------------------------------------------
 
-type, abstract, public, extends(file_type) :: ugrid_file_type
+type, abstract, extends(file_type), public :: ugrid_file_type
   private
 contains
   procedure (read_mesh_interface ),      deferred :: read_mesh
+  procedure (read_map_interface ),       deferred :: read_map
   procedure (write_mesh_interface),      deferred :: write_mesh
   procedure (write_mesh_interface),      deferred :: append_mesh
   procedure (get_dimensions_interface),  deferred :: get_dimensions
@@ -42,6 +43,38 @@ end type ugrid_file_type
 ! Abstract interfaces
 !-------------------------------------------------------------------------------
 abstract interface
+
+  !-----------------------------------------------------------------------------
+  !> @brief  Interface: Gets the intergrid map from two specified
+  !>         mesh topologies in the file.
+  !>
+  !> @param[in]   self                   The ugrid file strategy object.
+  !> @param[in]   source_mesh_name       Source mesh of the map
+  !> @param[in]   target_mesh_name       Target mesh of the map
+  !> @param[out]  mesh_map               Allocatable array of global mesh
+  !>                                     ids. These map source mesh ids to
+  !>                                     target mesh ids:
+  !>                                     [n target cells per source cell,
+  !>                                      n source cells]
+  !-----------------------------------------------------------------------------
+  subroutine read_map_interface( self,             &
+                                 source_mesh_name, &
+                                 target_mesh_name, &
+                                 mesh_map )
+
+    import :: ugrid_file_type, i_def, str_def
+
+    implicit none
+
+    ! Arguments
+    class(ugrid_file_type), intent(in)  :: self
+    character(str_def),     intent(in)  :: source_mesh_name
+    character(str_def),     intent(in)  :: target_mesh_name
+
+    integer(i_def),         intent(out), allocatable :: mesh_map(:,:)
+
+  end subroutine read_map_interface
+
 
   !-----------------------------------------------------------------------------
   !> @brief  Interface: Gets numbers of nodes etc. for array dimensions.
@@ -248,7 +281,7 @@ abstract interface
     integer(i_def),      intent(in) :: face_face_connectivity(:,:)
     integer(i_def),      intent(in) :: num_targets
     character(str_def),  intent(in), allocatable :: target_mesh_names(:)
-    type(global_mesh_map_collection_type), pointer, &
+    type(global_mesh_map_collection_type), &
                          intent(in) :: target_mesh_maps
 
   end subroutine write_mesh_interface

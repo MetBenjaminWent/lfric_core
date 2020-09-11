@@ -1800,7 +1800,7 @@ end subroutine calc_cell_centres
 !>                                           the this ugrid_generator_type
 !> @param[out, optional]  nmaps              Number of maps to create with this mesh
 !>                                           as source mesh
-!> @param[out, optional]  maps_mesh_names    Mesh names of the target meshes that
+!> @param[out, optional]  target_mesh_names  Mesh names of the target meshes that
 !>                                           this mesh has maps for.
 !> @param[out, optional]  maps_edge_cells_x  Number of panel edge cells (x-axis) of
 !>                                           target mesh(es) to create map(s) for.
@@ -1817,7 +1817,7 @@ subroutine get_metadata( self,               &
                          edge_cells_y,       &
                          constructor_inputs, &
                          nmaps,              &
-                         maps_mesh_names,    &
+                         target_mesh_names,  &
                          maps_edge_cells_x,  &
                          maps_edge_cells_y )
 
@@ -1835,7 +1835,7 @@ subroutine get_metadata( self,               &
   integer(i_def),   optional,  intent(out) :: edge_cells_y
 
   integer(i_def),   optional,  intent(out) :: nmaps
-  character(str_def), allocatable, optional,intent(out) :: maps_mesh_names(:)
+  character(str_def), allocatable, optional,intent(out) :: target_mesh_names(:)
   integer(i_def),     allocatable, optional,intent(out) :: maps_edge_cells_x(:)
   integer(i_def),     allocatable, optional,intent(out) :: maps_edge_cells_y(:)
 
@@ -1849,7 +1849,7 @@ subroutine get_metadata( self,               &
   if (present(nmaps)) nmaps = self%nmaps
 
   if (self%nmaps > 0) then
-    if (present(maps_mesh_names))   maps_mesh_names    = self%target_mesh_names
+    if (present(target_mesh_names)) target_mesh_names  = self%target_mesh_names
     if (present(maps_edge_cells_x)) maps_edge_cells_x  = self%target_edge_cells
     if (present(maps_edge_cells_x)) maps_edge_cells_y  = self%target_edge_cells
   end if

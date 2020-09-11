@@ -14,7 +14,8 @@
 !>
 module mesh_mod
 
-  use constants_mod,         only : i_def, i_native, r_def, l_def, pi, imdi
+  use constants_mod,         only : i_def, i_native, r_def, l_def, str_def, &
+                                    pi, imdi
   use extrusion_mod,         only : extrusion_type
   use global_mesh_mod,       only : global_mesh_type
   use global_mesh_collection_mod, only : global_mesh_collection
@@ -27,7 +28,7 @@ module mesh_mod
                                     LOG_LEVEL_ERROR, LOG_LEVEL_TRACE, &
                                     LOG_LEVEL_INFO, LOG_LEVEL_DEBUG
   use mesh_colouring_mod,    only : set_colours
-  use mesh_constructor_helper_functions_mod,                &
+  use mesh_constructor_helper_functions_mod,                 &
                              only : domain_size_type,        &
                                     mesh_extruder,           &
                                     mesh_connectivity,       &
@@ -49,6 +50,9 @@ module mesh_mod
   type, extends(linked_list_data_type), public :: mesh_type
 
     private
+
+    !> Mesh name
+    character(str_def) :: mesh_name
 
     !> Describes the shape of an element on this mesh.
     class(reference_element_type), allocatable :: reference_element
@@ -190,6 +194,7 @@ module mesh_mod
   contains
 
     procedure, public :: get_reference_element
+    procedure, public :: get_mesh_name
     procedure, public :: get_global_mesh_id
     procedure, public :: get_partition
     procedure, public :: get_nlayers
@@ -310,23 +315,29 @@ contains
   !>                           applied
   !> @param [in] partition     Partition object to base 3D-Mesh on
   !> @param [in] extrusion     Mechnism by which extrusion is to be achieved.
+  !> @param [in, optional]
+  !>             mesh_name     Mesh tag name to use for this mesh. If omitted,
+  !>                           the global mesh name it is based on will be used.
   !> @return                   3D-Mesh object based on the list of partitioned
   !>                           cells on the given global mesh
   !============================================================================
   function mesh_constructor ( global_mesh,   &
                               partition,     &
-                              extrusion )    &
+                              extrusion,     &
+                              mesh_name )    &
                               result( self )
 
     implicit none
 
-    type(global_mesh_type), intent(in), pointer :: global_mesh
-    type(partition_type),   intent(in)          :: partition
-    class(extrusion_type),  intent(in)          :: extrusion
+    type(global_mesh_type), intent(in), pointer  :: global_mesh
+    type(partition_type),   intent(in)           :: partition
+    class(extrusion_type),  intent(in)           :: extrusion
+    character(str_def),     intent(in), optional :: mesh_name
 
-    type(mesh_type)                     :: self
+    type(mesh_type) :: self
 
-    integer(i_def) :: i, j, counter        ! loop counters
+    ! Loop counters
+    integer(i_def) :: i, j, counter
 
     ! Arrays used in entity ownership calculation - see their names
     ! for a descriptioin of what they actually contain
@@ -370,8 +381,9 @@ contains
     ! Id of the Global mesh use to create mesh
     integer(i_def) :: global_mesh_id
 
-    ! Number of panels in the global mesh - used to optimise colouring algorithm
-    integer(i_def) :: npanels
+    ! Number of panels in the global mesh.
+    ! Used to optimise colouring algorithm
+    integer(i_def) :: n_panels
 
     ! Surface Coordinates in [long, lat, radius] (Units: Radians/metres)
     real(r_def), allocatable :: vertex_coords_2d(:,:)
@@ -379,6 +391,16 @@ contains
     ! is_spherical = True: vertex_coords_2d is in lat,lon coords,
     !                  False: vertex_coords_2d is in x,y coords
     logical(l_def) :: is_spherical
+
+    character(str_def):: name
+
+    if (present(mesh_name)) then
+      name = mesh_name
+    else
+      name =  global_mesh%get_mesh_name()
+    end if
+
+    self%mesh_name = name
 
     call extrusion%get_reference_element( global_mesh, &
                                           self%reference_element )
@@ -403,8 +425,6 @@ contains
     self%domain_bottom        = extrusion%get_atmosphere_bottom()
     self%ncolours             = -1     ! Initialise ncolours to error status
     self%ncells_global_mesh   = global_mesh%get_ncells()
-
-    npanels              = partition%get_num_panels_global_mesh()
 
     allocate( self%eta ( 0:self%nlayers ) )
     allocate( self%dz  ( self%nlayers   ) )
@@ -740,13 +760,15 @@ contains
       gid_from_lid(i) = self%get_gid_from_lid(i)
     end do
 
+    n_panels = partition%get_num_panels_global_mesh()
+
     call set_colours( self%get_ncells_2d(),                                 &
                       self%cell_next,                                       &
                       self%ncolours,                                        &
                       self%ncells_per_colour,                               &
                       self%cells_in_colour,                                 &
                       self%reference_element%get_number_horizontal_faces(), &
-                      npanels,                                              &
+                      n_panels,                                             &
                       self%ncells_global_mesh,                              &
                       gid_from_lid(:) )
 
@@ -2297,7 +2319,22 @@ contains
   adjacent_face => self%face_id_in_adjacent_cell(:,:)
 
   end function get_adjacent_face
+
   !============================================================================
+  !> @brief  Returns mesh tag name.
+  !> @return mesh_name  Tag name of mesh that identifies it.
+  !>
+  function get_mesh_name( self ) result ( mesh_name )
+
+    implicit none
+
+    class(mesh_type), intent(in) :: self
+
+    character(str_def) :: mesh_name
+
+    mesh_name = self%mesh_name
+
+  end function get_mesh_name
 
   !-----------------------------------------------------------------------------
   !  Function to clear up objects - called by destructor
@@ -2414,36 +2451,39 @@ contains
     ! The unit test mesh is quadrilateral, not prismatic
     allocate( self%reference_element, source=reference_cube_type() )
 
+
+
     if (mesh_cfg == PLANE) then
-       self%domain_top = 10000.0_r_def
+      self%mesh_name = 'test mesh: planar'
+      self%domain_top = 10000.0_r_def
 
-       self%ncells_2d = 9
-       self%nverts_2d = 16
-       self%nedges_2d = 24
+      self%ncells_2d = 9
+      self%nverts_2d = 16
+      self%nedges_2d = 24
 
-       self%nlayers = 5
-       self%ncells  = 45
-       self%nverts  = 96
-       self%nfaces  = 156
-       self%nedges  = 224
+      self%nlayers = 5
+      self%ncells  = 45
+      self%nverts  = 96
+      self%nfaces  = 156
+      self%nedges  = 224
 
     else if (mesh_cfg == PLANE_BI_PERIODIC) then
-       self%domain_top = 6000.0_r_def
+      self%mesh_name = 'test mesh: planar bi-periodic'
+      self%domain_top = 6000.0_r_def
 
-       ! 3x3x3 mesh bi-periodic
-       self%ncells_2d = 9
-       self%nverts_2d = 9
-       self%nedges_2d = 18
-
-       self%nlayers = 3
-       self%ncells  = 27
-       self%nverts  = 36
-       self%nfaces  = 90
-       self%nedges  = 99
+      ! 3x3x3 mesh bi-periodic
+      self%ncells_2d = 9
+      self%nverts_2d = 9
+      self%nedges_2d = 18
+      self%nlayers = 3
+      self%ncells  = 27
+      self%nverts  = 36
+      self%nfaces  = 90
+      self%nedges  = 99
     else
-       write(log_scratch_space,'(A,I0)')  &
-            "mesh_constructor_unit_test_data:bad mesh specify:", mesh_cfg
-       call log_event(log_scratch_space,LOG_LEVEL_ERROR)
+      write(log_scratch_space,'(A,I0)')  &
+          "mesh_constructor_unit_test_data:bad mesh specifier:", mesh_cfg
+      call log_event(log_scratch_space,LOG_LEVEL_ERROR)
     end if
 
     self%ncells_2d_with_ghost = self%ncells_2d &

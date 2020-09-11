@@ -87,7 +87,7 @@ abstract interface
   !>                                           the this ugrid_generator_type
   !> @param[out, optional]  nmaps              Number of maps to create with this mesh
   !>                                           as source mesh
-  !> @param[out, optional]  maps_mesh_names    Mesh names of the target meshes that
+  !> @param[out, optional]  target_mesh_names  Mesh names of the target meshes that
   !>                                           this mesh has maps for.
   !> @param[out, optional]  maps_edge_cells_x  Number of panel edge cells (x-axis) of
   !>                                           target mesh(es) to create map(s) for.
@@ -98,7 +98,7 @@ abstract interface
                                       periodic_x, periodic_y, npanels,      &
                                       edge_cells_x, edge_cells_y,           &
                                       constructor_inputs, nmaps,            &
-                                      maps_mesh_names,                      &
+                                      target_mesh_names,                      &
                                       maps_edge_cells_x, maps_edge_cells_y )
 
     import :: ugrid_generator_type, i_def, str_def, str_long, l_def
@@ -112,7 +112,7 @@ abstract interface
     logical(l_def),     optional, intent(out) :: periodic_y
     character(str_long),optional, intent(out) :: constructor_inputs
     character(str_def), allocatable, &
-                        optional, intent(out) :: maps_mesh_names(:)
+                        optional, intent(out) :: target_mesh_names(:)
 
     integer(i_def), allocatable, &
                     optional, intent(out) :: maps_edge_cells_x(:)

@@ -43,8 +43,8 @@ program summarise_ugrid
   logical(l_def)      :: periodic_x
   logical(l_def)      :: periodic_y
   character(str_long) :: constructor_inputs
-  character(str_def), allocatable :: maps_mesh_names(:)
-  character(str_long) :: maps_mesh_names_str
+  character(str_def), allocatable :: target_mesh_names(:)
+  character(str_long) :: target_mesh_names_str
 
   character(str_def)  :: fmt_str
 
@@ -52,7 +52,7 @@ program summarise_ugrid
   integer(i_def) :: nodes_per_face, edges_per_face
   integer(i_def) :: nodes_per_edge, max_faces_per_node
 
-  integer(i_def) :: comm, total_ranks, local_rank
+  integer(i_def) :: comm, total_ranks, local_rank, nmaps
 
   ! Start up
   call initialise_comm(comm)
@@ -90,14 +90,15 @@ program summarise_ugrid
     call infile%set_from_file_read( trim(mesh_names(i)), &
                                     trim(adjustl(filename)) )
 
-    if (allocated(maps_mesh_names)) deallocate(maps_mesh_names)
+    if (allocated(target_mesh_names)) deallocate(target_mesh_names)
 
     if (n_meshes > 1) then
       ! Extract data on the current mesh in the ugrid file object
       call infile%get_metadata( mesh_name=mesh_name,                   &
                                 mesh_class=mesh_class,                 &
                                 constructor_inputs=constructor_inputs, &
-                                maps_mesh_names=maps_mesh_names,       &
+                                nmaps=nmaps,                           &
+                                target_mesh_names=target_mesh_names,   &
                                 periodic_x=periodic_x,                 &
                                 periodic_y=periodic_y )
     else
@@ -163,22 +164,22 @@ program summarise_ugrid
     call log_event( trim(log_scratch_space), LOG_LEVEL_INFO )
 
 
-    if (allocated(maps_mesh_names)) then
-      if (size(maps_mesh_names) > 0) then
-        maps_mesh_names_str = '"'//trim(adjustl(maps_mesh_names(1)))//'"'
-        if (size(maps_mesh_names) > 1) then
-          do j=2, size(maps_mesh_names)
-            write(maps_mesh_names_str,'(A)')                    &
-                 trim(adjustl(maps_mesh_names_str)) // ', "' // &
-                 trim(maps_mesh_names(j)) // '"'
+    if (allocated(target_mesh_names)) then
+      if (size(target_mesh_names) > 0) then
+        target_mesh_names_str = '"'//trim(adjustl(target_mesh_names(1)))//'"'
+        if (size(target_mesh_names) > 1) then
+          do j=2, size(target_mesh_names)
+            write(target_mesh_names_str,'(A)')                    &
+                 trim(adjustl(target_mesh_names_str)) // ', "' // &
+                 trim(target_mesh_names(j)) // '"'
           end do
         end if
         fmt_str='(A,T24,A)'
         write ( log_scratch_space, fmt_str ) &
-             '  Maps to:', trim(adjustl(maps_mesh_names_str))
+             '  Maps to:', trim(adjustl(target_mesh_names_str))
         call log_event( trim(log_scratch_space), LOG_LEVEL_INFO )
       end if
-      deallocate(maps_mesh_names)
+      deallocate(target_mesh_names)
     end if
 
   end do

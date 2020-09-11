@@ -1479,7 +1479,7 @@ end subroutine calc_global_mesh_maps
 !>                                            the mesh_generator
 !> @param[out]  nmaps              [optional] Number of maps to create with this mesh
 !>                                            as source mesh
-!> @param[out]  maps_mesh_names    [optional] Mesh names of the target meshes that
+!> @param[out]  target_mesh_names  [optional] Mesh names of the target meshes that
 !>                                            this mesh has maps for.
 !> @param[out]  maps_edge_cells_x  [optional] Number of panel edge cells (x-axis) of
 !>                                            target mesh(es) to create map(s) for.
@@ -1496,7 +1496,7 @@ subroutine get_metadata( self,               &
                          edge_cells_y,       &
                          constructor_inputs, &
                          nmaps,              &
-                         maps_mesh_names,    &
+                         target_mesh_names,  &
                          maps_edge_cells_x,  &
                          maps_edge_cells_y )
   implicit none
@@ -1512,7 +1512,7 @@ subroutine get_metadata( self,               &
   integer(i_def),      optional, intent(out) :: nmaps
   character(str_long), optional, intent(out) :: constructor_inputs
 
-  character(str_def), optional, allocatable, intent(out) :: maps_mesh_names(:)
+  character(str_def), optional, allocatable, intent(out) :: target_mesh_names(:)
   integer(i_def),     optional, allocatable, intent(out) :: maps_edge_cells_x(:)
   integer(i_def),     optional, allocatable, intent(out) :: maps_edge_cells_y(:)
 
@@ -1527,7 +1527,7 @@ subroutine get_metadata( self,               &
   if (present(nmaps))              nmaps              = self%nmaps
 
   if (self%nmaps > 0) then
-    if (present(maps_mesh_names))   maps_mesh_names   = self%target_mesh_names
+    if (present(target_mesh_names)) target_mesh_names = self%target_mesh_names
     if (present(maps_edge_cells_x)) maps_edge_cells_x = self%target_edge_cells_x
     if (present(maps_edge_cells_y)) maps_edge_cells_y = self%target_edge_cells_y
   end if

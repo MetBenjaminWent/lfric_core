@@ -32,7 +32,7 @@ class ugrid_2d_mod::ugrid_2d_type {
   -target_mesh_names:   string[:] <<allocatable>>
   -target_edge_cells_x: integer[:] <<allocatable>>
   -target_edge_cells_y: integer[:] <<allocatable>>
-  -target_mesh_maps: target_mesh_maps <<pointer>>
+  -target_mesh_maps: global_mesh_map_collection_type
 
   -file_handler: ugrid_file_type <<allocatable>>
 
@@ -48,7 +48,8 @@ class ugrid_2d_mod::ugrid_2d_type {
   +set_from_file_read( <<in>>mesh_name: string, <<in>> filename: string )
   +write_to_file( <<in>> filename: string )
   +append_to_file( <<in>> filename: string )
-  +get_metadata( <<out>> mesh_name: string, <<out>> mesh_class: string, <<out>> constructor_inputs: string )
+  +get_metadata( <<out,optional>> mesh_name: string, <<out,optional>> mesh_class: string, <<out,optional>> periodic_x: logical, <<out,optional>> periodic_y: logical, <<out,optional>> edge_cells_x: integer, <<out,optional>> edge_cells_y: integer, <<out,optional>> constructor_inputs: string, <<out,optional>> nmaps: integer, <<out,optional,allocatable>> target_mesh_names: string )
+
   +get_coord_units( <<out>> coords_units_x: string, <<out>> coord_units_y: string )
   +get_node_coords( <<out>> node_coords: real[::] )
   +get_face_coords( <<out>> face_coords: real[::] )

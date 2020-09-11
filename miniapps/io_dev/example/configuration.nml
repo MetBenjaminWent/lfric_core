@@ -98,3 +98,7 @@
   planar_domain_min_y = -1.0
   planar_domain_max_y =  1.0
 /
+
+&development
+implement_consolidated_multigrid=.false.
+/

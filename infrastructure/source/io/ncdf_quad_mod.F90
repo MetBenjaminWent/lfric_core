@@ -9,7 +9,7 @@
 module ncdf_quad_mod
 
 use constants_mod,  only : r_def, i_def, l_def, str_def, str_long,             &
-                           str_max_filename, r_ncdf
+                           str_max_filename, r_ncdf, i_native
 use global_mesh_map_collection_mod, only: global_mesh_map_collection_type
 use global_mesh_map_mod,            only: global_mesh_map_type
 use ugrid_file_mod, only : ugrid_file_type
@@ -56,7 +56,7 @@ integer(i_def), parameter :: MESH_FACE_Y_RANK     = 1  !< Rank of face y coordin
 !> @details Implements the ugrid file type for NetCDF files storing 2D quads.
 !-------------------------------------------------------------------------------
 
-type, public, extends(ugrid_file_type) :: ncdf_quad_type
+type, extends(ugrid_file_type), public :: ncdf_quad_type
 
   private
 
@@ -75,7 +75,7 @@ type, public, extends(ugrid_file_type) :: ncdf_quad_type
 
   character(nf90_max_name), allocatable :: target_mesh_names(:)
 
-  type(global_mesh_map_collection_type), allocatable :: target_mesh_maps
+  type(global_mesh_map_collection_type) :: target_mesh_maps
 
   ! Dimension values
   integer(i_def) :: nmesh_nodes          !< Number of nodes
@@ -111,6 +111,7 @@ type, public, extends(ugrid_file_type) :: ncdf_quad_type
 contains
 
   procedure :: read_mesh
+  procedure :: read_map
   procedure :: write_mesh
   procedure :: append_mesh
   procedure :: get_dimensions
@@ -1255,6 +1256,7 @@ subroutine read_mesh( self, mesh_name, mesh_class,                     &
   real(r_ncdf), allocatable :: node_coordinates_ncdf(:,:)
   real(r_ncdf), allocatable :: face_coordinates_ncdf(:,:)
 
+  real(i_def), allocatable :: mesh_map(:,:)
   integer(i_def) :: lower1,upper1,lower2,upper2
 
   character(str_def) :: lchar_px
@@ -1307,22 +1309,40 @@ subroutine read_mesh( self, mesh_name, mesh_class,                     &
   ierr = nf90_get_att( self%ncid, self%mesh_id, &
                        'n_mesh_maps', num_targets )
   call check_err(ierr, routine, cmess)
+  self%nmesh_targets = num_targets
 
-  ! Target mesh maps
-  ierr = nf90_inquire_attribute(self%ncid, self%mesh_id, "maps_to")
-  if (ierr == nf90_noerr) then
-    cmess = 'Getting attribute, "maps_to"'
-    ierr = nf90_get_att( self%ncid, self%mesh_id, &
-                         'maps_to', target_mesh_names_str )
-    call check_err(ierr, routine, cmess)
-    allocate(target_mesh_names(num_targets))
-    do i =1, num_targets
-      upper_bound=index(target_mesh_names_str,' ')
-      target_mesh_names(i) = trim(target_mesh_names_str(1:upper_bound))
-      target_mesh_names_str(1:upper_bound) = ' '
-      target_mesh_names_str = trim(adjustl(target_mesh_names_str))
-    end do
-  end if
+  ! Read in names of the target meshes to map to.
+  ! Can't read in the actual maps as they require
+  ! the global mesh ids of the source and target.
+  ! The target may not have been read in at this point.
+  ! So target names are read, and the maps read in after
+  ! global meshes have been read in.
+
+  ! integer global mesh ids assigned by the global_mesh_mod/collection
+  if (self%nmesh_targets > 0 ) then
+
+    allocate(target_mesh_names(self%nmesh_targets))
+
+    ! 1.0 Find out the target mesh names
+    ierr = nf90_inquire_attribute(self%ncid, self%mesh_id, "maps_to")
+    if (ierr == nf90_noerr) then
+
+      cmess = 'Getting attribute, "maps_to"'
+      ierr = nf90_get_att( self%ncid, self%mesh_id, &
+                           'maps_to', target_mesh_names_str )
+      call check_err(ierr, routine, cmess)
+
+      do i =1, self%nmesh_targets
+        ! Get the a target from the list
+        upper_bound=index(target_mesh_names_str,' ')
+        target_mesh_names(i) = trim(target_mesh_names_str(1:upper_bound))
+
+        target_mesh_names_str(1:upper_bound) = ' '
+        target_mesh_names_str = trim(adjustl(target_mesh_names_str))
+      end do
+    end if
+
+  end if ! self%nmesh_targets > 0
 
 
 
@@ -1403,6 +1423,111 @@ subroutine read_mesh( self, mesh_name, mesh_class,                     &
 end subroutine read_mesh
 
 !-------------------------------------------------------------------------------
+!>  @brief   Read mesh map data from the NetCDF file.
+!>  @details Source and Target mesh names are used to identify
+!>           the relevant intergrid map in the mesh input file.
+!>
+!>  @param[in]      source_mesh_name    Name of the source mesh object
+!>  @param[in]      target_mesh_name    Name of the target mesh object
+!>  @param[out]     mesh_map            Intergrid mapping array which maps
+!>                                      source mesh cells to target mesh
+!>                                      cells. Allocatable integer array,
+!>                                      returned as
+!>                                      [n target cells per source cell,
+!>                                       n source cells]
+!-------------------------------------------------------------------------------
+subroutine read_map( self,             &
+                     source_mesh_name, &
+                     target_mesh_name, &
+                     mesh_map )
+
+  implicit none
+
+  ! Arguments
+  class(ncdf_quad_type),  intent(in) :: self
+
+  character(str_def), intent(in)  :: source_mesh_name
+  character(str_def), intent(in)  :: target_mesh_name
+  integer(i_def),     intent(out), allocatable :: mesh_map(:,:)
+
+  character(*), parameter :: routine = 'read_map'
+
+  integer(i_native) :: source_id, dim_id, mesh_map_id
+  integer(i_native) :: source_cells_id
+  integer(i_native) :: target_cells_per_source_cell_id
+  integer(i_native) :: ierr
+
+  integer(i_def) :: source_ncells
+  integer(i_def) :: target_cells_per_source_cell
+
+  character(nf90_max_name) :: var_name, dim_name
+  character(str_long)      :: cmess
+
+  ! 1.0 Get number of cells for source map
+  !=====================================================
+  dim_name = 'n'//trim(source_mesh_name)//'_face'
+
+  cmess = 'Getting '//trim(dim_name)//' id'
+  ierr = nf90_inq_dimid( self%ncid, &
+                         dim_name,  &
+                         source_cells_id )
+  call check_err(ierr, routine, cmess)
+
+  cmess = 'Getting '//trim(dim_name)//' value'
+  ierr = nf90_inquire_dimension( self%ncid,       &
+                                 source_cells_id, &
+                                 len=source_ncells )
+  call check_err(ierr, routine, cmess)
+
+
+  ! 2.0 Get number of target cells per source cell
+  !=====================================================
+  dim_name = 'n'//trim(target_mesh_name)//           &
+             '_cells_per_'//trim(source_mesh_name)// &
+             '_cell'
+
+  cmess = 'Getting '//trim(dim_name)//' id'
+  ierr = nf90_inq_dimid( self%ncid, &
+                         dim_name,  &
+                         target_cells_per_source_cell_id )
+  call check_err(ierr, routine, cmess)
+
+  cmess = 'Getting '//trim(dim_name)//' value'
+  ierr = nf90_inquire_dimension( self%ncid,                       &
+                                 target_cells_per_source_cell_id, &
+                                 len=target_cells_per_source_cell )
+  call check_err(ierr, routine, cmess)
+
+
+  ! 3.0 Allocate array and extract map
+  !================================================
+
+  ! 3.1 Allocate the mesh map array to be populated
+  if (allocated(mesh_map)) deallocate(mesh_map)
+  allocate( mesh_map( target_cells_per_source_cell, source_ncells ))
+
+  ! 3.2 Extract map from the NetCDF file
+  cmess = 'Getting '//trim(source_mesh_name)//'-'// &
+          trim(target_mesh_name)//' map id'
+  var_name = trim(source_mesh_name)//'_'// &
+             trim(target_mesh_name)//'_map'
+
+  ierr = nf90_inq_varid( self%ncid, &
+                         var_name,  &
+                         mesh_map_id )
+  call check_err(ierr, routine, cmess)
+
+  cmess = 'Getting '//trim(source_mesh_name)//'-'// &
+          trim(target_mesh_name)//' mesh-mesh connectivity'
+
+  ierr = nf90_get_var( self%ncid,   &
+                       mesh_map_id, &
+                       mesh_map(:,:) )
+  call check_err(ierr, routine, cmess)
+
+end subroutine read_map
+
+!-------------------------------------------------------------------------------
 !>  @brief   Writes data to the NetCDF file.
 !>  @details Writes dimension, coordinate and connectivity information
 !>           to the NetCDF file.
@@ -1461,7 +1586,7 @@ subroutine write_mesh( self, mesh_name, mesh_class,                       &
   integer(i_def),      intent(in) :: face_face_connectivity(:,:)
   integer(i_def),      intent(in) :: num_targets
   character(str_def),  intent(in), allocatable :: target_mesh_names(:)
-  type(global_mesh_map_collection_type), pointer, &
+  type(global_mesh_map_collection_type), &
                        intent(in) :: target_mesh_maps
 
   ! Internal variables
@@ -1517,7 +1642,6 @@ subroutine write_mesh( self, mesh_name, mesh_class,                       &
     allocate(self%ntargets_per_source_dim_id(self%nmesh_targets))
     allocate(self%mesh_mesh_links_id(self%nmesh_targets))
 
-    allocate(self%target_mesh_maps, source=global_mesh_map_collection_type())
     self%target_mesh_maps = target_mesh_maps
 
     allocate(self%target_mesh_names(self%nmesh_targets))
@@ -1701,16 +1825,16 @@ subroutine append_mesh( self, mesh_name, mesh_class,                       &
   integer(i_def),        intent(in)    :: face_edge_connectivity(:,:)
   integer(i_def),        intent(in)    :: face_face_connectivity(:,:)
   integer(i_def),        intent(in)    :: num_targets
-  character(str_def),    intent(in), allocatable :: target_mesh_names(:)
-  type(global_mesh_map_collection_type), pointer, &
+  character(str_def),    intent(in),      &
+                         allocatable   :: target_mesh_names(:)
+  type(global_mesh_map_collection_type),  &
                          intent(in)    :: target_mesh_maps
 
   ! Internal variables
-  integer(i_def)      :: ierr
   character(*), parameter :: routine = 'append_mesh'
-  character(str_long) :: cmess
-  logical(l_def)      :: mesh_present
-
+  integer(i_def)          :: ierr
+  character(str_long)     :: cmess
+  logical(l_def)          :: mesh_present
 
   mesh_present = self%is_mesh_present(mesh_name)
 

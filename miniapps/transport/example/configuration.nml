@@ -135,3 +135,7 @@ convection='none',
 microphysics='none',
 radiation='none'
 /
+
+&development
+implement_consolidated_multigrid=.false.
+/

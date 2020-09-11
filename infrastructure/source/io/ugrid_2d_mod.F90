@@ -67,14 +67,14 @@ type, public :: ugrid_2d_type
   integer(i_def), allocatable :: face_face_connectivity(:,:) !< Neighbouring faces of each face
 
   ! Target mesh map variables
-  integer(i_def) :: nmaps !< Number of mesh maps for this mesh (as source)
+  integer(i_def) :: nmaps = 0 !< Number of mesh maps for this mesh (as source)
 
   character(str_def), allocatable :: target_mesh_names(:)   !< Target mesh names
   integer(i_def),     allocatable :: target_edge_cells_x(:) !< Target meshes panel edge cells in x-axis
   integer(i_def),     allocatable :: target_edge_cells_y(:) !< Target meshes panel edge cells in y-axis
 
   ! Global mesh maps
-  type(global_mesh_map_collection_type), pointer :: target_mesh_maps => null()
+  type(global_mesh_map_collection_type) :: target_mesh_maps
 
   ! File handler
   class(ugrid_file_type), allocatable :: file_handler
@@ -245,14 +245,12 @@ subroutine allocate_arrays(self, generator_strategy)
   if ( allocated( self%face_face_connectivity ) ) &
                                      deallocate( self%face_face_connectivity )
 
-
   allocate(self%node_coordinates(2, self%num_nodes))
   allocate(self%face_coordinates(2, self%num_faces))
   allocate(self%edge_node_connectivity(self%num_nodes_per_edge, self%num_edges))
   allocate(self%face_node_connectivity(self%num_nodes_per_face, self%num_faces))
   allocate(self%face_edge_connectivity(self%num_edges_per_face, self%num_faces))
   allocate(self%face_face_connectivity(self%num_edges_per_face, self%num_faces))
-
 
   if (self%nmaps > 0) then
     allocate(self%target_mesh_names(self%nmaps))
@@ -295,6 +293,9 @@ subroutine allocate_arrays_for_file(self)
   if ( allocated( self%face_face_connectivity ) ) &
                                      deallocate( self%face_face_connectivity )
 
+  if ( allocated( self%target_mesh_names ) ) &
+                                     deallocate( self%target_mesh_names )
+
   allocate(self%node_coordinates(2, self%num_nodes))
   allocate(self%face_coordinates(2, self%num_faces))
 
@@ -302,6 +303,10 @@ subroutine allocate_arrays_for_file(self)
   allocate(self%face_node_connectivity(self%num_nodes_per_face, self%num_faces))
   allocate(self%face_edge_connectivity(self%num_edges_per_face, self%num_faces))
   allocate(self%face_face_connectivity(self%num_edges_per_face, self%num_faces))
+
+  if (self%nmaps > 0) then
+    allocate( self%target_mesh_names(self%nmaps) )
+  end if
 
   return
 end subroutine allocate_arrays_for_file
@@ -338,7 +343,7 @@ subroutine set_by_generator(self, generator_strategy)
 
   if (self%nmaps > 0) then
     call generator_strategy%get_metadata                &
-        ( maps_mesh_names   = self%target_mesh_names,   &
+        ( target_mesh_names = self%target_mesh_names,   &
           maps_edge_cells_x = self%target_edge_cells_x, &
           maps_edge_cells_y = self%target_edge_cells_y )
   end if
@@ -356,7 +361,7 @@ subroutine set_by_generator(self, generator_strategy)
         face_face_connectivity = self%face_face_connectivity )
 
   if (self%nmaps > 0) then
-    self%target_mesh_maps => generator_strategy%get_global_mesh_maps()
+    self%target_mesh_maps = generator_strategy%get_global_mesh_maps()
   end if
 
   return
@@ -407,14 +412,14 @@ subroutine set_from_file_read(self, mesh_name, filename)
 
   call self%file_handler%file_open(trim(filename))
 
-  call self%file_handler%get_dimensions(                   &
-         mesh_name              = self%mesh_name,          &
-         num_nodes              = self%num_nodes,          &
-         num_edges              = self%num_edges,          &
-         num_faces              = self%num_faces,          &
-         num_nodes_per_face     = self%num_nodes_per_face, &
-         num_edges_per_face     = self%num_edges_per_face, &
-         num_nodes_per_edge     = self%num_nodes_per_edge, &
+  call self%file_handler%get_dimensions(                    &
+         mesh_name              = self%mesh_name,           &
+         num_nodes              = self%num_nodes,           &
+         num_edges              = self%num_edges,           &
+         num_faces              = self%num_faces,           &
+         num_nodes_per_face     = self%num_nodes_per_face,  &
+         num_edges_per_face     = self%num_edges_per_face,  &
+         num_nodes_per_edge     = self%num_nodes_per_edge,  &
          max_num_faces_per_node = self%max_num_faces_per_node )
 
   call allocate_arrays_for_file(self)
@@ -548,13 +553,14 @@ end subroutine append_to_file
 !> @param[out, optional] edge_cells_x       Number of panel edge cells (x-axis).
 !> @param[out, optional] edge_cells_y       Number of panel edge cells (y-axis).
 !> @param[out, optional] constructor_inputs Input arguments use to create this mesh.
-!> @param[out, optional] maps_mesh_names    Names of target mesh topologies in this file
+!> @param[out, optional] target_mesh_names  Names of target mesh topologies in this file
 !>                                          which this mesh possesses cell-cell maps for.
 !-------------------------------------------------------------------------------
 subroutine get_metadata( self, mesh_name, mesh_class,         &
                          periodic_x, periodic_y,              &
                          edge_cells_x, edge_cells_y,          &
-                         constructor_inputs, maps_mesh_names )
+                         constructor_inputs, nmaps,           &
+                         target_mesh_names )
 
   implicit none
 
@@ -566,7 +572,9 @@ subroutine get_metadata( self, mesh_name, mesh_class,         &
   integer(i_def),       optional, intent(out) :: edge_cells_x
   integer(i_def),       optional, intent(out) :: edge_cells_y
   character(str_long),  optional, intent(out) :: constructor_inputs
-  character(str_def),   optional, allocatable, intent(out) :: maps_mesh_names(:)
+  integer(i_def),       optional, intent(out) :: nmaps
+  character(str_def),   optional, intent(out), &
+                                  allocatable :: target_mesh_names(:)
 
   if (present(mesh_name))          mesh_name          = self%mesh_name
   if (present(mesh_class))         mesh_class         = self%mesh_class
@@ -575,7 +583,10 @@ subroutine get_metadata( self, mesh_name, mesh_class,         &
   if (present(constructor_inputs)) constructor_inputs = self%constructor_inputs
   if (present(edge_cells_x))       edge_cells_x       = self%edge_cells_x
   if (present(edge_cells_y))       edge_cells_y       = self%edge_cells_y
-  if (present(maps_mesh_names))    maps_mesh_names    = self%target_mesh_names
+  if (present(nmaps))              nmaps              = self%nmaps
+  if (self%nmaps > 0 .and. present(target_mesh_names)) then
+    target_mesh_names = self%target_mesh_names
+  end if
 
 end subroutine get_metadata
 

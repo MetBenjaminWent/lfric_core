@@ -21,17 +21,17 @@
 !        output in the mesh file.
 !===================================================================
 &mesh
-  mesh_filename = 'meshes.nc'
+  mesh_filename = 'meshes_C32_MG.nc'
   n_meshes      = 5
-  mesh_names    = 'physics',
-                  'dynamics',
-                  'multigrid_l1',
-                  'multigrid_l2',
-                  'multigrid_l3'
-  mesh_maps     = 'physics:dynamics',
-                  'dynamics:multigrid_l1',
-                  'multigrid_l1:multigrid_l2',
-                  'multigrid_l2:multigrid_l3'
+  mesh_names    = 'C32',
+                  'C16',
+                  'C12',
+                  'C8',
+                  'C4',
+  mesh_maps     = 'C32:C16',
+                  'C16:C8',
+                  'C8:C4',
+                  'C4:C12'
 /
 
 !==================================================================
@@ -46,7 +46,7 @@
 ! intergrid mesh maps) is advised to be left as 0 for general use.
 
 &cubedsphere_mesh
-  edge_cells     = 72, 24, 12, 6, 3
+  edge_cells     = 32, 16, 12, 8, 4
   smooth_passes  = 0
   do_rotate      = .false.
   lon_north      = 0.0

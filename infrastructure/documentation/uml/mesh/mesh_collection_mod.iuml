@@ -6,13 +6,23 @@ class mesh_collection_mod::mesh_collection_type {
 
   -mesh_list: linked_list_type <<payload_type=mesh_type>>
 
+  -name_tags: string[] <<allocatble>>
+  -name_id: string[] <<allocatble>>
+
   +<<create>>  mesh_collection_constructor() : mesh_collection_type
   +<<destroy>> mesh_collection_destructor()
   +clear()
 
-  +add_new_mesh(<<in>>global_mesh: global_mesh, <<in>>partition: partition_type, <<in>>nlayers_in: integer, <<in>>domain_top: real, <<in>>vgrid_option: integer ) : mesh_id<<integer>>
+  +add_new_mesh(<<in>>global_mesh: global_mesh, <<in>>partition: partition_type, <<in>>extrusion: extruson_type, <<in,optional>>mesh_name: string ) : mesh_id<<integer>>
   +add_unit_test_mesh( <<in>>mesh_cfg: integer ) : mesh_id<<integer>>
-  +get_mesh( <<in>>mesh_id: integer ) : mesh_type<<pointer>>
+
+  +n_meshes(): integer
+  +get_mesh_names(): string[] <<allocatable>>
+  +get_mesh_id(<<in>>mesh_name:string): integer
+  +get_mesh_by_id( <<in>>mesh_id: integer ): mesh_type <<pointer>>
+  +get_mesh_by_name( <<in>>mesh_name: string ): mesh_type <<pointer>>
+  +get_mesh() <<generic>>: get_mesh_by_id(...), get_mesh_by_name(...)
+  +check_for( <<in>>mesh_name:string ): logical
 
 }
 

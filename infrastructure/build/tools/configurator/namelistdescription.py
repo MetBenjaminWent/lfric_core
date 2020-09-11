@@ -106,6 +106,8 @@ class _String(_Property):
     def get_configure_type(self):
         return 'string'
 
+    def get_missing_data_indicator(self):
+        return self._missing_data_indicator
 
 ##############################################################################
 class _Enumeration(_Property):
@@ -131,30 +133,37 @@ class _Enumeration(_Property):
 
 ##############################################################################
 class _Scalar(_Property):
-    _fortranKindMap = {'logical': {'default': 'l_def',
-                                   'native':  'l_native'},
-                       'integer': {'default': 'i_def',
-                                   'native':  'i_native',
-                                   'short':   'i_short',
-                                   'medium':  'i_medium',
-                                   'long':    'i_long'},
-                       'real':    {'default': 'r_def',
-                                   'native':  'r_native',
-                                   'single':  'r_single',
-                                   'double':  'r_double'}}
+    _fortranKindMap = {'character': {'default': 'str_def',
+                                     'filename': 'str_max_filename'},
+                       'logical':   {'default': 'l_def',
+                                     'native':  'l_native'},
+                       'integer':   {'default': 'i_def',
+                                     'native':  'i_native',
+                                     'short':   'i_short',
+                                     'medium':  'i_medium',
+                                     'long':    'i_long'},
+                       'real':      {'default': 'r_def',
+                                     'native':  'r_native',
+                                     'single':  'r_single',
+                                     'double':  'r_double'}}
 
-    _fortranFormatMap = {'logical': 'L2',
-                         'integer': 'I0',
-                         'real':    'E14.7'}
+    _fortranFormatMap = {'character': 'A',
+                         'logical':   'L2',
+                         'integer':   'I0',
+                         'real':      'E14.7'}
 
-    _fortranMissingDataIndicator = {'logical': '.false.',
-                                    'integer': 'imdi',
-                                    'real':    'rmdi'}
+    _fortranMissingDataIndicator = {'character': 'cmdi',
+                                    'logical':   '.false.',
+                                    'integer':   'imdi',
+                                    'real':      'rmdi'}
 
     def __init__(self, name, configure_type, configure_kind=None):
 
         if not configure_kind:
             configure_kind = 'default'
+
+        if configure_type == 'string':
+            configure_type = 'character'
 
         super(_Scalar, self).__init__(
             name, FortranType.instance(

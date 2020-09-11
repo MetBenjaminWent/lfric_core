@@ -105,3 +105,7 @@ planar_domain_min_y=-1.0,
   smagorinsky = .false.
   mix_factor = 0.0
 /
+
+&development
+implement_consolidated_multigrid=.false.
+/
