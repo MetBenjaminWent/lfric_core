@@ -52,10 +52,10 @@ module vertical_dimensions_mod
     type(range_vertical_dimension_meta_data_type) :: vertical_type
 
     vertical_type = range_vertical_dimension_meta_data_type(&
-                    standard_name = name,                     &
-                    units = units,                            &
-                    positive = positive,                      &
-                    lower_level = bottom,                     &
+                    standard_name = name,                   &
+                    units = units,                          &
+                    positive = positive,                    &
+                    lower_level = bottom,                   &
                     upper_level = top)
 
   end function model_custom_dimension
@@ -93,10 +93,10 @@ module vertical_dimensions_mod
     endif
 
     vertical_type = range_vertical_dimension_meta_data_type(&
-                    standard_name = 'depth',                  &
-                    units = 'm',                              &
-                    positive = POSITIVE_DOWN,                 &
-                    lower_level = lower_level,                &
+                    standard_name = 'depth',                &
+                    units = 'm',                            &
+                    positive = POSITIVE_DOWN,               &
+                    lower_level = lower_level,              &
                     upper_level = upper_level)
 
   end function model_depth_dimension

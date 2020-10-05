@@ -6,15 +6,12 @@
 !
 !> @brief A module for the vertical dimension types
 !>
-!> @details This allows for the creation of an object that represents the
-!> vertical dimension meta data for a field object.
-!> A meta_data_type can be supplied with, as an optional argument, a
-!> vertical_dimension_type to define its vertical dimension meta data.
+!> @details Encapsulates the vertical dimension meta data for a field object.
 
 
 module vertical_dimension_types_mod
 
-  use constants_mod,        only: i_def, str_def, r_def, l_def
+  use constants_mod,        only: i_def, str_def, r_def, l_def, i_native
 
   implicit none
 
@@ -22,12 +19,13 @@ module vertical_dimension_types_mod
 
   type, abstract, public :: abstract_vertical_meta_data_type
 
+    private
     !> standard_name used by the dimension
     character(str_def) :: standard_name
     !> unit of measure used by the dimension
     character(str_def) :: units
     !> The direction of movement for positive numbers
-    integer(i_def)     :: positive
+    integer(i_native)  :: positive
     !> The axis that this dimension represents
     character(str_def) :: axis
 
@@ -37,6 +35,7 @@ module vertical_dimension_types_mod
   !> Defines the range vertical dimension
   type, public, extends(abstract_vertical_meta_data_type) :: range_vertical_dimension_meta_data_type
 
+    private
     !> The lowest level the field is calculated on
     integer(i_def) :: lower_level
 
@@ -45,24 +44,26 @@ module vertical_dimension_types_mod
 
   end type range_vertical_dimension_meta_data_type
 
+  interface range_vertical_dimension_meta_data_type
+    module procedure range_vertical_dimension_meta_data_constructor
+  end interface range_vertical_dimension_meta_data_type
+
+
   !> Defines the list vertical dimension
   type, public, extends(abstract_vertical_meta_data_type) :: list_vertical_dimension_meta_data_type
 
+    private
     !> Array that defines the vertical level
     real(r_def), allocatable     :: level_definition(:)
 
   end type list_vertical_dimension_meta_data_type
-
-  interface range_vertical_dimension_meta_data_type
-    module procedure range_vertical_dimension_meta_data_constructor
-  end interface range_vertical_dimension_meta_data_type
 
   interface list_vertical_dimension_meta_data_type
     module procedure list_vertical_dimension_meta_data_constructor
    end interface list_vertical_dimension_meta_data_type
 
 
-  contains
+contains
 
   !> Construct a <code>range_vertical_dimension_meta_data_type</code> object.
   !> @param [in] standard_name The standard name of the verticality
@@ -83,7 +84,7 @@ module vertical_dimension_types_mod
 
     character(*),                 intent(in)  :: standard_name
     character(*),                 intent(in)  :: units
-    integer(i_def),               intent(in)  :: positive
+    integer(i_native),            intent(in)  :: positive
     integer(i_def),               intent(in)  :: lower_level
     integer(i_def),               intent(in)  :: upper_level
 
@@ -115,7 +116,7 @@ module vertical_dimension_types_mod
 
     character(*),                         intent(in)  :: standard_name
     character(*),                         intent(in)  :: units
-    integer(i_def),                       intent(in)  :: positive
+    integer(i_native),                    intent(in)  :: positive
     real(r_def),                          intent(in)  :: level_definition(:)
 
     type(list_vertical_dimension_meta_data_type)   :: self
@@ -125,8 +126,7 @@ module vertical_dimension_types_mod
     self%positive = positive
     self%axis = "Z"
 
-    allocate(self%level_definition(size(level_definition)))
-    self%level_definition = level_definition
+    allocate(self%level_definition, source=level_definition)
 
   end function list_vertical_dimension_meta_data_constructor
 

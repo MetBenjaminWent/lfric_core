@@ -15,7 +15,7 @@
 !-------------------------------------------------------------------------------
 module example_science_section__example_fields__meta_mod
 
-  use field_meta_data_mod,            only: field_meta_data_type
+  use diagnostics_mod,            only: field_meta_data_type
   use constants_mod,                  only: real_type, r_def, i_def
   !> Only import the dimensions that you will actually be using
   use vertical_dimensions_mod,        only: model_height_dimension, &

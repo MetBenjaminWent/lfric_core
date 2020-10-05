@@ -15,7 +15,7 @@
 !-------------------------------------------------------------------------------
 module example_science_section__example_fields__meta_mod
 
-  use field_meta_data_mod,            only: field_meta_data_type
+  use meta_data_mod,                  only: meta_data_type
   use constants_mod,                  only: real_type, r_def, i_def
   !> Only import the dimensions that you will actually be using
   use vertical_dimensions_mod,        only: model_height_dimension, &
@@ -30,7 +30,6 @@ module example_science_section__example_fields__meta_mod
   use interpolation_enum_mod,         only: BILINEAR
   !> Only import the levels that you will actually be using
   use levels_enum_mod,                only: TOP_WET_LEVEL
-  use positive_enum_mod,              only: POSITIVE_UP, POSITIVE_DOWN
 
   implicit none
 
@@ -39,7 +38,7 @@ module example_science_section__example_fields__meta_mod
   type, public :: example_science_section__example_fields__meta_type
 
     !> Declare the name of your fields here
-    type(field_meta_data_type), public :: &
+    type(meta_data_type), public :: &
       eastward_wind, &
       rate_of_increase_rain_mass_due_to_autoconv_from_liquid_cloud, &
       air_potential_temperature, &
@@ -56,7 +55,7 @@ module example_science_section__example_fields__meta_mod
 
 contains
 
-  !>@brief Creates field_meta_data_type objects for a specific section of science
+  !>@brief Creates meta_data_type objects for a specific section of science
   function example_science_section__example_fields__meta_constructor() result(self)
     implicit none
 
@@ -66,7 +65,7 @@ contains
     !> If no arguments are present, it will default to top atmospheric level
     !> and bottom atmospheric level. This field also uses a standard name,
     !> which is optional
-    self%eastward_wind = field_meta_data_type(&
+    self%eastward_wind = meta_data_type(&
       unique_id = "example_fields__eastward_wind", &
       units = "m s-1", &
       function_space = W2, &
@@ -87,7 +86,7 @@ contains
 
     !> Example of a field using a model height dimension and supplying one
     !> of its arguments
-    self%rate_of_increase_rain_mass_due_to_autoconv_from_liquid_cloud = field_meta_data_type(&
+    self%rate_of_increase_rain_mass_due_to_autoconv_from_liquid_cloud = meta_data_type(&
       unique_id = "example_fields__rate_of_increase_of_rain_mass_due_to_"// &
                   "autoconversion_from_liquid_cloud", &
       units = "kg kg-1 s-1", &
@@ -104,7 +103,7 @@ contains
       vertical_dimension = model_height_dimension(top = TOP_WET_LEVEL))
 
     !> This field uses a different function space
-    self%air_potential_temperature = field_meta_data_type(&
+    self%air_potential_temperature = meta_data_type(&
       unique_id = "example_fields__air_potential_temperature", &
       units = "K", &
       function_space = Wtheta, &
@@ -122,7 +121,7 @@ contains
     !> Example field using a depth vertical dimension using model levels
     !> If no arguments are present, it will default to top soil level and
     !> bottom soil level
-    self%lwe_thickness_of_moisture_content_of_soil_layer = field_meta_data_type(&
+    self%lwe_thickness_of_moisture_content_of_soil_layer = meta_data_type(&
       unique_id = "example_fields__lwe_thickness_of_moisture_content_of_"// &
                   "soil_layer", &
       units = "kg m-2", &
@@ -143,7 +142,7 @@ contains
     !> Example field using a height vertical dimension on fixed levels
     !> The level definition should be passed as an array of
     !> floating point numbers
-    self%surface_altitude = field_meta_data_type(&
+    self%surface_altitude = meta_data_type(&
       unique_id = "example_fields__surface_altitude", &
       units = "m", &
       function_space = Wtheta, &
@@ -165,7 +164,7 @@ contains
     !> dimension on fixed levels.
     !> This field will require an additional non-spatial dimension to
     !> define the tiles. This is yet to be implemented
-    self%air_temperature_over_tiles = field_meta_data_type(&
+    self%air_temperature_over_tiles = meta_data_type(&
       unique_id = "example_fields__air_temperature_over_tiles", &
       units = "K", &
       function_space = WTheta, &
@@ -181,7 +180,7 @@ contains
       standard_name = "air_temperature")
 
     !> Example of a field using a fixed height dimension
-    self%low_type_cloud_area_fraction = field_meta_data_type(&
+    self%low_type_cloud_area_fraction = meta_data_type(&
       unique_id = "example_fields__low_type_cloud_area_fraction", &
       units = "1", &
       function_space = W3, &
