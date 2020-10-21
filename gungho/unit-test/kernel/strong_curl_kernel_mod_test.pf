@@ -55,7 +55,7 @@ contains
     real(kind=r_def),    dimension(3,ndf1,ndf2) :: diff_basis_1
     real(kind=r_def),    dimension(undf1)       :: u
 
-    integer(kind=r_def) :: i
+    integer(kind=i_def) :: i
 
 
     d21 = real(reshape( [ &

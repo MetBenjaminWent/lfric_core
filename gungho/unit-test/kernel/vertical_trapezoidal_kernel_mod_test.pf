@@ -22,6 +22,7 @@ module vertical_trapezoidal_kernel_mod_test
   contains
     procedure setUp
     procedure test_all
+    procedure tearDown
   end type vertical_trapezoidal_test_type
 
   integer(i_def), parameter :: n_dep_pt_iterations = 3

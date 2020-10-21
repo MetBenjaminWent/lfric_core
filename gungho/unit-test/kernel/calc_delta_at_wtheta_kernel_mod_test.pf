@@ -51,7 +51,7 @@ contains
     integer(kind=i_def), dimension(ndftheta)    :: maptheta
     real(kind=r_def),    dimension(undftheta)   :: delta_at_wtheta
 
-    integer(kind=r_def) :: i, k
+    integer(kind=i_def) :: i, k
 
 
 

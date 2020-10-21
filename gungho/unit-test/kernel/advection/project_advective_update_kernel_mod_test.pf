@@ -67,7 +67,7 @@ contains
     real(kind=r_def), parameter              :: dy = 5.0_r_def
     real(kind=r_def), dimension(0:nlayers)   :: r
 
-    integer(kind=r_def)            :: k, df, d
+    integer(kind=i_def)            :: k, df, d
     real(kind=r_def), dimension(3) :: nodes
     real(kind=r_def), dimension(3) :: f1, f2
 

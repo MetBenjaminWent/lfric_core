@@ -120,7 +120,7 @@ build: ALWAYS
 unit-tests: export ADDITIONAL_EXTRACTION = $(ROOT_DIR)/infrastructure/source
 unit-tests: export BIN_DIR ?= test
 unit-tests: export EXTERNAL_STATIC_LIBRARIES += pfunit
-unit-tests: export FFLAG_GROUPS = DEBUG NO_OPTIMISATION INIT
+unit-tests: export FFLAG_GROUPS = DEBUG NO_OPTIMISATION INIT UNIT_WARNINGS
 unit-tests: export META_FILE_DIR = rose-meta/lfric-mesh_tools/HEAD
 unit-tests: export PROGRAMS = mesh_tools_unit_tests
 unit-tests: export PROJECT = mesh_tools

@@ -56,7 +56,7 @@ contains
     real(kind=r_def), dimension(0:nlayers)   :: r
     real(kind=r_def), dimension(0:nlayers-1) :: vol
 
-    integer(kind=r_def)                   :: k, df, d
+    integer(kind=i_def)                   :: k, df, d
     real(kind=r_def), dimension(ndf_ws,3) :: nodes
     real(kind=r_def), dimension(3)        :: f1, f2
     real(kind=r_def), dimension(undf_ws)  :: answer

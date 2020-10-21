@@ -56,7 +56,7 @@ contains
     integer(kind=i_def), parameter              :: nqp = 1_i_def
     real(kind=r_def),    dimension(1)           :: wt
 
-    integer(kind=r_def) :: i
+    integer(kind=i_def) :: i
 
 
     do i = 1,ndf1

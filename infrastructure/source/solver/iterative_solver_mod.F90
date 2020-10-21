@@ -530,7 +530,7 @@ contains
     real(kind=r_def) :: alpha, beta, rho, omega, rho_old
     real(kind=r_def) :: err, sc_err, tt, ts
 
-    integer(kind=r_def) :: iter
+    integer(kind=i_def) :: iter
 
     ! compute the starting residual
     ! r = b

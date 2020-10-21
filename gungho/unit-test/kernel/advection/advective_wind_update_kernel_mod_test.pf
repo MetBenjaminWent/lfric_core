@@ -51,7 +51,7 @@ contains
     ! Basis function arrays
     real(kind=r_def),    dimension(3,ndf_wv,ndf_ws) :: basis_wv
 
-    integer(kind=r_def) :: k, df, d
+    integer(kind=i_def) :: k, df, d
 
     map_ws = (/ 1 /)
     map_wv(1) = 1

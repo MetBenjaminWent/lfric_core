@@ -178,7 +178,7 @@ build: ALWAYS
 .PHONY: unit-tests
 unit-tests: export BIN_DIR ?= $(PROJECT_DIR)/test
 unit-tests: export EXTERNAL_STATIC_LIBRARIES += pfunit
-unit-tests: export FFLAGS += $(FFLAGS_DEBUG) $(FFLAGS_NO_OPTIMISATION) $(FFLAGS_INIT)
+unit-tests: export FFLAGS += $(FFLAGS_DEBUG) $(FFLAGS_NO_OPTIMISATION) $(FFLAGS_INIT) $(FFLAGS_UNIT_WARNINGS)
 unit-tests: export IGNORE_DEPENDENCIES += pfunit_mod
 unit-tests: export PROGRAMS = $(PROJECT_NAME)_unit_tests
 unit-tests: export PROJECT = $(PROJECT_NAME)

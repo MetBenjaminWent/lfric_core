@@ -115,7 +115,7 @@ document-api: api-documentation
 .PHONY: unit-tests
 unit-tests: export BIN_DIR ?= $(PROJECT_DIR)/test
 unit-tests: export EXTERNAL_STATIC_LIBRARIES += pfunit
-unit-tests: export FFLAG_GROUPS = DEBUG NO_OPTIMISATION INIT
+unit-tests: export FFLAG_GROUPS = DEBUG NO_OPTIMISATION INIT UNIT_WARNINGS
 unit-tests: export META_FILE_DIR = rose-meta/lfric-infrastructure/HEAD
 unit-tests: export PROGRAMS = infrastructure_unit_tests
 unit-tests: export PROJECT = infrastructure
