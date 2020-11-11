@@ -123,6 +123,7 @@
   outer_iterations   = 2
   inner_iterations   = 2
   runge_kutta_method = 'ssp3'
+  spinup_period      = 0.0
 /
 
 &partitioning

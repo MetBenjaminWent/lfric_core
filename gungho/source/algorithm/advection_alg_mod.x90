@@ -169,7 +169,8 @@ contains
   use field_collection_mod,           only: field_collection_type
   implicit none
 
-    type(field_type), dimension(bundle_size),       intent(inout) :: rhs, mr_inc, mr
+    type(field_type), dimension(bundle_size),       intent(inout) :: rhs
+    type(field_type), dimension(nummr),             intent(inout) :: mr_inc, mr
     type(field_type), dimension(num_moist_factors), intent(inout) :: moist_dyn
     type(field_collection_type),                    intent(inout) :: cloud_fields
     type(field_collection_type),                    intent(inout) :: cloud_fields_after_slow
@@ -177,7 +178,7 @@ contains
 
     type(field_type), dimension(bundle_size), intent(in) :: state_after_slow
     type(field_type),                         intent(in) :: wind_n, wind_np1, advected_wind
-    type(field_type), dimension(bundle_size), intent(in) :: mr_after_slow
+    type(field_type), dimension(nummr),       intent(in) :: mr_after_slow
 
     integer(i_def), intent(in) :: t_step, outer
 

@@ -749,7 +749,8 @@ contains
       !======== Create multiplicity for horizontally continuous fields ========!
 
       call nodal_multiplicity_w2_shifted%initialise( vector_space = w2_shift_fs )
-      call invoke( name = "Create shifted multiplicity ",             &
+      call invoke( name = "create_shifted_multiplicity",                    &
+                   setval_c(nodal_multiplicity_w2_shifted, 0.0_r_def),      &
                    multiplicity_kernel_type(nodal_multiplicity_w2_shifted) )
 
       !================ Create detj values at W2 dof locations ================!
