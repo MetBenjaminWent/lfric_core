@@ -9,14 +9,6 @@
 module invert_local_operator_kernel_mod_test
 
   use constants_mod,                 only : i_def, r_def
-  use function_space_collection_mod, only : function_space_collection_type, &
-                                            function_space_collection
-  use mesh_collection_mod,           only : mesh_collection_type, &
-                                            mesh_collection
-  use field_mod,                     only : field_type, field_proxy_type
-  use fs_continuity_mod,             only : W3
-  use function_space_mod,            only : function_space_type
-  use operator_mod,                  only : operator_type, operator_proxy_type
   use yaxt,                          only : xt_initialize, xt_finalize
   use mpi_mod,                       only : store_comm, clear_comm
   use pFUnit_Mod
@@ -29,52 +21,25 @@ module invert_local_operator_kernel_mod_test
   @TestCase
   type, extends(MPITestCase), public :: invert_local_operator_test_type
     private
-    type(operator_type)       :: mm, mm_inv
-    integer(i_def)            :: mesh_id
   contains
     procedure setUp
     procedure tearDown
     procedure test_all
   end type invert_local_operator_test_type
 
-  integer(i_def), parameter :: element_order = 0
-
 contains
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine setUp( this )
 
-    use finite_element_config_mod, only : cellshape_quadrilateral
-    use mesh_mod,                  only : mesh_type, PLANE_BI_PERIODIC
-
     implicit none
 
     class(invert_local_operator_test_type), intent(inout) :: this
 
-
-    type(function_space_type), pointer :: w3_fs => null()
-
-    type(mesh_type) :: unit_test_mesh
-
-    ! Initialise YAXT
+   ! Initialise YAXT
     call xt_initialize(this%getMpiCommunicator())
     ! Store the MPI communicator for later use
     call store_comm(this%getMpiCommunicator())
-
-    ! Create top level mesh collection
-    mesh_collection = mesh_collection_type()
-    ! Create top level function space collection
-    function_space_collection = function_space_collection_type()
-
-    ! Dummy mesh mod has 9 cells, 3 layers and is uniform in vertical
-    unit_test_mesh = mesh_type( PLANE_BI_PERIODIC )
-    this%mesh_id = mesh_collection%add_new_mesh( unit_test_mesh )
-
-
-    w3_fs => function_space_collection%get_fs( this%mesh_id, element_order, W3 )
-
-    this%mm     = operator_type( w3_fs, w3_fs )
-    this%mm_inv = operator_type( w3_fs, w3_fs )
 
   end subroutine setUp
 
@@ -84,9 +49,6 @@ contains
     implicit none
 
     class(invert_local_operator_test_type), intent(inout) :: this
-
-    call function_space_collection%clear()
-    call mesh_collection%clear()
 
     ! Finalise YAXT
     call xt_finalize()
@@ -100,7 +62,8 @@ contains
   subroutine test_all( this )
 
     use invert_local_operator_kernel_mod, only : invert_local_operator_code
-    use mesh_mod,                   only : mesh_type
+
+    use get_unit_test_m3x3_q3x3x3_sizes_mod, only: get_w3_m3x3_q3x3x3_size
 
     implicit none
 
@@ -108,40 +71,46 @@ contains
 
     real(r_def), parameter :: tol = 1.0e-6_r_def
 
-    real(kind=r_def) :: answer
+    real(r_def) :: answer
 
-    integer :: cell
-    integer(i_def) :: err
+    integer(i_def) :: nlayers, ncells, cell
+    integer(i_def) :: ndf_w3, undf_w3
 
-    real(r_def) :: dz_test(3)
+  ! Dummy variable for passing into multi-getter routines where item is not needed
+    integer(i_def) :: unused
 
-    ! Required for calling operator inversion kernel
-    integer :: nlayers, ndf
-    type(operator_proxy_type) :: mm_p, mm_inv_p
+   ! Test field data
+    real(r_def), allocatable :: matrix_inv(:,:,:)
+    real(r_def), allocatable :: matrix(:,:,:)
 
-    type(mesh_type),pointer   :: mesh => null()
+    ! Get canned data for a 3-layer mesh
+    nlayers = 3
 
-    mesh => mesh_collection%get_mesh( this%mesh_id )
-    call mesh%get_dz(dz_test)
+    ! Get sizes
+    call get_w3_m3x3_q3x3x3_size( ndf_w3, undf_w3, ncells, &
+                                  unused, unused,          &
+                                  unused, unused,          &
+                                  nlayers )
 
-    mm_p = this%mm%get_proxy()
-    nlayers  = mm_p%fs_from%get_nlayers()
-    ndf  = mm_p%fs_from%get_ndf()
-    mm_inv_p = this%mm_inv%get_proxy()
+    allocate(matrix_inv(ndf_w3,ndf_w3,ncells))
+    allocate(matrix(ndf_w3,ndf_w3,ncells))
 
     cell = 1
-    mm_p%local_stencil(:,:,:) = 5.0_r_def
-    call invert_local_operator_code( cell,                              &
-                                     nlayers,                           &
-                                     mm_inv_p%ncell_3d,                 &
-                                     mm_inv_p%local_stencil,            &
-                                     mm_p%ncell_3d,                     &
-                                     mm_p%local_stencil,                &
-                                     ndf                                &
+    matrix(:,:,:) = 5.0_r_def
+    call invert_local_operator_code( cell,       &
+                                     nlayers,    &
+                                     ncells,     &
+                                     matrix_inv, &
+                                     ncells,     &
+                                     matrix,     &
+                                     ndf_w3      &
                                      )
 
     answer = 1.0_r_def/5.0_r_def
-    @assertEqual(answer, mm_inv_p%local_stencil(1, 1, 1 ), tol)
+    @assertEqual(answer, matrix_inv(1, 1, 1 ), tol)
+
+    deallocate(matrix_inv)
+    deallocate(matrix)
 
   end subroutine test_all
 
