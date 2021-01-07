@@ -55,7 +55,7 @@ contains
   !! @param[in] cell      Identifying number of cell.
   !! @param[in] nlayers   Number of layers.
   !! @param[in] ncell_3d  ncell*ndf
-  !! @param[out] mm       Local stencil or mass matrix.
+  !! @param[in,out] mm    Local stencil or mass matrix.
   !! @param[in] chi1      1st (spherical) coordinate field in Wchi
   !! @param[in] chi2      2nd (spherical) coordinate field in Wchi
   !! @param[in] chi3      3rd (spherical) coordinate field in Wchi
@@ -102,7 +102,7 @@ contains
     integer(kind=i_def), intent(in)    :: undf_pid
     integer(kind=i_def), intent(in)    :: map_pid(ndf_pid)
 
-    real(kind=r_def),    intent(out)   :: mm(ndf_w2b,ndf_w2b,ncell_3d)
+    real(kind=r_def),    intent(inout) :: mm(ndf_w2b,ndf_w2b,ncell_3d)
     real(kind=r_def),    intent(in)    :: basis_chi(1,ndf_chi,nqp_h,nqp_v)
     real(kind=r_def),    intent(in)    :: diff_basis_chi(3,ndf_chi,nqp_h,nqp_v)
     real(kind=r_def),    intent(in)    :: chi1(undf_chi)

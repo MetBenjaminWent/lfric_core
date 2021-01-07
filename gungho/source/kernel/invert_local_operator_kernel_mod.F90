@@ -46,7 +46,7 @@ contains
 !! @param[in] ndf Number of degrees of freedom per cell.
 !! @param[in] ncell3d ncell*nlayers
 !! @param[in] ncell3d_inv ncell*nlayers
-!! @param[out] matrix_inv Inverse matrix
+!! @param[in,out] matrix_inv Inverse matrix
 !! @param[in] matrix Input matrix
 subroutine invert_local_operator_code(cell, nlayers, ncell3d_inv,       &
                                       matrix_inv, ncell3d, matrix,          &
@@ -60,8 +60,8 @@ subroutine invert_local_operator_code(cell, nlayers, ncell3d_inv,       &
   integer, intent(in)     :: ncell3d, ncell3d_inv
 
 
-  real(kind=r_def), dimension(ndf,ndf,ncell3d),     intent(in)   :: matrix
-  real(kind=r_def), dimension(ndf,ndf,ncell3d_inv), intent(out)  :: matrix_inv
+  real(kind=r_def), dimension(ndf,ndf,ncell3d),     intent(in)     :: matrix
+  real(kind=r_def), dimension(ndf,ndf,ncell3d_inv), intent(inout)  :: matrix_inv
 
   !Internal variables
   integer                                      :: k, ik

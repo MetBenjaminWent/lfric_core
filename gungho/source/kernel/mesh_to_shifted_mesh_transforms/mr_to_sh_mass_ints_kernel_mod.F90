@@ -69,13 +69,13 @@ contains
 
 !> @brief Compute integrals for matrix transforming from mixing ratio to density.
 !! @param[in] nlayers The number of layers of the original mesh.
-!! @param[out] I_lower_i_ip1 The integral of the (i+1)-th Wtheta basis function on
+!! @param[in,out] I_lower_i_ip1 The integral of the (i+1)-th Wtheta basis function on
 !! the lower half of the original mesh. Is a W3 field.
-!! @param[out] I_lower_i_i The integral of the i-th Wtheta basis function on
+!! @param[in,out] I_lower_i_i The integral of the i-th Wtheta basis function on
 !! the lower half of the original mesh. Is a W3 field.
-!! @param[out] I_upper_i_i The integral of the i-th Wtheta basis function on
+!! @param[in,out] I_upper_i_i The integral of the i-th Wtheta basis function on
 !! the upper half of the original mesh. Is a W3 field.
-!! @param[out] I_upper_i_im1 The integral of the (i-1)-th Wtheta basis function on
+!! @param[in,out] I_upper_i_im1 The integral of the (i-1)-th Wtheta basis function on
 !! the upper half of the original mesh. Is a W3 field.
 !! @param[in] chi_dl_1 The 1st spherical coordinate field in Wchi for double level mesh.
 !! @param[in] chi_dl_2 The 2nd spherical coordinate field in Wchi for double level mesh.
@@ -140,10 +140,10 @@ subroutine mr_to_sh_mass_ints_code(                                      &
   real(kind=r_def), dimension(3,ndf_chi_dl,nqp_h,nqp_v), intent(in) :: chi_dl_diff_basis
   real(kind=r_def), dimension(1,ndf_chi_dl,nqp_h,nqp_v), intent(in) :: chi_dl_basis
 
-  real(kind=r_def), dimension(undf_w3),     intent(out)  :: I_lower_i_ip1
-  real(kind=r_def), dimension(undf_w3),     intent(out)  :: I_lower_i_i
-  real(kind=r_def), dimension(undf_w3),     intent(out)  :: I_upper_i_i
-  real(kind=r_def), dimension(undf_w3),     intent(out)  :: I_upper_i_im1
+  real(kind=r_def), dimension(undf_w3),     intent(inout) :: I_lower_i_ip1
+  real(kind=r_def), dimension(undf_w3),     intent(inout) :: I_lower_i_i
+  real(kind=r_def), dimension(undf_w3),     intent(inout) :: I_upper_i_i
+  real(kind=r_def), dimension(undf_w3),     intent(inout) :: I_upper_i_im1
   real(kind=r_def), dimension(undf_pid),    intent(in)   :: panel_id
   real(kind=r_def), dimension(undf_wtheta), intent(in)   :: dummy_theta
   real(kind=r_def), dimension(undf_chi_dl), intent(in)   :: chi_dl_1, chi_dl_2, chi_dl_3

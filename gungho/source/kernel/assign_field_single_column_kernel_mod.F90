@@ -50,11 +50,11 @@ contains
 
 !> @brief Sets all field entries to 0, except for the values in the first encountered
 !>        column.
-!> @param[in]  nlayers Number of vertical layers
-!> @param[out] x Output data
-!> @param[in]  ndf Number of degrees of freedom per cell for the output field
-!> @param[in]  undf Unique number of degrees of freedom  for the output field
-!> @param[in]  map Dofmap for the cell at the base of the column for the output field
+!> @param[in]     nlayers Number of vertical layers
+!> @param[in,out] x Output data
+!> @param[in]     ndf Number of degrees of freedom per cell for the output field
+!> @param[in]     undf Unique number of degrees of freedom  for the output field
+!> @param[in]     map Dofmap for the cell at the base of the column for the output field
 subroutine assign_field_single_column_code(nlayers,     &
                                            x,           &
                                            ndf, undf, map)
@@ -62,7 +62,7 @@ subroutine assign_field_single_column_code(nlayers,     &
   !Arguments
   integer(kind=i_def),                   intent(in)    :: nlayers
   integer(kind=i_def),                   intent(in)    :: undf, ndf
-  real   (kind=r_def), dimension(undf),  intent(out)   :: x
+  real   (kind=r_def), dimension(undf),  intent(inout) :: x
   integer(kind=i_def), dimension(ndf),   intent(in)    :: map
 
   !Internal variables

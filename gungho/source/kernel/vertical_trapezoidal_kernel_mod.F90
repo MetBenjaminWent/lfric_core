@@ -55,7 +55,7 @@ contains
 !> @brief Kernel which computes the departure distances for cell faces in the
 !>        vertical direction.
 !! @param[in]  nlayers             The number of layers
-!! @param[in]  dep_pts_z           The departure distances in the vertical
+!! @param[in,out]  dep_pts_z       The departure distances in the vertical
 !! @param[in]  u_n                 The wind field at time level n
 !! @param[in]  u_np1               The wind field at time level n+1
 !! @param[in]  ndf_w2              The number of degrees of freedom per cell

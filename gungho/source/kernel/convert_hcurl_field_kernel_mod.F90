@@ -96,10 +96,10 @@ subroutine convert_hcurl_field_code(nlayers,                                  &
 
   real(kind=r_def), dimension(undf),     intent(in)    :: computational_field
   real(kind=r_def), dimension(undf_chi), intent(in)    :: chi1, chi2, chi3
-  real(kind=r_def), dimension(undf_pid),  intent(in)   :: panel_id
-  real(kind=r_def), dimension(undf),     intent(inout) :: physical_field1,&
-                                                          physical_field2,&
-                                                          physical_field3
+  real(kind=r_def), dimension(undf_pid), intent(in)    :: panel_id
+  real(kind=r_def), dimension(undf),     intent(inout) :: physical_field1
+  real(kind=r_def), dimension(undf),     intent(inout) :: physical_field2
+  real(kind=r_def), dimension(undf),     intent(inout) :: physical_field3
 
   real(kind=r_def), dimension(1,ndf_chi,ndf), intent(in) :: basis_chi
   real(kind=r_def), dimension(3,ndf_chi,ndf), intent(in) :: diff_basis_chi

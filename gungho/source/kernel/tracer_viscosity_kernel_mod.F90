@@ -46,7 +46,7 @@ contains
 
 !> @brief The subroutine which is called directly by the Psy layer
 !! @param[in] nlayers Number of layers in the mesh
-!! @param[in] theta_inc Diffusion increment for temperature field
+!! @param[in,out] theta_inc Diffusion increment for temperature field
 !! @param[in] theta_n Input temperature field
 !! @param[in] map_wt_size Number of cells in the stencil at the base of the column for wt
 !! @param[in] map_wt Array holding the dofmap for the stencil at the base of the column for wt

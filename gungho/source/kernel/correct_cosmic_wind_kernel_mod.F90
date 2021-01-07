@@ -50,7 +50,7 @@ contains
   !>          Cosmic scheme is a finite-volume scheme and we require the physical
   !>          values of the wind, rather than the Piola wind values.
   !> @param[in] nlayers Integer the number of layers
-  !> @param[in] wind_out The output field for the wind
+  !> @param[in,out] wind_out The output field for the wind
   !> @param[in] wind_in The input field for the wind
   !> @param[in] orientation The orientation of the cells, in particular in the halo
   !> @param[in] undf_w2 The number of unique degrees of freedom for the wind fields

@@ -39,19 +39,20 @@ module split_w2_field_kernel_mod
 
 contains
 
-!> @brief Kernel to sample a flux at nodal points: F = u*q
-!! @param[in] nlayers Number of layers
-!! @param[in] ndf_f Number of degrees of freedom per cell for w2
-!! @param[in] undf_f Number of unique degrees of freedom for w2
-!! @param[in] map_f Dofmap for the cell at the base of the column for w2
-!! @param[inout] flux Field to contain the right hand side to be computed
-!! @param[in] rmultiplicity Reciprocal of How many times the dof has been visited in total
-!! @param[in] u Advecting wind
-!! @param[in] ndf_q Number of degrees of freedom per cell for the field to be advected
-!! @param[in] undf_q  Number of unique degrees of freedom for the advected field
-!! @param[in] map_q Dofmap for the cell at the base of the column for the field to be advected
-!! @param[in] basis_q Basis functions evaluated at gaussian quadrature points
-!! @param[in] q Advected field
+!> @brief Split a W2 field into the component W2v and W2h fields
+!> @param[in,out] uv Horizontal wind
+!> @param[in,out] w Vertical wind
+!> @param[in]     uvw 3D wind
+!> @param[in]     ndf_w2h  Number of degrees of freedom per cell for w2h
+!> @param[in]     undf_w2h Number of unique degrees of freedom for w2h
+!> @param[in]     map_w2h  Dofmap for the cell at the base of the column for w2h
+!> @param[in]     ndf_w2v  Number of degrees of freedom per cell for w2v
+!> @param[in]     undf_w2v Number of unique degrees of freedom for w2v
+!> @param[in]     map_w2v  Dofmap for the cell at the base of the column for w2v
+!> @param[in]     ndf_w2   Number of degrees of freedom per cell for w2
+!> @param[in]     undf_w2  Number of unique degrees of freedom for w2
+!> @param[in]     map_w2   Dofmap for the cell at the base of the column for w2
+
 subroutine split_w2_field_code(nlayers,                    &
                                uv, w, uvw,                 &
                                ndf_w2h, undf_w2h, map_w2h, &

@@ -62,7 +62,7 @@ contains
 !> @param [in]  local_stencil_Dh Locally assembled matrix for \f$D_h\f$
 !> @param [in]  ncell_3d_tmp Total number of cells (unused duplicate)
 !> @param [in]  local_stencil_M2h Locally assembled matrix for \f$M_{2h}\f$
-!> @param [out] columnwise_matrix Banded matrix to assemble into
+!> @param [in,out] columnwise_matrix Banded matrix to assemble into
 !> @param [in]  nrow Number of rows (and columns) in the banded matrix
 !> @param [in]  bandwidth Bandwidth of the banded matrix
 !> @param [in]  alpha banded Matrix parameter \f$\alpha\f$
@@ -109,7 +109,7 @@ subroutine columnwise_op_asm_diag_hmht_kernel_code(cell,                 &
   integer(kind=i_def), dimension(ndf_w3,nlayers),          intent(in)  :: column_banded_dofmap
   real   (kind=r_def), dimension(ndf_w3,ndf_w2h,ncell_3d), intent(in)  :: local_stencil_Dh
   real   (kind=r_def), dimension(ndf_w2h,ndf_w2h,ncell_3d),intent(in)  :: local_stencil_M2h
-  real   (kind=r_def), dimension(bandwidth,nrow,ncell_2d), intent(out) :: columnwise_matrix
+  real   (kind=r_def), dimension(bandwidth,nrow,ncell_2d), intent(inout) :: columnwise_matrix
 
 
   ! Internal parameters

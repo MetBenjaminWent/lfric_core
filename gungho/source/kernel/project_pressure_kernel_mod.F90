@@ -123,11 +123,11 @@ subroutine project_pressure_code(cell, nlayers,                                &
   real(kind=r_def), dimension(3,ndf_chi,nqp_h,nqp_v), intent(in) :: chi_diff_basis
   real(kind=r_def), dimension(1,ndf_chi,nqp_h,nqp_v), intent(in) :: chi_basis
 
-  real(kind=r_def), dimension(undf_w3),  intent(out) :: exner
-  real(kind=r_def), dimension(undf_w3),  intent(in)  :: rho
-  real(kind=r_def), dimension(undf_wt),  intent(in)  :: theta
-  real(kind=r_def), dimension(undf_wt),  intent(in)  :: moist_dyn_gas
-  real(kind=r_def), dimension(undf_chi), intent(in)  :: chi1, chi2, chi3
+  real(kind=r_def), dimension(undf_w3),  intent(inout) :: exner
+  real(kind=r_def), dimension(undf_w3),  intent(in)    :: rho
+  real(kind=r_def), dimension(undf_wt),  intent(in)    :: theta
+  real(kind=r_def), dimension(undf_wt),  intent(in)    :: moist_dyn_gas
+  real(kind=r_def), dimension(undf_chi), intent(in)    :: chi1, chi2, chi3
   real(kind=r_def), dimension(undf_pid), intent(in)  :: panel_id
 
   real(kind=r_def), dimension(ndf_w3,ndf_w3,ncell_3d), intent(in) :: m3_inv

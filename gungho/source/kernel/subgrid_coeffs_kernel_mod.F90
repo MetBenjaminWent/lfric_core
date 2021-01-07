@@ -69,9 +69,9 @@ contains
 !! @param[in] stencil_length Local length of a stencil (5 for PPM)
 !! @param[in] stencil_map Dofmap for the stencil
 !! @param[in] direction Direction of cosmic update
-!! @param[out] a0 Coefficient a0
-!! @param[out] a1 Coefficient a1
-!! @param[out] a2 Coefficient a2
+!! @param[in,out] a0 Coefficient a0
+!! @param[in,out] a1 Coefficient a1
+!! @param[in,out] a2 Coefficient a2
 
 subroutine subgrid_coeffs_code(                                               &
                                 nlayers,                                      &

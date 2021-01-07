@@ -46,7 +46,7 @@ contains
 
 !> @brief Tridiagonal solver using Thomas algorithm
 !> @param[in]  nlayers Number of levels to solve over
-!> @param[out] y LHS field to solve for
+!> @param[in,out] y LHS field to solve for
 !> @param[in]  x RHS field
 !> @param[in]  tri_0 Centred part of tridiagonal matrix
 !> @param[in]  tri_plus Upper diagonal part of tridiagonal matrix
@@ -66,11 +66,11 @@ subroutine tri_solve_code(nlayers, &
 
   integer, dimension(ndf),  intent(in) :: map
 
-  real(kind=r_def), dimension(undf),  intent(out) :: y
-  real(kind=r_def), dimension(undf),  intent(in)  :: x
-  real(kind=r_def), dimension(undf),  intent(in)  :: tri_0
-  real(kind=r_def), dimension(undf),  intent(in)  :: tri_plus
-  real(kind=r_def), dimension(undf),  intent(in)  :: tri_minus
+  real(kind=r_def), dimension(undf), intent(inout) :: y
+  real(kind=r_def), dimension(undf), intent(in)    :: x
+  real(kind=r_def), dimension(undf), intent(in)    :: tri_0
+  real(kind=r_def), dimension(undf), intent(in)    :: tri_plus
+  real(kind=r_def), dimension(undf), intent(in)    :: tri_minus
 
   integer(kind=i_def)                  :: k, ij
   real(kind=r_def), dimension(nlayers) :: x_new, tri_plus_new

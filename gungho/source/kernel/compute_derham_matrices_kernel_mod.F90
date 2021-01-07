@@ -77,25 +77,25 @@ contains
 !! @param[in] cell Cell number.
 !! @param[in] nlayers Number of layers.
 !! @param[in] ncell_3d0 ncell*nlayers
-!! @param[out] mm0 Local assembly mass matrix for W0 space.
+!! @param[in,out] mm0 Local assembly mass matrix for W0 space.
 !! @param[in] ncell_3d1 ncell*nlayers
-!! @param[out] mm1 Local assembly mass matrix for W1 space.
+!! @param[in,out] mm1 Local assembly mass matrix for W1 space.
 !! @param[in] ncell_3d2 ncell*nlayers
-!! @param[out] mm2 Local assembly mass matrix for W2 space.
+!! @param[in,out] mm2 Local assembly mass matrix for W2 space.
 !! @param[in] ncell_3db ncell*nlayers
-!! @param[out] mm2b Local assembly mass matrix for W2broken space.
+!! @param[in,out] mm2b Local assembly mass matrix for W2broken space.
 !! @param[in] ncell_3d3 ncell*nlayers
-!! @param[out] mm3 Local assembly mass matrix for W3 space.
+!! @param[in,out] mm3 Local assembly mass matrix for W3 space.
 !! @param[in] ncell_3dt ncell*nlayers
-!! @param[out] mmt Local assembly mass matrix for Wtheta space.
+!! @param[in,out] mmt Local assembly mass matrix for Wtheta space.
 !! @param[in] ncell_3d4 ncell*nlayers
-!! @param[out] grad Local assembly gradient matrix.
+!! @param[in,out] grad Local assembly gradient matrix.
 !! @param[in] ncell_3d5 ncell*nlayers
-!! @param[out] curl Local assembly curl matrix.
+!! @param[in,out] curl Local assembly curl matrix.
 !! @param[in] ncell_3d6 ncell*nlayers
-!! @param[out] div Local assembly divergence matrix.
+!! @param[in,out] div Local assembly divergence matrix.
 !! @param[in] ncell_3d7 ncell*nlayers
-!! @param[out] broken_div Local assembly divergence matrix for W2broken.
+!! @param[in,out] broken_div Local assembly divergence matrix for W2broken.
 !! @param[in] chi1 Physical coordinates in the 1st dir.
 !! @param[in] chi2 Physical coordinates in the 2nd dir.
 !! @param[in] chi3 Physical coordinates in the 3rd dir.
@@ -159,10 +159,10 @@ subroutine compute_derham_matrices_code(cell, nlayers,                      &
   integer(kind=i_def),   intent(in)     :: cell, nqp_h, nqp_v
   integer(kind=i_def),   intent(in)     :: nlayers
   integer(kind=i_def),   intent(in)     :: ndf_w0, ndf_w1, ndf_w2, ndf_w3, ndf_wt, ndf_w2b
-  integer(kind=i_def),   intent(in)     :: ncell_3d0, ncell_3d1, ncell_3d2, &
-                                           ncell_3d3, ncell_3d4, ncell_3d5, &
-                                           ncell_3d6, ncell_3dt, ncell_3db, &
-                                           ncell_3d7
+  integer(kind=i_def),   intent(in)     :: ncell_3d0, ncell_3d1, ncell_3d2
+  integer(kind=i_def),   intent(in)     :: ncell_3d3, ncell_3d4, ncell_3d5
+  integer(kind=i_def),   intent(in)     :: ncell_3d6, ncell_3dt, ncell_3db
+  integer(kind=i_def),   intent(in)     :: ncell_3d7
   integer(kind=i_def),   intent(in)     :: ndf_chi
   integer(kind=i_def),   intent(in)     :: undf_chi
   integer(kind=i_def),   intent(in)     :: ndf_pid
@@ -170,16 +170,17 @@ subroutine compute_derham_matrices_code(cell, nlayers,                      &
   integer(kind=i_def), dimension(ndf_chi), intent(in) :: map_chi
   integer(kind=i_def), dimension(ndf_pid), intent(in) :: map_pid
 
-  real(kind=r_def), intent(out) :: mm0(ndf_w0,ndf_w0,ncell_3d0)
-  real(kind=r_def), intent(out) :: mm1(ndf_w1,ndf_w1,ncell_3d1)
-  real(kind=r_def), intent(out) :: mm2(ndf_w2,ndf_w2,ncell_3d2)
-  real(kind=r_def), intent(out) :: mm2b(ndf_w2b,ndf_w2b,ncell_3db)
-  real(kind=r_def), intent(out) :: mm3(ndf_w3,ndf_w3,ncell_3d3)
-  real(kind=r_def), intent(out) :: mmt(ndf_wt,ndf_wt,ncell_3dt)
-  real(kind=r_def), intent(out) :: grad(ndf_w1,ndf_w0,ncell_3d4)
-  real(kind=r_def), intent(out) :: curl(ndf_w2,ndf_w1,ncell_3d5)
-  real(kind=r_def), intent(out) :: div(ndf_w3,ndf_w2,ncell_3d6)
-  real(kind=r_def), intent(out) :: broken_div(ndf_w3,ndf_w2b,ncell_3d7)
+  real(kind=r_def), intent(inout) :: mm0(ndf_w0,ndf_w0,ncell_3d0)
+  real(kind=r_def), intent(inout) :: mm1(ndf_w1,ndf_w1,ncell_3d1)
+  real(kind=r_def), intent(inout) :: mm2(ndf_w2,ndf_w2,ncell_3d2)
+  real(kind=r_def), intent(inout) :: mm2b(ndf_w2b,ndf_w2b,ncell_3db)
+  real(kind=r_def), intent(inout) :: mm3(ndf_w3,ndf_w3,ncell_3d3)
+  real(kind=r_def), intent(inout) :: mmt(ndf_wt,ndf_wt,ncell_3dt)
+  real(kind=r_def), intent(inout) :: grad(ndf_w1,ndf_w0,ncell_3d4)
+  real(kind=r_def), intent(inout) :: curl(ndf_w2,ndf_w1,ncell_3d5)
+  real(kind=r_def), intent(inout) :: div(ndf_w3,ndf_w2,ncell_3d6)
+  real(kind=r_def), intent(inout) :: broken_div(ndf_w3,ndf_w2b,ncell_3d7)
+
   real(kind=r_def), intent(in)  :: basis_chi(1,ndf_chi,nqp_h,nqp_v)
   real(kind=r_def), intent(in)  :: diff_basis_chi(3,ndf_chi,nqp_h,nqp_v)
   real(kind=r_def), intent(in)  :: basis_w0(1,ndf_w0,nqp_h,nqp_v)

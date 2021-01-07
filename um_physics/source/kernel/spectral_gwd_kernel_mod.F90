@@ -113,9 +113,9 @@ contains
     integer, intent(in), dimension(ndf_wth) :: map_wth
     integer, intent(in), dimension(ndf_2d)  :: map_2d
 
-    real(kind=r_def), intent(out), dimension(undf_w3)  :: du_spectral_gwd
-    real(kind=r_def), intent(out), dimension(undf_w3)  :: dv_spectral_gwd
-    real(kind=r_def), intent(out), dimension(undf_wth) :: dtemp_spectral_gwd
+    real(kind=r_def), intent(inout), dimension(undf_w3)  :: du_spectral_gwd
+    real(kind=r_def), intent(inout), dimension(undf_w3)  :: dv_spectral_gwd
+    real(kind=r_def), intent(inout), dimension(undf_wth) :: dtemp_spectral_gwd
     real(kind=r_def), intent(in), dimension(undf_w3)   :: u1_in_w3
     real(kind=r_def), intent(in), dimension(undf_w3)   :: u2_in_w3
     real(kind=r_def), intent(in), dimension(undf_w3)   :: wetrho_in_w3

@@ -67,7 +67,7 @@ contains
   !> @param [in] beta_B banded matrix parameter \f$\beta\f$
   !> @param [in] gamma_m_B banded matrix parameter \f$\gamma_-\f$
   !> @param [in] gamma_p_B banded matrix parameter \f$\gamma_+\f$
-  !> @param [in] columnwise_matrix_C banded matrix \f$C\f$
+  !> @param [in,out] columnwise_matrix_C banded matrix \f$C\f$
   !> @param [in] nrow_C number of rows in the banded matrix C
   !> @param [in] ncol_C number of columns in the banded matrix C
   !> @param [in] bandwidth_C bandwidth of the banded matrix
@@ -114,7 +114,7 @@ contains
     integer(kind=i_def), intent(in) :: nrow_C, ncol_C
     integer(kind=i_def), intent(in) :: bandwidth_A, bandwidth_B, bandwidth_C
     real(kind=r_def), dimension(bandwidth_A,nrow_A,ncell_2d), intent(in) :: columnwise_matrix_A
-    real(kind=r_def), dimension(bandwidth_B,nrow_B,ncell_2d), intent(inout) :: columnwise_matrix_B
+    real(kind=r_def), dimension(bandwidth_B,nrow_B,ncell_2d), intent(in) :: columnwise_matrix_B
     real(kind=r_def), dimension(bandwidth_C,nrow_C,ncell_2d), intent(inout) :: columnwise_matrix_C
 
     integer(kind=i_def), intent(in) :: alpha_A, beta_A, gamma_m_A, gamma_p_A

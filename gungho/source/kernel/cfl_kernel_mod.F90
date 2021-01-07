@@ -47,9 +47,9 @@ contains
 !> @brief Calculates components of the advective Courant number on
 !>        W2 dofs
 !! @param[in]  nlayers Number of layers
-!! @param[out] cflx    CFL calculated on 'x' dofs in 'x' direction
-!! @param[out] cfly    CFL calculated on 'y' dofs in 'y' direction
-!! @param[out] cflz    CFL calculated on 'z' dofs in 'z' direction
+!! @param[in,out] cflx    CFL calculated on 'x' dofs in 'x' direction
+!! @param[in,out] cfly    CFL calculated on 'y' dofs in 'y' direction
+!! @param[in,out] cflz    CFL calculated on 'z' dofs in 'z' direction
 !! @param[in]  wind    Wind
 !! @param[in]  dJ_on_w2 detJ evaluated on w2 points
 !! @param[in]  ndf_w2 Number of degrees of freedom per cell
@@ -66,9 +66,9 @@ subroutine cfl_code(nlayers, cflx, cfly, cflz, wind, dJ_on_w2, &
   integer(i_def), intent(in) :: nlayers, ndf_w2, undf_w2
   integer(i_def), dimension(ndf_w2), intent(in) :: map_w2
 
-  real(kind=r_def), dimension(undf_w2), intent(out) :: cflx, cfly, cflz
-  real(kind=r_def), dimension(undf_w2), intent(in)  :: wind
-  real(kind=r_def), dimension(undf_w2), intent(in)  :: dJ_on_w2
+  real(kind=r_def), dimension(undf_w2), intent(inout) :: cflx, cfly, cflz
+  real(kind=r_def), dimension(undf_w2), intent(in)    :: wind
+  real(kind=r_def), dimension(undf_w2), intent(in)    :: dJ_on_w2
 
   ! Internal variables
   integer(kind=i_def) :: k

@@ -53,9 +53,9 @@ contains
   !! @param[in] undf_chi Number of degrees of freedom for chi
   !! @param[in] map_chi Dofmap for the cell at the base of the column for chi
   !! @param[in] chi_basis Basis functions evaluated at gaussian quadrature points
-  !! @param[inout] chi_1 X component of the chi coordinate field
-  !! @param[inout] chi_2 Y component of the chi coordinate field
-  !! @param[inout] chi_3 Z component of the chi coordinate field
+  !! @param[in] chi_1 X component of the chi coordinate field
+  !! @param[in] chi_2 Y component of the chi coordinate field
+  !! @param[in] chi_3 Z component of the chi coordinate field
   !! @param[in] time Current time of the model run
   subroutine initial_exner_sample_code(nlayers,                    &
                                        ndf_w3, undf_w3, map_w3,    &
@@ -71,11 +71,11 @@ contains
 
     ! Arguments
     integer(kind=i_def),                               intent(in)  :: nlayers
-    integer(kind=i_def),                               intent(in)  :: ndf_w3, ndf_chi, &
-                                                                      undf_w3, undf_chi
+    integer(kind=i_def),                               intent(in)  :: ndf_w3, ndf_chi
+    integer(kind=i_def),                               intent(in)  :: undf_w3, undf_chi
     integer(kind=i_def), dimension(ndf_w3),            intent(in)  :: map_w3
     integer(kind=i_def), dimension(ndf_chi),           intent(in)  :: map_chi
-    real(kind=r_def),    dimension(undf_w3),           intent(out) :: exner
+    real(kind=r_def),    dimension(undf_w3),           intent(inout) :: exner
     real(kind=r_def),    dimension(undf_chi),          intent(in)  :: chi_1, chi_2, chi_3
     real(kind=r_def),    dimension(1,ndf_chi, ndf_w3), intent(in)  :: chi_basis
     real(kind=r_def),                                  intent(in)  :: time

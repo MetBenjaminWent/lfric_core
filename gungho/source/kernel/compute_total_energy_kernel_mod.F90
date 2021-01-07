@@ -63,7 +63,7 @@ contains
 
 !> @brief Compute the cell integrated total energy
 !! @param[in] nlayers The number of layers
-!! @param[out] energy The cell integrated energy
+!! @param[in,out] energy The cell integrated energy
 !! @param[in] u The velocity array
 !! @param[in] rho The density
 !! @param[in] exner The Exner Pressure
@@ -132,12 +132,12 @@ subroutine compute_total_energy_code(                                           
   real(kind=r_def), dimension(1,ndf_chi,nqp_h,nqp_v),    intent(in) :: chi_basis
   real(kind=r_def), dimension(3,ndf_chi,nqp_h,nqp_v),    intent(in) :: chi_diff_basis
 
-  real(kind=r_def), dimension(undf_w3),     intent(out) :: energy
-  real(kind=r_def), dimension(undf_w2),     intent(in)  :: u
-  real(kind=r_def), dimension(undf_w3),     intent(in)  :: rho, exner
-  real(kind=r_def), dimension(undf_wtheta), intent(in)  :: theta
-  real(kind=r_def), dimension(undf_w3),     intent(in)  :: phi
-  real(kind=r_def), dimension(undf_chi),    intent(in)  :: chi_1, chi_2, chi_3
+  real(kind=r_def), dimension(undf_w3),     intent(inout) :: energy
+  real(kind=r_def), dimension(undf_w2),     intent(in)    :: u
+  real(kind=r_def), dimension(undf_w3),     intent(in)    :: rho, exner
+  real(kind=r_def), dimension(undf_wtheta), intent(in)    :: theta
+  real(kind=r_def), dimension(undf_w3),     intent(in)    :: phi
+  real(kind=r_def), dimension(undf_chi),    intent(in)    :: chi_1, chi_2, chi_3
   real(kind=r_def), dimension(undf_pid),    intent(in)  :: panel_id
 
   real(kind=r_def), dimension(nqp_h),       intent(in)  ::  wqp_h

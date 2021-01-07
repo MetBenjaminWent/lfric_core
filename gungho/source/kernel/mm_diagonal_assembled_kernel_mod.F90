@@ -57,7 +57,7 @@ contains
 !> @param[in]  mm_diag Field array containing the assembled diagonal entries
 !>                     of the mass matrix
 !> @param[in]  ncell_3d Total number of cells
-!> @param[out] mass_matrix Array holding mass matrix values after kernel execution
+!> @param[in,out] mass_matrix Array holding mass matrix values after kernel execution
 !> @param[in]  ndf Number of degrees of freedom per cell
 !> @param[in]  undf Unique number of degrees of freedom
 !> @param[in]  map Dofmap for the cell at the base of the column
@@ -72,12 +72,12 @@ subroutine mm_diagonal_assembled_kernel_code(cell,        &
   implicit none
 
   !Arguments
-  integer(kind=i_def),                              intent(in)  :: cell, nlayers
-  integer(kind=i_def),                              intent(in)  :: ncell_3d
-  integer(kind=i_def),                              intent(in)  :: ndf, undf
-  real   (kind=r_def), dimension(undf),             intent(in)  :: mm_diag
-  real   (kind=r_def), dimension(ndf,ndf,ncell_3d), intent(out) :: mass_matrix
-  integer(kind=i_def), dimension(ndf),              intent(in)  :: map
+  integer(kind=i_def),                              intent(in)    :: cell, nlayers
+  integer(kind=i_def),                              intent(in)    :: ncell_3d
+  integer(kind=i_def),                              intent(in)    :: ndf, undf
+  real   (kind=r_def), dimension(undf),             intent(in)    :: mm_diag
+  real   (kind=r_def), dimension(ndf,ndf,ncell_3d), intent(inout) :: mass_matrix
+  integer(kind=i_def), dimension(ndf),              intent(in)    :: map
 
   !Internal variables
   integer :: df, k, ik

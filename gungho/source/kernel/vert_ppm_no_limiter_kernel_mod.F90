@@ -53,9 +53,9 @@ contains
 
 !> @brief Compute the subgrid reconstruction coeffiecients for a density field
 !! @param[in]  nlayers Number of layers
-!! @param[out] a0      Coefficient a0
-!! @param[out] a1      Coefficient a1
-!! @param[out] a2      Coefficient a2
+!! @param[in,out] a0   Coefficient a0
+!! @param[in,out] a1   Coefficient a1
+!! @param[in,out] a2   Coefficient a2
 !! @param[in]  rho     Density
 !! @param[in]  ndf_w3  Number of degrees of freedom for W3 per cell
 !! @param[in]  undf_w3 Number of unique degrees of freedom for W3
@@ -75,9 +75,9 @@ subroutine vert_ppm_no_limiter_code( nlayers,                      &
   ! Arguments
   integer(kind=i_def), intent(in)   :: nlayers
   integer(kind=i_def), intent(in)   :: undf_w3
-  real(kind=r_def), intent(out)     :: a0(undf_w3)
-  real(kind=r_def), intent(out)     :: a1(undf_w3)
-  real(kind=r_def), intent(out)     :: a2(undf_w3)
+  real(kind=r_def), intent(inout)   :: a0(undf_w3)
+  real(kind=r_def), intent(inout)   :: a1(undf_w3)
+  real(kind=r_def), intent(inout)   :: a2(undf_w3)
   real(kind=r_def), intent(in)      :: rho(undf_w3)
   integer(kind=i_def), intent(in)   :: ndf_w3
   integer(kind=i_def), intent(in)   :: map_w3(ndf_w3)

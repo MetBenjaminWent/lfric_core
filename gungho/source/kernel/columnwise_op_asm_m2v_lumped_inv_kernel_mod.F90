@@ -61,7 +61,7 @@ contains
 !> @param [in]  ncell_2d Number of cells in 2d grid
 !> @param [in]  ncell_3d Total number of cells
 !> @param [in]  local_stencil Locally assembled matrix
-!> @param [out] columnwise_matrix Banded matrix to assemble into
+!> @param [in,out] columnwise_matrix Banded matrix to assemble into
 !> @param [in]  nrow Number of rows (and columns) in the banded matrix
 !> @param [in]  bandwidth Bandwidth of the banded matrix
 !> @param [in]  alpha Banded matrix parameter \f$\alpha=1\f$
@@ -101,7 +101,7 @@ subroutine columnwise_op_asm_m2v_lumped_inv_kernel_code(cell,                   
   integer(kind=i_def),                                      intent(in)  :: gamma_p
   integer(kind=i_def), dimension(ndf,nlayers),              intent(in)  :: column_banded_dofmap
   real   (kind=r_def), dimension(ndf,ndf,ncell_3d),         intent(in)  :: local_stencil
-  real   (kind=r_def), dimension(bandwidth,nrow,ncell_2d),  intent(out) :: columnwise_matrix
+  real   (kind=r_def), dimension(bandwidth,nrow,ncell_2d),  intent(inout) :: columnwise_matrix
 
   ! Internal parameters
   integer(kind=i_def) :: df1    ! Loop index for dofs

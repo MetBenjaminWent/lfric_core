@@ -60,7 +60,7 @@ contains
 !! @param[in] basis_w2 basis functions evaluated at quadrature points.
 !! @param[in] ndf_wt number of degrees of freedom per cell.
 !! @param[in] basis_wt basis functions evaluated at quadrature points.
-!! @param[in] q local stencil of the q operator
+!! @param[in,out] q local stencil of the q operator
 !! @param[in] nqp_h number of horizontal quadrature points
 !! @param[in] nqp_v number of vertical quadrature points
 !! @param[in] wqp_h Horizontal quadrature weights

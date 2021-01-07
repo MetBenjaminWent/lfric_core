@@ -49,8 +49,8 @@ contains
     integer(kind=i_def), intent(in) :: nlayers
     integer(kind=i_def), intent(in) :: ndf_wth
     integer(kind=i_def), intent(in) :: undf_wth
-    integer(kind=i_def), intent(in),  dimension(ndf_wth)  :: map_wth
-    real(kind=r_def),    intent(out), dimension(undf_wth) :: rh_crit_wth
+    integer(kind=i_def), intent(in),    dimension(ndf_wth)  :: map_wth
+    real(kind=r_def),    intent(inout), dimension(undf_wth) :: rh_crit_wth
 
     !Internal variables
     integer(kind=i_def) :: k

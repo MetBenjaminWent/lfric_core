@@ -57,7 +57,7 @@ contains
 !! @param[in] cell Cell number
 !! @param[in] nlayers Number of layers.
 !! @param[in] ncell_3d ncell*ndf
-!! @param[in] div Local stencil of the div operator
+!! @param[in,out] div Local stencil of the div operator
 !! @param[in] theta Potential temperature
 !! @param[in] scalar Real to scale operator by
 !! @param[in] ndf_w2 Number of degrees of freedom per cell.

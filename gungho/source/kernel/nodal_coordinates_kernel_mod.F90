@@ -58,9 +58,9 @@ contains
 !>@param[in] ndf_chi Number of degrees of freedom per cell for the input field
 !>@param[in] undf_chi Number of unique degrees of freedom for the input field
 !>@param[in] map_chi Dofmap for the cell at the base of the column for the input field
-!>@param[out] nodal_x Nodal coordinates in the first direction
-!>@param[out] nodal_y Nodal coordinates in the second direction
-!>@param[out] nodal_z Nodal coordinates in the third direction
+!>@param[in,out] nodal_x Nodal coordinates in the first direction
+!>@param[in,out] nodal_y Nodal coordinates in the second direction
+!>@param[in,out] nodal_z Nodal coordinates in the third direction
 !>@param[in] chi1 Coordinates in the first direction
 !>@param[in] chi2 Coordinates in the second direction
 !>@param[in] chi3 Coordinates in the third direction
@@ -80,8 +80,8 @@ subroutine nodal_coordinates_code(nlayers,                                    &
   integer, intent(in) :: ndf_x, ndf_chi, undf_x, undf_chi
   integer, dimension(ndf_x),   intent(in) :: map_x
   integer, dimension(ndf_chi), intent(in) :: map_chi
-  real(kind=r_def), dimension(undf_x),        intent(out) :: nodal_x, nodal_y, nodal_z
-  real(kind=r_def), dimension(undf_chi),      intent(in)  :: chi1, chi2, chi3
+  real(kind=r_def), dimension(undf_x),        intent(inout) :: nodal_x, nodal_y, nodal_z
+  real(kind=r_def), dimension(undf_chi),      intent(in)    :: chi1, chi2, chi3
   real(kind=r_def), dimension(1,ndf_chi,ndf_x), intent(in)  :: basis_chi
 
   ! Internal variables

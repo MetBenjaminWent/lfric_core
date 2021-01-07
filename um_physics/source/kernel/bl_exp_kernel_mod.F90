@@ -545,14 +545,14 @@ contains
 
     real(kind=r_def), dimension(undf_wth), intent(inout):: rh_crit
 
-    real(kind=r_def), dimension(undf_wth), intent(out)  :: visc_h_blend,       &
+    real(kind=r_def), dimension(undf_wth), intent(inout):: visc_h_blend,       &
                                                            visc_m_blend,       &
                                                            rhokm_bl,           &
                                                            ngstress_bl,        &
                                                            bq_bl, bt_bl,       &
                                                            dtrdz_tq_bl,        &
                                                            rdz_uv_bl
-    real(kind=r_def), dimension(undf_w3),  intent(out)  :: rhokh_bl,           &
+    real(kind=r_def), dimension(undf_w3),  intent(inout):: rhokh_bl,           &
                                                            moist_flux_bl,      &
                                                            heat_flux_bl,       &
                                                            dtrdz_uv_bl,        &
@@ -580,7 +580,7 @@ contains
     real(kind=r_def), dimension(undf_2d), intent(inout) :: zh_2d,              &
                                                            z0msea_2d
 
-    real(kind=r_def), dimension(undf_2d), intent(out)   :: ntml_2d,            &
+    real(kind=r_def), dimension(undf_2d), intent(inout) :: ntml_2d,            &
                                                            cumulus_2d,         &
                                                            blend_height_tq,    &
                                                            blend_height_uv,    &
@@ -607,8 +607,8 @@ contains
     real(kind=r_def), intent(in) :: n_snow_layers(undf_tile)
     real(kind=r_def), intent(in) :: snow_depth(undf_tile)
     real(kind=r_def), intent(in) :: canopy_water(undf_tile)
-    real(kind=r_def), intent(out) :: tile_heat_flux(undf_tile)
-    real(kind=r_def), intent(out) :: tile_moisture_flux(undf_tile)
+    real(kind=r_def), intent(inout) :: tile_heat_flux(undf_tile)
+    real(kind=r_def), intent(inout) :: tile_moisture_flux(undf_tile)
     real(kind=r_def), intent(in) :: sw_up_tile(undf_tile)
     real(kind=r_def), intent(in) :: albedo_obs_scaling(undf_scal)
 
@@ -630,10 +630,10 @@ contains
     real(kind=r_def), intent(in) :: lw_down_surf(undf_2d)
     real(kind=r_def), intent(in) :: sw_down_surf_blue(undf_2d)
     real(kind=r_def), intent(in) :: dd_mf_cb(undf_2d)
-    real(kind=r_def), intent(out) :: gross_prim_prod(undf_2d)
-    real(kind=r_def), intent(out) :: net_prim_prod(undf_2d)
-    real(kind=r_def), intent(out) :: soil_respiration(undf_2d)
-    real(kind=r_def), intent(out) :: thermal_cond_wet_soil(undf_2d)
+    real(kind=r_def), intent(inout) :: gross_prim_prod(undf_2d)
+    real(kind=r_def), intent(inout) :: net_prim_prod(undf_2d)
+    real(kind=r_def), intent(inout) :: soil_respiration(undf_2d)
+    real(kind=r_def), intent(inout) :: thermal_cond_wet_soil(undf_2d)
 
     real(kind=r_def), intent(in) :: soil_moist_wilt(undf_2d)
     real(kind=r_def), intent(in) :: soil_moist_crit(undf_2d)
@@ -650,12 +650,12 @@ contains
     real(kind=r_def), intent(in) :: snow_layer_liq_mass(undf_snow)
     real(kind=r_def), intent(in) :: snow_layer_temp(undf_snow)
 
-    real(kind=r_def), intent(out) :: tile_water_extract(undf_smtile)
+    real(kind=r_def), intent(inout) :: tile_water_extract(undf_smtile)
 
-    real(kind=r_def), dimension(undf_bl),   intent(out)  :: bl_types
-    real(kind=r_def), dimension(undf_pft),  intent(out)  :: snow_unload_rate
-    real(kind=r_def), dimension(undf_surf), intent(out)  :: rhokm_surf
-    real(kind=r_def), dimension(undf_tile), intent(out)  :: alpha1_tile,      &
+    real(kind=r_def), dimension(undf_bl),   intent(inout)  :: bl_types
+    real(kind=r_def), dimension(undf_pft),  intent(inout)  :: snow_unload_rate
+    real(kind=r_def), dimension(undf_surf), intent(inout)  :: rhokm_surf
+    real(kind=r_def), dimension(undf_tile), intent(inout):: alpha1_tile,      &
                                                             ashtf_prime_tile, &
                                                             dtstar_tile,      &
                                                             fraca_tile,       &

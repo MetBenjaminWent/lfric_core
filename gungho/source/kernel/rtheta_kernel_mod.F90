@@ -55,9 +55,9 @@ contains
 
 !> @brief Compute right hand side of the thermodynamic equation
 !! @param[in] nlayers Number of layers
-!! @param[inout] r_theta Right hand side of the thermodynamic equation
-!! @param[inout] theta Potential temperature
-!! @param[inout] u Velocity
+!! @param[in,out] r_theta Right hand side of the thermodynamic equation
+!! @param[in] theta Potential temperature
+!! @param[in] u Velocity
 !! @param[in] ndf_wtheta Number of degrees of freedom per cell for wtheta
 !! @param[in] undf_wtheta  Number of unique degrees of freedom  for wtheta
 !! @param[in] map_wtheta Dofmap for the cell at the base of the column for wtheta
@@ -94,7 +94,7 @@ subroutine rtheta_code(nlayers,                                                 
 
   real(kind=r_def), dimension(undf_wtheta), intent(inout) :: r_theta
   real(kind=r_def), dimension(undf_wtheta), intent(in)    :: theta
-  real(kind=r_def), dimension(undf_w2), intent(in)    :: u
+  real(kind=r_def), dimension(undf_w2),     intent(in)    :: u
 
   real(kind=r_def), dimension(nqp_h), intent(in)      ::  wqp_h
   real(kind=r_def), dimension(nqp_v), intent(in)      ::  wqp_v

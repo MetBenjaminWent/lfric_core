@@ -49,7 +49,7 @@ contains
   !>          vary only with pressure, which is calculated for a standard
   !>          atmosphere assuming a surface pressure of p_zero.
   !> @param[in]  nlayers     The number of layers
-  !> @param[out] dmv_methox  m_v increment from methane oxiation
+  !> @param[in,out] dmv_methox  m_v increment from methane oxiation
   !> @param[in]  m_v         vapour mixing ratio
   !> @param[in]  dt          Timestep length (s)
   !> @param[in]  ndf_wth     Number of degrees of freedom per cell for wtheta
@@ -72,7 +72,7 @@ contains
     integer(kind=i_def), intent(in), dimension(ndf_wth)  :: map_wth
     real(kind=r_def),    intent(in) :: dt
     real(kind=r_def),    intent(in), dimension(undf_wth) :: m_v
-    real(kind=r_def),    intent(out), dimension(undf_wth) :: dmv_methox
+    real(kind=r_def),    intent(inout), dimension(undf_wth) :: dmv_methox
 
     !Internal variables
     integer(kind=i_def) :: k

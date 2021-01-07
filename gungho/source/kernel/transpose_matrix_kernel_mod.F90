@@ -47,7 +47,7 @@ contains
 !> @param[in]  ncell_3d Total number of cells
 !> @param[in]  mat_in Input matrix
 !> @param[in]  ncell_3d_2 Total number of cells (passed in twice)
-!> @param[out] mat_out Resulting transposed matrix
+!> @param[in,out] mat_out Resulting transposed matrix
 !> @param[in]  ndf1 Number of degrees of freedom per cell for space 1
 !> @param[in]  ndf2 Number of degrees of freedom per cell for space 2
 subroutine transpose_matrix_code(cell,        &
@@ -62,14 +62,14 @@ subroutine transpose_matrix_code(cell,        &
   implicit none
 
   !Arguments
-  integer,                   intent(in)    :: cell,      &
-                                              nlayers,   &
-                                              ncell_3d,  &
-                                              ncell_3d_2
+  integer,                   intent(in)    :: cell
+  integer,                   intent(in)    :: nlayers
+  integer,                   intent(in)    :: ncell_3d
+  integer,                   intent(in)    :: ncell_3d_2
   integer,                   intent(in)    :: ndf1
   integer,                   intent(in)    :: ndf2
-  real(kind=r_def), dimension(ndf1,ndf2,ncell_3d), intent(in)    :: mat_in
-  real(kind=r_def), dimension(ndf2,ndf1,ncell_3d), intent(out)   :: mat_out
+  real(kind=r_def), dimension(ndf1,ndf2,ncell_3d), intent(in)      :: mat_in
+  real(kind=r_def), dimension(ndf2,ndf1,ncell_3d), intent(inout)   :: mat_out
 
   !Internal variables
   integer                           :: k, ik

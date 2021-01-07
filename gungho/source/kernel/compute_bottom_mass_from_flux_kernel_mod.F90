@@ -50,8 +50,8 @@ contains
 
 !> @brief Compute the mass in a column corresponding to an incoming flux
 !! @param[in] nlayers The number of layers in the mesh.
-!! @param[out] mass   A 2D discontinuous field whose values in the bottom layer
-!!                    will correspond to the flux
+!! @param[in,out] mass  A 2D discontinuous field whose values in the bottom layer
+!!                      will correspond to the flux
 !! @param[in] flux    A 2D discontinuous field corresponding to a flux
 !!                    on the bottom boundary
 !! @param[in] area    A field in W2 whose values are the areas of each
@@ -76,11 +76,11 @@ subroutine compute_bottom_mass_from_flux_code(                            &
   ! Arguments
   integer(kind=i_def), intent(in) :: nlayers
   integer(kind=i_def), intent(in) :: ndf_2d, undf_2d, ndf_w2, undf_w2
-  integer(kind=i_def), dimension(ndf_2d), intent(in)  :: map_2d
-  integer(kind=i_def), dimension(ndf_w2), intent(in)  :: map_w2
-  real(kind=r_def), dimension(undf_2d),   intent(out) :: mass
-  real(kind=r_def), dimension(undf_2d),   intent(in)  :: flux
-  real(kind=r_def), dimension(undf_w2),   intent(in)  :: area
+  integer(kind=i_def), dimension(ndf_2d), intent(in)    :: map_2d
+  integer(kind=i_def), dimension(ndf_w2), intent(in)    :: map_w2
+  real(kind=r_def), dimension(undf_2d),   intent(inout) :: mass
+  real(kind=r_def), dimension(undf_2d),   intent(in)    :: flux
+  real(kind=r_def), dimension(undf_w2),   intent(in)    :: area
 
   mass( map_2d(1) ) = flux( map_2d(1) ) * area( map_w2(B) ) * dt
 

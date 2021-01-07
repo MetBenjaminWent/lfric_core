@@ -45,7 +45,7 @@ module cosmic_halo_correct_x_kernel_mod
 contains
 
 !! @param[in] nlayers           The number of layers
-!! @param[in] rho_out           Density field after halo exchange
+!! @param[in,out] rho_out       Density field after halo exchange
 !! @param[in] rho_x_in          Density field created by the x-direction Cosmic update
 !! @param[in] rho_y_in          Density field created by the y-direction Cosmic update
 !! @param[in] cell_orientation  Orientation of cells, in particular halo cells

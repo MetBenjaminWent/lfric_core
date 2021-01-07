@@ -78,7 +78,7 @@ contains
   !! @param[in] cell The cell id.
   !! @param[in] nlayers Number of layers.
   !! @param[in] ncell_3d ncell*nlayers
-  !! @param[out] trace_op The operator coupling broken W2 and W2 trace functions.
+  !! @param[in,out] trace_op The operator coupling broken W2 and W2 trace functions.
   !! @param[in] ndf_w2b Number of degrees of freedom per cell for W2broken space.
   !! @param[in] ndf_w2t Number of degrees of freedom per cell for W2trace space.
   !! @param[in] nqp Number of quadrature points on each face.
@@ -110,9 +110,9 @@ contains
     integer(kind=i_def),                                     intent(in) :: ndf_w2b, ndf_w2t
     integer(kind=i_def),                                     intent(in) :: nfaces_re, nqp
 
-    real(kind=r_def), dimension(ndf_w2t, ndf_w2b, ncell_3d), intent(out) :: trace_op
-    real(kind=r_def), dimension(3, ndf_w2b, nqp, nfaces_re), intent(in)  :: w2b_basis
-    real(kind=r_def), dimension(1, ndf_w2t, nqp, nfaces_re), intent(in)  :: w2t_basis
+    real(kind=r_def), dimension(ndf_w2t, ndf_w2b, ncell_3d), intent(inout) :: trace_op
+    real(kind=r_def), dimension(3, ndf_w2b, nqp, nfaces_re), intent(in)    :: w2b_basis
+    real(kind=r_def), dimension(1, ndf_w2t, nqp, nfaces_re), intent(in)    :: w2t_basis
 
     integer(kind=i_def), dimension(ndf_w2t), intent(in) :: face_entity_map
     real(kind=r_def),                        intent(in) :: outward_normals_to_faces(:, :)

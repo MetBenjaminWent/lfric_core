@@ -45,7 +45,7 @@ contains
 
 !> @brief Compute the right hand side to initialise the wind field.
 !! @param[in] nlayers Number of layers
-!! @param[in] wind    The velocity vector
+!! @param[in,out] wind The velocity vector
 !! @param[in] chi_1 X component of the coordinate field
 !! @param[in] chi_2 Y component of the coordinate field
 !! @param[in] chi_3 Z component of the coordinate field

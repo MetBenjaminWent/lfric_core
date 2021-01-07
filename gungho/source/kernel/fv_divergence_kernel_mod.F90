@@ -52,7 +52,7 @@ contains
 
 !> @brief Computes the finite-volume divergence in either the x or y direction.
 !! @param[in]  nlayers             The number of layers
-!! @param[out] mass_divergence     The mass_divergence values in W3 space
+!! @param[in,out] mass_divergence  The mass_divergence values in W3 space
 !! @param[in]  cell_orientation    The orientation of the cells
 !! @param[in]  mass_flux           The flux values which are calculated
 !! @param[in]  direction           The direction in which to calculate the fluxes
@@ -83,7 +83,7 @@ subroutine fv_divergence_code( nlayers,              &
   integer(kind=i_def), intent(in)                       :: ndf_w3
   integer(kind=i_def), intent(in)                       :: undf_w3
   integer(kind=i_def), dimension(ndf_w3), intent(in)    :: map_w3
-  real(kind=r_def), dimension(undf_w3), intent(out)     :: mass_divergence
+  real(kind=r_def), dimension(undf_w3), intent(inout)   :: mass_divergence
   real(kind=r_def), dimension(undf_w3), intent(in)      :: cell_orientation
   integer(kind=i_def), intent(in)                       :: ndf_w2
   integer(kind=i_def), intent(in)                       :: undf_w2

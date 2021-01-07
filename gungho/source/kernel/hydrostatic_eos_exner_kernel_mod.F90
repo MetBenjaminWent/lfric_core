@@ -50,7 +50,7 @@ contains
 
 !> @brief Computes density from equation of state
 !! @param[in] nlayers Number of layers
-!! @param[out] exner Exner pressure field
+!! @param[in,out] exner Exner pressure field
 !! @param[in] rho Density field
 !! @param[in] theta Potential temperature field
 !! @param[in] height_w3 Height coordinate in w3

@@ -189,17 +189,18 @@ subroutine mphys_code( nlayers,                     &
     real(kind=r_def), intent(in),  dimension(undf_w3)  :: height_w3
     real(kind=r_def), intent(in),  dimension(undf_wth) :: height_wth
     real(kind=r_def), intent(in),  dimension(undf_wth) :: cloud_drop_no_conc
-    real(kind=r_def), intent(out), dimension(undf_wth) :: dmv_wth
-    real(kind=r_def), intent(out), dimension(undf_wth) :: dml_wth
-    real(kind=r_def), intent(out), dimension(undf_wth) :: dmi_wth
-    real(kind=r_def), intent(out), dimension(undf_wth) :: dmr_wth
-    real(kind=r_def), intent(out), dimension(undf_wth) :: dmg_wth
-    real(kind=r_def), intent(out), dimension(undf_2d)  :: ls_rain_2d
-    real(kind=r_def), intent(out), dimension(undf_2d)  :: ls_snow_2d
-    real(kind=r_def), intent(out), dimension(undf_wth) :: theta_inc
-    real(kind=r_def), intent(out), dimension(undf_wth) :: dcfl_wth
-    real(kind=r_def), intent(out), dimension(undf_wth) :: dcff_wth
-    real(kind=r_def), intent(out), dimension(undf_wth) :: dbcf_wth
+
+    real(kind=r_def), intent(inout), dimension(undf_wth) :: dmv_wth
+    real(kind=r_def), intent(inout), dimension(undf_wth) :: dml_wth
+    real(kind=r_def), intent(inout), dimension(undf_wth) :: dmi_wth
+    real(kind=r_def), intent(inout), dimension(undf_wth) :: dmr_wth
+    real(kind=r_def), intent(inout), dimension(undf_wth) :: dmg_wth
+    real(kind=r_def), intent(inout), dimension(undf_2d)  :: ls_rain_2d
+    real(kind=r_def), intent(inout), dimension(undf_2d)  :: ls_snow_2d
+    real(kind=r_def), intent(inout), dimension(undf_wth) :: theta_inc
+    real(kind=r_def), intent(inout), dimension(undf_wth) :: dcfl_wth
+    real(kind=r_def), intent(inout), dimension(undf_wth) :: dcff_wth
+    real(kind=r_def), intent(inout), dimension(undf_wth) :: dbcf_wth
 
     integer(kind=i_def), intent(in), dimension(ndf_wth) :: map_wth
     integer(kind=i_def), intent(in), dimension(ndf_w3)  :: map_w3

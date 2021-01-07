@@ -96,7 +96,7 @@ subroutine compute_mass_matrix_wtheta_code(    &
   integer(kind=i_def), dimension(ndf_chi), intent(in) :: map_chi
   integer(kind=i_def), dimension(ndf_pid), intent(in) :: map_pid
 
-  real(kind=r_def), dimension(ndf_wtheta,ndf_wtheta,ncell_3d),  intent(inout)  :: mm
+  real(kind=r_def), dimension(ndf_wtheta,ndf_wtheta,ncell_3d), intent(inout) :: mm
 
   real(kind=r_def), dimension(1,ndf_chi,nqp_h,nqp_v),    intent(in) :: basis_chi
   real(kind=r_def), dimension(3,ndf_chi,nqp_h,nqp_v),    intent(in) :: diff_basis_chi
@@ -124,7 +124,7 @@ subroutine compute_mass_matrix_wtheta_code(    &
   do k = 1, nlayers
     ik = k + (cell-1)*nlayers
 
-    ! indirect the chi coord field here
+    ! Indirect the chi coord field here
     do df = 1, ndf_chi
       chi1_e(df) = chi1(map_chi(df) + k - 1)
       chi2_e(df) = chi2(map_chi(df) + k - 1)

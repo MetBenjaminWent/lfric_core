@@ -59,7 +59,7 @@ contains
 
 !> @brief Compute the cell-integrated mass of a water species
 !! @param[in] nlayers The number of layers
-!! @param[out] water_mass The cell integrated mass of the water species
+!! @param[inout] water_mass The cell integrated mass of the water species
 !! @param[in] mr_i The mixing ratio of the i-th moisture species
 !! @param[in] rho The (dry) density
 !! @param[in] chi_1 The physical x coordinate in chi
@@ -124,7 +124,7 @@ subroutine compute_moist_mass_code(                                             
   real(kind=r_def), dimension(1,ndf_chi,nqp_h,nqp_v),    intent(in) :: chi_basis
   real(kind=r_def), dimension(3,ndf_chi,nqp_h,nqp_v),    intent(in) :: chi_diff_basis
 
-  real(kind=r_def), dimension(undf_w3),     intent(out)  :: water_mass
+  real(kind=r_def), dimension(undf_w3),     intent(inout):: water_mass
   real(kind=r_def), dimension(undf_w3),     intent(in)   :: rho
   real(kind=r_def), dimension(undf_wtheta), intent(in)   :: mr_i
   real(kind=r_def), dimension(undf_chi),    intent(in)   :: chi_1, chi_2, chi_3

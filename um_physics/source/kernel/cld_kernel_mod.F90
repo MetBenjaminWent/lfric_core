@@ -138,7 +138,7 @@ subroutine cld_code(nlayers,      &
     real(kind=r_def),    intent(inout), dimension(undf_wth) :: cf_ice
     real(kind=r_def),    intent(inout), dimension(undf_wth) :: cf_liq
     real(kind=r_def),    intent(inout), dimension(undf_wth) :: cf_bulk
-    real(kind=r_def),    intent(out),   dimension(undf_wth) :: theta_inc
+    real(kind=r_def),    intent(inout), dimension(undf_wth) :: theta_inc
 
     ! Local variables for the kernel
     integer (i_um):: k

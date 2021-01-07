@@ -98,22 +98,24 @@ subroutine convert_hdiv_field_code(nlayers,                                  &
   implicit none
   ! Arguments
   integer,                                    intent(in)    :: nlayers
-  integer,                                    intent(in)    :: ndf1, undf1, &
-                                                               ndf2, undf2, &
-                                                               ndf_chi, &
-                                                               undf_chi, &
-                                                               ndf_pid, &
-                                                               undf_pid
+  integer,                                    intent(in)    :: ndf1, undf1
+  integer,                                    intent(in)    :: ndf2, undf2
+  integer,                                    intent(in)    :: ndf_chi
+  integer,                                    intent(in)    :: undf_chi
+  integer,                                    intent(in)    :: ndf_pid, undf_pid
+
   integer,          dimension(ndf1),          intent(in)    :: map1
   integer,          dimension(ndf2),          intent(in)    :: map2
   integer,          dimension(ndf_chi),       intent(in)    :: map_chi
   integer,          dimension(ndf_pid),       intent(in)    :: map_pid
+
   real(kind=r_def), dimension(undf2),         intent(in)    :: computational_field
   real(kind=r_def), dimension(undf_chi),      intent(in)    :: chi1, chi2, chi3
   real(kind=r_def), dimension(undf_pid),      intent(in)    :: panel_id
-  real(kind=r_def), dimension(undf1),         intent(inout) :: physical_field1,&
-                                                               physical_field2,&
-                                                               physical_field3
+  real(kind=r_def), dimension(undf1),         intent(inout) :: physical_field1
+  real(kind=r_def), dimension(undf1),         intent(inout) :: physical_field2
+  real(kind=r_def), dimension(undf1),         intent(inout) :: physical_field3
+
   real(kind=r_def), dimension(1,ndf_chi,ndf1), intent(in)   :: basis_chi
   real(kind=r_def), dimension(3,ndf_chi,ndf1), intent(in)   :: diff_basis_chi
   real(kind=r_def), dimension(3,ndf2,ndf1),    intent(in)   :: basis2

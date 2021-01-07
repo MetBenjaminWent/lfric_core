@@ -63,7 +63,7 @@ contains
 
 !> @brief The subroutine to compute the total axial angular momentum
 !! @param[in] nlayers Number of layers
-!! @param[out] aam Cell integrated axial angular momentum
+!! @param[inout] aam Cell integrated axial angular momentum
 !! @param[in] u Velocity array
 !! @param[in] rho density
 !! @param[in] chi_sph_1 1st coordinate in spherical Wchi
@@ -132,11 +132,11 @@ subroutine compute_total_aam_code(                                              
   real(kind=r_def), dimension(1,ndf_chi_sph,nqp_h,nqp_v), intent(in) :: chi_sph_basis
   real(kind=r_def), dimension(3,ndf_chi_sph,nqp_h,nqp_v), intent(in) :: chi_sph_diff_basis
 
-  real(kind=r_def), dimension(undf_w3),      intent(out) :: aam
-  real(kind=r_def), dimension(undf_w2),      intent(in)  :: u
-  real(kind=r_def), dimension(undf_w3),      intent(in)  :: rho
-  real(kind=r_def), dimension(undf_chi_sph), intent(in)  :: chi_sph_1, chi_sph_2, chi_sph_3
-  real(kind=r_def), dimension(undf_pid),     intent(in)  :: panel_id
+  real(kind=r_def), dimension(undf_w3),      intent(inout) :: aam
+  real(kind=r_def), dimension(undf_w2),      intent(in)    :: u
+  real(kind=r_def), dimension(undf_w3),      intent(in)    :: rho
+  real(kind=r_def), dimension(undf_chi_sph), intent(in)    :: chi_sph_1, chi_sph_2, chi_sph_3
+  real(kind=r_def), dimension(undf_pid),     intent(in)    :: panel_id
 
   real(kind=r_def), dimension(nqp_h), intent(in)      ::  wqp_h
   real(kind=r_def), dimension(nqp_v), intent(in)      ::  wqp_v

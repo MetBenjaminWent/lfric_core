@@ -46,7 +46,7 @@ contains
 
 !> @brief The subroutine which is called directly by the Psy layer
 !! @param[in] nlayers Number of layers in the mesh
-!! @param[in] u_inc Diffusion increment for wind field
+!! @param[in,out] u_inc Diffusion increment for wind field
 !! @param[in] u_n Input wind field
 !! @param[in] map_w2_size Number of cells in the stencil at the base of the column for w2
 !! @param[in] map_w2 Array holding the stencil dofmap for the cell at the base of the column for w2

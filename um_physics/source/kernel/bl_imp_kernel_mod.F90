@@ -431,7 +431,7 @@ contains
     integer(kind=i_def), intent(in) :: map_bl(ndf_bl)
 
     real(kind=r_def), dimension(undf_w2),  intent(inout):: du_bl_w2
-    real(kind=r_def), dimension(undf_wth), intent(out)  :: dtheta_bl
+    real(kind=r_def), dimension(undf_wth), intent(inout)  :: dtheta_bl
     real(kind=r_def), dimension(undf_wth), intent(inout):: m_v, m_cl, m_ci,    &
                                                            cf_area, cf_ice,    &
                                                            cf_liq, cf_bulk
@@ -480,10 +480,10 @@ contains
     real(kind=r_def), intent(inout) :: tile_heat_flux(undf_tile)
     real(kind=r_def), intent(inout) :: tile_moisture_flux(undf_tile)
     real(kind=r_def), intent(in)    :: sw_up_tile(undf_tile)
-    real(kind=r_def), intent(out)   :: snow_sublimation(undf_tile)
-    real(kind=r_def), intent(out)   :: surf_heat_flux(undf_tile)
-    real(kind=r_def), intent(out)   :: canopy_evap(undf_tile)
-    real(kind=r_def), intent(out)   :: total_snowmelt(undf_tile)
+    real(kind=r_def), intent(inout)   :: snow_sublimation(undf_tile)
+    real(kind=r_def), intent(inout)   :: surf_heat_flux(undf_tile)
+    real(kind=r_def), intent(inout)   :: canopy_evap(undf_tile)
+    real(kind=r_def), intent(inout)   :: total_snowmelt(undf_tile)
 
     real(kind=r_def), intent(in) :: leaf_area_index(undf_pft)
     real(kind=r_def), intent(in) :: canopy_height(undf_pft)
@@ -500,7 +500,7 @@ contains
     real(kind=r_def), intent(in) :: qcl_at_inv_top(undf_2d)
 
     real(kind=r_def), intent(in) :: soil_temperature(undf_soil)
-    real(kind=r_def), intent(out):: water_extraction(undf_soil)
+    real(kind=r_def), intent(inout):: water_extraction(undf_soil)
 
     real(kind=r_def), intent(in) :: tile_water_extract(undf_smtile)
 

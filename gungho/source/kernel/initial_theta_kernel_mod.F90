@@ -60,9 +60,9 @@ contains
     !! @param[in] undf_chi Number of total degrees of freedom for chi
     !! @param[in] map_chi Dofmap for the cell at the base of the column
     !! @param[in] chi_basis Basis functions evaluated at gaussian quadrature points
-    !! @param[inout] chi_1 X component of the chi coordinate field
-    !! @param[inout] chi_2 Y component of the chi coordinate field
-    !! @param[inout] chi_3 Z component of the chi coordinate field
+    !! @param[in] chi_1 X component of the chi coordinate field
+    !! @param[in] chi_2 Y component of the chi coordinate field
+    !! @param[in] chi_3 Z component of the chi coordinate field
     subroutine initial_theta_code(nlayers, theta, chi_1, chi_2, chi_3, ndf_wtheta, &
                                   undf_wtheta, map_wtheta, ndf_chi, undf_chi, map_chi, chi_basis)
 
@@ -71,13 +71,14 @@ contains
         implicit none
 
         !Arguments
-        integer(kind=i_def),                        intent(in) :: nlayers, ndf_wtheta, ndf_chi, undf_wtheta, undf_chi
+        integer(kind=i_def), intent(in) :: nlayers, ndf_wtheta, ndf_chi, undf_wtheta, undf_chi
+
         integer(kind=i_def), dimension(ndf_wtheta), intent(in) :: map_wtheta
         integer(kind=i_def), dimension(ndf_chi),    intent(in) :: map_chi
 
-        real(kind=r_def),    dimension(undf_wtheta),           intent(out) :: theta
-        real(kind=r_def),    dimension(undf_chi),              intent(in)  :: chi_1, chi_2, chi_3
-        real(kind=r_def),    dimension(1,ndf_chi,ndf_wtheta),  intent(in)  :: chi_basis
+        real(kind=r_def),    dimension(undf_wtheta),           intent(inout) :: theta
+        real(kind=r_def),    dimension(undf_chi),              intent(in)    :: chi_1, chi_2, chi_3
+        real(kind=r_def),    dimension(1,ndf_chi,ndf_wtheta),  intent(in)    :: chi_basis
 
         !Internal variables
         integer(kind=i_def)                    :: df, dfc, k

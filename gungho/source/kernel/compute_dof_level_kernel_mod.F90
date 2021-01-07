@@ -38,12 +38,12 @@ end type
 public compute_dof_level_code
 contains
 
-!> @param[in] nlayers Number of layers
-!> @param[in] ndf Number of degrees of freedom per cell for the output field
-!> @param[in] undf Number of unique degrees of freedom for the output field
-!> @param[in] map Dofmap for the cell at the base of the column for the output field
-!> @param[out] level Fractional level of the dof's
-!> @param[in] nodes Nodal coordinates of the dofs
+!> @param[in]     nlayers Number of layers
+!> @param[in]     ndf Number of degrees of freedom per cell for the output field
+!> @param[in]     undf Number of unique degrees of freedom for the output field
+!> @param[in]     map Dofmap for the cell at the base of the column for the output field
+!> @param[in,out] level Fractional level of the dof's
+!> @param[in]     nodes Nodal coordinates of the dofs
 subroutine compute_dof_level_code(nlayers,                                  &
                                   level,                                    &
                                   ndf, undf, map,                           &
@@ -53,12 +53,12 @@ subroutine compute_dof_level_code(nlayers,                                  &
   implicit none
 
   !Arguments
-  integer, intent(in)                             :: nlayers
-  integer, intent(in)                             :: ndf
-  integer, intent(in)                             :: undf
-  integer, dimension(ndf),            intent(in)  :: map
-  real(kind=r_def), dimension(undf),  intent(out) :: level
-  real(kind=r_def), dimension(3,ndf), intent(in)  :: nodes
+  integer, intent(in)                               :: nlayers
+  integer, intent(in)                               :: ndf
+  integer, intent(in)                               :: undf
+  integer, dimension(ndf),            intent(in)    :: map
+  real(kind=r_def), dimension(undf),  intent(inout) :: level
+  real(kind=r_def), dimension(3,ndf), intent(in)    :: nodes
 
   !Internal variables
   integer          :: df, k

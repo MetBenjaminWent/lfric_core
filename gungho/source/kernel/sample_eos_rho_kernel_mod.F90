@@ -52,7 +52,7 @@ contains
 
 !> @brief Computes density from equation of state
 !! @param[in] nlayers Number of layers
-!! @param[out] rho Density field
+!! @param[in,out] rho Density field
 !! @param[in] exner Exner pressure field
 !! @param[in] theta Potential temperature field
 !! @param[in] moist_dyn_gas Moist dynamics factor

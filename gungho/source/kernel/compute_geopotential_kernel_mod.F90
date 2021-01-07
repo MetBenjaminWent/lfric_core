@@ -80,7 +80,7 @@ subroutine compute_geopotential_code(nlayers, phi,               &
   integer(kind=i_def), intent(in)                           :: undf_chi
   integer(kind=i_def), dimension(ndf_w3), intent(in)        :: map_w3
   integer(kind=i_def), dimension(ndf_chi), intent(in)       :: map_chi
-  real(kind=r_def), dimension(undf_w3), intent(out)         :: phi
+  real(kind=r_def), dimension(undf_w3), intent(inout)       :: phi
   real(kind=r_def), dimension(undf_chi), intent(in)         :: chi_1
   real(kind=r_def), dimension(undf_chi), intent(in)         :: chi_2
   real(kind=r_def), dimension(undf_chi), intent(in)         :: chi_3

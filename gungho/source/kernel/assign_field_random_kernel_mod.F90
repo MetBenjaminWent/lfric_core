@@ -41,7 +41,7 @@ contains
 
 !> @brief Sets all field entries to random values
 !> @param[in] nlayers Number of layers
-!> @param[out] x Output data
+!> @param[in,out] x Output data
 !> @param[in] ndf Number of degrees of freedom per cell for the output field
 !> @param[in] undf Unique number of degrees of freedom  for the output field
 !> @param[in] map Dofmap for the cell at the base of the column for the output field
@@ -53,7 +53,7 @@ subroutine assign_field_random_code(nlayers,     &
   integer(kind=i_def),                   intent(in)    :: nlayers
   integer(kind=i_def),                   intent(in)    :: undf, ndf
   integer(kind=i_def), dimension(ndf),   intent(in)    :: map
-  real   (kind=r_def), dimension(undf),  intent(out)   :: x
+  real   (kind=r_def), dimension(undf),  intent(inout) :: x
 
   !Internal variables
   integer                           :: df, k

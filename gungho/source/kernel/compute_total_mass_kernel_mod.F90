@@ -54,7 +54,7 @@ contains
 
 !> @brief Computes the cell integrated mass for a single model column
 !! @param[in] nlayers Number of layers
-!! @param[out] mass Cell integrated mass
+!! @param[inout] mass Cell integrated mass
 !! @param[in] rho Density
 !! @param[in] chi_1 1st (spherical) coordinate field in Wchi
 !! @param[in] chi_2 2nd (spherical) coordinate field in Wchi
@@ -101,10 +101,11 @@ subroutine compute_total_mass_code(                                   &
   integer(kind=i_def), dimension(ndf_chi),  intent(in)  :: map_chi
   integer(kind=i_def), dimension(ndf_pid),  intent(in)  :: map_pid
 
-  real(kind=r_def),    dimension(undf_w3),  intent(in)  :: rho
-  real(kind=r_def),    dimension(undf_w3),  intent(out) :: mass
-  real(kind=r_def),    dimension(undf_chi), intent(in)  :: chi_1, chi_2, chi_3
-  real(kind=r_def),    dimension(undf_pid), intent(in)  :: panel_id
+  real(kind=r_def),    dimension(undf_w3),  intent(inout) :: mass
+  real(kind=r_def),    dimension(undf_w3),  intent(in)    :: rho
+  real(kind=r_def),    dimension(undf_chi), intent(in)    :: chi_1, chi_2, chi_3
+  real(kind=r_def),    dimension(undf_pid), intent(in)    :: panel_id
+
   real(kind=r_def),    dimension(nqp_h),    intent(in)  :: wqp_h
   real(kind=r_def),    dimension(nqp_v),    intent(in)  :: wqp_v
 

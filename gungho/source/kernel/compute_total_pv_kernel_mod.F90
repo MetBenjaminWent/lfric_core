@@ -58,7 +58,7 @@ contains
 
 !> @brief The kernel computes the cell integrated potential vorticity
 !! @param[in] nlayers   Number of layers
-!! @param[out] pv       Cell integrated potential vorticity
+!! @param[in,out] pv Cell integrated potential vorticity
 !! @param[in]  xi       Absolute vorticity
 !! @param[in] theta     Potential temperature
 !! @param[in] chi1      1st (spherical) coordinate field in Wchi
@@ -123,7 +123,7 @@ subroutine compute_total_pv_code(                                               
   real(kind=r_def), dimension(3,ndf_chi,nqp_h,nqp_v), intent(in) :: chi_diff_basis
   real(kind=r_def), dimension(3,ndf_w1,nqp_h,nqp_v),  intent(in) :: w1_basis
 
-  real(kind=r_def), dimension(undf_w3), intent(out) :: pv
+  real(kind=r_def), dimension(undf_w3),  intent(inout) :: pv
   real(kind=r_def), dimension(undf_w0),  intent(in) :: theta
   real(kind=r_def), dimension(undf_chi), intent(in) :: chi1, chi2, chi3
   real(kind=r_def), dimension(undf_pid), intent(in) :: panel_id
@@ -140,8 +140,8 @@ subroutine compute_total_pv_code(                                               
   real(kind=r_def), dimension(ndf_w0)          :: theta_e
   real(kind=r_def), dimension(ndf_w1)          :: xi_e
   real(kind=r_def), dimension(ndf_w3)          :: pv_e
-  real(kind=r_def), dimension(3)               :: xi_at_quad, &
-                                                  grad_theta_at_quad
+  real(kind=r_def), dimension(3)               :: xi_at_quad
+  real(kind=r_def), dimension(3)               :: grad_theta_at_quad
   real(kind=r_def), dimension(nqp_h,nqp_v)     :: dj
   real(kind=r_def), dimension(3,3,nqp_h,nqp_v) :: jac, jac_inv
 

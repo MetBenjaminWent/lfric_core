@@ -57,7 +57,7 @@ contains
 !! @param[in]  nlayers           The number of model levels
 !! @param[in]  cell_orientation  Cell orientation values held in W3 field
 !! @param[in]  w2_field_in       Input W2 field
-!! @param[out] y_field           Extracted y-direction component of input W2 field
+!! @param[in,out] y_field        Extracted y-direction component of input W2 field
 !! @param[in]  undf_w3           Number of unique degrees of freedom for W3
 !! @param[in]  ndf_w3            Number of degrees of freedom per cell in W3
 !! @param[in]  map_w3            Dofmap for the cell at the base of the column
@@ -85,7 +85,7 @@ subroutine extract_y_code( nlayers,                      &
   integer(kind=i_def), intent(in)                     :: undf_w2
   real(kind=r_def), intent(in)                        :: cell_orientation(1:undf_w3)
   real(kind=r_def), intent(in)                        :: w2_field_in(1:undf_w2)
-  real(kind=r_def), intent(out)                       :: y_field(1:undf_w2)
+  real(kind=r_def), intent(inout)                     :: y_field(1:undf_w2)
   integer(kind=i_def), intent(in)                     :: ndf_w3
   integer(kind=i_def), dimension(ndf_w3), intent(in)  :: map_w3
   integer(kind=i_def), intent(in)                     :: ndf_w2

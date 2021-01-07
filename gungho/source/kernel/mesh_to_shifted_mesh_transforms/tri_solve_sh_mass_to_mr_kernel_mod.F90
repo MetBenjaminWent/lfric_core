@@ -48,7 +48,7 @@ contains
 
 !> @brief Tridiagonal solver using Thomas algorithm
 !> @param[in]  nlayers Number of levels to solve over
-!> @param[out] field_wt LHS field in Wtheta to solve for.
+!> @param[in,out] field_wt LHS field in Wtheta to solve for.
 !> @param[in]  field_sh_w3 RHS field in shifted W3.
 !> @param[in]  tri_below Below-diagonal elements of tridiagonal matrix. A field
 !> in shifted W3 space.
@@ -80,11 +80,11 @@ subroutine tri_solve_sh_mass_to_mr_code(                                   &
   integer(kind=i_def), dimension(ndf_wt),    intent(in) :: map_wt
   integer(kind=i_def), dimension(ndf_sh_w3), intent(in) :: map_sh_w3
 
-  real(kind=r_def), dimension(undf_wt),     intent(out) :: field_wt
-  real(kind=r_def), dimension(undf_sh_w3),  intent(in)  :: field_sh_w3
-  real(kind=r_def), dimension(undf_sh_w3),  intent(in)  :: tri_above
-  real(kind=r_def), dimension(undf_sh_w3),  intent(in)  :: tri_diag
-  real(kind=r_def), dimension(undf_sh_w3),  intent(in)  :: tri_below
+  real(kind=r_def), dimension(undf_wt),     intent(inout) :: field_wt
+  real(kind=r_def), dimension(undf_sh_w3),  intent(in)    :: field_sh_w3
+  real(kind=r_def), dimension(undf_sh_w3),  intent(in)    :: tri_above
+  real(kind=r_def), dimension(undf_sh_w3),  intent(in)    :: tri_diag
+  real(kind=r_def), dimension(undf_sh_w3),  intent(in)    :: tri_below
 
   ! Internal variables
   integer(kind=i_def)                     :: k, ij, nlayers_shifted

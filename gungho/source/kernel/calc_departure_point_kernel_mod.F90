@@ -93,7 +93,7 @@ subroutine calc_departure_point_code( nlayers,                       &
   integer, intent(in)                     :: stencil_map_w3(1:ndf_w3,1:departure_pt_stencil_length)
   real(kind=r_def), intent(in)            :: u_n(1:undf_w2)
   real(kind=r_def), intent(in)            :: u_np1(1:undf_w2)
-  real(kind=r_def), intent(inout)         :: cell_orientation(1:undf_w3)
+  real(kind=r_def), intent(in)            :: cell_orientation(1:undf_w3)
   integer, intent(in)                     :: direction
   integer, intent(in)                     :: dep_pt_method
 

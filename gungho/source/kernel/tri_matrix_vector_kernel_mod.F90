@@ -50,7 +50,7 @@ contains
 !> @brief Compute the terms of the tridiagonal matrix for transforming from
 !> mixing ratio in Wtheta to density in shifted W3.
 !! @param[in] nlayers_shifted Number of layers in the shifted mesh
-!! @param[out] field_sh_w3 The output field in W3 shifted.
+!! @param[in,out] field_sh_w3 The output field in W3 shifted.
 !! @param[in] tri_below The below-diagonal elements of the tridiagonal matrix.
 !! It is a field in shifted W3.
 !! @param[in] tri_diag The central diagonal elements of the tridiagonal matrix.
@@ -85,11 +85,11 @@ subroutine tri_matrix_vector_code(                                   &
   integer(kind=i_def), dimension(ndf_wt),    intent(in) :: map_wt
   integer(kind=i_def), dimension(ndf_sh_w3), intent(in) :: map_sh_w3
 
-  real(kind=r_def), dimension(undf_sh_w3),  intent(out) :: field_sh_w3
-  real(kind=r_def), dimension(undf_sh_w3),   intent(in) :: tri_below
-  real(kind=r_def), dimension(undf_sh_w3),   intent(in) :: tri_diag
-  real(kind=r_def), dimension(undf_sh_w3),   intent(in) :: tri_above
-  real(kind=r_def), dimension(undf_wt),      intent(in) :: field_wt
+  real(kind=r_def), dimension(undf_sh_w3), intent(inout) :: field_sh_w3
+  real(kind=r_def), dimension(undf_sh_w3), intent(in)    :: tri_below
+  real(kind=r_def), dimension(undf_sh_w3), intent(in)    :: tri_diag
+  real(kind=r_def), dimension(undf_sh_w3), intent(in)    :: tri_above
+  real(kind=r_def), dimension(undf_wt),    intent(in)    :: field_wt
 
   ! Internal variables
   integer(kind=i_def) :: df, k

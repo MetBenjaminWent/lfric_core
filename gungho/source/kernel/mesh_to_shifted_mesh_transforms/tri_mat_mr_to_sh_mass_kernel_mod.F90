@@ -55,11 +55,11 @@ contains
 !> @brief Compute the terms of the tridiagonal matrix for transforming from
 !> mixing ratio in Wtheta to density in shifted W3.
 !! @param[in] nlayers_shifted Number of layers in the shifted mesh
-!! @param[out] tri_below The below-diagonal elements of the tridiagonal matrix to
+!! @param[in,out] tri_below The below-diagonal elements of the tridiagonal matrix to
 !! be returned. It is a field in shifted W3.
-!! @param[out] tri_diag The central diagonal elements of the tridiagonal matrix to
+!! @param[in,out] tri_diag The central diagonal elements of the tridiagonal matrix to
 !! be returned. It is a field in shifted W3.
-!! @param[out] tri_above The above-diagonal elements of the tridiagonal matrix to
+!! @param[in,out] tri_above The above-diagonal elements of the tridiagonal matrix to
 !! be returned. It is a field in shifted W3.
 !! @param[in] rho_d The dry density in W3 on the original mesh.
 !! @param[in] I_lower_i_ip1 The integral of the (i+1)-th Wtheta basis function on
@@ -99,14 +99,14 @@ subroutine tri_mat_mr_to_sh_mass_code(                                     &
   integer(kind=i_def), dimension(ndf_w3),    intent(in) :: map_w3
   integer(kind=i_def), dimension(ndf_sh_w3), intent(in) :: map_sh_w3
 
-  real(kind=r_def), dimension(undf_sh_w3),  intent(out) :: tri_below
-  real(kind=r_def), dimension(undf_sh_w3),  intent(out) :: tri_diag
-  real(kind=r_def), dimension(undf_sh_w3),  intent(out) :: tri_above
-  real(kind=r_def), dimension(undf_w3),      intent(in) :: rho_d
-  real(kind=r_def), dimension(undf_w3),      intent(in) :: I_lower_i_ip1
-  real(kind=r_def), dimension(undf_w3),      intent(in) :: I_upper_i_i
-  real(kind=r_def), dimension(undf_w3),      intent(in) :: I_lower_i_i
-  real(kind=r_def), dimension(undf_w3),      intent(in) :: I_upper_i_im1
+  real(kind=r_def), dimension(undf_sh_w3),  intent(inout) :: tri_below
+  real(kind=r_def), dimension(undf_sh_w3),  intent(inout) :: tri_diag
+  real(kind=r_def), dimension(undf_sh_w3),  intent(inout) :: tri_above
+  real(kind=r_def), dimension(undf_w3),     intent(in)    :: rho_d
+  real(kind=r_def), dimension(undf_w3),     intent(in)    :: I_lower_i_ip1
+  real(kind=r_def), dimension(undf_w3),     intent(in)    :: I_upper_i_i
+  real(kind=r_def), dimension(undf_w3),     intent(in)    :: I_lower_i_i
+  real(kind=r_def), dimension(undf_w3),     intent(in)    :: I_upper_i_im1
 
   ! Internal variables
   integer(kind=i_def) :: df, k

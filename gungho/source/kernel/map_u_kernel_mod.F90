@@ -59,9 +59,9 @@ contains
 !> @brief Compute the right hand side to mapise the wind field.
 !! @param[in] nlayers Number of layers
 !! @param[inout] rhs Right hand side field to compute
-!! @param[inout] u_lon Longitudinal component of wind in W3.
-!! @param[inout] u_lat Latitudinal component of wind in W3.
-!! @param[inout] u_up Vertical component of wind in Wtheta.
+!! @param[in] u_lon Longitudinal component of wind in W3.
+!! @param[in] u_lat Latitudinal component of wind in W3.
+!! @param[in] u_up Vertical component of wind in Wtheta.
 !! @param[in] chi_sph_1 1st coordinate in spherical Wchi
 !! @param[in] chi_sph_2 2nd coordinate in spherical Wchi
 !! @param[in] chi_sph_3 3rd coordinate in spherical Wchi
@@ -137,8 +137,8 @@ subroutine map_u_code(nlayers,                                   &
   real(kind=r_def), intent(in), dimension(3,ndf_chi_sph,nqp_h,nqp_v) :: chi_sph_diff_basis
 
   real(kind=r_def), dimension(undf_w2),   intent(inout) :: rhs
-  real(kind=r_def), dimension(undf_w3),   intent(inout) :: u_lat, u_lon
-  real(kind=r_def), dimension(undf_wth),  intent(inout) :: u_up
+  real(kind=r_def), dimension(undf_w3),   intent(in)    :: u_lat, u_lon
+  real(kind=r_def), dimension(undf_wth),  intent(in)    :: u_up
   real(kind=r_def), dimension(undf_pid),     intent(in) :: panel_id
   real(kind=r_def), dimension(undf_chi_sph), intent(in) :: chi_sph_1, chi_sph_2, chi_sph_3
 

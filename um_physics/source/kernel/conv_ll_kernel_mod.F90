@@ -108,8 +108,8 @@ subroutine conv_ll_code(nlayers,      &
     integer(kind=i_def), dimension(ndf_w3),  intent(in) :: map_w3
     integer(kind=i_def), dimension(ndf_2d),  intent(in) :: map_2d
 
-    real(kind=r_def), dimension(undf_wth), intent(out)  :: dt_conv, dmv_conv, &
-                                                           dmcl_conv, dcfl_conv
+    real(kind=r_def), dimension(undf_wth), intent(inout)  :: dt_conv, dmv_conv, &
+                                                             dmcl_conv, dcfl_conv
 
     real(kind=r_def), dimension(undf_wth), intent(in)   :: theta_star, &
                                                            m_v, m_cl,  &
@@ -117,7 +117,7 @@ subroutine conv_ll_code(nlayers,      &
 
     real(kind=r_def), dimension(undf_w3),  intent(in)   :: exner_in_w3
 
-    real(kind=r_def), dimension(undf_2d),  intent(out)  :: conv_rain_2d
+    real(kind=r_def), dimension(undf_2d),  intent(inout)  :: conv_rain_2d
 
     ! Local variables for the kernel
     integer(kind=i_def) :: k

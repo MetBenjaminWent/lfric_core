@@ -49,7 +49,7 @@ module calc_dA_at_w2_kernel_mod
 contains
 
 !> @param[in]  nlayers        Integer the number of layers
-!> @param[out] dA             The output field containing the dA values at W2 locations
+!> @param[in,out] dA          The output field containing the dA values at W2 locations
 !> @param[in]  chi1           The array of coordinates in the first direction
 !> @param[in]  chi2           The array of coordinates in the second direction
 !> @param[in]  chi3           The array of coordinates in the third direction

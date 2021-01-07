@@ -137,11 +137,11 @@ contains
     integer(i_def), intent(in), dimension(ndf_wth) :: map_wth
     integer(i_def), intent(in), dimension(ndf_2d)  :: map_2d
 
-    real(r_def), intent(out), dimension(undf_w3)  :: du_blk, du_orog_gwd, &
-                                                     dv_blk, dv_orog_gwd
-    real(r_def), intent(out), dimension(undf_wth) :: dtemp_blk, dtemp_orog_gwd
-    real(r_def), intent(in), dimension(undf_w3)   :: u1_in_w3, u2_in_w3, &
-                                                     wetrho_in_w3
+    real(r_def), intent(inout), dimension(undf_w3)  :: du_blk, du_orog_gwd, &
+                                                       dv_blk, dv_orog_gwd
+    real(r_def), intent(inout), dimension(undf_wth) :: dtemp_blk, dtemp_orog_gwd
+    real(r_def), intent(in), dimension(undf_w3)     :: u1_in_w3, u2_in_w3, &
+                                                       wetrho_in_w3
     real(r_def), intent(in), dimension(undf_wth)  :: theta_in_wth, exner_in_wth
     real(r_def), intent(in), dimension(undf_wth)  :: mr_v, mr_cl, mr_ci
     real(r_def), intent(in), dimension(undf_2d)   :: sd_orog,      &

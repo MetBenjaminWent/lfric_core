@@ -59,9 +59,9 @@ contains
   !!          applied in a single kernel.
   !> @param[in]  cell Horizontal cell index
   !> @param[in]  nlayers Number of layers
-  !> @param[out] tri_0 Diagonal entry to preconditioner matrix
-  !> @param[out] tri_p Upper diagonal entry to preconditioner matrix
-  !> @param[out] tri_m Lower diagonal entry to preconditioner matrix
+  !> @param[in,out] tri_0 Diagonal entry to preconditioner matrix
+  !> @param[in,out] tri_p Upper diagonal entry to preconditioner matrix
+  !> @param[in,out] tri_m Lower diagonal entry to preconditioner matrix
   !> @param[in]  ncell_3d_1 Total number of cells for divergence matrix
   !> @param[in]  div_star Weighted transpose of the divergence operator
   !> @param[in]  hb_lumped_inv Lumped inverse of the HB (mass matrix + buoyancy)
@@ -114,9 +114,9 @@ contains
   implicit none
   ! Arguments
   integer(kind=i_def),                    intent(in) :: cell, nlayers
-  integer(kind=i_def),                    intent(in) :: ncell_3d_1, ncell_3d_2, &
-                                                        ncell_3d_3, ncell_3d_4, &
-                                                        ncell_3d_5, ncell_3d_6
+  integer(kind=i_def),                    intent(in) :: ncell_3d_1, ncell_3d_2
+  integer(kind=i_def),                    intent(in) :: ncell_3d_3, ncell_3d_4
+  integer(kind=i_def),                    intent(in) :: ncell_3d_5, ncell_3d_6
   integer(kind=i_def),                    intent(in) :: undf_w2, ndf_w2
   integer(kind=i_def),                    intent(in) :: undf_w3, ndf_w3
   integer(kind=i_def),                    intent(in) :: undf_wt, ndf_wt
@@ -124,10 +124,10 @@ contains
   integer(kind=i_def), dimension(ndf_w2), intent(in) :: map_w2
   integer(kind=i_def), dimension(ndf_wt), intent(in) :: map_wt
 
-  real(kind=r_def), dimension(undf_w3), intent(out) :: tri_0, tri_p, tri_m
-  real(kind=r_def), dimension(undf_w2), intent(in)  :: hb_lumped_inv, &
-                                                       u_normalisation
-  real(kind=r_def), dimension(undf_wt), intent(in)  :: t_normalisation
+  real(kind=r_def), dimension(undf_w3), intent(inout) :: tri_0, tri_p, tri_m
+  real(kind=r_def), dimension(undf_w2), intent(in)    :: hb_lumped_inv
+  real(kind=r_def), dimension(undf_w2), intent(in)    :: u_normalisation
+  real(kind=r_def), dimension(undf_wt), intent(in)    :: t_normalisation
 
   real(kind=r_def), dimension(ndf_w2, ndf_w3, ncell_3d_1), intent(in) :: div_star
   real(kind=r_def), dimension(ndf_w3, ndf_w2, ncell_3d_2), intent(in) :: compound_div

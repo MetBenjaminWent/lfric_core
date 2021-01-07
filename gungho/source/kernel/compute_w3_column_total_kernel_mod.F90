@@ -48,7 +48,7 @@ contains
 
 !> @brief Compute the sum of values in a column
 !! @param[in] nlayers The number of layers
-!! @param[out] column_total A field in W3 whose values in the bottom layer
+!! @param[in,out] column_total A field in W3 whose values in the bottom layer
 !!                          will be the column totals
 !! @param[in] mass A field in W3 space to be summed up
 !! @param[in] ndf_w3 The number of degrees of freedom per cell for w3
@@ -67,8 +67,8 @@ subroutine compute_w3_column_total_code(                                    &
   integer(kind=i_def), intent(in)                    :: ndf_w3, undf_w3
   integer(kind=i_def), dimension(ndf_w3), intent(in) :: map_w3
 
-  real(kind=r_def), dimension(undf_w3),  intent(out) :: column_total
-  real(kind=r_def), dimension(undf_w3),  intent(in)  :: mass
+  real(kind=r_def), dimension(undf_w3),  intent(inout) :: column_total
+  real(kind=r_def), dimension(undf_w3),  intent(in)    :: mass
 
   ! Internal variables
   integer(kind=i_def) :: df, k

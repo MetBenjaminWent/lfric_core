@@ -86,7 +86,7 @@ contains
 !> @param[in]    nd_ait_ins          Climatology aerosol field
 !> @param[in]    ait_ins_bc          Climatology aerosol field
 !> @param[in]    ait_ins_oc          Climatology aerosol field
-!> @param[out]   cloud_drop_no_conc  Cloud Droplet Number Concentration
+!> @param[in,out] cloud_drop_no_conc Cloud Droplet Number Concentration
 !>                                    via Jones method doi:10.1038/370450a0
 !> @param[in]    ndf_wth             Number of degrees of freedom per cell for
 !>                                    potential temperature space
@@ -170,7 +170,7 @@ subroutine glomap_aerosol_code( nlayers,                                       &
   real(kind=r_def), intent(in),  dimension(undf_wth) :: ait_ins_bc
   real(kind=r_def), intent(in),  dimension(undf_wth) :: ait_ins_oc
 
-  real(kind=r_def), intent(out), dimension(undf_wth) :: cloud_drop_no_conc
+  real(kind=r_def), intent(inout), dimension(undf_wth) :: cloud_drop_no_conc
 
   ! Local variables for the kernel
 
