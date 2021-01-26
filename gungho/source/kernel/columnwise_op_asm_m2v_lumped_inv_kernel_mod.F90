@@ -21,7 +21,6 @@ use argument_mod,            only : arg_type, func_type,                    &
                                     GH_OPERATOR, GH_COLUMNWISE_OPERATOR,    &
                                     GH_READ, GH_WRITE,                      &
                                     ANY_SPACE_1,                            &
-                                    GH_COLUMN_BANDED_DOFMAP,                &
                                     CELLS
 
 use constants_mod,           only : r_def, i_def
