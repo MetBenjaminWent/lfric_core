@@ -45,14 +45,14 @@ contains
     type( field_type ),    pointer :: panel_id => null()
     type( field_type ),    pointer :: chi_sph(:) => null()
     type( operator_type ), pointer :: m3_inv => null()
-    type( quadrature_xyoz_type )   :: qr
+    type( quadrature_xyoz_type ), pointer :: qr => null()
 
     call dtheta%initialise( state(igh_t)%get_function_space() )
 
     m3_inv  => get_mass_matrix(w3inv_id)
     chi_sph => get_coordinates()
     panel_id => get_panel_id()
-    qr = get_qr()
+    qr => get_qr()
 
     ! rho^np1 and theta^np1 can be updated directly from advection terms
     ! rho^np1   = rho^n   - dt*div(u*rho)
@@ -68,7 +68,7 @@ contains
                                               state(igh_t), moist_dyn_gas_law, &
                                               chi_sph, panel_id, m3_inv, qr ) )
 
-    nullify( chi_sph, m3_inv, panel_id )
+    nullify( chi_sph, m3_inv, panel_id, qr )
   end subroutine update_prognostic_scalars_alg
 
 end module update_prognostic_scalars_alg_mod

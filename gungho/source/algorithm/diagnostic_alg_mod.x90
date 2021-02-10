@@ -185,11 +185,11 @@ contains
     integer(i_def),   intent(in) :: mesh_id
 
     ! the quadrature object
-    type( quadrature_xyoz_type ) :: qr
+    type( quadrature_xyoz_type ), pointer :: qr => null()
 
     call hyd_imbal%initialise( vector_space = function_space_collection%get_fs(mesh_id,element_order, W2V) )
 
-    qr = get_qr()
+    qr => get_qr()
 
     ! Get geopotential field from runtime_constants
     geopotential => get_geopotential()
@@ -201,6 +201,8 @@ contains
                  X_innerproduct_X(l2, hyd_imbal) )
 
     l2 = sqrt(l2)
+
+    nullify( geopotential, qr )
 
   end subroutine hydbal_diagnostic_alg
 

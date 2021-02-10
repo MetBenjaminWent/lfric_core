@@ -308,7 +308,7 @@ contains
     integer, intent(in) :: twod_mesh_id
 
     ! Quadrature object
-    type( quadrature_xyoz_type ) :: qr
+    type( quadrature_xyoz_type ), pointer :: qr => null()
     ! Coordinate fields
     type( field_type ), pointer  :: chi_sph(:) => null()
     type( field_type ), pointer  :: chi_xyz(:) => null()
@@ -339,7 +339,7 @@ contains
 
     if ( subroutine_timers ) call timer('semi_implicit_timestep_alg')
 
-    qr = get_qr()
+    qr => get_qr()
 
     chi_sph       => get_coordinates()
     chi_xyz       => get_coordinates_xyz()
@@ -610,7 +610,7 @@ contains
                  setval_X(exner, state(igh_p)) )
 
     nullify( m3_inv, chi_xyz, chi_sph, height_w3, height_wth, dA, delta, &
-             mm_wt, mm_vel, max_diff_smag )
+             mm_wt, mm_vel, max_diff_smag, qr )
 
     if ( subroutine_timers ) call timer('semi_implicit_timestep_alg')
 

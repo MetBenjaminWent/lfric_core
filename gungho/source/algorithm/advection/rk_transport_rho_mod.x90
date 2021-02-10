@@ -234,7 +234,7 @@ contains
     type( field_type ),  intent( inout ) :: rho
     real( kind = r_def), intent( in    ) :: dts
     ! The quadrature object
-    type( quadrature_xyoz_type )          :: qr
+    type( quadrature_xyoz_type ), pointer :: qr => null()
     ! Coordinate fields
     type( function_space_type ), pointer :: u_fs     => null()
     type( function_space_type ), pointer :: rho_fs   => null()
@@ -249,7 +249,7 @@ contains
 
     if ( subroutine_timers ) call timer('rk_transport_rho_alg')
 
-    qr = get_qr()
+    qr => get_qr()
     u_fs   => u%get_function_space()
     rho_fs => rho%get_function_space()
 
@@ -303,7 +303,7 @@ contains
 
     end do
 
-    nullify( mm_w3_inv, mt_lumped_inv, u_fs, rho_fs )
+    nullify( mm_w3_inv, mt_lumped_inv, u_fs, rho_fs, qr )
 
     if ( subroutine_timers ) call timer('rk_transport_rho_alg')
 

@@ -111,7 +111,7 @@ contains
     type(field_type)                             :: r_psi, psi, r_u
     type(field_type), pointer                    :: chi_sph(:) => null()
     type(field_type), pointer                    :: panel_id => null()
-    type(quadrature_xyoz_type)                   :: qr
+    type(quadrature_xyoz_type), pointer          :: qr => null()
     real(kind=r_def)                             :: time
 
     if ( subroutine_timers ) call timer('rk_transport_alg')
@@ -148,7 +148,7 @@ contains
               function_space_collection%get_fs(wind%get_mesh_id(), element_order, W1))
     call r_u%initialise( vector_space = wind%get_function_space() )
 
-    qr = get_qr()
+    qr => get_qr()
     chi_sph => get_coordinates()
     panel_id => get_panel_id()
 
@@ -195,9 +195,10 @@ contains
       call copy_bundle(mr_out, mr, nummr)
     end if
 
-    deallocate(state, rhs_adv)
+    deallocate( state, rhs_adv )
     if (allocated(mr_inc)) deallocate(mr_inc)
     if (allocated(mr_out)) deallocate(mr_out)
+    nullify( panel_id, chi_sph, qr )
 
     if ( subroutine_timers ) call timer('rk_transport_alg')
 

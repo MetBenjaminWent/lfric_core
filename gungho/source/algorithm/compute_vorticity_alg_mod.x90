@@ -48,16 +48,16 @@ contains
 
     implicit none
 
-    type(field_type),    intent(inout) :: xi
-    type(field_type),    intent(in)    :: u
-    logical,             intent(in)    :: weak_form_u
+    type(field_type),     intent(inout) :: xi
+    type(field_type),     intent(in)    :: u
+    logical,              intent(in)    :: weak_form_u
 
-    type(field_type)                   :: advected_u, r_xi, u_in_w1, r_u
-    type(field_type),          pointer :: m1_lumped_inv => null()
-    type(operator_type),       pointer :: curl => null()
-    type(function_space_type), pointer :: w1_fs => null()
-    integer(i_def)                     :: mesh_id
-    type(quadrature_xyoz_type)         :: qr
+    type(field_type)                    :: advected_u, r_xi, u_in_w1, r_u
+    type(field_type),           pointer :: m1_lumped_inv => null()
+    type(operator_type),        pointer :: curl => null()
+    type(function_space_type) , pointer :: w1_fs => null()
+    integer(i_def)                      :: mesh_id
+    type(quadrature_xyoz_type), pointer :: qr => null()
 
     if ( weak_form_u ) then
       ! Advect u^* = M^-1 * <v,{u + beta*dt*[coriolis + pgf + grad(phi+K)]}>
@@ -81,7 +81,7 @@ contains
       call mass_matrix_solver_alg(xi, r_xi)
     else
       ! Compute vorticity in W2 as the strong curl of the projected W1 winds
-      qr = get_qr()
+      qr => get_qr()
       mesh_id = u%get_mesh_id()
       w1_fs => function_space_collection%get_fs( mesh_id, element_order, W1 )
       call u_in_w1%initialise( vector_space = w1_fs )
@@ -93,7 +93,7 @@ contains
       call invoke( strong_curl_kernel_type(xi, u_in_w1) )
     end if
 
-    nullify( m1_lumped_inv, curl, w1_fs)
+    nullify( m1_lumped_inv, curl, w1_fs, qr )
 
   end subroutine compute_vorticity_alg
 

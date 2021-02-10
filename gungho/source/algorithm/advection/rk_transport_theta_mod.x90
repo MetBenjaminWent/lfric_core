@@ -202,7 +202,7 @@ contains
     real( r_def),        intent( in   ) :: dts
 
     ! The quadrature object
-    type( quadrature_xyoz_type )        :: qr
+    type( quadrature_xyoz_type ), pointer :: qr => null()
     ! Coordinate fields
     type( field_type ), pointer         :: chi_xyz(:) => null()
     type( field_type )                  :: theta_n
@@ -220,7 +220,7 @@ contains
 
     if ( subroutine_timers ) call timer('rk_transport_theta_alg')
 
-    qr = get_qr()
+    qr => get_qr()
     chi_xyz => get_coordinates_xyz()
     call theta_n%initialise( vector_space = theta%get_function_space() )
     call theta%copy_field(theta_n)
@@ -301,7 +301,7 @@ contains
       end select
     end do
 
-    nullify( mm_w3_inv, mt_lumped_inv, chi_xyz )
+    nullify( mm_w3_inv, mt_lumped_inv, chi_xyz, qr )
     if ( subroutine_timers ) call timer('rk_transport_theta_alg')
 
   end subroutine rk_transport_theta_step

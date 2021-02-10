@@ -375,13 +375,13 @@ contains
 
     real( r_def ) :: si_err(bundle_size)
 
-    type( field_type ),    pointer :: t_normalisation => null(), &
-                                      u_normalisation => null()
-    type( field_type ),    pointer :: chi_sph(:) => null()
-    type( field_type ),    pointer :: panel_id => null()
-    type( operator_type ), pointer :: m3_inv => null()
-    type( quadrature_xyoz_type )   :: qr
-    type( field_vector_type ) :: vector_state, vector_rhs
+    type( field_type ),           pointer :: t_normalisation => null(), &
+                                             u_normalisation => null()
+    type( field_type ),           pointer :: chi_sph(:) => null()
+    type( field_type ),           pointer :: panel_id => null()
+    type( operator_type ),        pointer :: m3_inv => null()
+    type( quadrature_xyoz_type ), pointer :: qr => null()
+    type( field_vector_type )             :: vector_state, vector_rhs
 
     if ( subroutine_timers ) call timer('semi_implicit_solver_alg')
 
@@ -446,7 +446,7 @@ contains
       m3_inv  => get_mass_matrix(w3inv_id)
       chi_sph => get_coordinates()
       panel_id => get_panel_id()
-      qr = get_qr()
+      qr => get_qr()
       call invoke( project_pressure_kernel_type( state(igh_p), state(igh_d), &
                                                  state(igh_t),               &
                                                  moist_dyn_gas_law, chi_sph, &
@@ -457,7 +457,8 @@ contains
 
     nullify( t_normalisation, &
              u_normalisation, &
-             m3_inv, chi_sph, panel_id )
+             m3_inv, chi_sph, &
+             panel_id, qr )
 
     if ( subroutine_timers ) call timer('semi_implicit_solver_alg')
 

@@ -183,8 +183,8 @@ contains
                                            exner
 
     ! The quadrature object
-    type( quadrature_xyoz_type ) :: qr
-    type(quadrature_face_type)   :: qrf
+    type( quadrature_xyoz_type ),  pointer :: qr => null()
+    type(quadrature_face_type)             :: qrf
     class(reference_element_type), pointer :: reference_element =>null()
     type(mesh_type),               pointer :: mesh => null()
 
@@ -205,7 +205,7 @@ contains
     integer(kind=i_def)            :: st, stage
 
     if ( subroutine_timers ) call timer('rk_alg')
-    qr = get_qr()
+    qr => get_qr()
     mesh => theta%get_mesh()
     reference_element => mesh%get_reference_element()
     qrf = quadrature_face_type(element_order+2, .true., .false., &
@@ -314,7 +314,7 @@ contains
                  setval_X(exner, state(igh_p)) )
 
     nullify( mm_lumped_inv_wtheta, geopotential, chi_xyz, chi_sph, panel_id, m3_inv, &
-             mesh, reference_element )
+             mesh, reference_element, qr )
 
     if ( subroutine_timers ) call timer('rk_alg')
 
