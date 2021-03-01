@@ -17,7 +17,7 @@ module rhs_alg_mod
                                                  get_panel_id
   use fem_constants_mod,                   only: get_mass_matrix,  &
                                                  w2_id,            &
-                                                 theta_space_id,   &
+                                                 wt_id,            &
                                                  w3inv_id, dl_id
   use physical_op_constants_mod,           only: get_coriolis,     &
                                                  get_geopotential
@@ -124,7 +124,7 @@ contains
     if ( subroutine_timers ) call timer('rhs_alg')
 
     geopotential => get_geopotential()
-    mm_wtheta    => get_mass_matrix(theta_space_id)
+    mm_wtheta    => get_mass_matrix(wt_id)
     chi_xyz      => get_coordinates_xyz()
     chi_sph      => get_coordinates()
     panel_id     => get_panel_id()

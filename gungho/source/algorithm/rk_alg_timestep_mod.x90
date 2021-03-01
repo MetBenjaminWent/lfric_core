@@ -29,7 +29,7 @@ module rk_alg_timestep_mod
                                                 get_mass_matrix_diagonal, &
                                                 get_qr, &
                                                 get_inverse_lumped_mass_matrix, &
-                                                theta_space_id, &
+                                                wt_id, &
                                                 w3inv_id
   use geometric_constants_mod,            only: get_coordinates_xyz, &
                                                 get_coordinates, &
@@ -215,7 +215,7 @@ contains
     geopotential => get_geopotential()
 
     ! Get mm operators from runtime_constants
-    mm_lumped_inv_wtheta => get_inverse_lumped_mass_matrix(theta_space_id)
+    mm_lumped_inv_wtheta => get_inverse_lumped_mass_matrix(wt_id)
 
     ! Get coordinates
     chi_xyz => get_coordinates_xyz()

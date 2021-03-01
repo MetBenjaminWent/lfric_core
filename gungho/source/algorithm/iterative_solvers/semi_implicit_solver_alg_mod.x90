@@ -350,7 +350,7 @@ contains
                                              get_panel_id
     use fem_constants_mod,             only: get_mass_matrix, &
                                              get_normalisation, get_qr, &
-                                             theta_space_id, w2_id, w3inv_id
+                                             wt_id, w2_id, w3inv_id
     use mr_indices_mod,                only: nummr
     use formulation_config_mod,        only: exner_from_eos
     use project_pressure_kernel_mod,   only: project_pressure_kernel_type
@@ -391,7 +391,7 @@ contains
     end if
 
     ! Normalise theta & u residual
-    t_normalisation => get_normalisation(theta_space_id)
+    t_normalisation => get_normalisation(wt_id)
     u_normalisation => get_normalisation(w2_id)
     call invoke( inc_X_times_Y(rhs(igh_t), t_normalisation), &
                  inc_X_times_Y(rhs(igh_u), u_normalisation) )

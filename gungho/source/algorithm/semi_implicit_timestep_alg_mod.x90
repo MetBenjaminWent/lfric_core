@@ -35,8 +35,8 @@ module semi_implicit_timestep_alg_mod
   use boundaries_config_mod,     only: limited_area
   use geometric_constants_mod,   only: get_coordinates, get_height, &
                                        get_da_at_w2, get_coordinates_xyz
-  use fem_constants_mod,         only: get_mass_matrix, theta_space_id, &
-                                       w2_id, dl_id, w2_id, get_qr
+  use fem_constants_mod,         only: get_mass_matrix,  &
+                                       wt_id, w2_id, dl_id, w2_id, get_qr
   use physical_op_constants_mod, only : get_delta_at_wtheta, get_max_diff
   use fs_continuity_mod,         only: W3, Wtheta
 
@@ -350,7 +350,7 @@ contains
     dA            => get_da_at_w2()
     delta         => get_delta_at_wtheta()
     max_diff_smag => get_max_diff()
-    mm_wt         => get_mass_matrix(theta_space_id)
+    mm_wt         => get_mass_matrix(wt_id)
     ! Using modified velocity mass matrix if using damping layer
     if(dlayer_on) then
       mm_vel => get_mass_matrix(dl_id)
