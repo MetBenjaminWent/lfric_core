@@ -1,4 +1,4 @@
-import rose.upgrade
+#import rose.upgrade
 import re
 
 #from .versionsXX_XX import *
