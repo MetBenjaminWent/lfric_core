@@ -20,7 +20,6 @@ PUBLIC :: lfricinp_regrid_weights_type
 ! Type to contain weights information read from weights file
 TYPE :: lfricinp_regrid_weights_type
   CHARACTER(LEN=fnamelen) :: filename
-  INTEGER(KIND=int32) :: file_id
 
   ! Weights order, ie num_wgts = 1, first order, =2 second order
   INTEGER(KIND=int32) :: num_wgts
@@ -118,16 +117,20 @@ USE log_mod, ONLY: log_event, LOG_LEVEL_INFO, LOG_LEVEL_ERROR, &
 USE lfricinp_check_stat_ncdf_mod, ONLY: check_stat_ncdf
 ! External libraries
 USE netcdf, ONLY: NF90_OPEN, NF90_NOWRITE, NF90_GET_VAR, NF90_INQ_DIMID, &
-     NF90_INQUIRE_DIMENSION, NF90_INQ_VARID
+     NF90_INQUIRE_DIMENSION, NF90_INQ_VARID, NF90_CLOSE
 
 IMPLICIT NONE
 
 CLASS(lfricinp_regrid_weights_type) :: self
 CHARACTER(LEN=fnamelen) :: filename
 
-INTEGER(KIND=int32) :: dim_id = -1
-INTEGER(KIND=int32) :: var_id = -1
+INTEGER(KIND=int32) :: dim_id
+INTEGER(KIND=int32) :: var_id
+INTEGER(KIND=int32) :: file_id
 
+dim_id = -1
+var_id = -1
+file_id = -1
 
 self % filename = TRIM(filename)
 CALL log_event("Loading weights file: " // TRIM(self%filename), &
@@ -135,30 +138,30 @@ CALL log_event("Loading weights file: " // TRIM(self%filename), &
 
 ! Open weights file
 CALL check_stat_ncdf( NF90_OPEN (self%filename, NF90_NOWRITE, &
-     self%file_id))
+     file_id))
 
 ! Get dimensions
-CALL check_stat_ncdf( NF90_INQ_DIMID (self%file_id, "num_wgts", &
+CALL check_stat_ncdf( NF90_INQ_DIMID (file_id, "num_wgts", &
      dim_id))
-CALL check_stat_ncdf( NF90_INQUIRE_DIMENSION (self%file_id, dim_id, &
+CALL check_stat_ncdf( NF90_INQUIRE_DIMENSION (file_id, dim_id, &
      len=self%num_wgts))
 
 ! Number of links between source and destination grids/mesh
-CALL check_stat_ncdf( NF90_INQ_DIMID (self%file_id, "num_links", &
+CALL check_stat_ncdf( NF90_INQ_DIMID (file_id, "num_links", &
      dim_id))
-CALL check_stat_ncdf( NF90_INQUIRE_DIMENSION (self%file_id, dim_id, &
+CALL check_stat_ncdf( NF90_INQUIRE_DIMENSION (file_id, dim_id, &
      len=self%num_links))
 
 ! Number of points in source grid/mesh
-CALL check_stat_ncdf( NF90_INQ_DIMID (self%file_id, "src_grid_size", &
+CALL check_stat_ncdf( NF90_INQ_DIMID (file_id, "src_grid_size", &
      dim_id))
-CALL check_stat_ncdf( NF90_INQUIRE_DIMENSION (self%file_id, dim_id, &
+CALL check_stat_ncdf( NF90_INQUIRE_DIMENSION (file_id, dim_id, &
      len=self%num_points_src))
 
 ! Number of points in destination grids/mesh
-CALL check_stat_ncdf( NF90_INQ_DIMID (self%file_id, "dst_grid_size", &
+CALL check_stat_ncdf( NF90_INQ_DIMID (file_id, "dst_grid_size", &
      dim_id))
-CALL check_stat_ncdf( NF90_INQUIRE_DIMENSION (self%file_id, dim_id, &
+CALL check_stat_ncdf( NF90_INQUIRE_DIMENSION (file_id, dim_id, &
      len=self%num_points_dst))
 
 ! Allocate size of remap matrix
@@ -170,8 +173,8 @@ WRITE(log_scratch_space, '(2(A,I0),A)' ) "Allocated remap_matrix(num_wgts = ", &
 CALL log_event(log_scratch_space, LOG_LEVEL_INFO)
 
 ! Read remap matrix from file
-CALL check_stat_ncdf( NF90_INQ_VARID (self%file_id, "remap_matrix", var_id))
-CALL check_stat_ncdf( NF90_GET_VAR (self%file_id, var_id, self%remap_matrix(:,:)))
+CALL check_stat_ncdf( NF90_INQ_VARID (file_id, "remap_matrix", var_id))
+CALL check_stat_ncdf( NF90_GET_VAR (file_id, var_id, self%remap_matrix(:,:)))
 
 ! Allocate source and destination address arrays
 IF (ALLOCATED(self%src_address)) DEALLOCATE(self%src_address)
@@ -180,10 +183,13 @@ IF (ALLOCATED(self%dst_address)) DEALLOCATE(self%dst_address)
 ALLOCATE( self%dst_address( self%num_links ))
 
 ! Read address arrays
-CALL check_stat_ncdf( NF90_INQ_VARID (self%file_id, "src_address", var_id))
-CALL check_stat_ncdf( NF90_GET_VAR (self%file_id, var_id, self%src_address))
-CALL check_stat_ncdf( NF90_INQ_VARID (self%file_id, "dst_address", var_id))
-CALL check_stat_ncdf( NF90_GET_VAR (self%file_id, var_id, self%dst_address))
+CALL check_stat_ncdf( NF90_INQ_VARID (file_id, "src_address", var_id))
+CALL check_stat_ncdf( NF90_GET_VAR (file_id, var_id, self%src_address))
+CALL check_stat_ncdf( NF90_INQ_VARID (file_id, "dst_address", var_id))
+CALL check_stat_ncdf( NF90_GET_VAR (file_id, var_id, self%dst_address))
+
+! Close the file and release associated resources
+CALL check_stat_ncdf( NF90_CLOSE (file_id))
 
 END SUBROUTINE load
 
