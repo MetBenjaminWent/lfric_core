@@ -24,10 +24,10 @@ module io_dev_init_mod
   use lfric_xios_time_axis_mod,       only : time_axis_type, update_interface
   ! Configuration
   use finite_element_config_mod,      only : element_order
-  use initialization_config_mod,      only : init_option,                     &
-                                             init_option_fd_start_dump,       &
-                                             ancil_option,                    &
-                                             ancil_option_basic_gal
+  use io_dev_config_mod,              only : field_initialisation,                     &
+                                             field_initialisation_start_dump,       &
+                                             time_variation,                    &
+                                             time_variation_ancil
   ! I/O methods
   use lfric_xios_read_mod,            only : read_field_node,                 &
                                              read_field_edge,                 &
@@ -104,7 +104,7 @@ module io_dev_init_mod
     !----------------------------------------------------------------------------
     ! Time varying fields
     !----------------------------------------------------------------------------
-    if ( ancil_option == ancil_option_basic_gal ) then
+    if ( time_variation == time_variation_ancil ) then
 
       ! Set pointer to time axis read behaviour
       tmp_update_ptr => read_field_time_var

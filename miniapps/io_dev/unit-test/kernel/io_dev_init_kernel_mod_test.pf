@@ -1,0 +1,159 @@
+!-----------------------------------------------------------------------------
+! (C) Crown copyright 2021 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
+
+!> Test the
+!>
+module io_dev_init_kernel_mod_test
+
+  use constants_mod,                 only : i_def, r_def
+
+  use get_unit_test_m3x3_q3x3x3_sizes_mod, only : get_w0_m3x3_q3x3x3_size, &
+                                                  get_w2_m3x3_q3x3x3_size
+
+  use get_unit_test_m3x3_dofmap_mod,       only : get_w0_m3x3_dofmap, &
+                                                  get_w2_m3x3_dofmap
+
+  use get_unit_test_w2nodal_basis_mod,     only : get_w0_w2nodal_basis
+
+  use get_unit_test_3x3x3_chi_mod,         only : get_w0_3x3x3_field
+
+  use pFUnit_Mod
+
+  implicit none
+
+  private
+  public :: test_all
+
+  @TestCase
+  type, extends(TestCase), public :: io_dev_init_test_type
+    private
+  contains
+    procedure setUp
+    procedure tearDown
+    procedure test_all
+  end type io_dev_init_test_type
+
+  integer(i_def), parameter :: element_order = 0
+
+contains
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine setUp( this )
+
+    implicit none
+
+    class(io_dev_init_test_type), intent(inout) :: this
+
+  end subroutine setUp
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine tearDown( this )
+
+    implicit none
+
+    class(io_dev_init_test_type), intent(inout) :: this
+
+  end subroutine tearDown
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  @Test
+  subroutine test_all( this )
+
+    use io_dev_init_kernel_mod, only: io_dev_init_code
+
+    implicit none
+
+    class(io_dev_init_test_type), intent(inout) :: this
+
+    real(r_def), parameter :: dx = 3.0_r_def
+    real(r_def), parameter :: dy = 2.0_r_def
+    real(r_def), parameter :: dz = 4.0_r_def
+    real(r_def), parameter :: tol = 1.0e-6_r_def
+
+    ! Fields
+    real(r_def), allocatable :: nodal_xyz(:)
+    real(r_def), allocatable :: answer(:)
+    real(r_def), allocatable :: chi1(:), chi2(:), chi3(:)
+
+    ! Dofmaps
+    integer(i_def), allocatable :: map_w0(:,:)
+    integer(i_def), allocatable :: map_w2(:,:)
+
+    ! Basis functions
+    real(r_def),    allocatable :: basis_w0(:,:,:)
+
+    integer(kind=i_def) :: cell
+
+    ! Sizes
+    integer(kind=i_def) :: nlayers, ncells
+    integer(kind=i_def) :: ndf_w0, ndf_w2
+    integer(kind=i_def) :: undf_w0, undf_w2
+    integer(kind=i_def) :: dim_space, dim_space_diff
+    integer(kind=i_def) :: nqp_h, nqp_v
+
+    nlayers = 3
+    call get_w0_m3x3_q3x3x3_size( ndf_w0, undf_w0, ncells,   &
+                                  dim_space, dim_space_diff, &
+                                  nqp_h, nqp_v,              &
+                                  nlayers )
+    call get_w2_m3x3_q3x3x3_size( ndf_w2, undf_w2, ncells,   &
+                                  dim_space, dim_space_diff, &
+                                  nqp_h, nqp_v,              &
+                                  nlayers )
+    call get_w0_m3x3_dofmap(map_w0)
+    call get_w2_m3x3_dofmap(map_w2)
+
+    call get_w0_w2nodal_basis(basis_w0)
+
+    allocate(nodal_xyz(undf_w2))
+    allocate(answer(undf_w2))
+
+    ! Compute coordinates
+    allocate(chi1(undf_w0))
+    allocate(chi2(undf_w0))
+    allocate(chi3(undf_w0))
+
+    call get_w0_3x3x3_field(chi1, chi2, chi3, dx, dy, dz, &
+                            map_w0,nlayers)
+
+    answer = (/ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, &
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 12.0, 36.0, 60.0, 0.0,   &
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 12.0, 36.0,    &
+                60.0, 0.0, 12.0, 24.0, 36.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,  &
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, &
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, &
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, &
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 /)
+
+    ! Call the kernel
+    cell = 3
+    call io_dev_init_code( nlayers,         &
+                           nodal_xyz,       &
+                           chi1,            &
+                           chi2,            &
+                           chi3,            &
+                           ndf_w2, undf_w2, &
+                           map_w2(:,cell),  &
+                           ndf_w0, undf_w0, &
+                           map_w0(:,cell),  &
+                           basis_w0         &
+                           )
+
+    @assertEqual(nodal_xyz, answer, tol)
+
+    deallocate(nodal_xyz)
+    deallocate(answer)
+    deallocate(chi1)
+    deallocate(chi2)
+    deallocate(chi3)
+    deallocate(map_w0)
+    deallocate(map_w2)
+    deallocate(basis_w0)
+
+
+  end subroutine test_all
+
+end module io_dev_init_kernel_mod_test

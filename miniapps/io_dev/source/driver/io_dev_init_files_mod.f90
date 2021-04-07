@@ -16,21 +16,21 @@ module io_dev_init_files_mod
                                        linked_list_item_type
 
   ! Configuration
-  use files_config_mod,          only: diag_stem_name,            &
-                                       checkpoint_stem_name,      &
-                                       start_dump_filename,       &
-                                       start_dump_directory,      &
-                                       time_varying_input_path
-  use initialization_config_mod, only: init_option,               &
-                                       init_option_fd_start_dump, &
-                                       ancil_option,              &
-                                       ancil_option_basic_gal
-  use io_config_mod,             only: diagnostic_frequency,      &
-                                       checkpoint_write,          &
-                                       checkpoint_read,           &
-                                       write_diag, write_dump
-  use time_config_mod,           only: timestep_start,            &
-                                       timestep_end
+  use files_config_mod,              only: diag_stem_name,            &
+                                           checkpoint_stem_name,      &
+                                           start_dump_filename,       &
+                                           start_dump_directory,      &
+                                           time_varying_input_path
+  use io_dev_config_mod,             only: field_initialisation,            &
+                                           field_initialisation_start_dump, &
+                                           time_variation,                  &
+                                           time_variation_ancil
+  use io_config_mod,                 only: diagnostic_frequency,      &
+                                           checkpoint_write,          &
+                                           checkpoint_read,           &
+                                           write_diag, write_dump
+  use time_config_mod,               only: timestep_start,            &
+                                           timestep_end
 
   implicit none
 
@@ -72,7 +72,7 @@ module io_dev_init_files_mod
     end if
 
     ! Setup dump-reading context information
-    if( init_option == init_option_fd_start_dump ) then
+    if ( field_initialisation == field_initialisation_start_dump ) then
       ! Create dump filename from stem
       write(dump_fname,'(A)') trim(start_dump_directory)//'/'// &
                               trim(start_dump_filename)
@@ -107,7 +107,7 @@ module io_dev_init_files_mod
     end if
 
     ! Setup time-varying input files
-    if ( ancil_option == ancil_option_basic_gal ) then
+    if ( time_variation == time_variation_ancil ) then
       ! Set land area ancil filename from namelist
       write(ancil_fname,'(A)') trim(start_dump_directory)//'/'// &
                                trim(time_varying_input_path)

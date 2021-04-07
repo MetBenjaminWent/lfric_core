@@ -20,24 +20,21 @@ module io_dev_driver_mod
                                  log_scratch_space, &
                                  LOG_LEVEL_ALWAYS,  &
                                  LOG_LEVEL_INFO
-  use variable_fields_mod, only: update_variable_fields
   ! Configuration
-  use io_config_mod,       only: use_xios_io, &
-                                 write_diag,  &
-                                 write_dump,  &
-                                 diagnostic_frequency
-  use io_dev_config_mod,   only: timestepping_on
+  use io_config_mod,              only: use_xios_io,               &
+                                        write_diag,                &
+                                        write_dump,                &
+                                        diagnostic_frequency
   ! IO_Dev driver modules
-  use io_dev_mod,          only: program_name
-  use io_dev_data_mod,     only: io_dev_data_type,      &
-                                 create_model_data,     &
-                                 initialise_model_data, &
-                                 output_model_data,     &
-                                 finalise_model_data
-  use io_dev_model_mod,    only: initialise_infrastructure, &
-                                 finalise_infrastructure
-  ! Algorithms
-  use io_dev_timestep_alg_mod,    only: io_dev_timestep_alg
+  use io_dev_mod,                 only: program_name
+  use io_dev_data_mod,            only: io_dev_data_type,          &
+                                        create_model_data,         &
+                                        initialise_model_data,     &
+                                        update_model_data,         &
+                                        output_model_data,         &
+                                        finalise_model_data
+  use io_dev_model_mod,           only: initialise_infrastructure, &
+                                        finalise_infrastructure
 
   implicit none
 
@@ -109,13 +106,8 @@ module io_dev_driver_mod
     ! Model step
     do while( clock%tick() )
 
-      ! Update time-varying fields
-      call update_variable_fields( model_data%variable_field_times, &
-                                   clock, model_data%core_fields )
-
-      if ( timestepping_on ) then
-        call io_dev_timestep_alg( model_data%alg_fields, clock )
-      end if
+      ! Update fields
+      call update_model_data( model_data, clock )
 
       ! Write out the fields
       if ( (mod( clock%get_step(), diagnostic_frequency ) == 0) ) then

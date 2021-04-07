@@ -1,3 +1,51 @@
+!=======================  IO_Dev configuration namelist =======================
+&io_dev
+  field_initialisation  = 'analytic'
+  time_variation        = 'ancil'
+/
+!==============================================================================
+
+&files
+  diag_stem_name            = 'diagIODev'
+  checkpoint_stem_name      = 'restartIoDev'
+  start_dump_filename       = 'IODev_dump_test'
+  start_dump_directory      = '../data'
+  time_varying_input_path   = 'time_var_input'
+/
+
+&io
+  use_xios_io               = .true.
+  write_diag                = .false.
+  write_dump                = .true.
+  diagnostic_frequency      = 1
+  nodal_output_on_w3        = .false.
+  subroutine_timers         = .false.
+  subroutine_counters       = .false.
+  checkpoint_read           = .false.
+  checkpoint_write          = .false.
+/
+
+&time
+ calendar='timestep'
+ timestep_start='1'
+ timestep_end='500'
+/
+
+&timestepping
+  method             = 'semi_implicit'
+  dt                 = 86400.0
+  alpha              = 0.5
+  tau_u              = 0.5
+  tau_t              = 0.5
+  tau_r              = 0.5
+  outer_iterations   = 4
+  inner_iterations   = 1
+  runge_kutta_method = 'ssp3'
+  spinup_period      = 1
+  spinup_alpha       = .false.
+  spinup_winds       = .false.
+/
+
 &base_mesh
   filename        = 'mesh_C12.nc'
   prime_mesh_name = 'dynamics'
@@ -8,26 +56,14 @@
   f_lat_deg       = 45.0
 /
 
-&boundaries
-  limited_area    = .false.
-/
-
 &extrusion
   method           = 'uniform'
   domain_top       = 30000.0
   number_of_layers = 3
 /
 
-&initialization
- init_option = 'analytic'
- ancil_option = 'none'
-/
-
-&files
-  diag_stem_name            = 'diagIODev'
-  checkpoint_stem_name      = 'restartIoDev'
-  start_dump_filename       = 'IODev_dump'
-  start_dump_directory      = './'
+&boundaries
+  limited_area    = .false.
 /
 
 &finite_element
@@ -39,26 +75,8 @@
   spherical_coord_system = 'abh'
 /
 
-&io
-  use_xios_io               = .true.
-  write_diag                = .false.
-  write_dump                = .false.
-  diagnostic_frequency      = 1
-  nodal_output_on_w3        = .false.
-  subroutine_timers         = .false.
-  subroutine_counters       = .false.
-  checkpoint_read           = .false.
-  checkpoint_write          = .true.
-/
-
 &logging
   run_log_level='info'
-/
-
-&time
- calendar='timestep'
- timestep_start='1'
- timestep_end='1'
 /
 
 &planet
@@ -69,25 +87,6 @@
   cp             = 1005.0
   p_zero         = 100000.0
   scaling_factor = 1.0
-/
-
-&io_dev
-  timestepping_on    = .true.
-/
-
-&timestepping
-  method             = 'semi_implicit'
-  dt                 = 4.0
-  alpha              = 0.5
-  tau_u              = 0.5
-  tau_t              = 0.5
-  tau_r              = 0.5
-  outer_iterations   = 4
-  inner_iterations   = 1
-  runge_kutta_method = 'ssp3'
-  spinup_period      = 1
-  spinup_alpha       = .false.
-  spinup_winds       = .false.
 /
 
 &formulation

@@ -179,15 +179,22 @@ build: ALWAYS
 # Unit tests
 #
 .PHONY: unit-tests
+unit-tests: export ADDITIONAL_EXTRACTION = "$(ROOT_DIR)/infrastructure/source \
+                                            $(ROOT_DIR)/components/lfric-xios/source \
+                                            $(ROOT_DIR)/gungho/source \
+                                            $(ROOT_DIR)/gungho/unit-test/support"
 unit-tests: export BIN_DIR ?= $(PROJECT_DIR)/test
 unit-tests: export EXTERNAL_STATIC_LIBRARIES += pfunit
 unit-tests: export FFLAG_GROUPS = DEBUG NO_OPTIMISATION INIT UNIT_WARNINGS
 unit-tests: export IGNORE_DEPENDENCIES += pfunit_mod
+unit-tests: export META_FILE_DIR = rose-meta/lfric-io_dev/HEAD
 unit-tests: export PROGRAMS = $(PROJECT_NAME)_unit_tests
 unit-tests: export PROJECT = $(PROJECT_NAME)
+unit-tests: export SOURCE_DIR = source
+unit-tests: export TEST_DIR = unit-test
 unit-tests: export WORKING_DIR := $(WORKING_DIR)/unit-test
 unit-tests: do-unit-tests
-	$(Q)echo > /dev/null
+				$(Q)echo > /dev/null
 
 
 ##############################################################################

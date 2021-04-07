@@ -22,15 +22,18 @@ module io_dev_data_mod
   use log_mod,                          only : log_event,      &
                                                LOG_LEVEL_INFO, &
                                                LOG_LEVEL_ERROR
-  use variable_fields_mod,              only : init_variable_fields
+  use variable_fields_mod,              only : init_variable_fields, &
+                                               update_variable_fields
   ! Configuration
   use io_config_mod,                    only : write_diag, write_dump, &
                                                checkpoint_read,        &
                                                checkpoint_write
-  use initialization_config_mod,        only : init_option,               &
-                                               init_option_fd_start_dump, &
-                                               ancil_option,              &
-                                               ancil_option_basic_gal
+  use io_dev_config_mod,                only : field_initialisation,            &
+                                               field_initialisation_start_dump, &
+                                               time_variation,                  &
+                                               time_variation_analytic,         &
+                                               time_variation_ancil,            &
+                                               time_variation_none
   ! I/O methods
   use lfric_xios_read_mod,              only : read_state, read_checkpoint
   use lfric_xios_write_mod,             only : write_state, write_checkpoint
@@ -38,6 +41,7 @@ module io_dev_data_mod
   use io_dev_init_mod,                  only : setup_io_dev_fields
   use io_dev_init_fields_alg_mod,       only : io_dev_init_fields_alg
   use io_dev_checksum_alg_mod,          only : io_dev_checksum_alg
+  use io_dev_timestep_alg_mod,          only : io_dev_timestep_alg
 
   implicit none
 
@@ -64,8 +68,8 @@ module io_dev_data_mod
 
   end type io_dev_data_type
 
-  public io_dev_data_type, create_model_data, finalise_model_data, &
-         initialise_model_data, output_model_data
+  public io_dev_data_type, create_model_data, initialise_model_data, &
+         update_model_data, finalise_model_data, output_model_data
 
 contains
 
@@ -105,7 +109,6 @@ contains
 
     type( io_dev_data_type ), intent(inout) :: model_data
     type( field_type ),       intent(in)    :: chi_xyz(3)
-    ! Clock will be integrated with future I/O testing functionality
     class( clock_type ),      intent(in)    :: clock
 
     ! Initialise all the model fields here analytically - setting data value
@@ -121,22 +124,55 @@ contains
 
     else
       ! If fields need to be read from dump file, read them
-      select case( init_option )
-        case ( init_option_fd_start_dump )
+      if ( field_initialisation == field_initialisation_start_dump ) then
           call read_state( model_data%dump_fields, prefix='input_' )
-      end select
+      end if
 
       ! If testing initialisation of time-varying I/O
-      select case( ancil_option )
-      case ( ancil_option_basic_gal )
+      if ( time_variation == time_variation_ancil ) then
         call init_variable_fields( model_data%variable_field_times, &
                                    clock, model_data%core_fields )
-      end select
+      end if
 
     end if
 
 
   end subroutine initialise_model_data
+
+  !> @brief Updates the working data set dependent of namelist configuration
+  !> @param[inout] model_data The working data set for a model run
+  !> @param[in]    clock      The model clock object
+  subroutine update_model_data( model_data, clock )
+
+    implicit none
+
+    type( io_dev_data_type ), intent(inout) :: model_data
+    class( clock_type ),      intent(in)    :: clock
+
+    !---------------------------------------------------------------
+    ! Separate update calls are made based on model configuration
+    !---------------------------------------------------------------
+    select case ( time_variation )
+
+    case ( time_variation_analytic )
+      call log_event( "IO_Dev: Updating fields analytically", LOG_LEVEL_INFO )
+      call io_dev_timestep_alg( model_data%alg_fields, clock )
+
+    case ( time_variation_ancil )
+      call log_event( "IO_Dev: Updating fields from time_varying ancillary", LOG_LEVEL_INFO )
+      call update_variable_fields( model_data%variable_field_times, &
+                                   clock, model_data%core_fields )
+
+    case ( time_variation_none )
+      call log_event( "IO_Dev: No time variation for this run", LOG_LEVEL_INFO )
+
+    case default
+      call log_event( "IO_Dev: Invalid choice for time-variation namelist", LOG_LEVEL_ERROR )
+
+    end select
+
+  end subroutine update_model_data
+
 
   !> @brief Writes out a checkpoint and dump file dependent on namelist options
   !> @param[inout] model_data The working data set for the model run

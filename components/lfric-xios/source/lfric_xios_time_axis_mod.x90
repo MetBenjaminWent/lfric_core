@@ -187,6 +187,7 @@ subroutine initialise( self, input_data, name, input_units, cyclic, &
     if( self%cyclic ) then
       self%time_data(1) = self%time_data(1) + self%upper_limit
     end if
+
     self%time_data = cshift(self%time_data, 1)
     self%index_data = cshift(self%index_data, 1)
 
@@ -230,7 +231,6 @@ subroutine initialise( self, input_data, name, input_units, cyclic, &
     class(time_axis_type), intent(inout) :: self
     real(r_def),           intent(in)    :: input_time
 
-    real(r_def)    :: time_window(2)
     integer(i_def) :: n
 
     ! Until final clock/calendar implementation, the time is currently in the
@@ -243,11 +243,11 @@ subroutine initialise( self, input_data, name, input_units, cyclic, &
         self%index_data = cshift(self%index_data, -1)
 
         if ( (self%time_data(1) > self%time_data(2)) ) then
-          time_window(1) = time_window(1) - self%upper_limit
+          self%time_data(1) = self%time_data(1) - self%upper_limit
           return
         end if
 
-      else if ( (time_window(1) <= input_time) .and. (input_time < time_window(2)) ) then
+      else if ( (self%time_data(1) <= input_time) .and. (input_time < self%time_data(2)) ) then
         return
       else
         self%time_data = cshift(self%time_data, -1)
@@ -256,26 +256,22 @@ subroutine initialise( self, input_data, name, input_units, cyclic, &
     end do
 
     ! If we are still going, cycle forward to get the correct time window
-    time_window = self%get_time_window()
     do n=1,size(self%time_data)
-      if ( (time_window(1) <= input_time) .and. (input_time < time_window(2)) ) then
+      if ( (self%time_data(1) <= input_time) .and. (input_time < self%time_data(2)) ) then
         return
       else
         call self%shift_forward()
-        time_window = self%get_time_window()
       end if
     end do
 
     ! If we're still going then the correct time is out of the time axis bounds
     ! or in a future cycle of a cyclic time-axis
     if ( self%cyclic ) then
-      time_window = self%get_time_window()
       do
-        if ( (time_window(1) <= input_time) .and. (input_time < time_window(2)) ) then
+        if ( (self%time_data(1) <= input_time) .and. (input_time < self%time_data(2)) ) then
           return
         else
           call self%shift_forward()
-          time_window = self%get_time_window()
         end if
       end do
     else
