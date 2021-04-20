@@ -262,7 +262,7 @@ module cell_locator_api_mod
 
     ! Convert field to physical nodal output & sample chi on nodal points;
     ! convert result to lon, lat, rad if requested
-    chi => get_coordinates()
+    chi => get_coordinates(mesh_id)
     call invoke_nodal_coordinates_kernel( coord_output, chi )
 
     nullify( chi )

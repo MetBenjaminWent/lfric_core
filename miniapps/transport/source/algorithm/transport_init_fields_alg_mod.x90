@@ -12,7 +12,7 @@
 
 module transport_init_fields_alg_mod
 
-  use constants_mod,                     only: r_def
+  use constants_mod,                     only: r_def, i_def
   use geometric_constants_mod,           only: get_coordinates_xyz, &
                                                get_coordinates,     &
                                                get_panel_id
@@ -67,10 +67,13 @@ subroutine transport_init_fields_alg( wind_n,    &
     type(field_type), pointer           :: chi_sph(:) => null()
     type(field_type), pointer           :: panel_id => null()
     real(kind=r_def), parameter         :: initial_time = 0.0_r_def
+    integer(kind=i_def)                 :: mesh_id
 
-    chi_xyz  => get_coordinates_xyz()
-    chi_sph  => get_coordinates()
-    panel_id => get_panel_id()
+    mesh_id = wind_n%get_mesh_id()
+
+    chi_xyz  => get_coordinates_xyz(mesh_id)
+    chi_sph  => get_coordinates(mesh_id)
+    panel_id => get_panel_id(mesh_id)
     qr = quadrature_xyoz_type( element_order+3, quadrature_rule )
 
     call invoke( setval_c( wind_n, 1.0_r_def ),    &

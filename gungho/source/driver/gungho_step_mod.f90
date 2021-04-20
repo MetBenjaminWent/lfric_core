@@ -120,7 +120,7 @@ module gungho_step_mod
     u => prognostic_fields%get_field('u')
     rho => prognostic_fields%get_field('rho')
     exner => prognostic_fields%get_field('exner')
-    dA => get_da_at_w2()
+    dA => get_da_at_w2(mesh_id)
 
     if ( transport_only ) then
       select case( scheme )

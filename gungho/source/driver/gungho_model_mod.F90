@@ -25,7 +25,8 @@ module gungho_model_mod
   use field_parent_mod,           only : write_interface
   use field_collection_mod,       only : field_collection_type, &
                                          field_collection_iterator_type
-  use formulation_config_mod,     only : transport_only, &
+  use formulation_config_mod,     only : l_multigrid,    &
+                                         transport_only, &
                                          use_moisture,   &
                                          use_physics
   use global_mesh_collection_mod, only : global_mesh_collection, &
@@ -62,6 +63,7 @@ module gungho_model_mod
                                          LOG_LEVEL_INFO,     &
                                          LOG_LEVEL_DEBUG,    &
                                          LOG_LEVEL_TRACE
+  use mg_orography_alg_mod,       only : mg_orography_alg
   use minmax_tseries_mod,         only : minmax_tseries,      &
                                          minmax_tseries_init, &
                                          minmax_tseries_final
@@ -198,8 +200,11 @@ contains
     type(field_type), target :: double_level_chi_xyz(3)
     type(field_type), target :: double_level_chi_sph(3)
 
-    integer(i_def), allocatable :: multigrid_mesh_ids(:)
-    integer(i_def), allocatable :: multigrid_2d_mesh_ids(:)
+
+    integer(i_def),   allocatable :: multigrid_mesh_ids(:)
+    integer(i_def),   allocatable :: multigrid_2d_mesh_ids(:)
+    type(field_type), allocatable :: chi_mg_sph(:,:)
+    type(field_type), allocatable :: panel_id_mg(:)
 
     !-------------------------------------------------------------------------
     ! Initialise aspects of the infrastructure
@@ -279,15 +284,17 @@ contains
                     multigrid_mesh_ids    = multigrid_mesh_ids,   &
                     multigrid_2D_mesh_ids = multigrid_2D_mesh_ids )
 
-    call init_fem( mesh_id, chi_xyz, chi_sph, panel_id,          &
-                   shifted_mesh_id       = shifted_mesh_id,      &
-                   shifted_chi_xyz       = shifted_chi_xyz,      &
-                   shifted_chi_sph       = shifted_chi_sph,      &
-                   double_level_mesh_id  = double_level_mesh_id, &
-                   double_level_chi_xyz  = double_level_chi_xyz, &
-                   double_level_chi_sph  = double_level_chi_sph, &
-                   multigrid_mesh_ids    = multigrid_mesh_ids,   &
-                   multigrid_2D_mesh_ids = multigrid_2D_mesh_ids )
+    call init_fem( mesh_id, chi_xyz, chi_sph, panel_id,           &
+                   shifted_mesh_id       = shifted_mesh_id,       &
+                   shifted_chi_xyz       = shifted_chi_xyz,       &
+                   shifted_chi_sph       = shifted_chi_sph,       &
+                   double_level_mesh_id  = double_level_mesh_id,  &
+                   double_level_chi_xyz  = double_level_chi_xyz,  &
+                   double_level_chi_sph  = double_level_chi_sph,  &
+                   multigrid_mesh_ids    = multigrid_mesh_ids,    &
+                   multigrid_2D_mesh_ids = multigrid_2D_mesh_ids, &
+                   chi_mg_sph            = chi_mg_sph,            &
+                   panel_id_mg           = panel_id_mg            )
 
 
     ! Full global meshes no longer required, so reclaim
@@ -347,6 +354,12 @@ contains
                                 double_level_mesh_id, surface_altitude, &
                                 spherical_coords=.true.)
 
+    ! Set up orography fields for multgrid meshes
+    if ( l_multigrid ) then
+      call mg_orography_alg(multigrid_mesh_ids, multigrid_2D_mesh_ids, &
+                            chi_mg_sph, panel_id_mg, surface_altitude)
+    end if
+
     !-------------------------------------------------------------------------
     ! Setup constants
     !-------------------------------------------------------------------------
@@ -358,7 +371,8 @@ contains
                                   panel_id, shifted_mesh_id, shifted_chi_xyz, &
                                   shifted_chi_sph, double_level_mesh_id,      &
                                   double_level_chi_xyz, double_level_chi_sph, &
-                                  surface_altitude)
+                                  multigrid_mesh_ids, multigrid_2D_mesh_ids,  &
+                                  chi_mg_sph, panel_id_mg)
 
 #ifdef UM_PHYSICS
     ! Set derived planet constants and presets

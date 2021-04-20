@@ -112,7 +112,7 @@ contains
 
     u_physics_star  => derived_fields%get_field('u_physics_star')
     w_physics_star  => derived_fields%get_field('w_physics_star')
-    dA => get_da_at_w2()
+    dA => get_da_at_w2(u_physics_star%get_mesh_id())
     call invoke(         X_divideby_Y(u_physics_star, u_star, dA),     &
                 extract_w_kernel_type(w_physics_star, u_physics_star) )
 

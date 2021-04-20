@@ -235,7 +235,7 @@ subroutine catalyst_coprocess(timestep, time, vis_fields, mesh_id)
       call create_vtk_grid(mesh_id)
     end if
 
-    chi => get_coordinates()
+    chi => get_coordinates(mesh_id)
 
     ! Loop over each field in the list
     loop => vis_fields%head

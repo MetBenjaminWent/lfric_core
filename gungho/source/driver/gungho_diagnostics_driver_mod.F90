@@ -93,7 +93,7 @@ contains
     moist_dyn => model_data%moist_dyn
     derived_fields => model_data%derived_fields
     cloud_fields => model_data%cloud_fields
-    panel_id => get_panel_id()
+    panel_id => get_panel_id(mesh_id)
 
     ! Can't just iterate through the prognostic/diagnostic collections as
     ! some fields are scalars and some fields are vectors, so explicitly

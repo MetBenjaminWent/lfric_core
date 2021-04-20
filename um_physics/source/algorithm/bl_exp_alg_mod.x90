@@ -201,10 +201,13 @@ contains
     ! local variables
     type( field_type ) :: gross_prim_prod
     integer(i_def), parameter :: stencil_depth = 1
+    integer(i_def) :: mesh_id
 
     if ( subroutine_timers ) call timer('bl_exp_alg')
 
     call log_event( 'slow_physics: Running explicit Boundary layer', LOG_LEVEL_INFO )
+
+    mesh_id = theta%get_mesh_id()
 
     ! Unpack derived fields
     exner_in_wth  => derived_fields%get_field('exner_in_wth')
@@ -331,8 +334,8 @@ contains
     snow_layer_temp      => snow_fields%get_field('snow_layer_temp')
     snow_unload_rate     => snow_fields%get_field('snow_unload_rate')
 
-    height_wth => get_height(Wtheta)
-    height_w3 => get_height(W3)
+    height_wth => get_height(Wtheta, mesh_id)
+    height_w3 => get_height(W3, mesh_id)
     delta => get_delta_at_wtheta()
     max_diff_smag => get_max_diff()
 

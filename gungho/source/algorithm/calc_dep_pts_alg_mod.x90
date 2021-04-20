@@ -29,8 +29,7 @@ module calc_dep_pts_alg_mod
                                                invoke_extract_xy,              &
                                                invoke_cosmic_departure_wind,   &
                                                invoke_correct_cosmic_wind
-  use geometric_constants_mod,           only: get_cell_orientation, &
-                                               get_coordinates,      &
+  use geometric_constants_mod,           only: get_coordinates,                &
                                                get_panel_id
   use log_mod,                           only: log_event,                      &
                                                log_scratch_space,              &
@@ -92,8 +91,8 @@ contains
     mesh_id = wind_n%get_mesh_id()
     w3_fs   => function_space_collection%get_fs( mesh_id, element_order, W3 )
 
-    chi_sph => get_coordinates()
-    panel_id => get_panel_id()
+    chi_sph => get_coordinates(mesh_id)
+    panel_id => get_panel_id(mesh_id)
 
     call u_x_fem_n%initialise( vector_space = w2_fs )
     call u_y_fem_n%initialise( vector_space = w2_fs )

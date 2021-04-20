@@ -77,9 +77,13 @@ contains
     type( field_type ), pointer :: height_w3 => null()
     type( field_type ), pointer :: height_wth => null()
 
+    integer(kind=i_def) :: mesh_id
+
     if ( subroutine_timers ) call timer("spectral_gwd_alg")
 
     call log_event( 'slow_physics: Running spectral gravity wave drag', LOG_LEVEL_INFO )
+
+    mesh_id = theta%get_mesh_id()
 
     ! Unpack fields
     u1_in_w3 => derived_fields%get_field('u1_in_w3')
@@ -93,9 +97,9 @@ contains
     conv_rain => convection_fields%get_field('conv_rain')
     conv_snow => convection_fields%get_field('conv_snow')
 
-    latitude_w3 => get_latitude()
-    height_wth => get_height(Wtheta)
-    height_w3 => get_height(W3)
+    latitude_w3 => get_latitude(mesh_id)
+    height_wth => get_height(Wtheta, mesh_id)
+    height_w3 => get_height(W3, mesh_id)
 
     call u1_in_w3%copy_field_properties(du_spectral_gwd)
     call u2_in_w3%copy_field_properties(dv_spectral_gwd)

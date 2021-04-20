@@ -75,14 +75,14 @@ contains
 
     if ( subroutine_timers ) call timer('conservation_alg')
 
-    geopotential => get_geopotential()
-    chi_sph      => get_coordinates()
-    panel_id     => get_panel_id()
-
     ! Get a quadrature rule
     qr = quadrature_xyoz_type(nqp_exact, quadrature_rule)
     mesh = rho%get_mesh_id()
     w3_fs => function_space_collection%get_fs( mesh, element_order, W3)
+
+    geopotential => get_geopotential()
+    chi_sph      => get_coordinates(mesh)
+    panel_id     => get_panel_id(mesh)
 
     ! Initialise Mass, Energy and Axial Angular Momentum fields
     call mass%initialise( vector_space = w3_fs )

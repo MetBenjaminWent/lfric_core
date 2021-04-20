@@ -70,7 +70,7 @@ contains
       call log_event( 'Applying Viscosity', LOG_LEVEL_INFO )
       call dtheta%initialise( theta%get_function_space() )
       call du%initialise( u%get_function_space() )
-      chi_xyz => get_coordinates_xyz()
+      chi_xyz => get_coordinates_xyz(u%get_mesh_id())
       call invoke( tracer_viscosity_kernel_type( dtheta, theta, 1, chi_xyz ), &
                    momentum_viscosity_kernel_type( du, u, 1, chi_xyz ),       &
                    inc_X_plus_bY( theta, dt, dtheta ),                        &

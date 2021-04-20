@@ -44,12 +44,14 @@ contains
     type( field_type ), pointer :: chi_sph(:) => null(), &
                                    panel_id => null()
 
-    real(kind=r_def) :: time
+    real(kind=r_def)    :: time
+    integer(kind=i_def) :: mesh_id
 
+    mesh_id = rho%get_mesh_id()
 
     qr = quadrature_xyoz_type(nqp_exact, quadrature_rule)
-    chi_sph => get_coordinates()
-    panel_id => get_panel_id()
+    chi_sph => get_coordinates(mesh_id)
+    panel_id => get_panel_id(mesh_id)
     ! Set rho according to formulation
     time = real(timestep,r_def)*dt
     call invoke( set_rho_kernel_type ( rho, chi_sph, panel_id, time, qr ) )

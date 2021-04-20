@@ -245,7 +245,7 @@ contains
     integer(i_def), parameter :: i_minus_one = -1_i_def
 
     ! temporaries needed for Multigrid
-    integer(kind=i_def)       :: level, multigrid_levels
+    integer(kind=i_def)       :: level, multigrid_levels, mg_mesh_id
 
 
     if ( subroutine_timers ) call timer('fem_constants_alg')
@@ -262,8 +262,8 @@ contains
 
     !=========== Create function spaces required for setup ===================!
 
-    chi_mg      => get_coordinates(level)
-    panel_id_mg => get_panel_id(level)
+    chi_mg      => get_coordinates(mesh_id)
+    panel_id_mg => get_panel_id(mesh_id)
 
     w0_fs     => function_space_collection%get_fs( mesh_id, element_order, W0 )
     w1_fs     => function_space_collection%get_fs( mesh_id, element_order, W1 )
@@ -546,11 +546,13 @@ contains
          write(log_scratch_space,'(A,I0,A)') "fem_constants[",level,"]:creating ops"
          call log_event(log_scratch_space,LOG_LEVEL_INFO)
 
-         chi_mg      => get_coordinates(level)
-         panel_id_mg => get_panel_id(level)
          w3_fs       => multigrid_function_space_chain%get_next()
          w2_fs       => w2_multigrid_function_space_chain%get_next()
          wtheta_fs   => wtheta_multigrid_function_space_chain%get_next()
+
+         mg_mesh_id = w3_fs%get_mesh_id()
+         chi_mg      => get_coordinates(mg_mesh_id)
+         panel_id_mg => get_panel_id(mg_mesh_id)
 
          mm_w2(level)     = operator_type( w2_fs, w2_fs )
          mm_dl(level)     = operator_type( w2_fs, w2_fs )

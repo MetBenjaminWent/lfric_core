@@ -359,6 +359,7 @@ contains
     integer(kind=i_def)                    :: level, i
     type(field_type),              target  :: dummy_w2_mask
     type(field_type),              pointer :: w2_mask => null()
+    integer(kind=i_def)                    :: mesh_id
 
     if ( subroutine_timers ) call timer('si_operators_alg:compute')
     call log_event( "Gungho: computing si_operators", LOG_LEVEL_INFO )
@@ -394,8 +395,9 @@ contains
        write(log_scratch_space,'(A,I0)') "si_ops: mg level=",level
        call log_event(log_scratch_space, LOG_LEVEL_INFO)
 
-       chi_sph  => get_coordinates(level)
-       panel_id =>  get_panel_id(level)
+       mesh_id = rho_at_u(level)%get_mesh_id()
+       chi_sph  => get_coordinates(mesh_id)
+       panel_id =>  get_panel_id(mesh_id)
 
        ! Operators for the equation of state
        const1 = (1.0_r_def-kappa)/kappa

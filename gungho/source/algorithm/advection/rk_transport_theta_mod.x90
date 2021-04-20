@@ -137,7 +137,7 @@ contains
     if ( subroutine_timers ) call timer('rk_transport_theta_alg')
 
     qr => get_qr()
-    chi_sph => get_coordinates()
+    chi_sph => get_coordinates(u%get_mesh_id())
     call theta_n%initialise( vector_space = theta%get_function_space() )
     call theta%copy_field(theta_n)
 
@@ -302,8 +302,8 @@ contains
                    setval_c(mt_lumped, 0.0_r_def), &
                    matrix_vector_kernel_type(mt_lumped, ones, mm_wt) )
 
-      chi_sph => get_coordinates()
-      panel_id => get_panel_id()
+      chi_sph => get_coordinates(mesh_id)
+      panel_id => get_panel_id(mesh_id)
 
       if ( spherical_coord_system == spherical_coord_system_xyz ) then
         transform_radius = 0.0_r_def

@@ -21,8 +21,7 @@ module cusph_cosmic_transport_alg_mod
                                                LOG_LEVEL_TRACE
   use geometric_constants_mod,           only: get_coordinates_xyz, &
                                                get_coordinates, &
-                                               get_panel_id, &
-                                               get_cell_orientation
+                                               get_panel_id
   use cusph_split_transport_alg_mod,     only: cusph_split_transport_alg
   use cusph_fv_density_update_alg_mod,   only: cusph_fv_density_update_alg
   use flux_direction_mod,                only: x_direction, y_direction
@@ -90,9 +89,9 @@ contains
     call r_u%initialise( vector_space = w2_fs )
 
     qr = quadrature_xyoz_type(element_order+2, quadrature_rule)
-    chi_xyz => get_coordinates_xyz()
-    chi_sph => get_coordinates()
-    panel_id => get_panel_id()
+    chi_xyz => get_coordinates_xyz(mesh_id)
+    chi_sph => get_coordinates(mesh_id)
+    panel_id => get_panel_id(mesh_id)
 
     time = dt*real(timestep,r_def)
 

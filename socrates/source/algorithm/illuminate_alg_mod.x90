@@ -7,6 +7,7 @@
 
 module illuminate_alg_mod
 
+use constants_mod,           only: i_def
 use field_mod,               only: field_type
 use field_collection_mod,    only: field_collection_type
 use geometric_constants_mod, only: get_latitude, get_longitude
@@ -32,6 +33,8 @@ subroutine illuminate_alg(radiation_fields, timestep)
   type( field_collection_type ), intent(inout) :: radiation_fields
   integer,                       intent(in)    :: timestep
 
+  integer(kind=i_def) :: mesh_id
+
   type( field_type ), pointer :: latitude  => null()
   type( field_type ), pointer :: longitude => null()
 
@@ -44,9 +47,6 @@ subroutine illuminate_alg(radiation_fields, timestep)
   type( field_type ), pointer :: sin_stellar_declination_rts => null()
   type( field_type ), pointer :: stellar_eqn_of_time_rts => null()
 
-  latitude  => get_latitude()
-  longitude => get_longitude()
-
   cos_zenith_angle => radiation_fields%get_field('cos_zenith_angle')
   lit_fraction     => radiation_fields%get_field('lit_fraction')
   cos_zenith_angle_rts   => radiation_fields%get_field('cos_zenith_angle_rts')
@@ -55,6 +55,11 @@ subroutine illuminate_alg(radiation_fields, timestep)
   sin_stellar_declination_rts &
     => radiation_fields%get_field('sin_stellar_declination_rts')
   stellar_eqn_of_time_rts => radiation_fields%get_field('stellar_eqn_of_time_rts')
+
+  mesh_id = cos_zenith_angle%get_mesh_id()
+
+  latitude  => get_latitude(mesh_id)
+  longitude => get_longitude(mesh_id)
 
   call invoke( illuminate_kernel_type( &
                  cos_zenith_angle, lit_fraction, &

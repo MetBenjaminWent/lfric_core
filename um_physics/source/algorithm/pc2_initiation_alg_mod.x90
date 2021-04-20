@@ -105,7 +105,7 @@ contains
     zlcl_mixed      => turbulence_fields%get_field('z_lcl')
     r_cumulus       => turbulence_fields%get_field('cumulus')
 
-    height_wth      => get_height(Wtheta)
+    height_wth      => get_height(Wtheta, theta%get_mesh_id())
 
     call theta%copy_field_properties(dqv_pc2_inc)
     call theta%copy_field_properties(dqcl_pc2_inc)

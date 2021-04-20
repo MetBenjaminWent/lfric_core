@@ -42,7 +42,7 @@ subroutine locate_tropopause_alg(trop_level, theta, exner_in_wth, twod_mesh_id)
   procedure(write_interface), pointer :: write_diag_behaviour => null()
 
 
-  height_wth => get_height(Wtheta)
+  height_wth => get_height(Wtheta, theta%get_mesh_id())
 
   vector_space=>function_space_collection%get_fs(twod_mesh_id, 0, W3)
   call trop_level%initialise(vector_space)

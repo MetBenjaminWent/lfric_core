@@ -130,7 +130,7 @@ contains
     call max_diff_wtheta%initialise( vector_space = wtheta_fs )
 
     detj_at_w2 => get_detj_at_w2()
-    dA_at_w2 => get_dA_at_w2()
+    dA_at_w2 => get_dA_at_w2(mesh_id)
 
     call invoke( X_divideby_Y(dx_at_w2, detj_at_w2, dA_at_w2),&
                  calc_delta_at_wtheta_kernel_type(delta_at_wtheta, dx_at_w2)  )

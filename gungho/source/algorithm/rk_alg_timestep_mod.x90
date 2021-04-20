@@ -203,7 +203,7 @@ contains
 
     type(quadrature_rule_gaussian_type) :: gaussian_quadrature
 
-    integer(kind=i_def)            :: st, stage
+    integer(kind=i_def)            :: st, stage, mesh_id
 
     if ( subroutine_timers ) call timer('rk_alg')
     qr => get_qr()
@@ -218,9 +218,10 @@ contains
     mm_lumped_inv_wtheta => get_inverse_lumped_mass_matrix(wt_id)
 
     ! Get coordinates
-    chi_xyz => get_coordinates_xyz()
-    chi_sph => get_coordinates()
-    panel_id => get_panel_id()
+    mesh_id = u%get_mesh_id()
+    chi_xyz => get_coordinates_xyz(mesh_id)
+    chi_sph => get_coordinates(mesh_id)
+    panel_id => get_panel_id(mesh_id)
     !=== Do a single timestep ==============================================!
 
     ! Runge-Kutta algorithm

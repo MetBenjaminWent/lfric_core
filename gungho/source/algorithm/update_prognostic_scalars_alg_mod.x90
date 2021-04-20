@@ -22,6 +22,7 @@ contains
   !> @param[in] moist_dyn_gas_law Gas law component of moist dynamics
   subroutine update_prognostic_scalars_alg(state, rhs_n, rhs_adv, moist_dyn_gas_law)
 
+    use constants_mod,                only: i_def
     use derived_config_mod,           only: bundle_size
     use field_indices_mod,            only: igh_t, igh_d, igh_p
     use field_mod,                    only: field_type
@@ -47,11 +48,15 @@ contains
     type( operator_type ), pointer :: m3_inv => null()
     type( quadrature_xyoz_type ), pointer :: qr => null()
 
+    integer(kind=i_def) :: mesh_id
+
+    mesh_id = state(igh_t)%get_mesh_id()
+
     call dtheta%initialise( state(igh_t)%get_function_space() )
 
     m3_inv  => get_mass_matrix(w3inv_id)
-    chi_sph => get_coordinates()
-    panel_id => get_panel_id()
+    chi_sph => get_coordinates(mesh_id)
+    panel_id => get_panel_id(mesh_id)
     qr => get_qr()
 
     ! rho^np1 and theta^np1 can be updated directly from advection terms

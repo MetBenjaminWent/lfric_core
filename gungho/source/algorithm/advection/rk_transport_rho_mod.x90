@@ -140,8 +140,8 @@ contains
           flux_stencil_size = flux2d_stencil_size
         end if
 
-        chi_sph => get_coordinates()
-        panel_id => get_panel_id()
+        chi_sph => get_coordinates(mesh_id)
+        panel_id => get_panel_id(mesh_id)
 
         if ( spherical_coord_system == spherical_coord_system_xyz ) then
           transform_radius = 0.0_r_def

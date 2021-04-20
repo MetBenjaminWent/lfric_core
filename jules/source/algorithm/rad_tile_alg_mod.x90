@@ -145,8 +145,8 @@ subroutine rad_tile_alg(tile_sw_direct_albedo, tile_sw_diffuse_albedo,   &
     u1_in_w3          => derived_fields%get_field('u1_in_w3')
     u2_in_w3          => derived_fields%get_field('u2_in_w3')
 
-    height_wth        => get_height(Wtheta)
-    height_w3         => get_height(W3)
+    height_wth        => get_height(Wtheta, twod_mesh_id)
+    height_w3         => get_height(W3, twod_mesh_id)
 
     call invoke(rad_tile_kernel_type(tile_sw_direct_albedo, &
                                      tile_sw_diffuse_albedo, &

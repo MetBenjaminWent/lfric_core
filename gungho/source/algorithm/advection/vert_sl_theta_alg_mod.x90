@@ -11,7 +11,7 @@
 !-----------------------------------------------------------------------------
 module vert_sl_theta_alg_mod
 
-  use constants_mod,                      only: r_def
+  use constants_mod,                      only: r_def, i_def
   use io_config_mod,                      only: subroutine_timers
   use timer_mod,                          only: timer
   use field_mod,                          only: field_type
@@ -54,8 +54,12 @@ contains
     type( field_type ), pointer :: chi_sph(:) => null()
     type( field_type ), pointer :: panel_id => null()
 
+    integer(kind=i_def) :: mesh_id
+
 
     if ( subroutine_timers ) call timer( 'vert_sl_theta' )
+
+    mesh_id = wind_adv%get_mesh_id()
 
     if ( theta_vertical_scheme == theta_vertical_scheme_mol ) then
 
@@ -68,8 +72,8 @@ contains
         call log_event( "vertical_sl_theta: Invalid vertical_sl_order", LOG_LEVEL_ERROR )
       end if
 
-      chi_sph  => get_coordinates()
-      panel_id => get_panel_id()
+      chi_sph  => get_coordinates(mesh_id)
+      panel_id => get_panel_id(mesh_id)
       call departure_wind%initialise( vector_space = wind_adv%get_function_space())
 
       ! set up the wind and compute SL advection (vertical only) of theta

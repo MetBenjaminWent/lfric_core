@@ -63,7 +63,8 @@ module create_fem_mod
                          shifted_mesh_id, shifted_chi_xyz, shifted_chi_sph, &
                          double_level_mesh_id, double_level_chi_xyz,        &
                          double_level_chi_sph,                              &
-                         multigrid_mesh_ids, multigrid_2D_mesh_ids          )
+                         multigrid_mesh_ids, multigrid_2D_mesh_ids,         &
+                         chi_mg_sph, panel_id_mg                            )
 
     implicit none
 
@@ -81,6 +82,8 @@ module create_fem_mod
     type(field_type), optional, intent(inout) :: double_level_chi_sph(:)
     integer(i_def),   optional, intent(in)    :: multigrid_mesh_ids(:)
     integer(i_def),   optional, intent(in)    :: multigrid_2d_mesh_ids(:)
+    type(field_type), optional, intent(inout), allocatable :: chi_mg_sph(:,:)
+    type(field_type), optional, intent(inout), allocatable :: panel_id_mg(:)
 
     logical(l_def) :: create_shifted_chi        = .false.
     logical(l_def) :: create_double_level_chi   = .false.
@@ -97,13 +100,15 @@ module create_fem_mod
     integer(i_def) :: chi_xyz_space
     integer(i_def) :: chi_sph_space
     integer(i_def) :: coord
-    integer(i_def) :: mesh_ctr
+    integer(i_def) :: mesh_ctr, i
 
     ! Set control flags
     !=================================================================
-    if ( l_multigrid                 .and. &
-         present(multigrid_mesh_ids) .and. &
-         present(multigrid_2d_mesh_ids) ) create_multigrid_fs_chain = .true.
+    if ( l_multigrid                    .and. &
+         present(multigrid_mesh_ids)    .and. &
+         present(multigrid_2d_mesh_ids) .and. &
+         present(chi_mg_sph)            .and. &
+         present(panel_id_mg) ) create_multigrid_fs_chain = .true.
 
     if ( present(shifted_mesh_id) .and. &
          present(shifted_chi_xyz) ) create_shifted_chi = .true.
@@ -242,8 +247,18 @@ module create_fem_mod
       w2_multigrid_function_space_chain     = function_space_chain_type()
       wtheta_multigrid_function_space_chain = function_space_chain_type()
 
-      write(log_scratch_space,'(A,I1,A)')                     &
-          'Intialising MultiGrid ', size(multigrid_mesh_ids), &
+      if (allocated(chi_mg_sph)) deallocate(chi_mg_sph)
+      if (allocated(panel_id_mg)) deallocate(panel_id_mg)
+      allocate(chi_mg_sph(3,size(multigrid_mesh_ids)))
+      allocate(panel_id_mg(size(multigrid_mesh_ids)))
+
+      do i = 1, 3
+         call chi_sph(i)%copy_field(chi_mg_sph(i,1))
+      end do
+      call panel_id%copy_field(panel_id_mg(1))
+
+      write(log_scratch_space,'(A,I1,A)')                      &
+          'Initialising MultiGrid ', size(multigrid_mesh_ids), &
           '-level function space chain.'
       call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
@@ -260,6 +275,24 @@ module create_fem_mod
         fs => function_space_collection%get_fs( multigrid_mesh_ids(mesh_ctr), &
                                                 0, Wtheta )
         call wtheta_multigrid_function_space_chain%add( fs )
+
+        ! Set up the coordinate fields for multigrid levels greater than 1
+        if (mesh_ctr > 1) then
+          do i = 1, 3
+            call chi_mg_sph( i, mesh_ctr )%initialise( vector_space =           &
+              function_space_collection%get_fs( multigrid_mesh_ids(mesh_ctr),   &
+                                                spherical_coord_order, chi_sph_space) )
+          end do
+
+          call panel_id_mg(mesh_ctr)%initialise(vector_space =                  &
+            function_space_collection%get_fs( multigrid_mesh_ids(mesh_ctr), 0, W3) )
+
+          call assign_coordinate_field( chi_mg_sph(:,mesh_ctr),       &
+                                        panel_id_mg(mesh_ctr),        &
+                                        multigrid_mesh_ids(mesh_ctr), &
+                                        spherical_coords=.true.)
+        end if
+
       end do
 
       single_layer_function_space_chain = function_space_chain_type()

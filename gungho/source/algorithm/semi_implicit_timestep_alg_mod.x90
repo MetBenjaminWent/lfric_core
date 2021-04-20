@@ -328,8 +328,9 @@ contains
 
     if ( subroutine_timers ) call timer('semi_implicit_timestep_alg')
 
-    qr    => get_qr()
-    mm_wt => get_mass_matrix(wt_id)
+    qr => get_qr()
+
+    mm_wt         => get_mass_matrix(wt_id)
     ! Using modified velocity mass matrix if using damping layer
     if(dlayer_on) then
       mm_vel => get_mass_matrix(dl_id)

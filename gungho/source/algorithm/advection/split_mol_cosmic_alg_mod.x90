@@ -67,7 +67,7 @@ subroutine split_transport_rho_step( wind, rho, rho_splitting )
 
   call wind%copy_field_properties(dep_z)
   detj_w2 => get_detj_at_w2()
-  cell_orient => get_cell_orientation()
+  cell_orient => get_cell_orientation(rho%get_mesh_id())
 
   if ( subroutine_timers ) call timer('split_transport_rho_step')
 

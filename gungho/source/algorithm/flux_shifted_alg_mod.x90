@@ -9,7 +9,7 @@ module flux_shifted_alg_mod
 
   use constants_mod,                  only: r_def, i_def
   use enforce_bc_kernel_mod,          only: enforce_bc_kernel_type
-  use geometric_constants_mod,        only: get_coordinates_shifted,  &
+  use geometric_constants_mod,        only: get_coordinates,  &
                                             get_panel_id
   use fem_constants_mod,              only: get_mass_matrix,          &
                                             get_mass_matrix_diagonal, &
@@ -139,8 +139,8 @@ contains
                                                fv_flux_order, flux_stencil_size, &
                                                nfaces_re_h, nfaces_re_v)
 
-        chi_sph => get_coordinates_shifted()
-        panel_id => get_panel_id()
+        chi_sph => get_coordinates(mesh_id)
+        panel_id => get_panel_id(mesh_id)
 
         if ( spherical_coord_system == spherical_coord_system_xyz ) then
           transform_radius = 0.0_r_def
@@ -253,13 +253,17 @@ contains
   type(field_type)                    :: rhs_f
 
   type(function_space_type), pointer  :: u_fs  => null()
-  logical :: logspace_loc
+
+  integer(kind=i_def) :: mesh_id
+  logical             :: logspace_loc
 
   if (.not.present(logspace))then
     logspace_loc=.false.
   else
     logspace_loc=logspace
   end if
+
+  mesh_id = mass_flux%get_mesh_id()
 
   select case(operators)
 
@@ -288,8 +292,8 @@ contains
 
       mm_w2    => get_mass_matrix(w2_shift_id)
       mmd_w2   => get_mass_matrix_diagonal(w2_shift_id)
-      chi_sph  => get_coordinates_shifted()
-      panel_id => get_panel_id()
+      chi_sph  => get_coordinates(mesh_id)
+      panel_id => get_panel_id(mesh_id)
       u_fs     => wind%get_function_space()
       call rhs_f%initialise( vector_space = u_fs )
       call invoke( name = "Transport operators fem",            &

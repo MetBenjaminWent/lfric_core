@@ -66,8 +66,8 @@ contains
     type( field_type )               :: w2_field
     integer                          :: dir
 
-    chi_sph => get_coordinates()
-    panel_id => get_panel_id()
+    chi_sph => get_coordinates(mesh)
+    panel_id => get_panel_id(mesh)
 
 
 ! Create continuous fields to project data into

@@ -72,6 +72,7 @@ contains
     type( field_type ), pointer :: panel_id => null()
 
     real(kind=r_def), parameter        :: initial_time = 0.0_r_def
+    integer(kind=i_def)                :: mesh_id
 
     ! Get references out of the prognostic collection for the prognostic
     ! variables
@@ -79,9 +80,11 @@ contains
     buoyancy => prognostics%get_field("buoyancy")
     pressure => prognostics%get_field("pressure")
 
-    chi_xyz  => get_coordinates_xyz()
-    chi_sph  => get_coordinates()
-    panel_id => get_panel_id()
+    mesh_id = wind%get_mesh_id()
+
+    chi_xyz  => get_coordinates_xyz(mesh_id)
+    chi_sph  => get_coordinates(mesh_id)
+    panel_id => get_panel_id(mesh_id)
 
     qr = quadrature_xyoz_type(element_order+3, quadrature_rule)
 

@@ -441,8 +441,8 @@ contains
 
     if (exner_from_eos) then
       m3_inv  => get_mass_matrix(w3inv_id)
-      chi_sph => get_coordinates()
-      panel_id => get_panel_id()
+      chi_sph => get_coordinates(state(igh_p)%get_mesh_id())
+      panel_id => get_panel_id(state(igh_p)%get_mesh_id())
       qr => get_qr()
       call invoke( project_pressure_kernel_type( state(igh_p), state(igh_d), &
                                                  state(igh_t),               &

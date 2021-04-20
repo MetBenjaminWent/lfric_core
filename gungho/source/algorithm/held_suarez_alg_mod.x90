@@ -14,6 +14,7 @@ module held_suarez_alg_mod
   use held_suarez_fv_wind_kernel_mod, only: held_suarez_fv_wind_kernel_type
 
   ! Derived Types
+  use constants_mod,                  only: i_def
   use field_mod,                      only: field_type
   use field_collection_mod,           only: field_collection_type
 
@@ -58,7 +59,11 @@ contains
     type( field_type ), pointer :: dA => null()
     type( field_type ), pointer :: chi_xyz(:) => null()
 
+    integer(kind=i_def) :: mesh_id
+
     if ( subroutine_timers ) call timer("held_suarez_alg")
+
+    mesh_id = theta%get_mesh_id()
 
     if (heldsuarez_thermo_placement < 0)then
 
@@ -68,7 +73,7 @@ contains
       call log_event( &
          'slow_physics: Running Held-Suarez theta forcing', &
          LOG_LEVEL_INFO )
-      chi_xyz => get_coordinates_xyz()
+      chi_xyz => get_coordinates_xyz(mesh_id)
       call invoke(held_suarez_fv_kernel_type(dtheta_hs, theta, exner_in_wth, chi_xyz))
       held_suarez_thermo_done=.true. ! Collect this increment later on
 
@@ -85,7 +90,7 @@ contains
       call log_event( &
          'slow_physics: Running Held-Suarez wind forcing', &
          LOG_LEVEL_INFO )
-      dA => get_da_at_w2()
+      dA => get_da_at_w2(mesh_id)
       call invoke(held_suarez_fv_wind_kernel_type(du_hs, u_physics,   &
                                                   w2_rmultiplicity,   &
                                                   exner_in_wth),      &

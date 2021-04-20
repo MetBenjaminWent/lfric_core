@@ -77,8 +77,7 @@ module transport_driver_mod
   use density_inc_update_alg_mod,     only: density_inc_update_alg
   use fem_constants_mod,              only: get_detj_at_w2,                   &
                                             get_detj_at_w2_shifted
-  use geometric_constants_mod,        only: get_cell_orientation,             &
-                                            get_cell_orientation_shifted
+  use geometric_constants_mod,        only: get_cell_orientation
   use yaxt,                           only: xt_initialize, xt_finalize
   use rk_transport_rho_mod,           only: rk_transport_rho_final
   use rk_transport_theta_mod,         only: rk_transport_theta_final
@@ -275,8 +274,8 @@ contains
     if (scheme /= scheme_method_of_lines    .or. &
         rho_splitting /= rho_splitting_none .or. &
         theta_splitting /= theta_splitting_none  ) then
-      cell_orientation => get_cell_orientation()
-      cell_orientation_shifted => get_cell_orientation_shifted()
+      cell_orientation => get_cell_orientation(mesh_id)
+      cell_orientation_shifted => get_cell_orientation(shifted_mesh_id)
     end if
 
     ! I/O initialisation

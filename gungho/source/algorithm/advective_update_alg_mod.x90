@@ -157,8 +157,8 @@ contains
                                       advective_stencil_size, nfaces_re_h, &
                                       nfaces_re_v)
 
-        chi_sph => get_coordinates()
-        panel_id => get_panel_id()
+        chi_sph => get_coordinates(mesh_id)
+        panel_id => get_panel_id(mesh_id)
 
         if ( spherical_coord_system == spherical_coord_system_xyz ) then
           transform_radius = 0.0_r_def
@@ -328,7 +328,7 @@ contains
       call invoke( poly_advective_kernel_type(u_grad_f, wind, advective_av) )
       call wind%copy_field(consistent_wind)
       if ( consistent_metric ) then
-        chi_sph => get_coordinates()
+        chi_sph => get_coordinates(wind%get_mesh_id())
         call invoke( poly_advective_kernel_type(wt_metrics, wind, advective_av_chi3), &
         ! Modify advecting wind
                      consistent_wind_kernel_type(consistent_wind, wind, wt_metrics, chi_sph) )

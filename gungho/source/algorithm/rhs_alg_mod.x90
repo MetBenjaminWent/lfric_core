@@ -123,11 +123,13 @@ contains
 
     if ( subroutine_timers ) call timer('rhs_alg')
 
+    mesh_id = base_state(igh_u)%get_mesh_id()
+
     geopotential => get_geopotential()
     mm_wtheta    => get_mass_matrix(wt_id)
-    chi_xyz      => get_coordinates_xyz()
-    chi_sph      => get_coordinates()
-    panel_id     => get_panel_id()
+    chi_xyz      => get_coordinates_xyz(mesh_id)
+    chi_sph      => get_coordinates(mesh_id)
+    panel_id     => get_panel_id(mesh_id)
     mm_w3_inv    => get_mass_matrix(w3inv_id)
 
     ! Using modified velocity mass matrix if using damping layer
@@ -177,7 +179,6 @@ contains
         call invoke( kinetic_energy_gradient_kernel_type( rhs_tmp, u,             &
                                                           chi_sph, panel_id, qr ) )
         ! Compute the vorticity
-        mesh_id = u%get_mesh_id()
         if ( vorticity_in_w1 ) then
           vorticity_fs = W1
         else

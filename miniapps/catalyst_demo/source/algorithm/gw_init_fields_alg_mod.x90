@@ -65,7 +65,7 @@ contains
 
     real(kind=r_def), parameter        :: initial_time = 0.0_r_def
 
-    chi => get_coordinates()
+    chi => get_coordinates(wind%get_mesh_id())
 
     qr = quadrature_xyoz_type(element_order+3, quadrature_rule)
 

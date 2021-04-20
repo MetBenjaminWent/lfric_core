@@ -19,7 +19,6 @@ module split_slice_mol_alg_mod
   use finite_element_config_mod,          only: element_order
   use fs_continuity_mod,                  only: W2, W3
   use geometric_constants_mod,            only: get_coordinates,               &
-                                                get_cell_orientation,          &
                                                 get_panel_id
   use fem_constants_mod,                  only: get_detj_at_w2
   use flux_direction_mod,                 only: z_direction
@@ -198,10 +197,12 @@ contains
    type(operator_type),       pointer :: mm_w3 => null()
    type(function_space_type), pointer :: wind_fs  => null()
    type(function_space_type), pointer :: rho_fs   => null()
-   integer(kind=i_def)                :: inc_div, conserv
+   integer(kind=i_def)                :: inc_div, conserv, mesh_id
 
-   chi_sph  => get_coordinates()
-   panel_id => get_panel_id()
+   mesh_id = rho%get_mesh_id()
+
+   chi_sph  => get_coordinates(mesh_id)
+   panel_id => get_panel_id(mesh_id)
    wind_fs  => vert_wind%get_function_space()
    rho_fs   => rho%get_function_space()
    call wind_comp%initialise( vector_space = wind_fs )
