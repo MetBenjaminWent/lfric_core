@@ -24,8 +24,9 @@ module io_dev_init_mod
   use lfric_xios_time_axis_mod,       only : time_axis_type, update_interface
   ! Configuration
   use finite_element_config_mod,      only : element_order
-  use io_dev_config_mod,              only : field_initialisation,                     &
-                                             field_initialisation_start_dump,       &
+  use io_dev_config_mod,              only : ancil_update_freq,                 &
+                                             field_initialisation,              &
+                                             field_initialisation_start_dump,   &
                                              time_variation,                    &
                                              time_variation_ancil
   ! I/O methods
@@ -116,7 +117,8 @@ module io_dev_init_mod
                                                 "variable_field_times", &
                                                 input_units = 'seconds', &
                                                 upper_limit = 360.0_r_def*86400_r_def, &
-                                                interp_flag = interp_flag )
+                                                interp_flag = interp_flag, &
+                                                update_freq = ancil_update_freq )
 
       call core_fields%remove_field( "W3_2D_field" )
       call create_field( core_fields, "W3_2D_field", mesh_id, twod_mesh_id, W3, &

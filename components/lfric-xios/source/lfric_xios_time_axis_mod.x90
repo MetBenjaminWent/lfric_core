@@ -47,6 +47,8 @@ module lfric_xios_time_axis_mod
     real(r_def) :: upper_limit
     !> Flag for interpolation
     logical(l_def) :: does_interpolation = .false.
+    !> Update frequency in timesteps
+    integer(i_def) :: update_frequency = 1
 
     procedure(update_interface), nopass, pointer :: update_behaviour => null()
 
@@ -65,6 +67,8 @@ module lfric_xios_time_axis_mod
     procedure, public :: get_time_window
     !> Returns start/end indices for active time window
     procedure, public :: get_index_window
+    !> Returns update frequency of time axis in timesteps
+    procedure, public :: get_update_frequency
     !> Aligns the active time window with the current model time
     procedure, public :: align
     !> Adds a field to the associated time axis object
@@ -78,6 +82,10 @@ module lfric_xios_time_axis_mod
   abstract interface
 
   !> Interface for updating the field data associated with the time axis
+  !> @param[in]    field_name  Name of the field to be updated
+  !> @param[inout] field_proxy Field proxy to be updated
+  !> @param[in]    times       The time data corresponding to the new field data
+  !>
   subroutine update_interface(field_name, field_proxy, times)
     import i_def, field_proxy_type
     character(len=*),        intent(in) :: field_name
@@ -101,8 +109,9 @@ contains
   !>                          before it cycles
   !> @param [in] interp_flag  Flag determining if time_axis fields are linearly
   !>                          interpolated before being passed to the model data
+  !> @param [in] update_freq  The update frequency of the time axis in timesteps
 subroutine initialise( self, input_data, name, input_units, cyclic, &
-                         upper_limit, interp_flag )
+                         upper_limit, interp_flag, update_freq )
 
     implicit none
 
@@ -113,6 +122,7 @@ subroutine initialise( self, input_data, name, input_units, cyclic, &
     logical(l_def), optional,     intent(in)    :: cyclic
     real(r_def),    optional,     intent(in)    :: upper_limit
     logical(l_def), optional,     intent(in)    :: interp_flag
+    integer(i_def), optional,     intent(in)    :: update_freq
 
     type(field_collection_type) :: input_fields
     integer(i_def) :: i
@@ -133,6 +143,8 @@ subroutine initialise( self, input_data, name, input_units, cyclic, &
     if ( present(upper_limit) ) self%upper_limit = upper_limit
 
     if ( present(interp_flag) ) self%does_interpolation = interp_flag
+
+    if ( present(update_freq) ) self%update_frequency = update_freq
 
   end subroutine initialise
 
@@ -220,6 +232,20 @@ subroutine initialise( self, input_data, name, input_units, cyclic, &
     time_window_index = self%index_data(1:2)
 
   end function get_index_window
+
+  !> Returns time axis update frequency
+  !> @result update_frequency The update frequency of the time axis in timesteps
+  function get_update_frequency(self) result(update_frequency)
+
+    implicit none
+
+    class(time_axis_type), intent(inout) :: self
+
+    integer(i_def) :: update_frequency
+
+    update_frequency = self%update_frequency
+
+  end function get_update_frequency
 
   !> Takes model time and shifts forward through time axis so active time
   !> window is aligned with model time

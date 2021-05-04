@@ -6,14 +6,16 @@ class lfric_xios_time_axis_mod::time_axis_type {
   -time_units : character = 'seconds'
   -upper_limit : real
   -does_interpolation : logical = .false.
+  -update_frequency : integer = 1
 
-  +initialise(<<in>>input_data: real[], <<in>>name: character, <<in>>input_units: character<<optional>>, <<in>>cyclic: logical<<optional>>, <<in>>upper_limit: real<<optional>>, <<in>>interp_flag: logical<<optional>>)
+  +initialise(<<in>>input_data: real[], <<in>>name: character, <<in>>input_units: character<<optional>>, <<in>>cyclic: logical<<optional>>, <<in>>upper_limit: real<<optional>>, <<in>>interp_flag: logical<<optional>>, <<in>>update_freq: integer<<optional>>)
   +set_update_behaviour(<<in>> procedure <<pointer>> : update_behaviour))
   +get_name(<<out>>output_name: character)
   +get_units(<<out>>output_units: character)
   +shift_forward()
   +get_time_window(<<out>>time_window: real[2])
   +get_index_window(<<out>>time_window_index: integer[2])
+  +get_update_frequency(<<out>>update_frequency: integer)
   +align(<<in>>input_time: real)
   +add_field(<<in>>field: field_type)
   +update_fields()

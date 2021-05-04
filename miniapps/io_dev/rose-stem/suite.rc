@@ -530,7 +530,7 @@
 {%-         endfor %}
 
         [[[job]]]
-            execution retry delays = 1*PT10S
+            execution retry delays = 3*PT10S
 {%-       endif %}
 
 {# #############################################################################}

@@ -1,7 +1,8 @@
 !=======================  IO_Dev configuration namelist =======================
 &io_dev
   field_initialisation  = 'analytic'
-  time_variation        = 'ancil'
+  time_variation        = 'none'
+  ancil_update_freq     = 1
 /
 !==============================================================================
 
@@ -15,8 +16,8 @@
 
 &io
   use_xios_io               = .true.
-  write_diag                = .false.
-  write_dump                = .true.
+  write_diag                = .true.
+  write_dump                = .false.
   diagnostic_frequency      = 1
   nodal_output_on_w3        = .false.
   subroutine_timers         = .false.
@@ -28,7 +29,7 @@
 &time
  calendar='timestep'
  timestep_start='1'
- timestep_end='500'
+ timestep_end='1'
 /
 
 &timestepping

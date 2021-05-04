@@ -126,7 +126,9 @@ contains
           end if
 
           ! Populate the model fields from the time axis data
-          call time_axis%populate_model_fields(state, clock)
+          if ( mod(clock%get_step(), time_axis%get_update_frequency()) == 0 ) then
+            call time_axis%populate_model_fields(state, clock)
+          end if
 
       end select
 

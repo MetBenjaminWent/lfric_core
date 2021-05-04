@@ -31,24 +31,27 @@ def load_cube_by_varname(filename, var):
     return iris.load_cube(filename, constraint=variable_constraint)
 
 
-def plot_first_domain(filename, varname, axis):
-    '''Plots the first domain of a given field as a 2D scatter'''
+def plot_last_domain(filename, varname, ax):
+    '''Plots the last domain of a given field as a 2D scatter'''
 
     cube_out = load_cube_by_varname(filename, varname)
 
     # Strip out all but the last domain
     data = cube_out.data
     if len(np.shape(data)) == 2:
-        data = data[0]
+        data = data[-1]
     elif len(np.shape(data)) == 3:
-        data = data[0][0]
+        data = data[-1][-1]
 
     long = cube_out.coord('longitude').points
     lat = cube_out.coord('latitude').points
 
-    axis.scatter(long, lat, c=data, cmap='gist_earth')
-    axis.set_xlabel(r"X [$^\circ$]")
-    axis.set_ylabel(r"Y [$^\circ$]", labelpad=-4)
+    ax.text(0.9, 0.9, varname, transform=ax.transAxes,
+        verticalalignment ='top', horizontalalignment ='right',)
+
+    ax.scatter(long, lat, c=data, cmap='gist_earth')
+    ax.set_xlabel(r"X [$^\circ$]")
+    ax.set_ylabel(r"Y [$^\circ$]", labelpad=-4)
     print("{0} domain plotted...".format(varname))
 
 
@@ -93,13 +96,13 @@ def create_plots(config, datapath, plot_fields):
 
         for i in range(len(plot_fields)):
             field = plot_fields[i]
-            plot_first_domain(datapath, field, axs[i])
+            plot_last_domain(datapath, field, axs[i])
 
         remove_axes = np.arange(len(plot_fields)-len(axs), 0)
         for a in remove_axes:
             axs[a].set_axis_off()
 
-        fig.suptitle(datapath)
+        fig.suptitle("/".join(datapath.split("/")[-5::]))
 
     elif config == "time_var":
 
@@ -113,9 +116,9 @@ def create_plots(config, datapath, plot_fields):
         for i in range(len(plot_fields)):
             field = plot_fields[i]
             plot_time_mean(datapath, field, axs[i])
-            plot_first_domain(datapath, field, axs[i+len(plot_fields)])
+            plot_last_domain(datapath, field, axs[i+len(plot_fields)])
 
-        fig.suptitle(datapath)
+        fig.suptitle("/".join(datapath.split("/")[-5::]))
 
     else:
         print("Invalid config key '{0}' for IO_Dev plotting "
