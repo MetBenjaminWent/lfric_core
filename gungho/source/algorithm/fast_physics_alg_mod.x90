@@ -192,18 +192,18 @@ contains
                       turbulence_fields, convection_fields, cloud_fields, &
                       surface_fields, soil_fields, snow_fields, outer, clock)
       boundary_layer_done=.true. ! Collect this increment later on
-    end if
 
     !--------------------------------------------------------------------
     ! Jules surface and sub-surface (snow and hydrology)
     !--------------------------------------------------------------------
-    if ( surface == surface_jules .and. &
-       outer == outer_iterations ) then
-      call jules_extra_alg(microphysics_fields, convection_fields,        &
-                           surface_fields, soil_fields, snow_fields,      &
-                           snow_sublimation, surf_heat_flux, canopy_evap, &
-                           water_extraction, total_snowmelt)
-    end if
+      if ( surface == surface_jules .and. &
+           outer == outer_iterations ) then
+        call jules_extra_alg(microphysics_fields, convection_fields,        &
+                             surface_fields, soil_fields, snow_fields,      &
+                             snow_sublimation, surf_heat_flux, canopy_evap, &
+                             water_extraction, total_snowmelt)
+      end if ! jules
+    end if ! fast_bl
 #endif
 
     !=====================================================================

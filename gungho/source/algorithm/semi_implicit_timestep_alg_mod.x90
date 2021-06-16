@@ -18,7 +18,10 @@ module semi_implicit_timestep_alg_mod
   ! Configuration options
   use section_choice_config_mod, only: cloud,              &
                                        cloud_um
-
+  use physics_config_mod,        only: blayer_placement,               &
+                                       blayer_placement_fast,          &
+                                       convection_placement,           &
+                                       convection_placement_fast
   use formulation_config_mod,    only: use_moisture, use_physics, dlayer_on, &
                                        use_wavedynamics,                     &
                                        moisture_conservation,                &
@@ -193,11 +196,12 @@ contains
     call u%copy_field_properties(du)
 
     call clone_bundle(mr, mr_n, nummr)
+    call clone_bundle(mr, mr_after_slow, nummr)
     if (use_moisture)then
-      call clone_bundle(mr, mr_after_slow, nummr)
-      call clone_bundle(mr, mr_inc,        nummr)
+      call clone_bundle(mr, mr_inc, nummr)
     else
       call set_bundle_scalar(0.0_r_def, mr_n, nummr)
+      call set_bundle_scalar(0.0_r_def, mr_after_slow, nummr)
     end if
 
     if ( use_physics )then
@@ -433,9 +437,12 @@ contains
         !--------------------------------------------------------------------
         ! setting predictors for fast physics
         !--------------------------------------------------------------------
-        call calc_phys_predictors_alg(derived_fields, rhs_np1,                 &
-                                      rhs_adv, rhs_n, state, state_after_slow, &
-                                      moist_dyn, varalpha, clock )
+        if (blayer_placement == blayer_placement_fast .or.                     &
+             convection_placement == convection_placement_fast) then
+          call calc_phys_predictors_alg(derived_fields, rhs_np1, rhs_adv,      &
+                                        rhs_n, state, state_after_slow,        &
+                                        moist_dyn, varalpha, clock )
+        end if
         !--------------------------------------------------------------------
         ! Call the fast physics terms
         !--------------------------------------------------------------------

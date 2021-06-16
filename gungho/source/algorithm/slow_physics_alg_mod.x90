@@ -7,7 +7,10 @@
 module slow_physics_alg_mod
 
   use clock_mod,                 only: clock_type
+  use timestepping_config_mod,   only: outer_iterations
   use cloud_config_mod,          only: scheme, scheme_pc2, cld_fsd_hill
+  use convection_config_mod,     only: cv_scheme, cv_scheme_lambert_lewis, &
+                                       cv_scheme_gregory_rowntree
   use constants_mod,             only: i_def, r_def
   use log_mod,                   only: LOG_LEVEL_INFO
   use physics_config_mod,        only: heldsuarez_thermo_placement,    &
@@ -19,7 +22,11 @@ module slow_physics_alg_mod
                                        radiation_placement,            &
                                        radiation_placement_slow,       &
                                        spectral_gwd_placement,         &
-                                       spectral_gwd_placement_slow
+                                       spectral_gwd_placement_slow,    &
+                                       blayer_placement,               &
+                                       blayer_placement_slow,          &
+                                       convection_placement,           &
+                                       convection_placement_slow
   use section_choice_config_mod, only: aerosol, aerosol_um,                 &
                                        boundary_layer, boundary_layer_um,   &
                                        microphysics, microphysics_um,       &
@@ -27,6 +34,8 @@ module slow_physics_alg_mod
                                        radiation, radiation_socrates,       &
                                        spectral_gwd, spectral_gwd_um,       &
                                        methane_oxidation,                   &
+                                       surface, surface_jules,              &
+                                       convection, convection_um,           &
                                        cloud, cloud_um
   ! Derived Types
   use field_mod,                 only: field_type
@@ -59,6 +68,11 @@ module slow_physics_alg_mod
   use spectral_gwd_alg_mod,      only: spectral_gwd_alg
   use orographic_drag_alg_mod,   only: orographic_drag_alg
   use bl_exp_alg_mod,            only: bl_exp_alg
+  use bl_imp_alg_mod,            only: bl_imp_alg
+  use conv_ll_alg_mod,           only: conv_ll_alg
+  use conv_gr_alg_mod,           only: conv_gr_alg
+  use jules_extra_alg_mod,       only: jules_extra_alg
+  use pc2_conv_coupling_alg_mod, only: pc2_conv_coupling_alg
   use pc2_checks_alg_mod,        only: pc2_checks_alg
   use methox_alg_mod,            only: methox_alg
   use aerosol_config_mod,        only: activation_scheme,                      &
@@ -140,9 +154,12 @@ contains
     ! ...for H-S physics
     type( field_type ) :: dtheta_hs, du_hs
     ! ...for microphysics
+    type( field_type ), pointer :: dtheta_mphys => null()
     type( field_type ) :: dmr_mphys(nummr)
     type( field_type ) :: dcfl_pc2_mphys, dcff_pc2_mphys, dbcf_pc2_mphys
     ! ...for radiation
+    type( field_type ), pointer :: dtheta_rad => null()
+    type( field_type ), pointer :: dmv_pc2_rad => null()
     type( field_type ) :: dtheta_pc2_rad, dmcl_pc2_rad
     type( field_type ) :: dcfl_pc2_rad, dbcf_pc2_rad
 #ifdef UM_PHYSICS
@@ -160,7 +177,18 @@ contains
     type( field_type ) :: du_tot_orographic_drag, dtheta_orographic_drag
     ! ...for methane oxidation
     type( field_type ) :: dmv_methox
+    ! ...for boundary layer
+    type( field_type ) :: dtheta_bl
+    type( field_type ), pointer :: du_bl => null()
 #ifdef UM_PHYSICS
+    ! ...for Convection
+    type( field_type ), pointer :: dmv_conv => null()
+    ! ...surface fields passed from BL to Jules
+    type( field_type ) :: snow_sublimation
+    type( field_type ) :: surf_heat_flux
+    type( field_type ) :: canopy_evap
+    type( field_type ) :: water_extraction
+    type( field_type ) :: total_snowmelt
     ! ...for PC2 checks
     type( field_type ) :: dtheta_pc2_checks, theta_updated
     type( field_type ) :: dmv_pc2_checks, dmcl_pc2_checks, dmcf_pc2_checks
@@ -175,9 +203,6 @@ contains
     type( field_type ), pointer :: departure_exner_wth => null()
 #endif
     type( field_type ), pointer :: exner_in_wth => null()
-    type( field_type ), pointer :: dtheta_mphys => null()
-    type( field_type ), pointer :: dtheta_rad => null()
-    type( field_type ), pointer :: dmv_pc2_rad => null()
     ! Fields required by PC2
     type( field_type ), pointer :: liquid_fraction => null()
     type( field_type ), pointer :: ice_fraction    => null()
@@ -193,6 +218,7 @@ contains
     logical :: spectral_gwd_done
     logical :: orographic_drag_done
     logical :: methox_done
+    logical :: boundary_layer_done
 
     if ( subroutine_timers ) call timer("slow_physics")
 
@@ -209,6 +235,7 @@ contains
     spectral_gwd_done       = .false.
     orographic_drag_done    = .false.
     methox_done             = .false.
+    boundary_layer_done     = .false.
 
     !--------------------------------------------------------------------
     ! Held-Suarez simple physics codes
@@ -396,7 +423,57 @@ contains
                       turbulence_fields, convection_fields, cloud_fields,&
                       surface_fields, soil_fields, snow_fields,          &
                       albedo_obs_scaling)
+
+    !--------------------------------------------------------------------
+    ! UM convection scheme
+    !--------------------------------------------------------------------
+    if (convection == convection_um .and.                       &
+        convection_placement == convection_placement_slow) then
+      if ( cv_scheme == cv_scheme_lambert_lewis ) then
+        ! Call the UM Lambert-Lewis convection scheme
+        call conv_ll_alg(mr, exner, derived_fields, convection_fields,    &
+                         outer_iterations)
+      else if ( cv_scheme == cv_scheme_gregory_rowntree ) then
+        ! Call the UM Gregory Rowntree convection scheme
+        call conv_gr_alg(mr, rho, exner, derived_fields,                  &
+                         turbulence_fields, convection_fields,            &
+                         cloud_fields, surface_fields, outer_iterations)
+      end if
+
+      if ( cloud == cloud_um .and. scheme == scheme_pc2 ) then
+        ! Update the cloud fields if using PC2
+        call pc2_conv_coupling_alg( mr, derived_fields,                  &
+                                    convection_fields, cloud_fields )
+      else
+        ! Without PC2, just update vapour field
+        dmv_conv => convection_fields%get_field('dmv_conv')
+        call invoke( inc_X_plus_Y(mr(imr_v), dmv_conv) )
+      end if
+
     end if
+
+    !--------------------------------------------------------------------
+    ! UM implicit boundary layer and Jules surface schemes
+    !--------------------------------------------------------------------
+      if (blayer_placement == blayer_placement_slow) then
+        du_bl => turbulence_fields%get_field('du_bl')
+        call bl_imp_alg(dtheta_bl, du_bl, mr, snow_sublimation,             &
+                        surf_heat_flux, canopy_evap, water_extraction,      &
+                        total_snowmelt, theta, exner, mr_n,                 &
+                        derived_fields, radiation_fields, orography_fields, &
+                        turbulence_fields, convection_fields, cloud_fields, &
+                        surface_fields, soil_fields, snow_fields,           &
+                        outer_iterations, clock)
+        boundary_layer_done=.true. ! Collect this increment later on
+
+        if ( surface == surface_jules ) then
+          call jules_extra_alg(microphysics_fields, convection_fields,        &
+                               surface_fields, soil_fields, snow_fields,      &
+                               snow_sublimation, surf_heat_flux, canopy_evap, &
+                               water_extraction, total_snowmelt)
+        end if ! jules
+      end if ! slow_bl
+    end if ! bl_um
 #endif
 
     !=====================================================================
@@ -451,6 +528,11 @@ contains
 
     if (methox_done) then
       call invoke(inc_X_plus_Y(mr(imr_v), dmv_methox))
+    end if
+
+    if (boundary_layer_done) then
+      call invoke(inc_X_plus_Y(du, du_bl), &
+                  inc_X_plus_Y(dtheta, dtheta_bl) )
     end if
 
 #ifdef UM_PHYSICS

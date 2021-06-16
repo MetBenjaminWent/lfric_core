@@ -62,7 +62,7 @@ contains
 
     if ( subroutine_timers ) call timer("conv_ll_alg")
 
-    call log_event( 'fast_physics: Running LL convection scheme', LOG_LEVEL_INFO )
+    call log_event( 'Running LL convection scheme', LOG_LEVEL_INFO )
 
     ! Unpack fields
     exner_in_wth => derived_fields%get_field('exner_in_wth')

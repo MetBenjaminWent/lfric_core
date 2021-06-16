@@ -191,7 +191,7 @@ contains
 
     if ( subroutine_timers ) call timer("bl_imp_alg")
 
-    call log_event( 'fast_physics: Running implicit Boundary layer', LOG_LEVEL_INFO )
+    call log_event( 'Running implicit Boundary layer', LOG_LEVEL_INFO )
 
     mesh_id = theta%get_mesh_id()
 
