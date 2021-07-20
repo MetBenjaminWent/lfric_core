@@ -1,31 +1,50 @@
 {
     "meta_data": {
         "sections": {
-            "section_name": {
+            "dummy_section": {
+                "title": "Dummy Section",
+                "name": "dummy_section",
                 "groups": {
-                    "field_group_1": {
+                    "dummy_group_id": {
                         "fields": {
-                            "section_name__field_1": {
-                                "_unique_id": "section_name__field_1",
-                                "units": "units_1"
-                            },
-                            "section_name__field_2": {
-                                "_unique_id": "section_name__field_2",
-                                "units": "units_2"
+                            "dummy_section__dummy_field": {
+                                "non_spatial_dimension": {
+                                    "dummy_non_spatial_dimension": {
+                                        "name": "bad_non_spatial_dimension",
+                                        "label_definition": "Not supposed to",
+                                        "axis_definition": "Have both of these"
+                                    }
+                                }
                             }
                         }
-                    },
-                    "field_group_2": {
-                        "fields": {
-                            "section_name__field_3": {
-                                "_unique_id": "section_name__field_3",
-                                "units": "units_3"
+                    }
+                }
+            },
+            "section_name": {
+            "groups": {
+                        "field_group_1": {
+                            "fields": {
+                                "section_name__field_1": {
+                                    "_unique_id": "section_name__field_1",
+                                    "units": "units_1"
+                                },
+                                "section_name__field_2": {
+                                    "_unique_id": "section_name__field_2",
+                                    "units": "units_2"
+                                }
+                            }
+                        },
+                        "field_group_2": {
+                            "fields": {
+                                "section_name__field_3": {
+                                    "_unique_id": "section_name__field_3",
+                                    "units": "units_3"
+                                }
                             }
                         }
                     }
                 }
             }
-        }
-    },
-    "checksum": "md5: acd7ce02bd32b01511d3f78c98a0faea"
+        },
+    "checksum": "md5: 77ea599ea0eb794b7900f22086e4436f"
 }

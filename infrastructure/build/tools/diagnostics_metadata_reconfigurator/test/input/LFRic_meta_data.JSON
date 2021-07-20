@@ -31,6 +31,26 @@
                                     "units": "m"
                                 },
                                 "standard_name": "eastward_wind",
+                                "non_spatial_dimension": {
+                                    "red_numerical_NSD": {
+                                        "name": "red_numerical_NSD",
+                                        "type": "axis_definition",
+                                        "help": "Red help text",
+                                        "axis_definition": [
+                                            "0",
+                                            "1",
+                                            "2",
+                                            "3"
+                                        ],
+                                        "units": "1",
+                                        "fields": [
+                                            ["example_science_section",
+                                            "example_fields",
+                                            "example_science_section__eastward_wind"
+                                            ]
+                                        ]
+                                    }
+                                },
                                 "level_definition": null,
                                 "misc_meta_data": {
                                     "test_name_1": "test_value_1",
@@ -54,6 +74,7 @@
                                 "time_step": "STANDARD_TIMESTEP",
                                 "recommended_interpolation": "BILINEAR",
                                 "packing": "0",
+                                "non_spatial_dimension": {},
                                 "vertical_dimension": {
                                     "top_arg": "TOP_WET_LEVEL",
                                     "bottom_arg": "BOTTOM_ATMOSPHERIC_LEVEL",
@@ -86,7 +107,24 @@
                                     "bottom_arg": "BOTTOM_ATMOSPHERIC_LEVEL",
                                     "standard_name": "height",
                                     "positive": "POSITIVE_UP",
-                                    "units": "m"
+                                    "units": "m"},
+                                "non_spatial_dimension":{
+                                    "green_Categorical_NSD": {
+                                        "name": "green_Categorical_NSD",
+                                        "type": "label_definition",
+                                        "help": "Green help text",
+                                        "label_definition": [
+                                            "A",
+                                            "B",
+                                            "C"
+                                        ],
+                                        "fields": [
+                                            ["example_science_section",
+                                             "example_fields",
+                                             "example_science_section__air_potential_temperature"
+                                            ]
+                                        ]
+                                    }
                                 },
                                 "standard_name": "air_potential_temperature",
                                 "level_definition": null,
@@ -115,6 +153,7 @@
                                 "time_step": "STANDARD_TIMESTEP",
                                 "recommended_interpolation": "BILINEAR",
                                 "packing": "0",
+                                "non_spatial_dimension": {},
                                 "vertical_dimension": {
                                     "top_arg": "TOP_SOIL_LEVEL",
                                     "bottom_arg": "BOTTOM_SOIL_LEVEL",
@@ -142,6 +181,7 @@
                                 "time_step": "STANDARD_TIMESTEP",
                                 "recommended_interpolation": "BILINEAR",
                                 "packing": "0",
+                                "non_spatial_dimension": {},
                                 "vertical_dimension": {
                                     "standard_name": "height",
                                     "positive": "POSITIVE_UP",
@@ -170,6 +210,7 @@
                                 "time_step": "STANDARD_TIMESTEP",
                                 "recommended_interpolation": "BILINEAR",
                                 "packing": "0",
+                                "non_spatial_dimension": {},
                                 "vertical_dimension": {
                                     "standard_name": "height",
                                     "positive": "POSITIVE_UP",
@@ -211,6 +252,32 @@
                                 "time_step": "STANDARD_TIMESTEP",
                                 "recommended_interpolation": "BILINEAR",
                                 "packing": "0",
+                                "non_spatial_dimension": {
+                                    "mutable_non_spatial_dimension": {
+                                        "name": "mutable_non_spatial_dimension",
+                                        "type": "axis_definition",
+                                        "help": "A mutable NSD",
+                                        "unit": "cupcakes",
+                                        "fields": [
+                                            ["another_science_section",
+                                            "another_field_group",
+                                            "another_science_section__low_type_cloud_area_fraction"
+                                            ]
+                                        ]
+                                    },
+                                    "mutable_non_spatial_dimension_2": {
+                                        "name": "mutable_non_spatial_dimension_2",
+                                        "type": "label_definition",
+                                        "help": "Another mutable NSD",
+                                        "unit": "brownies",
+                                        "fields": [
+                                            ["another_science_section",
+                                            "another_field_group",
+                                            "another_science_section__low_type_cloud_area_fraction"
+                                            ]
+                                        ]
+                                    }
+                                },
                                 "vertical_dimension": {
                                     "standard_name": "height",
                                     "positive": "POSITIVE_UP",
@@ -231,7 +298,69 @@
                     }
                 }
             }
+        },
+        "non_spatial_dimensions": {
+            "mutable_non_spatial_dimension": {
+                                        "name": "mutable_non_spatial_dimension",
+                                        "type": "axis_definition",
+                                        "help": "A mutable NSD",
+                                        "unit": "cupcakes",
+                                        "fields": [
+                                            ["another_science_section",
+                                            "another_field_group",
+                                            "another_science_section__low_type_cloud_area_fraction"
+                                            ]
+                                        ]
+                                    },
+            "mutable_non_spatial_dimension_2": {
+                                        "name": "mutable_non_spatial_dimension_2",
+                                        "type": "label_definition",
+                                        "help": "Another mutable NSD",
+                                        "unit": "brownies",
+                                        "fields": [
+                                            ["another_science_section",
+                                            "another_field_group",
+                                            "another_science_section__low_type_cloud_area_fraction"
+                                            ]
+                                        ]
+                                    },
+            "red_numerical_NSD": {
+                "name": "red_numerical_NSD",
+                "type": "axis_definition",
+                "help": "Red help text",
+                "axis_definition": [
+                    "0",
+                    "1",
+                    "2",
+                    "3"
+                ],
+                "units": "1",
+                "fields": [
+                    [
+                        "example_science_section",
+                        "example_fields",
+                        "example_science_section__eastward_wind"
+                    ]
+                ]
+            },
+            "green_Categorical_NSD": {
+                "name": "green_Categorical_NSD",
+                "type": "label_definition",
+                "help": "Green help text",
+                "label_definition": [
+                    "A",
+                    "B",
+                    "C"
+                ],
+                "fields": [
+                    [
+                        "example_science_section",
+                        "example_fields",
+                        "example_science_section__air_potential_temperature"
+                    ]
+                ]
+            }
         }
     },
-    "checksum": "md5: bfa9c0ed7737f6149e6dc9d848c63af5"
+    "checksum": "md5: 44a90f318536acfff9f4a87a2daa40d6"
 }

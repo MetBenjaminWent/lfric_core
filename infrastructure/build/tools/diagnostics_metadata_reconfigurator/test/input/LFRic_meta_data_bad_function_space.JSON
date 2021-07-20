@@ -31,6 +31,7 @@
                                         0.0
                                     ]
                                 },
+                                "non_spatial_dimension": {},
                                 "standard_name": "low_type_cloud_area_fraction",
                                 "level_definition": "REAL([111.0, 1949.0], r_def)",
                                 "misc_meta_data": null,
@@ -42,7 +43,8 @@
                     }
                 }
             }
-        }
+        },
+        "non_spatial_dimensions": {}
     },
-    "checksum": "md5: c7d3400874f1406b5d5f08bd43c6b514"
+    "checksum": "md5: 3c2419252692ed49851fbaa61a752c23"
 }

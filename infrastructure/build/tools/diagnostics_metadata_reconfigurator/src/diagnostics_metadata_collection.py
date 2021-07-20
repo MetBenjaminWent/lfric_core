@@ -5,10 +5,14 @@
 ##############################################################################
 """Class for storing and operating on metadata fields and their output streams.
 """
+import logging
+
 from typing import Dict
 
 from entities import Field, FieldGroup, OutputStream, OutputStreamField, \
-        VerticalDimension, Grid
+        VerticalDimension, Grid, NonSpatialDimension
+
+LOGGER = logging.getLogger("diag_metadata_collection")
 
 
 class Metadata:
@@ -19,6 +23,7 @@ class Metadata:
         self._output_streams: Dict[int, OutputStream] = {}
         self._fields: Dict[str, Field] = {}
         self._vertical_dimensions: Dict[str, VerticalDimension] = {}
+        self._non_spatial_dimensions: Dict[str, NonSpatialDimension] = {}
         self._grids: Dict[str, Grid] = {}
 
     def add_field(self, field: Field):
@@ -87,7 +92,7 @@ class Metadata:
                 break
         if not is_duplicate:
             self._vertical_dimensions.update(
-                    {vertical_dimension.unique_id: vertical_dimension}
+                {vertical_dimension.unique_id: vertical_dimension}
             )
         return unique_id
 
@@ -130,3 +135,29 @@ class Metadata:
     def get_grids(self) -> [Grid]:
         """:return: A sorted list of grids"""
         return sorted(self._grids.values(), key=lambda grid: grid.unique_id)
+
+    def get_non_spatial_dimensions(self) -> [NonSpatialDimension]:
+        """:return: A list of non-spatial dimensions"""
+        return self._non_spatial_dimensions
+
+    def get_non_spatial_dimension(self, key) -> NonSpatialDimension:
+        """:return: A specific non-spatial dimension"""
+        if key not in self._non_spatial_dimensions:
+            LOGGER.error("""Non-spatial dimension not recognised.
+                         Metadata mismatch: %s""", key)
+        return self._non_spatial_dimensions[key]
+
+    def add_non_spatial_dimension(self, non_spatial_dimension):
+        """Add a non-spatial dimension if it is not a duplicate of one already
+        stored.
+        :param non_spatial_dimension: non_spatial dimension object to add to
+        metadata"""
+        is_duplicate = False
+        for dimension in self._non_spatial_dimensions.values():
+            if non_spatial_dimension == dimension:
+                is_duplicate = True
+                break
+        if not is_duplicate:
+            self._non_spatial_dimensions.update(
+                {non_spatial_dimension.name: non_spatial_dimension}
+            )

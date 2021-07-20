@@ -17,22 +17,23 @@ from pathlib import Path
 from typing import TextIO, Union
 
 from entities import Field, FieldGroup, OutputStream, OutputStreamField, \
-    VerticalDimension, Grid
+    VerticalDimension, Grid, NonSpatialDimension
 from diagnostics_metadata_collection import Metadata
 
 KEY_VALUE_RE = re.compile(r'^([a-zA-Z_]+)=\'?([\w.]+)\'?$')
 KEY_VALUE_LIST_RE = re.compile(
-        r'^(\w+)=(\'?[\w.]+\'?(?:, ?\'?[\w.]+\'?)*)(?!,)')
+    r'^(\w+)=(\'?[\w.]+\'?(?:, ?\'?[\w.]+\'?)*)(?!,)')
+
 FIELD_CONFIG_RE = re.compile(r'^\[field_config:([a-zA-Z_]+):([a-zA-Z_]+)\]$')
 FIELD_RE = re.compile(
     r'^([a-zA-Z]+(?:_[a-zA-Z]+)*__[a-zA-Z]+(?:_[a-zA-Z]+)*)=(true|false)$')
 ADDITIONAL_INPUT_RE = re.compile(
-        r'^[a-zA-Z_]+__[a-zA-Z_]+__([a-zA-Z]+)=(true|false)$'
-)
+    r'^[a-zA-Z_]+__[a-zA-Z_]+__([a-zA-Z]+)=(true|false)$')
 BASE_OUTPUT_RE = re.compile(r'^\[output_stream\(([0-9]+)\)\]$')
 OUTPUT_FIELD_RE = re.compile(
     r'^\[output_stream\(([0-9]+)\):field\(([0-9]+)\)\]$')
 VERTICAL_DIMENSION_RE = re.compile(r'^\[vertical_dimension\(([0-9]+)\)\]$')
+NON_SPATIAL_DIMENSION_RE = re.compile(r'^\[non_spatial_dimensions]$')
 
 REQUIRED_METADATA = ['unique_id', 'long_name', 'standard_name',
                      'units', 'grid_ref', 'function_space', 'mesh_id', 'order',
@@ -65,7 +66,7 @@ class MetadataExtractor:
         self._metadata = Metadata()
         immutable_data_path = Path(immutable_data_file).expanduser()
         self._immutable_metadata = self._get_immutable_data(
-                immutable_data_path)
+            immutable_data_path)
 
         self._rose_app_path = Path(diagnostic_config_path).expanduser()
 
@@ -76,8 +77,8 @@ class MetadataExtractor:
     def _get_immutable_data(file_path) -> dict:
         """
         Returns immutable metadata from the JSON file given.
-        Validates the MD5 checksum to ensure the file has not been
-        modified by hand after it was generated.
+        Validates the MD5 checksum to ensure the file has not been modified by
+        hand after it was generated.
 
         :param file_path: Path to the immutable data JSON file
         :return: Multidimensional dictionary containing immutable metadata
@@ -89,7 +90,7 @@ class MetadataExtractor:
                 raise KeyError("Can't find checksum "
                                "to validate immutable data")
 
-            # generate a checksum from a copy of the data without the checksum
+            # Generate a checksum from a copy of the data without the checksum
             # and check it against the original
             immutable_metadata = copy.deepcopy(file_data)
             del immutable_metadata['checksum']
@@ -108,17 +109,17 @@ class MetadataExtractor:
 
         :param field: Object containing field's data
         """
-        # get the current field's immutable metadata
+        # Get the current field's immutable metadata
         section_name, group_name = field.field_group_id.split('__')
         metadata_section = self._immutable_metadata["meta_data"]["sections"][
-                section_name]["groups"][group_name]["fields"][field.unique_id]
+            section_name]["groups"][group_name]["fields"][field.unique_id]
 
-        # add the immutable metadata to the field
+        # Add the immutable metadata to the field
         for attr in metadata_section:
             if attr in REQUIRED_METADATA:
                 setattr(field, attr, metadata_section[attr])
 
-        # add fixed vertical dimension if field has one
+        # Add fixed vertical dimension if field has one
         vert_dim_meta = metadata_section.get("vertical_dimension", None)
         if vert_dim_meta is not None:
             # Create immutable vertical dimension
@@ -126,18 +127,18 @@ class MetadataExtractor:
                 positive = {"POSITIVE_UP": "up", "POSITIVE_DOWN": "down"}
                 id_number = self._metadata.count_fixed_vert_axes() + 1
                 vertical_dimension = VerticalDimension(
-                        "fixed_vert_axis_" + str(id_number),
-                        name="fixed_vert_axis_" + str(id_number),
-                        positive_direction=positive[vert_dim_meta["positive"]],
-                        primary_axis='false',
-                        level_definition=vert_dim_meta["level_definition"],
-                        number_of_layers=len(
-                                vert_dim_meta["level_definition"]),
-                        units=vert_dim_meta["units"]
-                        )
+                    "fixed_vert_axis_" + str(id_number),
+                    name="fixed_vert_axis_" + str(id_number),
+                    positive_direction=positive[vert_dim_meta["positive"]],
+                    primary_axis='false',
+                    level_definition=vert_dim_meta["level_definition"],
+                    number_of_layers=len(
+                        vert_dim_meta["level_definition"]),
+                    units=vert_dim_meta["units"]
+                )
 
                 vert_dim_id = self._metadata.add_vertical_dimension(
-                        vertical_dimension)
+                    vertical_dimension)
 
                 field.vertical_dimension_id = vert_dim_id
 
@@ -145,18 +146,46 @@ class MetadataExtractor:
                 # Add information about top_arg and bottom_arg in future ticket
                 field.vertical_dimension_id = "mutable"
 
+        immutable_non_spatial_dimension_meta = metadata_section.get(
+            "non_spatial_dimension", None)
+        for value in immutable_non_spatial_dimension_meta.values():
+            unit = None
+            definition = None
+            if 'label_definition' in value and 'axis_definition' in value:
+                LOGGER.error("Non-spatial dimension %s has both a "
+                             "'label_definition' and an 'axis_definition'."
+                             " This is invalid.", value["name"])
+                raise ValueError("Non-spatial dimension %s has both a "
+                                 "'label_definition' and an 'axis_definition.'"
+                                 " This is invalid." % value["name"])
+
+            if 'label_definition' in value:
+                definition = value['label_definition']
+            if 'axis_definition' in value:
+                definition = value['axis_definition']
+
+            if 'unit' in value.keys():
+                unit = value['unit']
+
+            nsd = NonSpatialDimension(name=value['name'],
+                                      definition=definition,
+                                      unit=unit)
+
+            field.non_spatial_dimension.append(nsd)
+            self._metadata.add_non_spatial_dimension(nsd)
+
         # Set domain reference based on function space
-        function_space_map = {"W0": "node",
-                              "W2H": "edge",
-                              "W3": "face",
-                              "Wtheta": "face"}
-        if field.function_space in function_space_map:
-            field.domain_ref = function_space_map[field.function_space]
+        if field.function_space in ["W0"]:
+            field.domain_ref = "node"
+        elif field.function_space in ["W2H", "W2"]:
+            field.domain_ref = "edge"
+        elif field.function_space.upper() in ["W3", "WTHETA"]:
+            field.domain_ref = "face"
         else:
             raise ValueError(f"Invalid function space "
                              f"{field.function_space}")
 
-        # hard-code following attributes for now
+        # Hard-code following attributes for now
         field.mesh_id = 1
         field.io_driver = 'WRITE_FIELD_FACE'
         return field
@@ -180,10 +209,10 @@ class MetadataExtractor:
         field_group = FieldGroup(field_group_id)
         self._metadata.add_field_group(field_group)
 
-        # process fields within group
+        # Process fields within group
         line = file_pointer.readline()
 
-        # stop if file pointer reaches the start of the next section
+        # Stop if file pointer reaches the start of the next section
         while line and line[0] != '[':
             field_match = FIELD_RE.search(line)
             key_value_match = KEY_VALUE_RE.search(line)
@@ -195,7 +224,7 @@ class MetadataExtractor:
                 field = Field(field_id, field_group_id,
                               active=active.lower() == 'true')
 
-                # process additional configuration for field
+                # Process additional configuration for field
                 # currently only checksum is supported
                 line = file_pointer.readline()
                 match = ADDITIONAL_INPUT_RE.search(line)
@@ -251,6 +280,10 @@ class MetadataExtractor:
             if field.vertical_dimension_id is not None:
                 axes.append(field.vertical_dimension_id)
 
+            if field.non_spatial_dimension:
+                for nsd in field.non_spatial_dimension:
+                    axes.append(nsd.name)
+
             grid = Grid(field.domain_ref, axes)
             grid_id = self._metadata.add_grid(grid)
             field.grid_ref = grid_id
@@ -271,9 +304,9 @@ class MetadataExtractor:
         line = file_pointer.readline()
         stream = OutputStream(stream_id)
 
-        # stop if file pointer reaches the start of the next section
+        # Stop if file pointer reaches the start of the next section
         while line and line[0] != '[':
-            # check if line has key-value pair
+            # Check if line has key-value pair
             match = KEY_VALUE_RE.search(line)
 
             if match is not None:
@@ -308,9 +341,9 @@ class MetadataExtractor:
         output_stream_field = OutputStreamField(output_stream_field_id)
         line = file_pointer.readline()
 
-        # stop if file pointer reaches the start of the next section
+        # Stop if file pointer reaches the start of the next section
         while line and line[0] != '[':
-            # check if line has key-value pair
+            # Check if line has key-value pair
             match = KEY_VALUE_RE.search(line)
 
             if match is not None:
@@ -337,6 +370,43 @@ class MetadataExtractor:
         self._metadata.add_output_stream_field(output_stream_field, stream_id)
         return line
 
+    def _parse_non_spatial_dimension(self, file_pointer: TextIO) -> str:
+
+        """
+        Read a non-spatial dimension section (in the rose-app) and store
+        info about the non-spatial dimension in the Metadata object.
+        :param file_pointer: IO object pointing to the start of an
+                             output_stream(x):field(y) section
+        :return: Current line of the file pointer to allow calling method to
+                 continue parsing where this method left off
+        """
+
+        line = file_pointer.readline()
+
+        while line and line[0] != '[':
+
+            # Check if line has key-list pair
+            match = KEY_VALUE_LIST_RE.search(line)
+
+            if match:
+                key, values = match.groups()
+                values = list(values.split(","))
+
+                # Add any immutable meta data from the JSON file
+                # Add unit of measure
+                if self._immutable_metadata['meta_data'][
+                        'non_spatial_dimensions'][key].get('unit', False):
+                    unit = self._immutable_metadata['meta_data'][
+                        'non_spatial_dimensions'][key]['unit']
+                    self._metadata.get_non_spatial_dimension(key).add_unit(
+                        unit)
+                self._metadata.get_non_spatial_dimension(key).add_definition(
+                    values)
+
+            line = file_pointer.readline()
+
+        return line
+
     def _parse_vertical_dimension(self, file_pointer: TextIO,
                                   dimension_id: int) -> str:
         """
@@ -352,16 +422,16 @@ class MetadataExtractor:
                  continue parsing where this method left off
         """
         vert_dim_half = VerticalDimension(
-                f"model_vert_axis_{dimension_id}_half_levels")
+            f"model_vert_axis_{dimension_id}_half_levels")
         vert_dim_full = VerticalDimension(
-                f"model_vert_axis_{dimension_id}_full_levels")
+            f"model_vert_axis_{dimension_id}_full_levels")
         line = file_pointer.readline()
 
-        # stop if file pointer reaches the start of the next section
+        # Stop if file pointer reaches the start of the next section
         while line and line[0] != '[':
-            # check if line has key-value pair
+            # Check if line has key-value pair
             single_value_match = KEY_VALUE_RE.search(line)
-            # check if line has key-list pair
+            # Check if line has key-list pair
             list_match = KEY_VALUE_LIST_RE.search(line)
 
             if single_value_match is not None:
@@ -412,46 +482,51 @@ class MetadataExtractor:
             # processes its own section (updated line is returned by each
             # method pointing to start of next section)
             while line:
-                # if line is start of a new section
+                # If line is start of a new section
                 if line[0] == '[':
                     LOGGER.debug("Parsing section: %s", line[:-1])
 
-                    # matches [field_config:(section):(field_group)]
+                    # Matches [field_config:(section):(field_group)]
                     match = FIELD_CONFIG_RE.search(line)
                     if match is not None:
                         line = self._parse_field_config(
-                                file_pointer,
-                                match.group(1),
-                                match.group(2)
+                            file_pointer,
+                            match.group(1),
+                            match.group(2)
                         )
                         continue
 
-                    # matches [output_stream(x)]
+                    # Matches [output_stream(x)]
                     match = BASE_OUTPUT_RE.search(line)
                     if match is not None:
                         line = self._parse_output_stream(
-                                file_pointer,
-                                int(match.group(1))
+                            file_pointer,
+                            int(match.group(1))
                         )
                         continue
 
-                    # matches [output_stream(x):field(y)]
+                    # Matches [output_stream(x):field(y)]
                     match = OUTPUT_FIELD_RE.search(line)
                     if match is not None:
                         line = self._parse_output_stream_field(
-                                file_pointer,
-                                int(match.group(1)),
-                                int(match.group(2))
+                            file_pointer,
+                            int(match.group(1)),
+                            int(match.group(2))
                         )
                         continue
 
-                    # matches [vertical_dimension(x)]
+                    # Matches [vertical_dimension(x)]
                     match = VERTICAL_DIMENSION_RE.search(line)
                     if match is not None:
                         line = self._parse_vertical_dimension(
-                                file_pointer,
-                                int(match.group(1))
-                        )
+                            file_pointer,
+                            int(match.group(1)))
+                        continue
+
+                    # Matches [non_spatial_dimension]
+                    match = NON_SPATIAL_DIMENSION_RE.search(line)
+                    if match:
+                        line = self._parse_non_spatial_dimension(file_pointer)
                         continue
 
                 line = file_pointer.readline()

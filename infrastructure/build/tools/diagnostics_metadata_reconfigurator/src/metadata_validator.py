@@ -29,8 +29,8 @@ def validate_metadata(metadata: Metadata, force: bool = False) -> None:
 
     if (invalid_vert_axes or invalid_fields) and not force:
         raise InvalidMetadataError("Metadata invalid")
-    else:
-        LOGGER.info("Metadata valid")
+
+    LOGGER.info("Metadata valid")
 
 
 def validate_fields(metadata: Metadata, force: bool = False) -> bool:
@@ -61,7 +61,7 @@ def validate_fields(metadata: Metadata, force: bool = False) -> bool:
             # If dimension valid then set active to True so it will be output
             else:
                 metadata.activate_vertical_dimension(
-                        field.vertical_dimension_id)
+                    field.vertical_dimension_id)
 
     return invalid_fields
 

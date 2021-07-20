@@ -27,7 +27,7 @@ module example_science_section__example_fields__meta_mod
   use misc_meta_data_mod,             only: misc_meta_data_type
   use field_synonym_mod,              only: field_synonym_type
   !> Only import the function spaces that you will actually be using
-  use fs_continuity_mod,              only: W2, W3, Wtheta
+  use fs_continuity_mod,              only: W2H, W3, Wtheta
   !> Only import the time steps that you will actually be using
   use time_step_enum_mod,             only: STANDARD_TIMESTEP
   !> Only import the interpolation methods that you will actually be using
@@ -78,7 +78,7 @@ contains
     self%eastward_wind = field_meta_data_type(&
       unique_id = "example_fields__eastward_wind", &
       units = "m s-1", &
-      function_space = W2, &
+      function_space = W2H, &
       order = 0, &
       io_driver = "", &
       trigger = "__checksum: true;", &
@@ -106,6 +106,7 @@ contains
     self%rate_of_increase_rain_mass_due_to_autoconv_from_liquid_cloud = field_meta_data_type(&
       unique_id = "example_fields__rate_of_increase_of_rain_mass_due_to_"// &
                   "autoconversion_from_liquid_cloud", &
+      long_name = "rate_of_increase_rain_mass_due_to_autoconv_from_liquid_cloud", &
       units = "kg kg-1 s-1", &
       function_space = Wtheta, &
       order = 0, &
@@ -194,9 +195,14 @@ contains
               dimension_name = "test_axis_non_spatial_dimension", &
               dimension_category = NUMERICAL, &
               help_text = "Test axis non-spatial dimension help text", &
-              axis_definition = [real(r_def) :: 1,2,3,4,5,6,7,8,9], &
-              non_spatial_units = "1")], &
-      standard_name = "surface_altitude",&
+              non_spatial_units = "test_unit_1"), &
+      non_spatial_dimension_type( &
+              dimension_name = "test_axis_non_spatial_dimension_2", &
+              dimension_category = CATEGORICAL, &
+              help_text = "Test axis non-spatial dimension help text_2", &
+              axis_definition = [character(str_short) :: 'A','B','C','D','E'], &
+              non_spatial_units = "test_unit_2")], &
+      standard_name = "surface_altitude", &
       synonyms = [ &
             field_synonym_type(AMIP, "orog"),&
             field_synonym_type(CF, "surface_altitude"),&
@@ -234,7 +240,16 @@ contains
                                                           'Urban', &
                                                           'Water', &
                                                           'Soil', &
-                                                          'Ice'])], &
+                                                          'Ice']), &
+      non_spatial_dimension_type( &
+              dimension_name = "mutable_dimension", &
+              dimension_category = CATEGORICAL, &
+              help_text = "test_mutable_text", &
+              non_spatial_units = "test_mutable_unit"), &
+      non_spatial_dimension_type( &
+              dimension_name = "mutable_dimension_no_units", &
+              dimension_category = CATEGORICAL, &
+              help_text = "test_mutable_text")], &
       standard_name = "air_temperature", &
       synonyms = [ &
             field_synonym_type(STASH, "3328")&

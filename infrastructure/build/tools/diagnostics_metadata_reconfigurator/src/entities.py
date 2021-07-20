@@ -77,6 +77,7 @@ class Field:
         self.data_type = data_type
         self.timestep = timestep  # for timestep restricted fields
         self.vertical_dimension_id = vertical_dimension_id
+        self.non_spatial_dimension = []
         self.domain_ref = domain_ref
 
 
@@ -192,7 +193,7 @@ class VerticalDimension:
         self.active = active
         self.domain_top = domain_top
         self.extrusion_method = extrusion_method
-        self.name = name
+        self.name = name.replace(" ", "_") if name else None
         self.positive_direction = positive_direction
         self.primary_axis = primary_axis
         self.level_definition = level_definition
@@ -287,3 +288,74 @@ class Grid:
 
     def __eq__(self, other):
         return self.domain == other.domain and self.axes == other.axes
+
+
+class NonSpatialDimension:
+    """Stores attributes of a non-spatial dimension."""
+
+    def __init__(self,
+                 name: str,
+                 definition: List,
+                 unit: str):
+        """
+        :param name: Name of the non-spatial dimension
+        :param definition: Definition of the non-spatial dimension
+        :param unit: The unit of measure used by the non-spatial dimension
+        """
+
+        self.name = name.replace(" ", "_")
+        self.definition = self._parse_definition(definition)
+        self.unit = unit
+        self.is_numerical = None
+
+    def __eq__(self, other):
+        """Evaluates if two dimensions are functionally identical.
+        :param other: The other object that is being compared"""
+        return self.name == other.name
+
+    def add_unit(self, unit: str):
+        """Adds the unit of measure to the non-spatial dimension.
+        :param unit: The unit of measure being added"""
+        if not self.unit:
+            self.unit = unit
+        elif self.unit != unit:
+            LOGGER.error("There is a mismatch in non-spatial dimension units"
+                         " of measure. %s %s %s", self.name, self.unit, unit)
+
+    def add_definition(self, definition: List):
+        """Adds a non-spatial dimension definition if one does not already
+        exist.
+        :param definition: The non-spatial dimension definition to be added
+"""
+        if not self.definition:
+            self.definition = self._parse_definition(definition)
+        else:
+            LOGGER.error("""%s already has a definition
+Definition = %s
+Tried to add = %s
+""", self.name, self.definition, definition)
+
+    def _parse_definition(self, definition: List[str]) -> str:
+        """Takes a list of values from a non-spatial dimension definition
+        and returns it in the required format for the 'iodef.xml' file.
+        :param definition: A list to strings containing a points on a
+        non-spatial dimension
+        :return: A string containing the values in the required format"""
+        value = None
+        if definition:
+            self.size = len(definition)
+            self.is_numerical = True
+            stripped_def = []
+            for element in definition:
+                element = element.replace("'", "")
+                element = element.replace('"', '')
+                stripped_def.append(element)
+                for char in element:
+                    if not char.isdigit() and not char == ".":
+                        self.is_numerical = False
+
+            self.size = len(stripped_def)
+            value = f"(0, {len(stripped_def) - 1}) " \
+                    f"[{' '.join(str(i) for i in stripped_def)}]"
+
+        return value

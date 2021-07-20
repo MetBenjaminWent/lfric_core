@@ -3,9 +3,11 @@
 # The file LICENCE, distributed with this code, contains details of the terms
 # under which the code may be used.
 ##############################################################################
-import pytest
+"""Tests for the metadata_extractor module"""
 from pathlib import Path
+import pytest
 
+from entities import Field
 from metadata_extractor import MetadataExtractor
 
 TEST_DIR = Path(__file__).parent
@@ -29,13 +31,36 @@ def test_extractor():
     immutable_metadata = {
         "meta_data": {
             "sections": {
+                "dummy_section": {
+                    "title": "Dummy Section",
+                    "name": "dummy_section",
+                    "groups": {
+                        "dummy_group_id": {
+                            "fields": {
+                                "dummy_section__dummy_field": {
+                                    "non_spatial_dimension": {
+                                        "dummy_non_spatial_dimension": {
+                                            "name":
+                                                "bad_non_spatial_dimension",
+                                            "label_definition":
+                                                "Not supposed to",
+                                            "axis_definition":
+                                                "Have both of these"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
                 "section_name": {
                     "groups": {
                         "field_group_1": {
                             "fields": {
                                 "section_name__field_1": {
                                     "_unique_id": "section_name__field_1",
-                                    "units": "units_1"},
+                                    "units": "units_1"
+                                },
                                 "section_name__field_2": {
                                     "_unique_id": "section_name__field_2",
                                     "units": "units_2"
@@ -100,7 +125,7 @@ def test_extractor_invalid_function_space():
     is not supported by the reconfigurator"""
     with pytest.raises(ValueError) as excinfo:
         extractor = MetadataExtractor(
-                ROSE_SUITE_PATH, IMMUTABLE_DATA_BAD_FUNCTION_SPACE_PATH)
+            ROSE_SUITE_PATH, IMMUTABLE_DATA_BAD_FUNCTION_SPACE_PATH)
         extractor.extract_metadata()
     assert "Invalid function space W42" in str(excinfo.value)
 
@@ -132,3 +157,21 @@ def test_extractor_invalid_vert_dim(caplog):
                "extrusion method or a level definition" in caplog.text
         assert "'model_vert_axis_5' requires either a domain top and " \
                "extrusion method or a level definition" in caplog.text
+
+
+def test__parse_field_config(caplog):
+    """Test to ensure that an error is logged when a non-spatial dimension
+    has both a label definition and an axis definition"""
+
+    dummy_field = Field("dummy_section__dummy_field",
+                        "dummy_section__dummy_group_id")
+    dummy_field.non_spatial_dimension = {"label_definition": "some_stuff",
+                                         "axis_definition": "more_stuff"}
+    extractor = MetadataExtractor(ROSE_SUITE_PATH, IMMUTABLE_DATA_PATH)
+
+    with pytest.raises(ValueError):
+        extractor._add_immutable_field_metadata(dummy_field)
+
+    assert "Non-spatial dimension bad_non_spatial_dimension has both a" \
+           " 'label_definition' and an 'axis_definition'. This is invalid." \
+           in caplog.text

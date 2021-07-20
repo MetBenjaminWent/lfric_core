@@ -27,8 +27,8 @@ def update_extrusion_namelist(namelist_path: str,
     :param vertical_dimension: Vertical dimension object containing domain_top,
                                extrusion_method and number_of_layers
                                attributes"""
-    with open(namelist_path, 'r') as f:
-        namelist = f.read()
+    with open(namelist_path, 'r') as file:
+        namelist = file.read()
 
     match = EXTRUSION_REGEX.search(namelist)
     if not match:
@@ -42,5 +42,5 @@ def update_extrusion_namelist(namelist_path: str,
                 f"/\n\n"
     namelist = EXTRUSION_REGEX.sub(extrusion, namelist)
 
-    with open(namelist_path, 'w') as f:
-        f.write(namelist)
+    with open(namelist_path, 'w') as file:
+        file.write(namelist)

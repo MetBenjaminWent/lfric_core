@@ -8,8 +8,10 @@
 from pathlib import Path
 from logging import getLogger
 from xml.etree import ElementTree
+from xml.dom import minidom
 
-from entities import Field, FieldGroup, OutputStream, VerticalDimension, Grid
+from entities import Field, FieldGroup, OutputStream, VerticalDimension, Grid,\
+    NonSpatialDimension
 from diagnostics_metadata_collection import Metadata
 from extrusion_namelist_updater import update_extrusion_namelist
 
@@ -48,13 +50,22 @@ FILE_NODE_ATTRS = {
     'output_freq': 'timestep',
     'convention': 'convention'
 }
-AXIS_NODE_ATTRS = {
-        'id': 'unique_id',
-        'n_glo': 'size',
-        'name': 'name',
-        'positive': 'positive_direction',
-        'unit': 'units',
-        'value': 'level_definition'
+
+VERT_AXIS_NODE_ATTRS = {
+    'id': 'unique_id',
+    'n_glo': 'size',
+    'name': 'name',
+    'positive': 'positive_direction',
+    'unit': 'units',
+    'value': 'level_definition'
+}
+
+NON_SPATIAL_AXIS_ATTRS = {
+    'id': 'name',
+    'n_glo': 'size',
+    'name': 'name',
+    'value': 'definition',
+    'unit': 'unit',
 }
 
 LOGGER = getLogger("reconfigurator.presenter")
@@ -79,6 +90,7 @@ class MetadataIodefGenerator:
         self._metadata = metadata
         self._root_node = None
         self._axis_def = None
+        self._grid_def = None
         self._field_def = None
         self._file_def = None
 
@@ -109,7 +121,6 @@ class MetadataIodefGenerator:
         Use ElementTree to get the root, axis_definition, grid_definition
         field_definition, and file_definition nodes in the given template XML
         file
-
         :param template_path: String path to template XML file
         """
         parser = ElementTree.XMLParser(target=CommentedTreeBuilder())
@@ -157,14 +168,33 @@ class MetadataIodefGenerator:
         axis_node = ElementTree.SubElement(self._axis_def, 'axis')
 
         # Loop through axis attributes and set them
-        for iodef_attr, entity_attr in sorted(AXIS_NODE_ATTRS.items()):
+        for iodef_attr, entity_attr in sorted(VERT_AXIS_NODE_ATTRS.items()):
             attribute_value = getattr(axis, entity_attr, None)
             axis_node.set(iodef_attr, str(attribute_value))
 
         return axis_node
 
-    def _create_grid_node(self, grid: Grid) \
+    def _create_non_spatial_axis_node(self, axis: NonSpatialDimension) \
             -> ElementTree.Element:
+        """
+        Create and populate <axis> elements within the axis_definition node
+
+        :param axis: NonSpatialDimension axis to be created
+        :return: The newly made node in the XML tree containing the axis
+        """
+        LOGGER.debug("Creating axis: %s", axis.name)
+        axis_node = ElementTree.SubElement(self._axis_def, 'axis')
+
+        # Loop through axis attributes and set them
+        for iodef_attr, entity_attr in sorted(NON_SPATIAL_AXIS_ATTRS.items()):
+            attribute_value = getattr(axis, entity_attr, None)
+            axis_node.set(iodef_attr, str(attribute_value))
+
+        if not axis.is_numerical:
+            axis_node.attrib["label"] = axis_node.attrib.pop("value")
+        return axis_node
+
+    def _create_grid_node(self, grid: Grid) -> ElementTree.Element:
         """
         Create and populate <grid> elements within the grid_definition node
 
@@ -181,7 +211,6 @@ class MetadataIodefGenerator:
         for axis in grid.axes:
             axis_node = ElementTree.SubElement(grid_node, 'axis')
             axis_node.set("axis_ref", axis)
-
         return grid_node
 
     def _create_field_group_node(self, field_group: FieldGroup) \
@@ -241,13 +270,13 @@ class MetadataIodefGenerator:
             attribute_value = getattr(field, entity_attr, None)
             if attribute_value is not None:
                 # FoX requires booleans to be lowercase when parsing them
-                if type(attribute_value) == bool:
+                if isinstance(attribute_value, bool):
                     attribute_value = str(attribute_value).lower()
                 ElementTree.SubElement(
-                        field_node,
-                        'variable',
-                        name=variable_name,
-                        type=FIELD_NODE_VARIABLE_TYPES[variable_name]
+                    field_node,
+                    'variable',
+                    name=variable_name,
+                    type=FIELD_NODE_VARIABLE_TYPES[variable_name]
                 ).text = str(attribute_value)
 
         return field_node
@@ -287,8 +316,8 @@ class MetadataIodefGenerator:
         :param output_path: Path to output XML
         """
         LOGGER.info("Writing XML file")
-        xml_text = ElementTree.tostring(self._root_node)
-        xml_text = xml_text.replace(b"><", b">\n<")
+        xml_text = minidom.parseString(ElementTree.tostring(
+            self._root_node)).toprettyxml(indent="    ", encoding="UTF-8")
         with open(output_path, 'wb') as output_file:
             output_file.write(xml_text)
 
@@ -322,6 +351,11 @@ class MetadataIodefGenerator:
                     update_extrusion_namelist(namelist_file_path, axis)
         axes = len(self._axis_def.findall("axis"))
         LOGGER.info("Created %s axes", axes)
+
+        for axis in self._metadata.get_non_spatial_dimensions().values():
+            self._create_non_spatial_axis_node(axis)
+            num_nsd = len(self._metadata.get_non_spatial_dimensions())
+            LOGGER.info("Created %s Immutable Non-spatial Dimensions", num_nsd)
 
         # Build the XML tree for the grid_definition
         for grid in self._metadata.get_grids():
