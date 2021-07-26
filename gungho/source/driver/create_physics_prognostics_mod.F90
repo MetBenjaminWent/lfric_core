@@ -10,6 +10,7 @@ module create_physics_prognostics_mod
   use clock_mod,                      only : clock_type
   use constants_mod,                  only : i_def, l_def
   use field_mod,                      only : field_type
+  use integer_field_mod,              only : integer_field_type
   use field_parent_mod,               only : write_interface, read_interface,  &
                                              checkpoint_write_interface,       &
                                              checkpoint_read_interface
@@ -1029,7 +1030,6 @@ contains
   !> @param[in]     twod              Optional flag to determine if this is a
   !>                                   2D field for diagnostic output
   !> @param[in]     advection_flag    Optional flag whether this field is to be advected
-
   subroutine add_physics_field(field_collection, &
                                depository, prognostic_fields, &
                                name, vector_space, &
@@ -1116,5 +1116,104 @@ contains
     endif
 
   end subroutine add_physics_field
+
+  !>@brief Add integer field to field collection and set its write,
+  !>       checkpoint-restart and advection behaviour
+  !> @param[in,out] field_collection  Field collection that 'name' will be added to
+  !> @param[in,out] depository        Collection of all fields
+  !> @param[in,out] prognostic_fields Collection of checkpointed fields
+  !> @param[in]     name              Name of field to be added to collection
+  !> @param[in]     vector_space      Function space of field to set behaviour for
+  !> @param[in]     checkpoint_flag   Optional flag to allow checkpoint-
+  !>                                   restart behaviour of field to be set
+  !> @param[in]     twod              Optional flag to determine if this is a
+  !>                                   2D field for diagnostic output
+  !> @param[in]     advection_flag    Optional flag whether this field is to be advected
+  subroutine add_integer_field(field_collection, &
+                               depository, prognostic_fields, &
+                               name, vector_space, &
+                               checkpoint_flag, twod, advection_flag)
+
+    use io_config_mod,           only : use_xios_io, &
+                                        write_diag, checkpoint_write, &
+                                        checkpoint_read
+    use lfric_xios_read_mod,     only : read_field_face, &
+                                        read_field_single_face
+    use lfric_xios_write_mod,    only : write_field_face, &
+                                        write_field_single_face
+    use io_mod,                  only : checkpoint_write_netcdf, &
+                                        checkpoint_read_netcdf
+
+    implicit none
+
+    character(*), intent(in)                       :: name
+    type(field_collection_type), intent(inout)     :: field_collection
+    type(field_collection_type), intent(inout)     :: depository
+    type(field_collection_type), intent(inout)     :: prognostic_fields
+    type(function_space_type), pointer, intent(in) :: vector_space
+    logical(l_def), optional, intent(in)           :: checkpoint_flag
+    logical(l_def), optional, intent(in)           :: twod
+    logical(l_def), optional, intent(in)           :: advection_flag
+    !Local variables
+    type(integer_field_type)                       :: new_field
+    class(pure_abstract_field_type), pointer       :: field_ptr => null()
+    logical(l_def)                                 :: twod_field, checkpointed
+
+    ! pointers for xios write interface
+    procedure(write_interface), pointer :: write_behaviour => null()
+    procedure(read_interface),  pointer :: read_behaviour => null()
+    procedure(checkpoint_write_interface), pointer :: checkpoint_write_behaviour => null()
+    procedure(checkpoint_read_interface), pointer  :: checkpoint_read_behaviour => null()
+
+    ! Create the new field
+    if (present(advection_flag)) then
+      call new_field%initialise( vector_space, name=trim(name), advection_flag=advection_flag )
+    else
+      call new_field%initialise( vector_space, name=trim(name) )
+    end if
+
+    ! Set checkpoint flag
+    if (present(checkpoint_flag)) then
+      checkpointed = checkpoint_flag
+    else
+      checkpointed = .false.
+    end if
+
+    ! Set read and write behaviour
+    if (use_xios_io) then
+      if (present(twod)) then
+        twod_field = twod
+      else
+        twod_field = .false.
+      end if
+      if (twod_field) then
+        write_behaviour => write_field_single_face
+        read_behaviour  => read_field_single_face
+      else
+        write_behaviour => write_field_face
+        read_behaviour  => read_field_face
+      end if
+      if (write_diag .or. checkpoint_write) &
+        call new_field%set_write_behaviour(write_behaviour)
+      if (checkpoint_read .and. checkpointed) &
+        call new_field%set_read_behaviour(read_behaviour)
+    else
+      checkpoint_write_behaviour => checkpoint_write_netcdf
+      checkpoint_read_behaviour  => checkpoint_read_netcdf
+      call new_field%set_checkpoint_write_behaviour(checkpoint_write_behaviour)
+      call new_field%set_checkpoint_read_behaviour(checkpoint_read_behaviour)
+    endif
+
+    ! Add the field to the depository
+    call depository%add_field(new_field)
+    field_ptr => depository%get_field(name)
+    ! Put a pointer to the field in the required collection
+    call field_collection%add_reference_to_field( field_ptr )
+    ! If checkpointing the field, put a pointer to it in the prognostics collection
+    if ( checkpointed ) then
+      call prognostic_fields%add_reference_to_field( field_ptr )
+    endif
+
+  end subroutine add_integer_field
 
 end module create_physics_prognostics_mod
