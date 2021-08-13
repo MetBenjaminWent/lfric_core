@@ -181,7 +181,8 @@
                     'module load meto-environment/lfric/cray/8.7.0'
                 ]
             },
-            'reveal' : ['module list 2>&1', 'export']
+            'reveal' : ['module list 2>&1', 'export'],
+            'tech' : ['module load cray-snplauncher/$CRAY_MPICH2_VER']
         },
         'queue' : {
             'build' : {
