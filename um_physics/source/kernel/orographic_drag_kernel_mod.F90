@@ -309,7 +309,7 @@ contains
                   dzcond, l_lapse, kbot,                             &
                   ulow, vlow, rholow, nlow, psilow, psi1, modu,      &
                   ! Time-independent input
-                  z_rho_levels, z_theta_levels, sd,                  &
+                  z_theta_levels, sd,                                &
                   grad_xx, grad_xy, grad_yy,                         &
                   ! Time-independent output
                   mt_high, slope, anis, banis, canis, mtdir, ktop,   &
@@ -320,7 +320,7 @@ contains
 
     ! Call routine to compute orographic blocking depth and drag
     call gw_block(nlayers,seg_len,gw_seg_size,timestep,u_on_p,v_on_p,    &
-                  wetrho,nsq,ulow, vlow,rholow, psilow,modu,             &
+                  wetrho,nsq,ulow, vlow, modu,                           &
                   z_rho_levels,z_theta_levels,mt_high,                   &
                   sd,slope,anis,mtdir,zb,banis,canis,                    &
                   du_dt_blk,dv_dt_blk,                                   &
@@ -346,7 +346,7 @@ contains
                  z_rho_levels,z_theta_levels,delta_lambda,delta_phi, &
                  latitude,mt_high,sd,slope,zb,banis,canis,           &
                  du_dt_orog_gwd,dv_dt_orog_gwd,dtemp_dt_orog_gwd,    &
-                 timestep,dynbeta,nonhydro,l_smooth,                 &
+                 dynbeta,nonhydro,l_smooth,                          &
                  gwd_fsat,gsharp,drag,l_gw_heating,                  &
                  ! diagnostics (not used)
                  du_dt_diag,seg_len,du_dt_diag_on,du_dt_diag_on,     &

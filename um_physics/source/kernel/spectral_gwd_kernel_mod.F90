@@ -147,7 +147,7 @@ contains
 
     integer(i_um) :: k
 
-    integer(i_um), parameter :: n_proc = 1, global_row_length = 1
+    integer(i_um), parameter :: global_row_length = 1
 
     ! These are flags for diagnostics that are not used in LFRic
     logical, parameter ::                                              &
