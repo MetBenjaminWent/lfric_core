@@ -134,13 +134,17 @@ module tl_test_kinetic_energy_gradient_mod
                    X_innerproduct_X( norm_diff, diff ) )
       norm_diff = sqrt(norm_diff)
 
-      print*,gamma, norm_diff
+      write( log_scratch_space, '(A, E32.12, A, E32.12)' ) &
+             'gamma = ', gamma, ' norm = ', norm_diff
+
+      call log_event( log_scratch_space, LOG_LEVEL_INFO )
+
       if (n == 2) then
         call convergence_rate_check( norm_diff, norm_diff_prev, label )
-      endif
+      end if
 
       norm_diff_prev = norm_diff
-    enddo
+    end do
 
   end subroutine test_kinetic_energy_gradient
 

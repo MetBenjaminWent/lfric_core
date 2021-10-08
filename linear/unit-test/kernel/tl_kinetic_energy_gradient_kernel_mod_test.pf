@@ -1,7 +1,7 @@
 !-----------------------------------------------------------------------------
-! Copyright (c) 2021,  Met Office, on behalf of HMSO and Queen's Printer
-! For further details please refer to the file LICENCE.original which you
-! should have received as part of this distribution.
+! (C) Crown copyright 2021 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
 !-----------------------------------------------------------------------------
 
 !>@brief Test the tangent linear gradient of the kinetic energy computation
@@ -236,12 +236,12 @@ contains
     end do
 
     scaling = 1000.0_r_def
-    do k=0,2
+    do k = 0,2
       u( map_w2( 5, : ) + k ) = real( scaling * dz * k )
       u( map_w2( 6, : ) + k ) = real( scaling * dz * (k+1) )
       ls_u( map_w2( 5, : ) + k ) = real( scaling * dz * k )
       ls_u( map_w2( 6, : ) + k ) = real( scaling * dz * (k+1) )
-    enddo
+    end do
     r_u(:) = 0.0_r_def
     cell = 3
 

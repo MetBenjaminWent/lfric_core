@@ -18,10 +18,17 @@ program tl_test
   use log_mod,            only : log_event,       &
                                  LOG_LEVEL_ERROR, &
                                  LOG_LEVEL_INFO
-  use tl_test_driver_mod, only : initialise,                 &
-                                 finalise,                   &
-                                 run_kinetic_energy_gradient
-
+  use tl_test_driver_mod, only : initialise,                  &
+                                 finalise,                    &
+                                 run_kinetic_energy_gradient, &
+                                 run_advection,               &
+                                 run_advect_density_field,    &
+                                 run_advect_theta_field,      &
+                                 run_vorticity_advection,     &
+                                 run_project_pressure,        &
+                                 run_hydrostatic,             &
+                                 run_pressure_gradient_bd,    &
+                                 run_rk_alg
   implicit none
 
   character(*), parameter :: xios_id = "linear"
@@ -37,6 +44,14 @@ program tl_test
 
   ! Flags which determine the tests that will be carried out
   logical :: do_test_kinetic_energy_gradient = .false.
+  logical :: do_test_advection = .false.
+  logical :: do_test_advect_density_field = .false.
+  logical :: do_test_advect_theta_field = .false.
+  logical :: do_test_project_pressure = .false.
+  logical :: do_test_vorticity_advection = .false.
+  logical :: do_test_pressure_gradient_bd = .false.
+  logical :: do_test_hydrostatic = .false.
+  logical :: do_test_rk_alg = .false.
 
   ! Usage message to print
   character(len=256) :: usage_message
@@ -63,6 +78,14 @@ program tl_test
           " <namelist filename> "      // &
           " test_XXX with XXX in { "   // &
           " kinetic_energy_gradient, " // &
+          " advection, "               // &
+          " advect_density_field, "    // &
+          " advect_theta_field, "      // &
+          " vorticity_advection, "     // &
+          " pressure_gradient_bd, "    // &
+          " project_pressure, "        // &
+          " hydrostatic, "             // &
+          " rk_alg, "                  // &
           " } "
      call log_event( trim(usage_message), LOG_LEVEL_ERROR )
   end if
@@ -80,6 +103,22 @@ program tl_test
   select case (trim(test_flag))
   case ("test_kinetic_energy_gradient")
      do_test_kinetic_energy_gradient = .true.
+  case ("test_advection")
+     do_test_advection = .true.
+  case ("test_advect_density_field")
+     do_test_advect_density_field = .true.
+  case ("test_advect_theta_field")
+     do_test_advect_theta_field = .true.
+  case ("test_project_pressure")
+     do_test_project_pressure = .true.
+  case ("test_vorticity_advection")
+     do_test_vorticity_advection = .true.
+  case ("test_pressure_gradient_bd")
+     do_test_pressure_gradient_bd = .true.
+  case ("test_hydrostatic")
+     do_test_hydrostatic = .true.
+  case ("test_rk_alg")
+     do_test_rk_alg = .true.
   case default
      call log_event( "Unknown test", LOG_LEVEL_ERROR )
   end select
@@ -89,6 +128,30 @@ program tl_test
 
   if (do_test_kinetic_energy_gradient) then
     call run_kinetic_energy_gradient()
+  endif
+  if (do_test_advection) then
+    call run_advection()
+  endif
+  if (do_test_advect_density_field) then
+    call run_advect_density_field()
+  endif
+  if (do_test_advect_theta_field) then
+    call run_advect_theta_field()
+  endif
+  if (do_test_vorticity_advection) then
+    call run_vorticity_advection()
+  endif
+  if (do_test_project_pressure) then
+    call run_project_pressure()
+  endif
+  if (do_test_pressure_gradient_bd) then
+    call run_pressure_gradient_bd()
+  endif
+  if (do_test_hydrostatic) then
+    call run_hydrostatic()
+  endif
+  if (do_test_rk_alg) then
+    call run_rk_alg()
   endif
 
   call finalise()

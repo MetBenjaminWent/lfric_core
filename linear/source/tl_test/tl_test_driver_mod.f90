@@ -26,13 +26,29 @@ module tl_test_driver_mod
   use linear_model_data_mod,      only : linear_create_ls,  &
                                          linear_init_ls
   use tl_test_kinetic_energy_gradient_mod, only : test_kinetic_energy_gradient
+  use tl_test_advection_mod,               only : test_advection
+  use tl_test_advect_density_field_mod,    only : test_advect_density_field
+  use tl_test_advect_theta_field_mod,      only : test_advect_theta_field
+  use tl_test_vorticity_mod,               only : test_vorticity_advection
+  use tl_test_project_pressure_mod,        only : test_project_pressure
+  use tl_test_hydrostatic_mod,             only : test_hydrostatic
+  use tl_test_pressure_grad_bd_mod,        only : test_pressure_gradient_bd
+  use tl_test_rk_alg_mod,                  only : test_rk_alg
 
   implicit none
 
   private
-  public initialise,                 &
-         finalise,                   &
-         run_kinetic_energy_gradient
+  public initialise,                  &
+         finalise,                    &
+         run_kinetic_energy_gradient, &
+         run_advection,               &
+         run_advect_density_field,    &
+         run_advect_theta_field,      &
+         run_vorticity_advection,     &
+         run_project_pressure,        &
+         run_hydrostatic,             &
+         run_pressure_gradient_bd,    &
+         run_rk_alg
 
   type (model_data_type) :: model_data
 
@@ -110,6 +126,86 @@ contains
                                        twod_mesh_id )
 
   end subroutine run_kinetic_energy_gradient
+
+  subroutine run_advection()
+
+    implicit none
+
+    call test_advection( model_data,  &
+                         mesh_id,     &
+                         twod_mesh_id )
+
+  end subroutine run_advection
+
+  subroutine run_advect_density_field()
+
+    implicit none
+
+    call test_advect_density_field( model_data,  &
+                                    mesh_id,     &
+                                    twod_mesh_id )
+
+  end subroutine run_advect_density_field
+
+  subroutine run_advect_theta_field()
+
+    implicit none
+
+    call test_advect_theta_field( model_data,  &
+                                  mesh_id,     &
+                                  twod_mesh_id )
+
+  end subroutine run_advect_theta_field
+
+  subroutine run_vorticity_advection()
+
+    implicit none
+
+    call test_vorticity_advection( model_data,  &
+                                   mesh_id,     &
+                                   twod_mesh_id )
+
+  end subroutine run_vorticity_advection
+
+  subroutine run_project_pressure()
+
+    implicit none
+
+    call test_project_pressure( model_data,  &
+                                mesh_id,     &
+                                twod_mesh_id )
+
+  end subroutine run_project_pressure
+
+  subroutine run_hydrostatic()
+
+    implicit none
+
+    call test_hydrostatic( model_data,  &
+                           mesh_id,     &
+                           twod_mesh_id )
+
+  end subroutine run_hydrostatic
+
+  subroutine run_pressure_gradient_bd()
+
+    implicit none
+
+    call test_pressure_gradient_bd( model_data,  &
+                                    mesh_id,     &
+                                    twod_mesh_id )
+
+  end subroutine run_pressure_gradient_bd
+
+  subroutine run_rk_alg()
+
+    implicit none
+
+    call test_rk_alg( model_data,  &
+                      mesh_id,     &
+                      twod_mesh_id )
+
+  end subroutine run_rk_alg
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !>@brief Tidies up after a run.

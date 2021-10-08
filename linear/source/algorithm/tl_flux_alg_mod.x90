@@ -1,0 +1,181 @@
+!-----------------------------------------------------------------------------
+! (c) Crown copyright 2021 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
+
+!> @brief Compute the tangent linear flux F = rho * u_ls + rho_ls * u
+module tl_flux_alg_mod
+
+  use constants_mod,                  only: r_def, i_def
+  use enforce_bc_kernel_mod,          only: enforce_bc_kernel_type
+  use geometric_constants_mod,        only: get_coordinates,          &
+                                            get_panel_id
+  use fem_constants_mod,              only: get_mass_matrix,          &
+                                            get_mass_matrix_diagonal
+  use field_mod,                      only: field_type
+  use finite_element_config_mod,      only: element_order,          &
+                                            nqp_exact,              &
+                                            coord_system,           &
+                                            coord_system_xyz
+  use function_space_mod,             only: function_space_type
+  use operator_mod,                   only: operator_type
+  use tl_poly1d_vert_flux_kernel_mod, only: tl_poly1d_vert_flux_kernel_type
+  use poly1d_vert_flux_coeffs_kernel_mod, &
+                                      only: poly1d_vert_flux_coeffs_kernel_type
+  use tl_poly1d_flux_kernel_mod,      only: tl_poly1d_flux_kernel_type
+
+  use poly1d_flux_coeffs_kernel_mod, &
+                                      only: poly1d_flux_coeffs_kernel_type
+  use tl_poly2d_flux_kernel_mod,      only: tl_poly2d_flux_kernel_type
+  use poly2d_flux_coeffs_kernel_mod, &
+                                      only: poly2d_flux_coeffs_kernel_type
+  use quadrature_rule_gaussian_mod,   only: quadrature_rule_gaussian_type
+  use quadrature_xyoz_mod,            only: quadrature_xyoz_type
+  use quadrature_face_mod,            only: quadrature_face_type
+  use flux_rhs_kernel_mod,            only: flux_rhs_kernel_type
+  use mass_matrix_solver_alg_mod,     only: mass_matrix_solver_alg
+  use transport_config_mod,           only: operators,            &
+                                            fv_flux_order,        &
+                                            operators_fv,         &
+                                            operators_fem,        &
+                                            oned_reconstruction
+  use log_mod,                        only: log_event,         &
+                                            LOG_LEVEL_ERROR,   &
+                                            LOG_LEVEL_INFO
+  use io_config_mod,                  only: subroutine_timers
+  use timer_mod,                      only: timer
+
+  use assign_field_random_kernel_mod, only : assign_field_random_kernel_type
+
+  implicit none
+
+  private
+
+  public :: tl_flux_alg_init
+  public :: tl_flux_alg_final
+  public :: tl_flux_alg
+
+contains
+
+  !> @brief Initialises the system for computing the tangent linear flux
+  !>
+  !> @details Initializes system required for FV flux computation.
+  !>          FV aspects currently only support lowest order elements.
+  !>
+  !> @param[in] mesh_id Identity of the mesh to create all fields on
+  !>
+  subroutine tl_flux_alg_init( mesh_id )
+
+    use flux_alg_mod,       only: flux_alg_init
+
+    implicit none
+
+    integer(i_def),  intent(in) :: mesh_id
+
+    ! Set up all the flux coefficients from flux_alg
+    call flux_alg_init(mesh_id)
+
+  end subroutine tl_flux_alg_init
+
+  !> @brief Finalises allocatable arrays and calls finalising routines for
+  !>        kernels that this algorithm initialised.
+  subroutine tl_flux_alg_final()
+
+    implicit none
+
+  end subroutine tl_flux_alg_final
+
+  !> @brief Compute the tangent linear change in mass flux,
+  !>        f = rho*ls_u + ls_rho *u
+  !>        using desired spatial reconstruction.
+  !> @param[in,out] mass_flux   ACTIVE Change in mass flux field
+  !> @param[in]     density     ACTIVE Change in field to advect
+  !> @param[in]     wind        ACTIVE Change in advecting wind field
+  !> @param[in]     ls_density  Linearisation state for the field to advect
+  !> @param[in]     ls_wind     Linearisation state for the advecting wind field
+  !> @param[in]     logspace    Carry out interpolation in log space
+  subroutine tl_flux_alg( mass_flux, density, wind,      &
+                          ls_density, ls_wind, logspace )
+
+  use flux_alg_mod,    only: get_flux_coeffs,          &
+                             get_vert_flux_coeffs,     &
+                             get_flux_stencil_extent,  &
+                             get_flux_2d_stencil_size, &
+                             get_flux_ndata_h,         &
+                             get_flux_ndata_v
+
+  implicit none
+
+  type(field_type), intent(in)    :: density, wind
+  type(field_type), intent(inout) :: mass_flux
+  type(field_type), intent(in)    :: ls_density, ls_wind
+  logical, optional, intent(in)   :: logspace
+
+  integer(kind=i_def) :: mesh_id
+  integer(i_def) :: logspace_loc
+  integer(i_def) :: stencil_extent
+
+  integer(i_def), pointer    :: flux_stencil_extent => null()
+  integer(i_def), pointer    :: flux2d_stencil_size => null()
+  integer(i_def), pointer    :: ndata_h => null()
+  integer(i_def), pointer    :: ndata_v => null()
+
+  type(field_type), pointer :: flux_coeffs => null()
+  type(field_type), pointer :: vert_flux_coeffs => null()
+
+  logspace_loc = 0_i_def
+  if ( present(logspace) ) then
+    if ( logspace ) logspace_loc = 1_i_def
+  end if
+
+  mesh_id = mass_flux%get_mesh_id()
+
+  flux_stencil_extent => get_flux_stencil_extent(mesh_id)
+  flux2d_stencil_size => get_flux_2d_stencil_size(mesh_id)
+  ndata_h => get_flux_ndata_h(mesh_id)
+  ndata_v => get_flux_ndata_v(mesh_id)
+  flux_coeffs => get_flux_coeffs(mesh_id)
+  vert_flux_coeffs => get_vert_flux_coeffs(mesh_id)
+
+  select case(operators)
+
+    case default
+      call log_event( "Gungho: Unrecognized option for operator.", LOG_LEVEL_ERROR )
+
+    case(operators_fv)
+     if ( oned_reconstruction ) then
+       ! Use 1d flux reconstruction
+       call invoke( tl_poly1d_flux_kernel_type( mass_flux, wind, density,     &
+                                                ls_wind, ls_density,          &
+                                                flux_stencil_extent,          &
+                                                flux_coeffs,                  &
+                                                fv_flux_order,                &
+                                                ndata_h ) )
+     else
+       ! Use 2d flux reconstruction
+       stencil_extent = fv_flux_order/2
+       call invoke(tl_poly2d_flux_kernel_type( &
+                                   mass_flux, wind, density,         &
+                                   ls_wind, ls_density,              &
+                                   stencil_extent, flux_coeffs,      &
+                                   ndata_h, flux2d_stencil_size) )
+
+     end if
+     ! Compute vertical components of mass flux
+     call invoke(tl_poly1d_vert_flux_kernel_type( &
+                                     mass_flux, wind, density,                &
+                                     ls_wind, ls_density,                     &
+                                     vert_flux_coeffs,                        &
+                                     ndata_v, fv_flux_order, logspace_loc) )
+
+    case(operators_fem)
+      call log_event( "No Tangent linear for operators_fem", LOG_LEVEL_ERROR )
+  end select
+
+  nullify( flux_stencil_extent, flux2d_stencil_size, ndata_h, ndata_v, &
+           flux_coeffs, vert_flux_coeffs )
+
+  end subroutine tl_flux_alg
+
+end module tl_flux_alg_mod

@@ -1,0 +1,301 @@
+!-----------------------------------------------------------------------------
+! (c) Crown copyright 2021 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
+
+!> @brief Tangent linear for the advective update A of a variable f by a wind U
+!!        Nonlinear code is A = U.grad(f)
+!!        Linear code is    A = U.grad(ls_f) + ls_U.grad(f)
+module tl_advective_update_alg_mod
+
+  use constants_mod,                      only: r_def, i_def
+  use geometric_constants_mod,            only: get_coordinates,          &
+                                                get_panel_id
+  use fem_constants_mod,                  only: get_mass_matrix_diagonal,       &
+                                                get_inverse_lumped_mass_matrix, &
+                                                get_multiplicity
+  use field_mod,                          only: field_type
+  use finite_element_config_mod,          only: element_order,        &
+                                                nqp_exact,            &
+                                                coord_system,         &
+                                                coord_system_xyz
+  use fs_continuity_mod,                  only: W1, Wtheta
+  use function_space_mod,                 only: function_space_type
+  use function_space_collection_mod,      only: function_space_collection
+  use quadrature_rule_gauss_lobatto_mod,  only: quadrature_rule_gauss_lobatto_type
+  use quadrature_rule_gaussian_mod,       only: quadrature_rule_gaussian_type
+  use quadrature_xyoz_mod,                only: quadrature_xyoz_type
+  use quadrature_face_mod,                only: quadrature_face_type
+  use quadrature_edge_mod,                only: quadrature_edge_type
+  use rtheta_kernel_mod,                  only: rtheta_kernel_type
+  use rtheta_bd_kernel_mod,               only: rtheta_bd_kernel_type
+  use sample_field_kernel_mod,            only: sample_field_kernel_type
+  use transport_config_mod,               only: operators,            &
+                                                fv_advective_order,   &
+                                                operators_fv,         &
+                                                operators_fem,        &
+                                                oned_reconstruction,  &
+                                                enforce_monotonicity, &
+                                                consistent_metric
+  use log_mod,                            only: log_event,            &
+                                                LOG_LEVEL_ERROR,      &
+                                                LOG_LEVEL_INFO
+  use io_config_mod,                      only: subroutine_timers
+  use timer_mod,                          only: timer
+  use poly_advective_kernel_mod,          only: poly_advective_kernel_type
+  use tl_poly_advective_kernel_mod,       only: tl_poly_advective_kernel_type
+  use poly1d_adv_recon_kernel_mod,        only: poly1d_adv_recon_kernel_type
+  use poly1d_vert_adv_coeffs_kernel_mod,  only: poly1d_vert_adv_coeffs_kernel_type
+  use poly1d_advective_coeffs_kernel_mod, only: poly1d_advective_coeffs_kernel_type
+  use tl_poly1d_vert_adv_kernel_mod,      only: tl_poly1d_vert_adv_kernel_type
+  use poly2d_advective_coeffs_kernel_mod, only: poly2d_advective_coeffs_kernel_type
+  use poly2d_adv_recon_kernel_mod,        only: poly2d_adv_recon_kernel_type
+
+  implicit none
+
+  private
+
+  public :: tl_advective_update_alg_init
+  public :: tl_advective_update_alg_final
+  public :: tl_advective_update_alg
+
+contains
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !> @brief Initialises the system for running the Tangent linear advection
+  !>        algorithm.
+  !>
+  !> @details Initialises system required for FV transport.
+  !>          FV aspects currently only support lowest order elements.
+  !>
+  !> @param[in] mesh_id Identity of the mesh to create all fields on
+  !>
+  subroutine tl_advective_update_alg_init( mesh_id )
+
+    use advective_update_alg_mod,    only: advective_update_alg_init
+
+    implicit none
+
+    integer(i_def),  intent(in) :: mesh_id
+
+    ! Set up all the coefficients from advective_update_alg
+    call advective_update_alg_init(mesh_id)
+
+  end subroutine tl_advective_update_alg_init
+
+  !=============================================================================
+  !> @details Finalises allocatable arrays and calls finalising routines for
+  !>          kernels that this algorithm initialised.
+  subroutine tl_advective_update_alg_final()
+
+    implicit none
+
+  end subroutine tl_advective_update_alg_final
+
+  !=============================================================================
+  !> @brief Compute tangent linear advective update using desired spatial
+  !>        reconstruction. Options for this are either FE or FV reconstructions.
+  !>        A monotonicity filter is also applied if enforce_monotonicity=.true.
+  !> @param[in,out] rhs          ACTIVE Change in Advective increment
+  !> @param[in]     adv_field    ACTIVE Change in Field to advect
+  !> @param[in]     wind         ACTIVE Change in Advecting wind field
+  !> @param[in]     ls_adv_field Lin state for Field to advect
+  !> @param[in]     ls_wind      Lin state for Advecting wind field
+  !> @param[in]     dt           timestep
+  !> @param[in]     logspace     Carry out interpolation in log space
+  subroutine tl_advective_update_alg(rhs, adv_field, wind, ls_adv_field, ls_wind, dt, logspace)
+
+    use consistent_wind_kernel_mod,  only: consistent_wind_kernel_type
+    use reference_element_mod,       only: reference_element_type
+    use mesh_mod,                    only: mesh_type
+    use monotonic_update_kernel_mod, only: monotonic_update_kernel_type
+    use advective_update_alg_mod,    only: get_adv_stencil_extent,  &
+                                           get_adv_2d_stencil_size, &
+                                           get_adv_ndata_h,         &
+                                           get_adv_ndata_v,         &
+                                           get_adv_coeffs,          &
+                                           get_vert_adv_coeffs,     &
+                                           get_chi3_at_wt
+    implicit none
+
+    type(field_type),  intent(in)          :: adv_field, wind
+    type(field_type),  intent(in)          :: ls_adv_field, ls_wind
+    type(field_type),  intent(inout)       :: rhs
+    real(kind=r_def),  intent(in)          :: dt
+    logical, optional, intent(in)          :: logspace
+
+    type(field_type), pointer              :: chi(:) => null()
+    type(field_type), pointer              :: mt_lumped_inv => null()
+    class(reference_element_type), pointer :: reference_element =>null()
+    type(mesh_type),               pointer :: mesh => null()
+    integer(kind=i_def)                    :: mesh_id
+    type(field_type)                       :: consistent_wind, u_grad_f
+    type(field_type)                       :: ls_consistent_wind
+    type(function_space_type),     pointer :: w1_fs => null()
+    type(function_space_type),     pointer :: wt_fs => null()
+
+    integer(kind=i_def) :: logspace_loc
+
+    integer(i_def), pointer                :: advective_stencil_extent => null()
+    integer(i_def), pointer                :: advective2d_stencil_size => null()
+    type(field_type), pointer              :: adv_coeffs => null()
+    type(field_type), pointer              :: vert_adv_coeffs => null()
+    type(field_type), pointer              :: chi3_at_wt => null()
+    integer(i_def), pointer                :: ndata_h => null()
+    integer(i_def), pointer                :: ndata_v => null()
+
+    type( field_type )              :: advective_av
+    type( field_type )              :: ls_advective_av
+    type( field_type )              :: advective_av_chi3, &
+                                             wt_metrics
+
+    type(field_type), pointer       :: w1_multiplicity=> null()
+
+    logspace_loc = 0
+    if ( present(logspace) ) then
+      if ( logspace ) logspace_loc = 1
+    end if
+
+    mesh_id = wind%get_mesh_id()
+    mt_lumped_inv => get_inverse_lumped_mass_matrix(Wtheta, mesh_id)
+    w1_multiplicity => get_multiplicity(W1, mesh_id)
+
+    w1_fs => function_space_collection%get_fs( mesh_id, element_order, W1 )
+    wt_fs => function_space_collection%get_fs( mesh_id, element_order, Wtheta )
+    call u_grad_f%initialise( adv_field%get_function_space() )
+    call advective_av%initialise( vector_space = w1_fs )
+    call ls_advective_av%initialise( vector_space = w1_fs )
+    call advective_av_chi3%initialise( vector_space = w1_fs )
+    if ( consistent_metric ) then
+      call wt_metrics%initialise(vector_space = wt_fs )
+    end if
+
+    advective_stencil_extent => get_adv_stencil_extent(mesh_id)
+    advective2d_stencil_size => get_adv_2d_stencil_size(mesh_id)
+    adv_coeffs => get_adv_coeffs(mesh_id)
+    vert_adv_coeffs => get_vert_adv_coeffs(mesh_id)
+    ndata_h => get_adv_ndata_h(mesh_id)
+    ndata_v => get_adv_ndata_v(mesh_id)
+
+    if (consistent_metric) chi3_at_wt => get_chi3_at_wt(mesh_id)
+
+    select case(operators)
+
+    case default
+      call log_event( "TL: Unrecognized option for operator.", LOG_LEVEL_ERROR )
+
+    case(operators_fv)
+      ! ------------------------------------------------------------------
+      !                     Linearisation state
+      ! ------------------------------------------------------------------
+      call invoke( setval_c(ls_advective_av, 0.0_r_def), &
+                   sample_field_kernel_type(ls_advective_av, w1_multiplicity, ls_adv_field) )
+      if ( consistent_metric ) then
+        call invoke( setval_c(advective_av_chi3, 0.0_r_def), &
+                     sample_field_kernel_type(advective_av_chi3, w1_multiplicity, chi3_at_wt) )
+      end if
+
+      if ( oned_reconstruction ) then
+        call invoke( poly1d_adv_recon_kernel_type(                             &
+                                              ls_advective_av,                 &
+                                              ls_wind, ls_adv_field,           &
+                                              advective_stencil_extent,        &
+                                              adv_coeffs,                      &
+                                              ndata_h,                         &
+                                              fv_advective_order ) )
+        ! Horizontal advection of metric terms
+        if ( consistent_metric ) then
+          call invoke( poly1d_adv_recon_kernel_type(                           &
+                                              advective_av_chi3,               &
+                                              ls_wind, chi3_at_wt,             &
+                                              advective_stencil_extent,        &
+                                              adv_coeffs,                      &
+                                              ndata_h,                         &
+                                              fv_advective_order ) )
+
+        end if
+      else
+        ! Use 2d reconstruction
+        call invoke( poly2d_adv_recon_kernel_type( ls_advective_av, ls_wind,      &
+                                                   ls_adv_field,                  &
+                                                   advective_stencil_extent,      &
+                                                   adv_coeffs, ndata_h,           &
+                                                   advective2d_stencil_size ) )
+
+        ! Horizontal advection of metric terms
+        if ( consistent_metric ) then
+          call invoke( poly2d_adv_recon_kernel_type( advective_av_chi3, ls_wind, chi3_at_wt, &
+                                                     advective_stencil_extent,               &
+                                                     adv_coeffs, ndata_h,                    &
+                                                     advective2d_stencil_size ) )
+        end if
+      end if
+
+      call ls_wind%copy_field(ls_consistent_wind)
+      if ( consistent_metric ) then
+        chi => get_coordinates(ls_wind%get_mesh_id())
+        call invoke( poly_advective_kernel_type(wt_metrics, ls_wind, advective_av_chi3), &
+        ! Modify advecting wind
+                     consistent_wind_kernel_type(ls_consistent_wind, ls_wind, wt_metrics, chi) )
+      end if
+
+      ! ------------------------------------------------------------------
+      !                     Perturbation
+      ! ------------------------------------------------------------------
+
+      call invoke( setval_c(advective_av, 0.0_r_def), &
+                   sample_field_kernel_type(advective_av, w1_multiplicity, adv_field) )
+
+      if ( oned_reconstruction ) then
+        call invoke( poly1d_adv_recon_kernel_type(                             &
+                                              advective_av,                    &
+                                              ls_wind, adv_field,              &
+                                              advective_stencil_extent,        &
+                                              adv_coeffs,                      &
+                                              ndata_h,                         &
+                                              fv_advective_order ) )
+      else
+        ! Use 2d reconstruction
+        ! Perturbation
+        call invoke( poly2d_adv_recon_kernel_type( advective_av, ls_wind,         &
+                                                   adv_field,                     &
+                                                   advective_stencil_extent,      &
+                                                   adv_coeffs, ndata_h,           &
+                                                   advective2d_stencil_size ) )
+      end if
+
+      ! Compute horizontal advective update
+      call invoke( tl_poly_advective_kernel_type(u_grad_f, wind, advective_av, &
+                                                 ls_wind, ls_advective_av) )
+      call wind%copy_field(consistent_wind)
+      if ( consistent_metric ) then
+        chi => get_coordinates(wind%get_mesh_id())
+        call invoke( consistent_wind_kernel_type(consistent_wind, wind, wt_metrics, chi) )
+      end if
+
+      ! Compute vertical component of advective update
+      call invoke( tl_poly1d_vert_adv_kernel_type( u_grad_f, consistent_wind, adv_field, &
+                                                   ls_consistent_wind, ls_adv_field,     &
+                                                   vert_adv_coeffs, ndata_v,             &
+                                                   fv_advective_order,                   &
+                                                   logspace_loc ) )
+
+    case(operators_fem)
+      call log_event( "TL: fem not available", LOG_LEVEL_ERROR )
+    end select
+
+    ! Apply monotonicity (as if this is a full timestep)
+    if ( enforce_monotonicity ) then
+      call log_event( "TL: enforce monotonicity not available", LOG_LEVEL_ERROR )
+    end if
+
+    call invoke( X_times_Y(rhs, u_grad_f, mt_lumped_inv) )
+
+    nullify( chi, mt_lumped_inv, reference_element, mesh )
+    nullify( advective_stencil_extent, advective2d_stencil_size, adv_coeffs, &
+             vert_adv_coeffs, ndata_h, ndata_v )
+
+  end subroutine tl_advective_update_alg
+
+end module tl_advective_update_alg_mod

@@ -38,8 +38,10 @@ module gungho_driver_mod
                                          LOG_LEVEL_ALWAYS,  &
                                          LOG_LEVEL_INFO
   use variable_fields_mod,        only : update_variable_fields
+#ifdef COUPLED
   use esm_couple_config_mod,      only : l_esm_couple_test
   use coupler_mod,                only : l_esm_couple, cpl_snd, cpl_rcv
+#endif
 
   implicit none
 
@@ -104,11 +106,13 @@ contains
                            mesh_id, &
                            model_data )
 
+#ifdef COUPLED
     ! Placeholder for ESM coupling initialisation code.
     ! Check we have a value for related namelist control variable
     write(log_scratch_space,'(A,L1)') program_name//': Couple flag l_esm_couple_test: ', &
                                      l_esm_couple_test
     call log_event(log_scratch_space, LOG_LEVEL_INFO)
+#endif
 
 
   end subroutine initialise
@@ -120,16 +124,21 @@ contains
   subroutine run()
 
     implicit none
+
+#ifdef COUPLED
     integer(i_def)             :: cpl_step
+#endif
     class(clock_type), pointer :: clock
 
     write(log_scratch_space,'(A)') 'Running '//program_name//' ...'
     call log_event( log_scratch_space, LOG_LEVEL_ALWAYS )
 
+#ifdef COUPLED
     if(l_esm_couple) then
       write(log_scratch_space,'(A)') 'Configuration is coupled'
       call log_event( log_scratch_space, LOG_LEVEL_ALWAYS )
     endif
+#endif
 
     clock => io_context%get_clock()
     do while (clock%tick())
@@ -139,6 +148,8 @@ contains
       ! and will be re-instated in a later ticket
       !call update_variable_fields( model_data%ancil_times_list, &
       !                             clock, model_data%ancil_fields )
+
+#ifdef COUPLED
       if(l_esm_couple) then
 
          cpl_step = clock%get_step() - clock%get_first_step()
@@ -151,6 +162,7 @@ contains
          CALL cpl_snd(model_data%cpl_snd, model_data%depository, clock, cpl_step)
 
       endif
+#endif
 
       if ( lbc_option == lbc_option_file ) then
 

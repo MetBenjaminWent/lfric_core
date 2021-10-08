@@ -171,7 +171,6 @@ subroutine tl_kinetic_energy_gradient_code(nlayers,       &
 
     ! Perturbation - values at dofs
     do df = 1, ndf_w2
-      u_e(df) = 0.0_r_def
       u_e(df) = u( map_w2(df) + k )
     end do
 
@@ -186,7 +185,7 @@ subroutine tl_kinetic_energy_gradient_code(nlayers,       &
         do df = 1, ndf_w2
           ls_u_at_quad(:) = ls_u_at_quad(:) &
                           + ls_u_e(df) * w2_basis(:,df,qp1,qp2)
-        enddo
+        end do
 
         ! Perturbation - values at quadrature points
         u_at_quad(:) = 0.0_r_def
@@ -196,14 +195,12 @@ subroutine tl_kinetic_energy_gradient_code(nlayers,       &
         end do
 
         ! Calculation
-        ke_at_quad = 0.0_r_def
         ke_at_quad = dot_product( &
                      matmul( jac(:,:,qp1,qp2), ls_u_at_quad ), &
                      matmul( jac(:,:,qp1,qp2), u_at_quad ) )   &
                      / ( dj(qp1,qp2)**2 )
 
         do df = 1, ndf_w2
-          dv = 0.0_r_def
           dv = w2_diff_basis(1,df,qp1,qp2)
           ru_e(df) = ru_e(df) +  wqp_h(qp1) * wqp_v(qp2) * &
                                  dv * ke_at_quad

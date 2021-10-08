@@ -24,7 +24,8 @@ module linear_model_data_mod
   use fs_continuity_mod,              only : W2, W3, WTheta
   use linear_config_mod,              only : ls_option,         &
                                              ls_option_analytical
-  use linear_data_algorithm_mod,      only : linear_copy_model_to_ls
+  use linear_data_algorithm_mod,      only : linear_copy_model_to_ls, &
+                                             linear_init_pert_random
   use log_mod,                        only : log_event,         &
                                              log_scratch_space, &
                                              LOG_LEVEL_INFO,    &
@@ -34,7 +35,8 @@ module linear_model_data_mod
 
   public linear_create_ls,        &
          linear_setup_ls_field,   &
-         linear_init_ls
+         linear_init_ls,          &
+         linear_init_pert
 
 contains
 
@@ -90,7 +92,7 @@ contains
         name = trim('ls_' // adjustl(mr_names(imr)) )
         call linear_setup_ls_field( &
              name, depository, ls_fields, Wtheta, mesh_id, mr=ls_mr, imr=imr )
-      enddo
+      end do
 
       do imr = 1, num_moist_factors
         write(moist_dyn_name, "(A12, I1)") "ls_moist_dyn", imr
@@ -103,7 +105,7 @@ contains
     else
       call log_event( "LS setup not available for requested ls_option ", &
            LOG_LEVEL_ERROR)
-    endif
+    end if
 
   end subroutine linear_create_ls
 
@@ -146,7 +148,7 @@ contains
     else
       call new_field%initialise( field_space, name=trim(name) )
       call depository%add_field(new_field)
-    endif
+    end if
 
     ! Add the field pointer to the target field collection
     abs_fld_ptr => depository%get_field(name)
@@ -175,8 +177,6 @@ contains
     integer(i_def),                  intent(in)    :: twod_mesh_id
     type( model_data_type ), target, intent(inout) :: model_data
     class(clock_type),               intent(in)    :: clock
-    type( field_type ), pointer                    :: mr(:) => null()
-    type( field_type ), pointer                    :: moist_dyn(:) => null()
 
     integer :: i
     type( field_type ), pointer                    :: ls_field => null()
@@ -197,14 +197,14 @@ contains
                           twod_mesh_id, &
                           model_data,   &
                           clock )
-      enddo
+      end do
 
       ! Copy the prognostic fields to the LS and then zero the prognostics.
       call linear_copy_model_to_ls( model_data )
 
     else
      call log_event('This ls_option not available', LOG_LEVEL_ERROR)
-    endif
+    end if
 
     ! Print the min and max values of the linearisation fields.
     ls_field => model_data%ls_fields%get_field("ls_u")
@@ -220,5 +220,24 @@ contains
     call ls_field%log_minmax(LOG_LEVEL_INFO,'ls_theta')
 
   end subroutine linear_init_ls
+
+  !> @brief   Define the initial perturbation values.
+  !> @details Define the initial perturbation - currently from random data
+  !> @param[in]    mesh_id      The identifier given to the current 3d mesh
+  !> @param[in]    twod_mesh_id The identifier given to the current 2d mesh
+  !> @param[inout] model_data   The working data set for a model run
+  subroutine linear_init_pert( mesh_id, twod_mesh_id, model_data )
+
+    implicit none
+
+    integer(i_def),                  intent(in)    :: mesh_id
+    integer(i_def),                  intent(in)    :: twod_mesh_id
+    type( model_data_type ), target, intent(inout) :: model_data
+
+    call linear_init_pert_random( mesh_id,      &
+                                  twod_mesh_id, &
+                                  model_data )
+
+  end subroutine linear_init_pert
 
 end module linear_model_data_mod

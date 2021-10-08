@@ -39,7 +39,9 @@ module create_gungho_prognostics_mod
                                              write_diag,      &
                                              checkpoint_read, &
                                              checkpoint_write
+#ifdef COUPLED
   use coupler_mod,                    only : l_esm_couple
+#endif
   implicit none
 
   private
@@ -81,6 +83,8 @@ contains
     ! Temp fields to create prognostics
     type( field_type )                         :: u, rho, theta, exner
 
+    logical                                    :: create_depository
+
     call log_event( 'GungHo: Creating prognostics...', LOG_LEVEL_INFO )
 
     ! Create the depository, prognostics and diagnostics field collections.
@@ -89,7 +93,16 @@ contains
 !>       currently used. This routine should return to original version
 !>       when cpl_define can be called in any place in the code.
 !>       See #2710 test branch for details.
-    if(.not.l_esm_couple) then
+
+    create_depository = .true.
+
+#ifdef COUPLED
+    if(l_esm_couple) then
+      create_depository = .false.
+    endif
+#endif
+
+    if (create_depository) then
        depository = field_collection_type(name='depository')
        prognostic_fields = field_collection_type(name="prognostics")
     endif

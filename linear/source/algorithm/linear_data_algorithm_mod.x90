@@ -6,7 +6,7 @@
 !>@brief  Additional code to initialise the linearisation state.
 module linear_data_algorithm_mod
 
-  use constants_mod,                  only: i_def
+  use constants_mod,                  only: i_def, r_def
   use gungho_model_data_mod,          only: model_data_type
   use field_mod,                      only: field_type
   use field_collection_mod,           only: field_collection_type
@@ -20,7 +20,8 @@ module linear_data_algorithm_mod
   implicit none
 
   private
-  public linear_copy_model_to_ls
+  public linear_copy_model_to_ls, &
+         linear_init_pert_random
 
   contains
 
@@ -73,15 +74,60 @@ module linear_data_algorithm_mod
     do imr = 1, nummr
       call invoke( setval_X( ls_mr(imr), mr(imr) ) , &
                    setval_C( mr(imr), 0.0_r_def) )
-    enddo
+    end do
 
     ls_moist_dyn => model_data%ls_moist_dyn
     moist_dyn => model_data%moist_dyn
     do imr = 1, num_moist_factors
       call invoke( setval_X( ls_moist_dyn(imr), moist_dyn(imr) ) , &
                    setval_C( moist_dyn(imr), 0.0_r_def) )
-    enddo
+    end do
 
   end subroutine linear_copy_model_to_ls
+
+  subroutine linear_init_pert_random( mesh_id, twod_mesh_id, model_data )
+
+    use assign_field_random_kernel_mod, only: assign_field_random_kernel_type
+
+    implicit none
+
+    integer(i_def),                  intent(in)    :: mesh_id
+    integer(i_def),                  intent(in)    :: twod_mesh_id
+    type( model_data_type ), target, intent(inout) :: model_data
+
+    integer :: i
+    type( field_type ), pointer                    :: field => null()
+    type( field_type ), pointer                    :: moist_dyn(:) => null()
+    real(r_def) :: gamma_u, gamma_rho, gamma_exner, gamma_theta, gamma_moist_dyn
+
+    gamma_u = 1.e4
+    gamma_theta = 1.e2
+    gamma_rho = 1.e-1
+    gamma_exner = 1.e-1
+    gamma_moist_dyn=1.e-1
+
+    field => model_data%prognostic_fields%get_field("u")
+    call invoke( assign_field_random_kernel_type( field ))
+    call invoke( inc_a_times_X( gamma_u, field ))
+
+    field => model_data%prognostic_fields%get_field("rho")
+    call invoke( assign_field_random_kernel_type( field ))
+    call invoke( inc_a_times_X( gamma_rho, field ))
+
+    field => model_data%prognostic_fields%get_field("theta")
+    call invoke( assign_field_random_kernel_type( field ))
+    call invoke( inc_a_times_X( gamma_theta, field ))
+
+    field => model_data%prognostic_fields%get_field("exner")
+    call invoke( assign_field_random_kernel_type( field ))
+    call invoke( inc_a_times_X( gamma_exner, field ))
+
+    moist_dyn         => model_data%moist_dyn
+    do i = 1, num_moist_factors
+      call invoke( assign_field_random_kernel_type( moist_dyn(i) ) )
+      call invoke( inc_a_times_X( gamma_moist_dyn, field ))
+    end do
+
+  end subroutine linear_init_pert_random
 
 end module linear_data_algorithm_mod

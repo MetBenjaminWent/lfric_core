@@ -26,15 +26,23 @@ module tl_test_convergence_rate_check
   !> @param[in] norm_diff       Norm at first iteration
   !> @param[in] norm_diff_prev  Norm at second iteration
   !> @param[in] label           Name of the code being tested
-  subroutine convergence_rate_check( norm_diff, norm_diff_prev, label )
+  !> @param[in] tol             Tolerance value
+  subroutine convergence_rate_check( norm_diff, norm_diff_prev, label, tol )
 
     implicit none
 
-    real(r_def),         intent(in) :: norm_diff, norm_diff_prev
-    character(str_def) , intent(in) :: label
-    real(r_def), parameter :: tolerance=1.0E-8
+    real(r_def),           intent(in) :: norm_diff, norm_diff_prev
+    character(str_def),    intent(in) :: label
+    real(r_def), optional, intent(in) :: tol
+    real(r_def) :: tolerance
     real(r_def) :: conv_rate
     character(len=4) :: pass_str
+
+    if ( present(tol) ) then
+      tolerance = tol
+    else
+      tolerance = 1.0E-8_r_def
+    end if
 
     conv_rate =  norm_diff_prev/ norm_diff
 
@@ -49,7 +57,7 @@ module tl_test_convergence_rate_check
       pass_str = "PASS"
     else
       pass_str = "FAIL"
-    endif
+    end if
 
     write(log_scratch_space,'("   test",A32," : ",A4)') trim(label), pass_str
     call log_event( log_scratch_space, LOG_LEVEL_INFO )

@@ -1,0 +1,822 @@
+!-----------------------------------------------------------------------------
+! (c) Crown copyright 2021 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
+
+!> @brief Wrapper for computing the tangent linear advection
+module tl_advection_alg_mod
+
+  use constants_mod,                  only: r_def, i_def, l_def, str_def, tiny_eps
+  use log_mod,                        only: log_event,         &
+                                            log_scratch_space, &
+                                            LOG_LEVEL_ERROR,   &
+                                            LOG_LEVEL_INFO
+  use enforce_bc_kernel_mod,          only: enforce_bc_kernel_type
+  use geometric_constants_mod,        only: get_coordinates,                &
+                                            get_panel_id,                   &
+                                            get_cell_orientation,           &
+                                            get_dA_at_w2,                   &
+                                            get_height
+  use runtime_constants_mod,          only: get_shifted_mesh_id,            &
+                                            get_double_level_mesh_id
+  use fem_constants_mod,              only: get_div,                        &
+                                            get_mass_matrix,                &
+                                            get_mass_matrix_diagonal,       &
+                                            get_inverse_lumped_mass_matrix, &
+                                            get_inverse_W3_mass_matrix,     &
+                                            get_detj_at_w2
+  use intermesh_constants_mod,        only: get_mr_to_sh_mass_integrals
+  use field_mod,                      only: field_type
+  use function_space_collection_mod,  only: function_space_collection
+  use function_space_mod,             only: function_space_type
+  use fs_continuity_mod,              only: W3, Wtheta, W2
+  use matrix_vector_kernel_mod,       only: matrix_vector_kernel_type
+  use dg_matrix_vector_kernel_mod,    only: dg_matrix_vector_kernel_type
+  use operator_mod,                   only: operator_type
+  use mass_matrix_solver_alg_mod,     only: mass_matrix_solver_alg
+  use derived_config_mod,             only: bundle_size
+  use transport_config_mod,           only: operators,    &
+                                            operators_fv, &
+                                            log_rho,      &
+                                            log_theta
+  use mr_indices_mod,                 only: nummr
+  use planet_config_mod,              only: recip_epsilon
+  use timestepping_config_mod,        only: dt, beta
+  use runge_kutta_init_mod,           only: num_rk_stage, ak
+  use field_indices_mod,              only: igh_u, igh_t, igh_d, igh_p
+  use io_config_mod,                  only: subroutine_timers
+  use timer_mod,                      only: timer
+  use timestepping_config_mod,        only: time_method => method,          &
+                                            method_rk,                      &
+                                            method_semi_implicit
+  use cosmic_threed_alg_mod,          only: cosmic_threed_transport_step,   &
+                                            cosmic_threed_advective_step
+  use calc_dep_pts_alg_mod,           only: calc_dep_pts
+  use transport_config_mod,           only: scheme,                         &
+                                            scheme_cosmic_3D,               &
+                                            scheme_method_of_lines,         &
+                                            rho_splitting,                  &
+                                            rho_splitting_none,             &
+                                            rho_splitting_vh,               &
+                                            rho_splitting_hv,               &
+                                            rho_splitting_strang,           &
+                                            theta_splitting,                &
+                                            theta_splitting_none,           &
+                                            theta_splitting_vh,             &
+                                            theta_splitting_hv,             &
+                                            theta_splitting_strang,         &
+                                            cfl_control_stab,               &
+                                            use_density_predictor
+  use formulation_config_mod,         only: moisture_conservation,          &
+                                            si_momentum_equation,           &
+                                            transport_only,                 &
+                                            vector_invariant
+  use advective_update_alg_mod,       only: advective_update_alg_init,      &
+                                            advective_update_alg_final,     &
+                                            advective_update_alg
+  use tl_advective_update_alg_mod,    only: tl_advective_update_alg_init,   &
+                                            tl_advective_update_alg_final,  &
+                                            tl_advective_update_alg
+  use flux_alg_mod,                   only: flux_alg
+  use split_mol_cosmic_alg_mod,       only: split_transport_rho_step
+  use rk_transport_rho_mod,           only: rk_transport_rho_init
+  use rk_transport_theta_mod,         only: rk_transport_theta_init
+  use split_transport_theta_mod,      only: split_transport_theta_step
+  use split_slice_mol_alg_mod,        only: split_slice_mol_transport
+  use tl_flux_alg_mod,                only: tl_flux_alg_init,               &
+                                            tl_flux_alg_final,              &
+                                            tl_flux_alg
+
+  implicit none
+
+  private
+
+  integer(kind=i_def) :: nummr_to_advect
+
+  public :: tl_advection_alg_init
+  public :: tl_advection_alg_final
+  public :: tl_advection_alg
+  public :: tl_advect_momentum_alg
+  public :: tl_advect_field
+
+contains
+
+  !> @brief Initialises the system for the tangent linear advection algorithm.
+  !>
+  !> @param[in] mesh_id Identity of the mesh to create all fields on
+  !>
+  subroutine tl_advection_alg_init( mesh_id )
+
+    implicit none
+
+    integer(i_def),  intent(in) :: mesh_id
+
+    ! In transport_only mode we transport just a single moisture species
+    if (transport_only) then
+      nummr_to_advect = 1
+    else
+      nummr_to_advect = nummr
+    end if
+
+    ! Set up the mass flux spatial computation
+
+    call tl_flux_alg_init(mesh_id)
+
+    if ( rho_splitting /= rho_splitting_none ) then
+      call log_event("Tangent linear not available for rho_splitting /=none", LOG_LEVEL_ERROR)
+    end if
+    if ( moisture_conservation ) then
+      call log_event("Tangent linear not available for moisture conservation", LOG_LEVEL_ERROR)
+    end if
+
+    ! Set up the advective update spatial computation
+    call tl_advective_update_alg_init(mesh_id)
+    if ( theta_splitting /= theta_splitting_none   ) then
+     call log_event("Tangent linear not available for theta_splitting /=none", LOG_LEVEL_ERROR)
+    end if
+
+  end subroutine tl_advection_alg_init
+
+  !>@brief Finalises allocatable arrays, nullifies pointer in module scope
+  !>         and calls finalising routines for kernels that this algorithm
+  !>         initialised.
+  subroutine tl_advection_alg_final()
+
+    implicit none
+
+    call tl_flux_alg_final()
+
+    call tl_advective_update_alg_final()
+
+  end subroutine tl_advection_alg_final
+
+  !>@details A wrapper algorithm for computing the tangent linear for the
+  !!         advection of the prognostic equations.
+  !> @param[in,out] advection     ACTIVE Advective terms
+  !> @param[in]     state         ACTIVE Change of the model prognostics
+  !> @param[in]     wind_n        ACTIVE Change in Wind field at timestep n
+  !> @param[in]     wind_np1      ACTIVE Change in Latest estimate of wind
+  !!                              field at timestep n+1
+  !> @param[in]     advected_wind ACTIVE Change in predictor for the wind to
+  !!                              be advected
+  !> @param[in]     ls_state      Linearisation state of the model prognostics
+  !> @param[in]     ls_wind_n     Linearisation state for wind field at
+  !!                              timestep n
+  !> @param[in]     ls_wind_np1   Linearisation state for the latest estimate
+  !!                              of wind field at timestep n+1
+  !> @param[in]     ls_advected_wind Linearisation state for predictor for
+  !!                              the wind to be advected
+  !> @param[in]     dt_step       timestep length of step
+  !> @param[in]     n_substep     number of steps
+  subroutine tl_advection_alg( advection,           &
+                               state,               &
+                               wind_n,              &
+                               wind_np1,            &
+                               advected_wind,       &
+                               ls_state,            &
+                               ls_wind_n,           &
+                               ls_wind_np1,         &
+                               ls_advected_wind,    &
+                               dt_step, n_substeps )
+
+  implicit none
+
+  type(field_type), intent(inout) :: advection(bundle_size)
+  type(field_type), intent(in)    :: state(bundle_size)
+  type(field_type), intent(in)    :: wind_n
+  type(field_type), intent(in)    :: wind_np1
+  type(field_type), intent(in)    :: advected_wind
+  type(field_type), intent(in)    :: ls_state(bundle_size)
+  type(field_type), intent(in)    :: ls_wind_n
+  type(field_type), intent(in)    :: ls_wind_np1
+  type(field_type), intent(in)    :: ls_advected_wind
+  real(r_def),      intent(in)    :: dt_step
+  integer(i_def),   intent(in)    :: n_substeps
+
+  type(operator_type), pointer :: mm_wt         => null(), &
+                                  mm_w3_inv     => null(), &
+                                  div           => null()
+  type(field_type),    pointer :: mt_lumped_inv => null()
+  type(field_type)             :: r_rho,                   &
+                                  u_grad_theta,            &
+                                  mass_flux,               &
+                                  advecting_wind
+  type(field_type)             :: ls_r_rho,                &
+                                  ls_mass_flux,            &
+                                  ls_advecting_wind
+  type(field_type) :: field, field_inc, field_old, mass_flux_i
+  type(field_type) :: ls_field
+  integer(i_def)   :: sub_step_count
+  integer(i_def)   :: mesh_id
+
+  real(r_def) :: dt_substep, dt_fraction
+
+  if ( subroutine_timers ) call timer('advection_alg')
+
+  mesh_id = wind_n%get_mesh_id()
+
+  ! substepping timesteps
+  dt_fraction = 1.0_r_def/real(n_substeps, r_def)
+  dt_substep = dt_step*dt_fraction
+
+  ! Construct fields needed for advection
+  call advecting_wind%initialise( state(igh_u)%get_function_space() )
+  call mass_flux%initialise( state(igh_u)%get_function_space() )
+  call r_rho%initialise( state(igh_d)%get_function_space() )
+  call ls_advecting_wind%initialise( state(igh_u)%get_function_space() )
+  call ls_mass_flux%initialise( state(igh_u)%get_function_space() )
+  call ls_r_rho%initialise( state(igh_d)%get_function_space() )
+
+  ! Linearisation state: Set advecting velocity = 0.5(u_np1 + u_n)
+  call invoke( aX_plus_bY(ls_advecting_wind, 0.5_r_def, ls_wind_n, &
+                                             0.5_r_def, ls_wind_np1) )
+
+
+  ! Perturbation: Set advecting velocity = 0.5(u_np1 + u_n)
+  call invoke( aX_plus_bY(advecting_wind, 0.5_r_def, wind_n, &
+                                          0.5_r_def, wind_np1) )
+
+  ! Advect density field
+  call log_event( "Advecting density...", LOG_LEVEL_INFO)
+  if ( scheme == scheme_method_of_lines ) then
+
+    if ( rho_splitting /= rho_splitting_none  ) then
+
+      call tl_advect_field( advection(igh_d), state(igh_d), advecting_wind, &
+                            ls_state(igh_d), ls_advecting_wind, scheme,     &
+                            wind_n, wind_np1, advect_density=.true.,        &
+                            timestep=dt, si_advective_terms=.false.,        &
+                            density_predictor=use_density_predictor,        &
+                            logspace=.false., dt=dt_step )
+    else
+      ! Reconstruct the advection increment from the mass flux
+     call ls_state(igh_d)%copy_field(ls_field)
+
+     call state(igh_d)%copy_field(field)
+     call field_inc%initialise( field%get_function_space() )
+     call mass_flux_i%initialise( state(igh_u)%get_function_space() )
+     call invoke(setval_c(mass_flux, 0.0_r_def), &
+                 setval_c(mass_flux_i, 0.0_r_def), &
+                 setval_c(advection(igh_d), 0.0_r_def))
+     mm_w3_inv => get_inverse_w3_mass_matrix(mesh_id)
+     div       => get_div(mesh_id)
+
+     do sub_step_count = 1, n_substeps
+
+       if (n_substeps > 1) then
+         call log_event("Tangent linear only for n_substeps=1", LOG_LEVEL_ERROR)
+       end if
+
+       call field%copy_field(field_old)
+       call tl_advect_field( mass_flux_i, field, advecting_wind,              &
+                             ls_field, ls_advecting_wind, scheme,             &
+                             wind_n, wind_np1, advect_density=.true.,         &
+                             timestep=dt_substep, si_advective_terms=.false., &
+                             density_predictor=use_density_predictor,         &
+                             logspace=log_rho, dt=dt_step )
+
+       call invoke( setval_c(r_rho, 0.0_r_def),                         &
+                    matrix_vector_kernel_type(r_rho, mass_flux_i, div), &
+                    inc_a_times_X(-1.0_r_def, r_rho),                   &
+                    dg_matrix_vector_kernel_type(field_inc,             &
+                                                 r_rho, mm_w3_inv),     &
+                    ! update the mass flux and increment
+                    inc_X_plus_bY(mass_flux, dt_fraction, mass_flux_i),      &
+                    inc_X_plus_bY(advection(igh_d), dt_fraction, field_inc), &
+                    ! update the field
+                    aX_plus_Y(field, dt_substep, field_inc, field_old)       &
+                   )
+     end do
+   end if
+  else
+    ! Cosmic computes the advection increment instead of the mass flux
+    call log_event("No Tangent linear for cosmic", LOG_LEVEL_ERROR)
+  end if
+
+  ! Advect potential temperature field
+  ! Cosmic is not yet implemented and so must use method of lines scheme
+  call log_event( "Advecting potential temperature...", LOG_LEVEL_INFO)
+  call u_grad_theta%initialise( state(igh_t)%get_function_space() )
+
+  call invoke(setval_c(u_grad_theta, 0.0_r_def))
+  call state(igh_t)%copy_field(field)
+  call ls_state(igh_t)%copy_field(ls_field)
+  do sub_step_count = 1, n_substeps
+
+    if (n_substeps > 1) then
+      call log_event("Tangent linear only for n_substeps=1", LOG_LEVEL_ERROR)
+    end if
+
+    call field%copy_field(field_old)
+    call field_inc%initialise( field%get_function_space() )
+    call tl_advect_field( field_inc, field, advecting_wind,                &
+                          ls_field, ls_advecting_wind,                     &
+                          scheme_method_of_lines,                          &
+                          wind_n, wind_np1, advect_density=.false.,        &
+                          timestep=dt_substep, si_advective_terms=.false., &
+                          density_predictor=.false.,                       &
+                          logspace=log_theta, dt=dt_step )
+
+    call invoke( aX_plus_Y(field, dt_substep, field_inc, field_old), &
+                 inc_X_plus_bY(u_grad_theta, dt_fraction, field_inc) &
+                 )
+  end do
+  ! u_grad_theta now contains a pointwise incremente to theta,
+  ! i.e. theta_np1 = theta_n - dt*u_grad_theta
+  ! Depending upon what the temporal discretisation is this needs
+  ! converting into the a weak form, either by cancelling out the
+  ! lumped mass matrix used to advect it or by multiplying by the
+  ! full mass matrix
+  if ( operators == operators_fv ) then
+    if ( time_method == method_rk ) then
+      ! Solve equation in pointwise form (fully fv equation)
+      call invoke( setval_X(advection(igh_t), u_grad_theta) )
+    else
+      ! Convert equation from pointwise form to weak form (fully fem equation)
+      mm_wt => get_mass_matrix(Wtheta, mesh_id)
+      call invoke( setval_c(advection(igh_t), 0.0_r_def), &
+                   matrix_vector_kernel_type(advection(igh_t), u_grad_theta, mm_wt) )
+    end if
+  else
+    ! Cancel out the lumped mass matrix used to advect theta
+    mt_lumped_inv => get_inverse_lumped_mass_matrix(Wtheta, mesh_id)
+    call invoke( X_divideby_Y(advection(igh_t), u_grad_theta, &
+                              mt_lumped_inv) )
+  end if
+
+  if ( si_momentum_equation ) then
+    ! Advection terms are handled by the semi-implicit scheme the increment is zero
+    call invoke( setval_c(advection(igh_u), 0.0_r_def) )
+  else
+    ! Advect wind field
+    call log_event( "Advecting wind...", LOG_LEVEL_INFO)
+    call tl_advect_momentum_alg(advection(igh_u), advected_wind, &
+                                advecting_wind,                  &
+                                ls_advected_wind,                &
+                                ls_advecting_wind,               &
+                                wind_n, wind_np1,                &
+                                dt, n_substeps, .false.)
+  end if
+
+  ! Don't advect Exner pressure
+  call invoke( setval_c(advection(igh_p), 0.0_r_def) )
+
+  nullify(mm_wt, mm_w3_inv, div,  mt_lumped_inv)
+
+  if ( subroutine_timers ) call timer('advection_alg')
+
+  end subroutine tl_advection_alg
+
+  !============================================================================!
+  !> @brief Tangent linear: Use MoL reconstruction to compute advective form
+  !!        update of momentum
+  !!        equations by advecting each vector component as a scalar. Splits
+  !!        the wind into 3 scalar components and then advects them separately.
+  !> @param[in,out] rhs               Change in Momentum advection increment
+  !> @param[in]     advected_wind     Change in Wind field to advect
+  !> @param[in]     advecting_wind    Change in Advecting wind field
+  !> @param[in]     ls_advected_wind  Lin state for Wind field to advect
+  !> @param[in]     ls_advecting_wind Lin state for Advecting wind field
+  !> @param[in]     wind_n            Time level n wind field
+  !> @param[in]     wind_np1          Time level n+1 wind field
+  !> @param[in]     dt_step           timestep length of step
+  !> @param[in]     n_substep         number of steps
+  !> @param[in]     from_si           Flag if calling this routine from
+  !!                                  semi-implicit (instead of advection)
+  !!                                  routines
+  subroutine tl_advect_momentum_alg( rhs, advected_wind, advecting_wind, &
+                                     ls_advected_wind, ls_advecting_wind, &
+                                     wind_n, wind_np1, dt_step, n_substeps, &
+                                     from_si )
+
+    use convert_hdiv_field_kernel_mod,  only: convert_hdiv_field_kernel_type
+    use project_advective_update_kernel_mod, &
+                                        only: project_advective_update_kernel_type
+    use finite_element_config_mod,      only: element_order, &
+                                              nqp_exact
+    use quadrature_rule_gaussian_mod,   only: quadrature_rule_gaussian_type
+    use quadrature_xyoz_mod,            only: quadrature_xyoz_type
+    use enforce_bc_kernel_mod,          only: enforce_bc_kernel_type
+
+    implicit none
+
+    type(field_type), intent(inout)     :: rhs
+    type(field_type), intent(in)        :: advected_wind, advecting_wind
+    type(field_type), intent(in)        :: ls_advected_wind, ls_advecting_wind
+    type(field_type), intent(in)        :: wind_n, wind_np1
+    real(r_def),      intent(in)        :: dt_step
+    integer(i_def),   intent(in)        :: n_substeps
+    logical(l_def),   intent(in)        :: from_si
+
+    type(field_type), dimension(3)      :: u_scalar, adv_wind_update
+    type(field_type), dimension(3)      :: ls_u_scalar
+    type( field_type ),        pointer  :: chi(:) => null()
+    type( field_type ),        pointer  :: panel_id => null()
+    type(function_space_type), pointer  :: ws_fs => null()
+    type(quadrature_xyoz_type)          :: qr
+    type(quadrature_rule_gaussian_type) :: quadrature_rule
+    integer(i_def)                      :: dir, mesh_id
+    type(field_type)                    :: field, field_inc, field_old
+    type(field_type)                    :: ls_field
+    integer(i_def)                      :: sub_step_count
+
+    ! Variables for substepping
+    real(r_def)      :: dt_substep, dt_fraction
+
+    if ( subroutine_timers ) call timer('momentum advection')
+
+    mesh_id = wind_n%get_mesh_id()
+
+    ! substepping timesteps
+    dt_fraction = 1.0_r_def/real(n_substeps, r_def)
+    dt_substep = dt_step*dt_fraction
+
+    ws_fs => function_space_collection%get_fs( mesh_id, element_order, W3 )
+
+    ! If not using vector invariant form then compute [ (u.grad)u ]
+    ! Compute u in physical space and advect components in geocentric
+    ! Cartesian coordinates and then map back to computational form
+    qr = quadrature_xyoz_type(nqp_exact, quadrature_rule)
+    chi => get_coordinates(mesh_id)
+    panel_id => get_panel_id(mesh_id)
+
+    ! Linearisation state - Compute updates on W3 points
+    do dir = 1,3
+      call ls_u_scalar(dir)%initialise( ws_fs )
+    end do
+    call invoke( setval_c(ls_u_scalar(1), 0.0_r_def), &
+                 setval_c(ls_u_scalar(2), 0.0_r_def), &
+                 setval_c(ls_u_scalar(3), 0.0_r_def), &
+                 convert_hdiv_field_kernel_type(ls_u_scalar,      &
+                                                ls_advected_wind, &
+                                                chi,              &
+                                                panel_id) )
+
+    ! Perturbation - Compute updates on W3 points
+    do dir = 1,3
+      call u_scalar(dir)%initialise( ws_fs )
+      call adv_wind_update(dir)%initialise( ws_fs )
+    end do
+    call advected_wind%log_minmax( LOG_LEVEL_INFO, 'advected u' )
+    call invoke( setval_c(u_scalar(1), 0.0_r_def), &
+                 setval_c(u_scalar(2), 0.0_r_def), &
+                 setval_c(u_scalar(3), 0.0_r_def), &
+                 convert_hdiv_field_kernel_type(u_scalar, advected_wind, &
+                                                chi, panel_id) )
+    call u_scalar(1)%log_minmax(LOG_LEVEL_INFO, 'xdot')
+    call u_scalar(2)%log_minmax(LOG_LEVEL_INFO, 'ydot')
+    call u_scalar(3)%log_minmax(LOG_LEVEL_INFO, 'zdot')
+
+    ! Compute reconstruction of each velocity component
+    do dir = 1,3
+      call ls_u_scalar(dir)%copy_field(ls_field)
+
+      call u_scalar(dir)%copy_field(field)
+      call invoke(setval_c(adv_wind_update(dir), 0.0_r_def))
+
+       if (n_substeps > 1) then
+         call log_event("Tangent linear only for n_substeps=1", LOG_LEVEL_ERROR)
+       end if
+
+      do sub_step_count = 1, n_substeps
+        call field%copy_field(field_old)
+        call field_inc%initialise( field%get_function_space() )
+        call tl_advect_field(field_inc, field, advecting_wind,                 &
+                        ls_field, ls_advecting_wind,                           &
+                        scheme, wind_n, wind_np1,                              &
+                        advect_density=.false., timestep=dt_substep,           &
+                        si_advective_terms=from_si, density_predictor=.false., &
+                        logspace=.false., dt=dt_step )
+
+        call invoke( aX_plus_Y(field, dt_substep, field_inc, field_old), &
+                     inc_X_plus_bY(adv_wind_update(dir), dt_fraction, field_inc) &
+                     )
+      end do
+    end do
+    ! Compute the updates to the W2 wind field using the physical scalar
+    ! update
+    call invoke( setval_c(rhs, 0.0_r_def),                                    &
+                 project_advective_update_kernel_type(rhs, adv_wind_update,   &
+                                                      chi, panel_id, qr),     &
+                 enforce_bc_kernel_type(rhs) )
+
+    nullify( ws_fs, chi, panel_id )
+    if ( subroutine_timers ) call timer('momentum advection')
+
+  end subroutine tl_advect_momentum_alg
+
+  !> @brief Tangent linear advection
+  !> @param[in,out] advection_inc      ACTIVE Update from advecting the field
+  !> @param[in]     field              ACTIVE Field to advect
+  !> @param[in]     advecting_wind     ACTIVE Advecting wind field
+  !> @param[in]     ls_field           Field to advect
+  !> @param[in]     ls_advecting_wind  Advecting wind field
+  !> @param[in]     adv_scheme         Scheme used to advect this field
+  !> @param[in]     wind_n             Time level n wind field
+  !> @param[in]     wind_np1           Time level n+1 wind field
+  !> @param[in]     advect_density     Flag for advecting the density and
+  !>                                   returning the mass flux
+  !> @param[in]     timestep           delta t to advect field by
+  !> @param[in]     si_advective_terms Flag to avoid using Runge-Kutta
+  !>                                   substepping
+  !> @param[in]     density_predictor  Flag for advecting the density
+  !>                                   predictor rho*[1-beta*dt*div(u)]
+  !> @param[in]     logspace           If true, then if scheme allows,
+  !>                                   do interpolation in log space
+  subroutine tl_advect_field( advection_inc, field, advecting_wind,           &
+                              ls_field, ls_advecting_wind, adv_scheme,        &
+                              wind_n, wind_np1, advect_density, timestep,     &
+                              si_advective_terms, density_predictor,          &
+                              logspace, dt )
+
+    use advective_wind_update_kernel_mod, &
+                                 only: advective_wind_update_kernel_type
+    use timestepping_config_mod, only: outer_iterations
+
+    implicit none
+
+    type(field_type), intent(inout) :: advection_inc
+    type(field_type), intent(in)    :: field
+    type(field_type), intent(in)    :: advecting_wind
+    type(field_type), intent(in)    :: wind_n, wind_np1
+    type(field_type), intent(in)    :: ls_field
+    type(field_type), intent(in)    :: ls_advecting_wind
+    integer(i_def),   intent(in)    :: adv_scheme
+    logical(l_def),   intent(in)    :: advect_density
+    real(r_def),      intent(in)    :: timestep
+    logical,          intent(in)    :: si_advective_terms
+    logical,          intent(in)    :: density_predictor
+    logical,          intent(in)    :: logspace
+    real(r_def),      intent(in)    :: dt
+
+    integer(i_def)                  :: mesh_id
+
+    ! For Method of Lines
+    type(operator_type), pointer  :: div => null(),      &
+                                     mm_w3_inv => null()
+    type(field_type)              :: flux,               &
+                                     rhs,                &
+                                     field_new,          &
+                                     field_inc,          &
+                                     ls_flux,            &
+                                     ls_rhs,             &
+                                     ls_field_inc,       &
+                                     unit_wind
+    type(field_type), allocatable :: ls_rk_rhs(:)
+    type(field_type), allocatable :: rk_rhs(:)
+    type(field_type), allocatable :: ls_field_new(:)
+    integer(i_def)                :: stage, s, function_space
+
+    integer(i_def)                :: nstage
+    real(r_def), allocatable      :: ak_adv(:,:)
+    real(r_def)                   :: inv_dt
+
+    mesh_id = field%get_mesh_id()
+
+    ! Function space of the field to be advected
+    function_space = field%which_function_space()
+
+    ! Linearisation state
+    call ls_flux%initialise( advecting_wind%get_function_space() )
+    call ls_rhs%initialise( field%get_function_space() )
+    call ls_field_inc%initialise( field%get_function_space() )
+
+    ! Perturbation
+    call flux%initialise( advecting_wind%get_function_space() )
+    call rhs%initialise( field%get_function_space() )
+    call field_inc%initialise( field%get_function_space() )
+    call field_new%initialise( field%get_function_space() )
+    call invoke( setval_c( field_new, 0.0_r_def) )
+    call field%copy_field( field_new )
+
+    div       => get_div(mesh_id)
+    mm_w3_inv => get_inverse_w3_mass_matrix(mesh_id)
+
+    if ( time_method == method_semi_implicit          &
+         .and. advect_density                         &
+         .and. .not. si_momentum_equation             &
+         .and. (rho_splitting == rho_splitting_none)  &
+         .and. density_predictor                      ) then
+       ! Advect predictor for the density: rho*divergence_factor with
+       ! divergence_factor = [1-beta*dt*div(u)]
+       ! This helps improve long timestep stability
+
+         call log_event("No Tangent linear for density predictor", &
+                         LOG_LEVEL_ERROR)
+    end if
+
+    if ( (  rho_splitting /= rho_splitting_none  ) .OR.  &
+         (theta_splitting /= theta_splitting_none)       ) then
+
+       call log_event("No Tangent linear for splitting", &
+                       LOG_LEVEL_ERROR)
+
+    end if
+
+    inv_dt = 1.0_r_def/timestep
+
+    if ( (rho_splitting /= rho_splitting_none) .AND. (function_space==W3) ) then
+      call log_event("No Tangent linear for rho_splitting", &
+                       LOG_LEVEL_ERROR)
+    else if( (theta_splitting /= theta_splitting_none) .AND. (function_space==Wtheta) ) then
+      call log_event("No Tangent linear for theta_splitting", &
+                       LOG_LEVEL_ERROR)
+    else
+
+       !
+       ! Use the original MOL or Cosmic methods
+       !
+     select case(adv_scheme)
+
+      case(scheme_method_of_lines)
+
+        if ( ( time_method == method_rk .and. .not. transport_only ) &
+              .or. si_advective_terms ) then
+        ! If using explicit timestepping then advection is called once per stage,
+        ! therefore no further sub stages are needed, setting number of stages = 1
+        ! and coeffs = 1 short cuts the rk advection scheme
+          nstage = 1
+          allocate( ak_adv( nstage, nstage ) )
+          ak_adv(1,1) = 1.0_r_def
+        else
+          nstage = num_rk_stage
+          allocate( ak_adv( nstage, nstage ) )
+          ak_adv = ak
+        end if
+        allocate( rk_rhs(nstage) )
+        allocate( ls_rk_rhs(nstage) )
+        allocate( ls_field_new(nstage+1) )
+
+        if ( function_space == W3 .and. .not. advect_density ) then
+          ! Compute unit wind to make flux alg return reconstructed
+          ! tracer instead of mass flux
+          call unit_wind%initialise( ls_advecting_wind%get_function_space() )
+          call invoke( sign_X(unit_wind, 1.0_r_def, ls_advecting_wind) )
+        end if
+
+        ! Use Runge-Kutta timestepping
+        ! The nonlinear model is:
+        !   y^i = y^n + dt sum_j^{i-1} a_{ij} f(y^j)
+        ! The tangent linear is:
+        !   y^i = y^n + dt sum_j^{i-1} a_{ij} tl_f (ls_y^j) y^j
+        ! so the linearisation state ls_y^j needs to be calculated first.
+
+!-------------------------------------------------------------------------
+!                    Linearisation state
+!
+!       This calculates the values of ls_field_new(stage), to use in the
+!       perturbation
+!-------------------------------------------------------------------------
+
+        call ls_field_new(1)%initialise( field%get_function_space() )
+        call ls_field%copy_field( ls_field_new(1) )
+
+        do stage = 1,nstage
+
+          call ls_rk_rhs(stage)%initialise( field%get_function_space() )
+          call ls_field_new(stage+1)%initialise( field%get_function_space() )
+
+          ! Build rhs depending upon type of field being advected
+          select case(function_space)
+            case(Wtheta)
+              call advective_update_alg(ls_rk_rhs(stage), ls_field_new(stage), &
+                                        ls_advecting_wind, timestep,    &
+                                        logspace=logspace )
+            case(W3)
+              ! Compute the flux using desired spatial reconstruction
+              call invoke( setval_c( ls_flux, 0.0_r_def ) )
+              if ( advect_density ) then
+                call flux_alg(ls_flux, ls_field_new(stage), &
+                              ls_advecting_wind, logspace=logspace )
+
+                ! Compute: -div(F)
+                call invoke( dg_matrix_vector_kernel_type(ls_rhs, ls_flux, div),  &
+                       dg_matrix_vector_kernel_type(ls_rk_rhs(stage), ls_rhs,     &
+                                                          mm_w3_inv) )
+              else
+                ! Compute the advective form increment, first the reconstructed tracer
+                call flux_alg(ls_flux, ls_field_new(stage), unit_wind, logspace=logspace)
+
+                ! Remove unit_wind term from flux and
+                ! Compute the advective update u.grad(f)
+                call invoke( inc_X_divideby_Y(ls_flux, unit_wind),                   &
+                             advective_wind_update_kernel_type(ls_rhs,               &
+                                                               ls_flux,              &
+                                                               ls_advecting_wind),   &
+                             dg_matrix_vector_kernel_type(ls_rk_rhs(stage), ls_rhs,  &
+                                                          mm_w3_inv) )
+              end if
+           case default
+              call log_event("No advection rule for this function space", &
+                             LOG_LEVEL_ERROR)
+          end select
+
+          ! Build rhs of Runge-Kutta scheme
+          call invoke( setval_c(ls_rhs, 0.0_r_def) )
+          do s = 1, stage
+            call invoke( inc_X_minus_bY(ls_rhs, ak_adv(stage,s), ls_rk_rhs(s)) )
+          end do
+          ! Update field: f = f^n + dt*rhs
+          call invoke( setval_X( ls_field_inc, ls_rhs ), &
+                       aX_plus_Y( ls_field_new(stage+1), timestep, &
+                                  ls_field_inc, ls_field ) )
+
+        end do
+
+! -------------------------------------------------------------------------
+!                    Perturbation
+!
+!   Repeat the calculation, but now for the tangent linear - adding in
+!   the values of ls_field_new(stage) obtained in the linearisation state
+!   stage
+!--------------------------------------------------------------------------
+
+        call invoke( setval_c( advection_inc, 0.0_r_def) )
+        do stage = 1,nstage
+
+          call rk_rhs(stage)%initialise( field%get_function_space() )
+          call invoke( setval_c( rk_rhs(stage), 0.0_r_def) )
+
+          ! Build rhs depending upon type of field being advected
+          select case(function_space)
+            case(Wtheta)
+              call tl_advective_update_alg(rk_rhs(stage), field_new,         &
+                                        advecting_wind, ls_field_new(stage), &
+                                        ls_advecting_wind, timestep,         &
+                                        logspace=logspace )
+            case(W3)
+              ! Compute the flux using desired spatial reconstruction
+              call invoke( setval_c( flux, 0.0_r_def ) )
+              if ( advect_density ) then
+                call tl_flux_alg(flux, field_new, advecting_wind,        &
+                                 ls_field_new(stage), ls_advecting_wind, &
+                                 logspace=logspace )
+
+                ! Compute: -div(F)
+                call invoke( setval_c( rhs, 0.0_r_def ), &
+                             dg_matrix_vector_kernel_type(rhs, flux, div),    &
+                             dg_matrix_vector_kernel_type(rk_rhs(stage), rhs, &
+                                                          mm_w3_inv),         &
+                             inc_X_plus_bY( advection_inc,                    &
+                                            ak_adv(nstage, stage),            &
+                                            flux ) )
+              else
+                ! Compute the advective form increment, first the reconstructed tracer
+                call tl_flux_alg(flux, field_new, unit_wind,     &
+                                 ls_field_new(stage), unit_wind, &
+                                 logspace=logspace)
+
+                ! Remove unit_wind term from flux and
+                ! Compute the advective update u.grad(f)
+                call invoke( inc_X_divideby_Y(flux, unit_wind),                &
+                             advective_wind_update_kernel_type(rhs,            &
+                                                               flux,           &
+                                                               advecting_wind),&
+                             dg_matrix_vector_kernel_type(rk_rhs(stage), rhs,  &
+                                                          mm_w3_inv) )
+              end if
+           case default
+              call log_event("No advection rule for this function space", &
+                             LOG_LEVEL_ERROR)
+          end select
+
+          ! Build rhs of Runge-Kutta scheme
+          call invoke( setval_c(rhs, 0.0_r_def) )
+          do s = 1, stage
+            call invoke( inc_X_minus_bY(rhs, ak_adv(stage,s), rk_rhs(s)) )
+          end do
+          ! Update field: f = f^n + dt*rhs
+          call invoke( setval_c( field_inc, 0.0_r_def ), &
+                       setval_X( field_inc, rhs ),       &
+                       aX_plus_Y( field_new, timestep, field_inc, field ) )
+
+          ! Add increment from this stage to the advection increment
+          if ( .not. advect_density) then
+            call invoke( inc_X_minus_bY( advection_inc,         &
+                                         ak_adv(nstage, stage), &
+                                         rk_rhs(stage) ) )
+          end if
+        end do
+
+        if ( associated( div ) ) nullify( div )
+        if ( allocated( rk_rhs ) ) deallocate( rk_rhs )
+        if ( allocated( ls_rk_rhs ) ) deallocate( ls_rk_rhs )
+        if ( allocated( ls_field_new ) ) deallocate( ls_field_new )
+        if ( allocated( ak_adv ) ) deallocate( ak_adv )
+
+      case(scheme_cosmic_3D)
+
+        call log_event("No Tangent linear for Cosmic", &
+                        LOG_LEVEL_ERROR)
+
+      case default
+        call log_event("Invalid transport scheme", &
+                       LOG_LEVEL_ERROR)
+
+      end select
+    end if  !if splitting
+
+  end subroutine tl_advect_field
+
+end module tl_advection_alg_mod

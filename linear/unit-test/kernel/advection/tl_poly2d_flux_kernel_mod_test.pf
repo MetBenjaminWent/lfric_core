@@ -1,0 +1,137 @@
+!-----------------------------------------------------------------------------
+! (C) Crown copyright 2021 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
+
+!>@brief Test the TL flux computation using 2d polynomials
+module tl_poly2d_flux_kernel_mod_test
+
+  use constants_mod, only : i_def, r_def
+  use pFUnit_Mod
+
+  implicit none
+
+  private
+  public :: test_all
+
+  @TestCase
+  type, extends(TestCase), public :: tl_poly2d_flux_test_type
+    private
+  contains
+    procedure test_all
+  end type tl_poly2d_flux_test_type
+
+contains
+
+  @Test
+  subroutine test_all( this )
+
+    use, intrinsic :: iso_fortran_env, only: real64
+    use tl_poly2d_flux_kernel_mod,        only: tl_poly2d_flux_code
+
+    use get_unit_test_planar_mesh_mod, &
+                                only: get_outward_normals_to_horizontal_faces
+
+    implicit none
+
+    class(tl_poly2d_flux_test_type), intent(inout) :: this
+
+    real(r_def), parameter :: tol = 1.0e-12_r_def    ! r_def 64bit
+    real(r_def) :: answer, use_tol
+
+    integer(i_def), parameter :: nlayers = 1
+    integer(i_def), parameter :: stencil_size = 5
+    integer(i_def), parameter :: nfaces_h = 4
+    integer(i_def), parameter :: ndata = stencil_size*nfaces_h
+    integer(i_def), parameter :: ndf_w2 = 4
+    integer(i_def), parameter :: ndf_c  = 1
+    integer(i_def), parameter :: ndf_w3 = 1
+    integer(i_def), parameter :: undf_w2 = ndf_w2*nlayers
+    integer(i_def), parameter :: undf_w3 = ndf_w3*nlayers*stencil_size
+    integer(i_def), parameter :: undf_c  = ndata*nlayers
+    integer(i_def), parameter :: order = 2
+
+    integer(i_def), dimension(ndf_w2)              :: map_w2
+    integer(i_def), dimension(ndf_c)               :: map_c
+    integer(i_def), dimension(ndf_w3,stencil_size) :: smap
+
+    real(r_def), dimension(3,ndf_w2,ndf_w2)  :: basis_w2
+    real(r_def), allocatable, dimension(:,:) :: outward_normals_to_horizontal_faces
+
+    real(r_def), dimension(undf_w2) :: flux
+    real(r_def), dimension(undf_w2) :: wind
+    real(r_def), dimension(undf_w3) :: density
+    real(r_def), dimension(undf_w2) :: ls_wind
+    real(r_def), dimension(undf_w3) :: ls_density
+    real(r_def), dimension(undf_c)  :: coeff
+
+    smap(1,:) = (/ 1, 2, 3, 4, 5 /)
+    map_w2(:) = (/ 1, 2, 3, 4 /)
+    map_c(1) = 1
+    ! Get canned information for the reference cube
+    call get_outward_normals_to_horizontal_faces(outward_normals_to_horizontal_faces)
+
+    basis_w2 = 0.0_r_def
+    basis_w2(1,1,1) = 1.0_r_def
+    basis_w2(2,2,2) = -1.0_r_def
+    basis_w2(1,3,3) = 1.0_r_def
+    basis_w2(2,4,4) = -1.0_r_def
+
+    wind(:) = 1.0_r_def
+
+    density(:) = (/ 3.0_r_def, 1.0_r_def, 1.0_r_def, 5.0_r_def, 5.0_r_def /)
+
+    ls_wind(:) = 1.0_r_def
+
+    ls_density(:) = (/ 3.0_r_def, 1.0_r_def, 1.0_r_def, 5.0_r_def, 5.0_r_def /)
+
+
+    coeff(6:10) = (/ 5.0_r_def/6.0_r_def, 0.0_r_def, 2.0_r_def/6.0_r_def, 0.0_r_def, -1.0_r_def/6.0_r_def /)
+    coeff(11:15) = (/ 5.0_r_def/6.0_r_def, -1.0_r_def/6.0_r_def, 0.0_r_def, 2.0_r_def/6.0_r_def, 0.0_r_def /)
+
+    flux = -1.0_r_def
+
+    call tl_poly2d_flux_code( nlayers,              &
+                              flux,                 &
+                              wind,                 &
+                              density,              &
+                              ls_wind,              &
+                              ls_density,           &
+                              stencil_size,         &
+                              smap,                 &
+                              coeff,                &
+                              ndata,                &
+                              stencil_size,         &
+                              ndf_w2,               &
+                              undf_w2,              &
+                              map_w2,               &
+                              basis_w2,             &
+                              ndf_w3,               &
+                              undf_w3,              &
+                              smap(:,1),            &
+                              ndf_c,                &
+                              undf_c,               &
+                              map_c,                &
+                              nfaces_h,             &
+                              outward_normals_to_horizontal_faces )
+
+    if ( r_def == real64 ) then
+      use_tol = tol
+    else
+      use_tol = 10.0_r_def*spacing( maxval( flux(1:4) ) )
+    end if
+
+    answer = 4.0_r_def
+    @assertEqual(answer, flux(2), use_tol)
+    answer = 8.0_r_def
+    @assertEqual(answer, flux(3), use_tol)
+    ! These flux points should not have been computed so check
+    ! they are unchanged
+    answer = -1.0_r_def
+    @assertEqual(answer, flux(1), use_tol)
+    @assertEqual(answer, flux(4), use_tol)
+
+  end subroutine test_all
+
+end module tl_poly2d_flux_kernel_mod_test

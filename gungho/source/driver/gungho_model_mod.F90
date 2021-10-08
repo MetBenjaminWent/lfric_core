@@ -97,7 +97,9 @@ module gungho_model_mod
   use transport_config_mod,       only : scheme, &
                                          scheme_method_of_lines
   use yaxt,                       only : xt_initialize, xt_finalize
+#ifdef COUPLED
   use coupler_mod,                only : l_esm_couple, cpl_define, cpl_fields
+#endif
 #ifdef UM_PHYSICS
   use jules_control_init_mod,     only : jules_control_init
   use jules_physics_init_mod,     only : jules_physics_init
@@ -304,6 +306,7 @@ contains
 !> @todo this must be done in infrastructure for now (before XIOS context
 !>       initialization). With XIOS 3 it will be possible to move it outside
 !>       infrastructure and remove change in gungho_prognostics_mod.f90
+#ifdef COUPLED
     if( l_esm_couple ) then
        call log_event("Initialising coupler", LOG_LEVEL_INFO)
        !add fields used in coupling
@@ -313,6 +316,7 @@ contains
        call cpl_define(twod_mesh_id, chi, model_data%depository, &
                        model_data%cpl_snd, model_data%cpl_rcv    )
     endif
+#endif
 
     !-------------------------------------------------------------------------
     ! Initialise aspects of output

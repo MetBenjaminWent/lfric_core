@@ -53,5 +53,53 @@ class tl_test_kinetic_energy_gradient(TLTest):
         flag = "kinetic_energy_gradient"
         super(tl_test_kinetic_energy_gradient, self).__init__(flag)
 
+class tl_test_rk_alg(TLTest):
+    def __init__(self):
+        flag = "rk_alg"
+        super(tl_test_rk_alg, self).__init__(flag)
+
+class tl_test_project_pressure(TLTest):
+    def __init__(self):
+        flag = "project_pressure"
+        super(tl_test_project_pressure, self).__init__(flag)
+
+class tl_test_advection(TLTest):
+    def __init__(self):
+        flag = "advection"
+        super(tl_test_advection, self).__init__(flag)
+
+class tl_test_advect_density_field(TLTest):
+    def __init__(self):
+        flag = "advect_density_field"
+        super(tl_test_advect_density_field, self).__init__(flag)
+
+class tl_test_advect_theta_field(TLTest):
+    def __init__(self):
+        flag = "advect_theta_field"
+        super(tl_test_advect_theta_field, self).__init__(flag)
+
+class tl_test_vorticity_advection(TLTest):
+    def __init__(self):
+        flag = "vorticity_advection"
+        super(tl_test_vorticity_advection, self).__init__(flag)
+
+class tl_test_pressure_gradient_bd(TLTest):
+    def __init__(self):
+        flag = "pressure_gradient_bd"
+        super(tl_test_pressure_gradient_bd, self).__init__(flag)
+
+class tl_test_hydrostatic(TLTest):
+    def __init__(self):
+        flag = "hydrostatic"
+        super(tl_test_hydrostatic, self).__init__(flag)
+
 if __name__ == '__main__':
     TestEngine.run( tl_test_kinetic_energy_gradient() )
+    TestEngine.run( tl_test_advection() )
+    TestEngine.run( tl_test_advect_density_field() )
+    TestEngine.run( tl_test_advect_theta_field() )
+    TestEngine.run( tl_test_vorticity_advection() )
+    TestEngine.run( tl_test_hydrostatic() )
+    TestEngine.run( tl_test_pressure_gradient_bd() )
+    TestEngine.run( tl_test_project_pressure() )
+    TestEngine.run( tl_test_rk_alg() )
