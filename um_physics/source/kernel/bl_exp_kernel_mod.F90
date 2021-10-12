@@ -518,7 +518,6 @@ contains
 
     ! spatially varying fields used from modules
     use level_heights_mod, only: r_theta_levels, r_rho_levels
-    use ozone_vars, only: o3_gb
     use turb_diff_ctl_mod, only: visc_m, visc_h, max_diff, delta_smag
 
     ! subroutines used
@@ -539,11 +538,11 @@ contains
                                  coast, jules_vars,                            &
                                  fluxes,                                       &
                                  lake_vars,                                    &
-                                 forcing
-                                !rivers, &
-                                !veg3_parm, &
-                                !veg3_field, &
-                                !chemvars
+                                 forcing,                                      &
+                                !rivers,                                       &
+                                !veg3_parm,                                    &
+                                !veg3_field,                                   &
+                                chemvars
 
     implicit none
 
@@ -1164,7 +1163,7 @@ contains
     photosynth_act_rad = real(sw_down_surf_blue(map_2d(1)), r_um)
 
     ! Ozone
-    o3_gb = real(ozone(map_wth(1)), r_um)
+    chemvars%o3_gb = real(ozone(map_wth(1)), r_um)
 
     ! Carbon dioxide
     co2 = co2_mmr
@@ -1358,13 +1357,13 @@ contains
     !     JULES TYPES (IN OUT)
          crop_vars, psparms, ainfo, trif_vars, aerotype, urban_param,          &
          progs, trifctltype, coast, jules_vars,                                &
-         fluxes, &
-         lake_vars, &
-         forcing, &
-        !rivers, &
-        !veg3_parm, &
-        !veg3_field, &
-        !chemvars
+         fluxes,                                                               &
+         lake_vars,                                                            &
+         forcing,                                                              &
+        !rivers,                                                               &
+        !veg3_parm,                                                            &
+        !veg3_field,                                                           &
+        chemvars,                                                              &
     !     INOUT variables for TKE based turbulence schemes
          e_trb, tsq_trb, qsq_trb, cov_trb, zhpar_shcu,                         &
     !     INOUT variables from bdy_expl1 needed elsewhere
@@ -1507,10 +1506,10 @@ contains
          fluxes,                                                        &
          lake_vars,                                                     &
          forcing,                                                       &
-        !rivers, &
-        !veg3_parm, &
-        !veg3_field, &
-        !chemvars
+        !rivers,                                                        &
+        !veg3_parm,                                                     &
+        !veg3_field,                                                    &
+        chemvars,                                                       &
     !     INOUT variables for TKE based turbulence schemes
          e_trb, tsq_trb, qsq_trb, cov_trb, zhpar_shcu,                  &
       ! INOUT variables from bdy_expl1 needed elsewhere

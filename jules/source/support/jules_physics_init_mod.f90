@@ -98,11 +98,11 @@ module jules_physics_init_mod
                                       jules_vars_data, jules_vars,            &
                                       fluxes_data, fluxes,                    &
                                       lake_data, lake_vars,                   &
-                                      forcing_data, forcing
+                                      forcing_data, forcing,                  &
                                       !rivers_data, rivers, &
                                       !veg3_parm_data, veg3_parm, &
                                       !veg3_field_data, veg3_field, &
-                                      !chemvars_data, chemvars
+                                      chemvars_data, chemvars
 
   use crop_vars_mod,           only : crop_vars_assoc
   use p_s_parms,               only : psparms_assoc
@@ -123,7 +123,7 @@ module jules_physics_init_mod
 ! use jules_rivers_mod,        only: rivers_assoc
 ! use veg3_parm_mod,           only: in_dev
 ! use veg3_field_mod,          only: in_dev
-! use jules_chemvars_mod,      only: chemvars_assoc
+  use jules_chemvars_mod,      only: chemvars_assoc
 
   implicit none
 
@@ -488,11 +488,11 @@ contains
                                coastal_data,jules_vars_data,                   &
                                fluxes_data,                                    &
                                lake_data,                                      &
-                               forcing_data                                    &
+                               forcing_data,                                   &
                               !rivers_data, &
                               !veg3_parm_data, &
                               !veg3_field_data, &
-                              !chemvars_data, &
+                               chemvars_data &
                                )
 
     ! Reset pdims_s
@@ -521,7 +521,7 @@ contains
     !call rivers_assoc(rivers,rivers_data)
     !call in_dev
     !call in_dev
-    !call chemvars_assoc(chemvars,chemvars_data)
+    call chemvars_assoc(chemvars,chemvars_data)
 
     ! ----------------------------------------------------------------
     ! Jules non-vegetated tile settings - contained in module nvegparm
