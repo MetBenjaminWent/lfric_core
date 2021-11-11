@@ -12,6 +12,7 @@
 !>          potential temperature space and exner is computed pointwise from
 !>          the equation of state.
 !>
+!> @todo Create unit test for this kernel, see #2935
 module weighted_proj_2theta_bd_kernel_mod
 
   use argument_mod,      only: arg_type, func_type,         &

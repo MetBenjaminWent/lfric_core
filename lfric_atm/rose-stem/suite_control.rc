@@ -394,7 +394,7 @@
                                         "C192":{"mpi_parts":864,
                                                "threads":1,
                                                "use_xios":"True",
-                                               "wallclock":"0:30:00"},
+                                               "wallclock":"0:60:00"},
 					       },
                          },
                      plotstr="plot_map.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR"

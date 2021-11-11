@@ -14,6 +14,7 @@
 !>          \f<[<\gamma, flux(\theta*v)\cdot n>\f],
 !>          where v is in W2 and gamma is in the potential temperature space.
 !>
+!> @todo Create unit test for this kernel, see #2935
 module weighted_proj_theta2_bd_kernel_mod
 
   use argument_mod,      only : arg_type, func_type,         &

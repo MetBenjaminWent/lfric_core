@@ -4,6 +4,7 @@
 ! under which the code may be used.
 !-----------------------------------------------------------------------------
 
+!> @todO Create unit test for this kernel, see #2935
 module apply_variable_hx_kernel_mod
 
   use argument_mod,      only : arg_type,             &

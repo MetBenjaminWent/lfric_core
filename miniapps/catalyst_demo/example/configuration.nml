@@ -87,15 +87,16 @@
 /
 
 &mixed_solver
-  si_method                      = 'gmres',
-  si_preconditioner              = 'pressure',
-  si_maximum_iterations          = 20,
-  gcrk                           = 4,
-  si_tolerance                   = 1.0e-4,
+  eliminate_variables            = 'none'
+  si_method                      = 'gmres'
+  si_preconditioner              = 'pressure'
+  si_maximum_iterations          = 20
+  gcrk                           = 4
+  si_tolerance                   = 1.0e-4
   guess_np1                      = .F
   reference_reset_freq           = 1
-  normalise                      = .true.,
-  use_operators                  = .T,
+  normalise                      = .true.
+  use_operators                  = .T
 /
 
 &helmholtz_solver

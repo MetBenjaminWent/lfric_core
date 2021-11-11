@@ -136,6 +136,7 @@ ls_option='analytical',
 run_log_level='info',
 /
 &mixed_solver
+eliminate_variables='none',
 gcrk=6,
 guess_np1=.false.,
 mixed_solver_a_tol=1.0e-6,

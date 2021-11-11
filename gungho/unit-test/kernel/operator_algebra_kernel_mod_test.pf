@@ -16,6 +16,7 @@ module operator_algebra_kernel_mod_test
   private
   public :: test_x_plus_ay
   public :: test_setval_c
+  public :: test_setval_x
 
   @TestCase
   type, extends(TestCase), public :: operator_algebra_test_type
@@ -25,6 +26,7 @@ module operator_algebra_kernel_mod_test
     procedure tearDown
     procedure test_x_plus_ay
     procedure test_setval_c
+    procedure test_setval_x
   end type operator_algebra_test_type
 
 contains
@@ -59,27 +61,27 @@ contains
 
     class(operator_algebra_test_type), intent(inout) :: this
 
-    real(r_def), parameter :: tol = 1.0e-12_r_def   ! r_def 64bit
-    real(r_def)            :: use_tol
+    real(kind=r_def), parameter :: tol = 1.0e-12_r_def   ! r_def 64bit
+    real(kind=r_def)            :: use_tol
 
     ! Mesh
-    integer(i_def), parameter :: nlayers = 1
-    integer(i_def), parameter :: cell = 1
-    integer(i_def), parameter :: ncell = 1
+    integer(kind=i_def), parameter :: nlayers = 1
+    integer(kind=i_def), parameter :: cell = 1
+    integer(kind=i_def), parameter :: ncell = 1
 
     ! Spaces
-    integer(i_def), parameter :: ndf1 = 3
-    integer(i_def), parameter :: ndf2 = 2
+    integer(kind=i_def), parameter :: ndf1 = 3
+    integer(kind=i_def), parameter :: ndf2 = 2
 
     ! Operators
-    real(r_def), dimension(ndf1, ndf2, ncell) :: x_plus_ay
-    real(r_def), dimension(ndf1, ndf2, ncell) :: x, y
+    real(kind=r_def), dimension(ndf1, ndf2, ncell) :: x_plus_ay
+    real(kind=r_def), dimension(ndf1, ndf2, ncell) :: x, y
 
     ! Reals
-    real(r_def), parameter :: a = 2.0_r_def
+    real(kind=r_def), parameter :: a = 2.0_r_def
 
-    real(r_def)    :: answer
-    integer(i_def) :: df
+    real(kind=r_def)    :: answer
+    integer(kind=i_def) :: df
 
     ! Set up operators
     x(:,1,1) = 0.1_r_def
@@ -119,25 +121,25 @@ contains
 
     class(operator_algebra_test_type), intent(inout) :: this
 
-    real(r_def), parameter :: tol = 1.0e-12_r_def   ! r_def 64bit
-    real(r_def)            :: use_tol
+    real(kind=r_def), parameter :: tol = 1.0e-12_r_def   ! r_def 64bit
+    real(kind=r_def)            :: use_tol
 
     ! Mesh
-    integer(i_def), parameter :: nlayers = 1
-    integer(i_def), parameter :: cell = 1
-    integer(i_def), parameter :: ncell = 1
+    integer(kind=i_def), parameter :: nlayers = 1
+    integer(kind=i_def), parameter :: cell = 1
+    integer(kind=i_def), parameter :: ncell = 1
 
     ! Spaces
-    integer(i_def), parameter :: ndf1 = 3
-    integer(i_def), parameter :: ndf2 = 2
+    integer(kind=i_def), parameter :: ndf1 = 3
+    integer(kind=i_def), parameter :: ndf2 = 2
 
     ! Operators
-    real(r_def), dimension(ndf1, ndf2, ncell) :: x
+    real(kind=r_def), dimension(ndf1, ndf2, ncell) :: x
 
     ! Reals
-    real(r_def), parameter :: a = 2.0_r_def
+    real(kind=r_def), parameter :: a = 2.0_r_def
 
-    real(r_def), dimension(ndf1, ndf2, ncell) :: answer
+    real(kind=r_def), dimension(ndf1, ndf2, ncell) :: answer
 
     ! Compute x = a
     call operator_setval_c_kernel_code(cell, nlayers, &
@@ -155,4 +157,55 @@ contains
     @assertEqual(answer, x, use_tol)
 
   end subroutine test_setval_c
+
+  @Test( )
+  subroutine test_setval_x( this )
+
+    use, intrinsic :: iso_fortran_env, only: real64
+    use operator_algebra_kernel_mod, only : operator_setval_x_kernel_code
+
+    implicit none
+
+    class(operator_algebra_test_type), intent(inout) :: this
+
+    real(kind=r_def), parameter :: tol = 1.0e-12_r_def   ! r_def 64bit
+    real(kind=r_def)            :: use_tol
+
+    ! Mesh
+    integer(kind=i_def), parameter :: nlayers = 1
+    integer(kind=i_def), parameter :: cell = 1
+    integer(kind=i_def), parameter :: ncell = 1
+
+    ! Spaces
+    integer(kind=i_def), parameter :: ndf1 = 1
+    integer(kind=i_def), parameter :: ndf2 = 2
+
+    ! Operators
+    real(kind=r_def), dimension(ndf1, ndf2, ncell) :: x
+    real(kind=r_def), dimension(ndf1, ndf2, ncell) :: y
+
+    ! Reals
+    real(kind=r_def), parameter :: a = 2.0_r_def
+
+    real(kind=r_def)    :: answer
+    integer(kind=i_def) :: df
+
+    ! Set up operators
+    y(1,1,1) = 1.1_r_def
+    y(2,1,1) = 2.1_r_def
+
+    ! Compute a*x*y
+    call operator_setval_x_kernel_code(cell, nlayers, &
+                                       ncell, x,      &
+                                       ncell, y,      &
+                                       ndf1, ndf2)
+    if ( r_def == real64 ) then
+      use_tol = tol
+    else
+      use_tol = 10.0_r_def*spacing( maxval(x) )
+    endif
+    @assertEqual(x, y, use_tol)
+
+  end subroutine test_setval_x
+
 end module operator_algebra_kernel_mod_test

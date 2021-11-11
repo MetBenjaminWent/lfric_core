@@ -11,6 +11,7 @@
 !> vJv = (0,dy,0) for v components
 !> vJv = (0,0,dz) for w components
 !>
+!> @todo Create unit test for this kernel, see #2935
 module w2_normalisation_kernel_mod
 
   use argument_mod,      only : arg_type, func_type,       &

@@ -4,7 +4,11 @@
 ! under which the code may be used.
 !-----------------------------------------------------------------------------
 
-!>@brief Semi-Implicit solver for the gungho dynamical core
+!> @brief Semi-Implicit solver for the gungho dynamical core.
+!> @details Control routine for the construction and application of
+!!          the semi-implicit solver.
+!!          More details of the solver forumulation can be found in the solver section of:
+!!          https://code.metoffice.gov.uk/trac/lfric/wiki/GhaspSupport/Documentation
 module semi_implicit_solver_alg_mod
 
   use constants_mod,                      only: i_def, r_def, l_def
@@ -15,14 +19,22 @@ module semi_implicit_solver_alg_mod
                                                 LOG_LEVEL_TRACE
 
   ! Config
-  use mixed_solver_config_mod,            only: split_w, mixed_solver_a_tol
+  use mixed_solver_config_mod,            only: split_w,                  &
+                                                mixed_solver_a_tol,       &
+                                                eliminate_variables,      &
+                                                eliminate_variables_none, &
+                                                eliminate_variables_analytic
 
   ! Derived Types
   use field_vector_mod,                   only: field_vector_type
   use field_mod,                          only: field_type
   use derived_config_mod,                 only: bundle_size
-  use field_indices_mod,                  only: igh_p, igh_t, igh_d, &
-                                                igh_u, igh_w, igh_uv
+  use field_indices_mod,                  only: isol_p, isol_t, isol_d,  &
+                                                isol_u, isol_w, isol_uv, &
+                                                igh_p, igh_t, igh_d,     &
+                                                igh_u, igh_w, igh_uv,    &
+                                                set_solver_field_indices
+
 
 
   ! Algorithms
@@ -59,15 +71,15 @@ module semi_implicit_solver_alg_mod
   private
 
   ! Operator, preconditioner and iterative solver for mixed problem
-  type(mixed_operator_type)                          :: mixed_operator
-  class(abstract_preconditioner_type),   allocatable :: mixed_preconditioner
-  class(abstract_iterative_solver_type), allocatable :: mixed_solver
+  type( mixed_operator_type )                          :: mixed_operator
+  class( abstract_preconditioner_type ),   allocatable :: mixed_preconditioner
+  class( abstract_iterative_solver_type ), allocatable :: mixed_solver
 
   !> Operator, preconditioner and iterative solver for
   !> Helmholtz (pressure) problem
-  type(pressure_operator_type)                       :: pressure_operator
-  class(abstract_preconditioner_type),   allocatable :: pressure_preconditioner
-  class(abstract_iterative_solver_type), allocatable :: pressure_solver
+  type( pressure_operator_type )                       :: pressure_operator
+  class( abstract_preconditioner_type ),   allocatable :: pressure_preconditioner
+  class( abstract_iterative_solver_type ), allocatable :: pressure_solver
 
   public  :: semi_implicit_solver_alg_init
   public  :: semi_implicit_solver_alg_final
@@ -123,6 +135,9 @@ contains
     type( field_vector_type ) :: vector_state
     ! Vertical pressure preconditioner
     type( pressure_preconditioner_type ) :: Hz_preconditioner
+
+    ! Set the correct indices for the solver fields
+    call set_solver_field_indices()
 
     call construct_solver_state(vector_state, state)
 
@@ -336,17 +351,17 @@ contains
 
 !=============================================================================!
 
-  !> @details An algorithm for timestepping the semi-implicit equations
+  !> @brief An algorithm for timestepping the semi-implicit equations.
   !>
-  !> @param[inout] state               Prognostic model state
-  !> @param[in]    rhs                 Residuals
-  !> @param[in]    moist_dyn_gas_law   Gas law component of moist dynamics factors
-  !> @param[in]    mr                  Mixing ratio array
-  !> @param[in]    step                Timestep
-  !> @param[in]    rho_guess           Estimate for rho^n+1 used for moisture
-  !!                                   diagnostics
-  !> @param[in]    write_moisture_diag Flag to control output of moisture
-  !!                                   conservation diagnostics
+  !> @param[in,out] state               Prognostic model state
+  !> @param[in,out] rhs                 Residuals
+  !> @param[in]     moist_dyn_gas_law   Gas law component of moist dynamics factors
+  !> @param[in]     mr                  Mixing ratio array
+  !> @param[in]     step                Timestep
+  !> @param[in]     rho_guess           Estimate for rho^n+1 used for moisture
+  !!                                    diagnostics
+  !> @param[in]     write_moisture_diag Flag to control output of moisture
+  !!                                    conservation diagnostics
   subroutine semi_implicit_solver_alg_step(state, rhs, &
                                            moist_dyn_gas_law, &
                                            mr, step, rho_guess, &
@@ -355,7 +370,9 @@ contains
     use geometric_constants_mod,       only: get_coordinates, &
                                              get_panel_id
     use fem_constants_mod,             only: get_inverse_w3_mass_matrix, &
-                                             get_normalisation, get_qr
+                                             get_normalisation, &
+                                             get_div, &
+                                             get_qr
     use fs_continuity_mod,             only: W2, Wtheta
     use mr_indices_mod,                only: nummr
     use formulation_config_mod,        only: exner_from_eos
@@ -363,33 +380,60 @@ contains
     use operator_mod,                  only: operator_type
     use quadrature_xyoz_mod,           only: quadrature_xyoz_type
     use moisture_conservation_alg_mod, only: moisture_conservation_alg
+    use si_operators_alg_mod,          only: get_m3_rho_star,       &
+                                             get_rho_at_u,          &
+                                             get_p2theta,           &
+                                             get_p3theta,           &
+                                             get_ptheta2,           &
+                                             get_eliminated_q2t,    &
+                                             get_eliminated_q3t
+    use matrix_vector_kernel_mod,      only: matrix_vector_kernel_type
+    use dg_matrix_vector_kernel_mod,   only: dg_matrix_vector_kernel_type
+    use operator_mod,                  only: operator_type
+    use field_mod,                     only: field_type
+    use timestepping_config_mod,       only: dt, tau_r
+    use enforce_bc_kernel_mod,         only: enforce_bc_kernel_type
+    use mass_matrix_solver_alg_mod,    only: mass_matrix_solver_alg
 
     implicit none
 
     ! Prognostic fields
     type( field_type ), dimension(bundle_size), intent( inout ) :: state
-    type( field_type ), dimension(bundle_size), intent( in )    :: rhs
+    type( field_type ), dimension(bundle_size), intent( inout ) :: rhs
     type( field_type ),                         intent( in )    :: moist_dyn_gas_law
     type( field_type ), dimension(nummr),       intent( in )    :: mr
     type( field_type ),                         intent( in )    :: rho_guess
     integer( kind=i_def ),                      intent( in )    :: step
-    logical( kind=l_def),                       intent( in )    :: write_moisture_diag
+    logical( kind=l_def ),                      intent( in )    :: write_moisture_diag
 
-    type( field_vector_type ) :: inc
-
-    real( kind=r_def )    :: si_err(bundle_size)
-    integer( kind=i_def ) :: mesh_id
-
+    real( kind=r_def )                    :: si_err(bundle_size)
     type( field_type ),           pointer :: t_normalisation => null(), &
                                              u_normalisation => null()
     type( field_type ),           pointer :: chi(:) => null()
     type( field_type ),           pointer :: panel_id => null()
     type( operator_type ),        pointer :: m3_inv => null()
     type( quadrature_xyoz_type ), pointer :: qr => null()
-    type( field_vector_type )             :: vector_state, vector_rhs
+    type( field_vector_type )             :: vector_inc, vector_rhs
+
+    ! For eliminate of rho and theta
+    type( field_type )             :: div_u,                    &
+                                      f_star, rhs_tmp, inc_uvw, &
+                                      inc_theta, inc_rho
+    type( field_type ),    pointer :: rho_at_u => null(), &
+                                      m2_diag => null(),  &
+                                      mt_lumped_inv => null()
+    type( operator_type ), pointer :: div => null(), &
+                                      m3_rho_star => null(), &
+                                      mm_w3_inv => null(),   &
+                                      p3theta => null(),     &
+                                      p2theta => null(),     &
+                                      ptheta2 => null(),     &
+                                      q2t_op => null(),      &
+                                      q3t_op => null()
+    real( kind=r_def )             :: tau_r_dt
+    integer( kind=i_def )          :: mesh_id
 
     if ( subroutine_timers ) call timer('semi_implicit_solver_alg')
-
     mesh_id = state(igh_p)%get_mesh_id()
 
     if ( write_moisture_diag ) then
@@ -403,9 +447,14 @@ contains
     ! Normalise theta & u residual
     t_normalisation => get_normalisation(Wtheta, mesh_id)
     u_normalisation => get_normalisation(W2, mesh_id)
-    call invoke( inc_X_times_Y(rhs(igh_t), t_normalisation), &
-                 inc_X_times_Y(rhs(igh_u), u_normalisation) )
-
+    call invoke( inc_X_times_Y(rhs(igh_u), u_normalisation) )
+    if ( eliminate_variables == eliminate_variables_analytic ) then
+      call rhs_tmp%initialise( vector_space = rhs(igh_t)%get_function_space() )
+      call invoke( setval_x( rhs_tmp, rhs(igh_t) ) )
+      call mass_matrix_solver_alg( rhs(igh_t), rhs_tmp )
+    else
+      call invoke( inc_X_times_Y(rhs(igh_t), t_normalisation) )
+    end if
     ! Write out si residuals
     call invoke( name = "Compute SI residuals",               &
                  X_innerproduct_X(si_err(igh_u), rhs(igh_u)), &
@@ -426,30 +475,112 @@ contains
          'Residual in equation of state:  ',sqrt(si_err(igh_p))
     call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
-    ! Create field vectors out of field arrays
-    call construct_solver_state(vector_state, state)
-    call construct_solver_state(vector_rhs,   rhs)
+    ! Modify RHS if we are eliminating variables
+    if ( eliminate_variables /= eliminate_variables_none ) then
+      m3_rho_star => get_m3_rho_star()
+       ! Elimination of rho
+      call rhs_tmp%initialise( vector_space = rhs(igh_p)%get_function_space() )
+      ! Set rhs_p = rhs_p + M_{3,rho} * rhs_rho
+      call invoke( matrix_vector_kernel_type( rhs(igh_p), rhs(igh_d), m3_rho_star ) )
 
+      ! Elimination of theta
+      if ( eliminate_variables == eliminate_variables_analytic ) then
+        q2t_op => get_eliminated_q2t()
+        q3t_op => get_eliminated_q3t()
+        call invoke( matrix_vector_kernel_type( rhs(igh_p), rhs(igh_t), q3t_op ), &
+                     matrix_vector_kernel_type( rhs(igh_u), rhs(igh_t), q2t_op ), &
+                     enforce_bc_kernel_type( rhs(igh_u) ) )
+      else
+        p3theta   => get_p3theta()
+        m2_diag   => get_normalisation(W2, mesh_id)
+        call rhs_tmp%initialise( vector_space = rhs(igh_p)%get_function_space() )
+        ! Set rhs_p = rhs_p + P_{3,theta} * rhs_theta
+        call invoke( matrix_vector_kernel_type( rhs(igh_p), rhs(igh_t), p3theta ) )
+        ! Set rhs_u = rhs_u + M_2^{diag} * P_{2,theta} * rhs_theta
+        call rhs_tmp%initialise( vector_space = rhs(igh_u)%get_function_space() )
+        p2theta => get_p2theta()
+        call invoke( setval_c(rhs_tmp, 0.0_r_def),                              &
+                     matrix_vector_kernel_type( rhs_tmp, rhs(igh_t), p2theta ), &
+                     inc_X_times_Y(rhs_tmp, m2_diag),                           &
+                     inc_X_plus_Y(rhs(igh_u), rhs_tmp),                         &
+                     enforce_bc_kernel_type( rhs(igh_u) ) )
+      end if
+    end if
+
+    ! Create field vectors out of field arrays
+    call construct_solver_state(vector_inc, state)
+    call construct_solver_state(vector_rhs,   rhs)
     ! Solve the semi-implicit operator
     call log_event( "Gungho: mixed solve:", LOG_LEVEL_INFO )
-    inc = vector_state
-    call inc%set_scalar(0.0_r_def)
-    call mixed_solver%apply(inc, vector_rhs)
-    call vector_state%axpy(1.0_r_def, inc)
+    call vector_inc%set_scalar(0.0_r_def)
+    if ( subroutine_timers ) call timer('mixed_solver')
+    call mixed_solver%apply(vector_inc, vector_rhs)
+    if ( subroutine_timers ) call timer('mixed_solver')
 
-    ! Recreate field arrays out of field vectors
+    ! Back substitute lhs if we are eliminating variables
+    call inc_uvw%initialise( rhs(igh_u)%get_function_space() )
     if ( split_w ) then
-      call invoke( combine_w2_field_kernel_type( state( igh_u ),                &
-                                                 vector_state%vector( igh_uv ), &
-                                                 vector_state%vector( igh_w ) ) )
+      ! Create inc_uvw from  uv & w
+      call invoke( combine_w2_field_kernel_type( inc_uvw,                      &
+                                                 vector_inc%vector( isol_uv ), &
+                                                 vector_inc%vector( isol_w ) ) )
+
+      call vector_inc%vector(isol_uv)%log_minmax(LOG_LEVEL_INFO, 'uv_inc')
+      call vector_inc%vector(isol_w)%log_minmax(LOG_LEVEL_INFO, 'w_inc')
     else
-      call vector_state%export_field( state( igh_u ), igh_u )
+      call invoke(setval_x(inc_uvw, vector_inc%vector(isol_u)) )
+      call vector_inc%vector(isol_u)%log_minmax(LOG_LEVEL_INFO, 'uvw_inc')
     end if
-    call vector_state%export_field( state( igh_t ), igh_t )
-    call vector_state%export_field( state( igh_d ), igh_d )
-    call vector_state%export_field( state( igh_p ), igh_p )
+
+    if ( eliminate_variables /= eliminate_variables_none ) then
+      ! Compute rho increment since solver does not provide one
+      div       => get_div(mesh_id)
+      rho_at_u  => get_rho_at_u()
+      mm_w3_inv => get_inverse_w3_mass_matrix(mesh_id)
+      tau_r_dt = -tau_r*dt
+      call div_u%initialise( vector_space = rhs(igh_p)%get_function_space() )
+      call f_star%initialise( vector_space = rhs(igh_u)%get_function_space() )
+      call rhs_tmp%initialise( vector_space = rhs(igh_p)%get_function_space() )
+      call inc_rho%initialise( vector_space = rhs(igh_p)%get_function_space() )
+
+      call invoke( X_times_Y( f_star, rho_at_u, inc_uvw ),                   &
+                   dg_matrix_vector_kernel_type( div_u, f_star, div ),       &
+                   dg_matrix_vector_kernel_type( rhs_tmp, div_u, mm_w3_inv), &
+                   aX_plus_Y(inc_rho, tau_r_dt, rhs_tmp, rhs(igh_d))         &
+                 )
+
+      ! Compute theta increment since solver does not provide one
+      ptheta2 => get_ptheta2()
+      mt_lumped_inv => get_normalisation(Wtheta, mesh_id)
+      call rhs_tmp%initialise( vector_space = rhs(igh_t)%get_function_space() )
+      call inc_theta%initialise( vector_space = rhs(igh_t)%get_function_space() )
+      call invoke( setval_c(rhs_tmp, 0.0_r_def), &
+                   matrix_vector_kernel_type(rhs_tmp, inc_uvw, ptheta2))
+
+      if (  eliminate_variables == eliminate_variables_analytic ) then
+        call invoke( setval_x( inc_theta, rhs_tmp ) )
+        call mass_matrix_solver_alg( rhs_tmp, inc_theta )
+      else
+        call invoke( inc_X_times_Y(rhs_tmp, mt_lumped_inv) )
+      end if
+      call invoke( X_minus_Y( inc_theta, rhs(igh_t), rhs_tmp) )
+    end if
+
+    call vector_inc%vector(isol_p)%log_minmax(LOG_LEVEL_INFO, 'exner_inc')
+
+    ! Add increments to state fields
+    call invoke( inc_X_plus_Y( state(igh_u), inc_uvw ), &
+                 inc_X_plus_Y( state(igh_p), vector_inc%vector(isol_p) ) )
+    if ( eliminate_variables == eliminate_variables_none ) then
+      call invoke( inc_X_plus_Y( state(igh_t), vector_inc%vector(isol_t) ), &
+                   inc_X_plus_Y( state(igh_d), vector_inc%vector(isol_d) ) )
+    else
+      call invoke( inc_X_plus_Y( state(igh_t), inc_theta ), &
+                   inc_X_plus_Y( state(igh_d), inc_rho ) )
+    end if
 
     if (exner_from_eos) then
+      if ( subroutine_timers ) call timer('exner_from_eos')
       m3_inv  => get_inverse_w3_mass_matrix(mesh_id)
       chi => get_coordinates(mesh_id)
       panel_id => get_panel_id(mesh_id)
@@ -458,14 +589,27 @@ contains
                                                  state(igh_t),               &
                                                  moist_dyn_gas_law, chi,     &
                                                  panel_id, m3_inv, qr ) )
+      if ( subroutine_timers ) call timer('exner_from_eos')
     end if
+
     if ( write_moisture_diag )  &
       call moisture_conservation_alg( step, state(igh_d), mr, 'After solve' )
 
     nullify( t_normalisation, &
              u_normalisation, &
              m3_inv, chi,     &
-             panel_id, qr )
+             panel_id, qr,    &
+             rho_at_u,        &
+             m2_diag,         &
+             mt_lumped_inv,   &
+             div,             &
+             m3_rho_star,     &
+             mm_w3_inv,       &
+             p3theta,         &
+             p2theta,         &
+             ptheta2,         &
+             q2t_op,          &
+             q3t_op )
 
     if ( subroutine_timers ) call timer('semi_implicit_solver_alg')
 
@@ -482,11 +626,19 @@ contains
 
     implicit none
 
-    type(field_vector_type),                  intent(inout) :: vector_state
-    type(field_type), dimension(bundle_size), intent(in) :: state
+    type( field_vector_type ),                  intent(inout) :: vector_state
+    type( field_type ), dimension(bundle_size), intent(in)    :: state
 
-    type(field_type)    :: uv, w
-    integer(kind=i_def) :: p, mesh_id
+    type( field_type )    :: uv, w
+    integer( kind=i_def ) :: p, mesh_id, state_size
+
+    state_size = 2 ! Default UV + P fields
+    if ( split_w ) &
+      state_size = state_size + 1 ! Additional W field
+    if ( eliminate_variables == eliminate_variables_none ) &
+      state_size = state_size + 2 ! Additional T & D fields
+
+    vector_state = field_vector_type( state_size )
 
     if ( split_w ) then
       p       = state(igh_u)%get_element_order()
@@ -497,16 +649,17 @@ contains
       call invoke( setval_c( uv, 0.0_r_def ), &
                    setval_c( w,  0.0_r_def ), &
                    split_w2_field_kernel_type( uv, w, state(igh_u) ) )
-      vector_state = field_vector_type( bundle_size+1 )
-      call vector_state%import_field( uv, igh_uv )
-      call vector_state%import_field( w, igh_w )
+      call vector_state%import_field( uv, isol_uv )
+      call vector_state%import_field( w, isol_w )
     else
-      vector_state = field_vector_type( bundle_size )
-      call vector_state%import_field( state(igh_u), igh_u )
+      call vector_state%import_field( state(igh_u), isol_u )
     end if
-    call vector_state%import_field( state(igh_t), igh_t )
-    call vector_state%import_field( state(igh_d), igh_d )
-    call vector_state%import_field( state(igh_p), igh_p )
+    call vector_state%import_field( state(igh_p), isol_p )
+
+    if ( eliminate_variables == eliminate_variables_none ) then
+      call vector_state%import_field( state(igh_t), isol_t )
+      call vector_state%import_field( state(igh_d), isol_d )
+    end if
 
   end subroutine construct_solver_state
 end module semi_implicit_solver_alg_mod

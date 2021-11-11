@@ -9,7 +9,7 @@
 !>
 !> @details Compute the projection operator \f[<\gamma,\nabla(\theta*)v>\f]
 !!          where v is in W2 and gamma is in the potential temperature space
-!>
+!> @todo Create unit test for this kernel, see #2935
 module weighted_proj_theta2_vert_kernel_mod
 
   use argument_mod,      only : arg_type, func_type,     &

@@ -1410,7 +1410,7 @@ end subroutine invoke_calc_deppts
     use mesh_mod, only: mesh_type
     use stencil_dofmap_mod, only: stencil_cross
     use stencil_dofmap_mod, only: stencil_dofmap_type
-
+    use reference_element_mod, only: reference_element_type
     implicit none
 
     type(field_type), intent(in) :: helmholtz_operator(9), hb_lumped_inv, u_normalisation, t_normalisation, w2_mask
@@ -1430,6 +1430,8 @@ end subroutine invoke_calc_deppts
     type(stencil_dofmap_type), pointer :: hb_lumped_inv_stencil_map => null()
     integer(kind=i_def) :: i
     integer(kind=i_def), allocatable :: cell_stencil(:)
+    integer(kind=i_def) nfaces_re_h
+    class(reference_element_type), pointer :: reference_element => null()
     !
     ! Initialise field and/or operator proxies
     !
@@ -1495,12 +1497,20 @@ end subroutine invoke_calc_deppts
     if (u_normalisation_proxy%is_dirty(depth=1)) then
       call u_normalisation_proxy%halo_exchange(depth=1)
     end if
+    if (t_normalisation_proxy%is_dirty(depth=1)) then
+      call t_normalisation_proxy%halo_exchange(depth=1)
+    end if
     if (w2_mask_proxy%is_dirty(depth=1)) then
       call w2_mask_proxy%halo_exchange(depth=1)
     end if
     !
+    ! Get the reference element and query its properties
+    !
+    reference_element => mesh%get_reference_element()
+    nfaces_re_h = reference_element%get_number_horizontal_faces()
+    !
     ! Create cell stencil of the correct size
-    stencil_size =  1 + 4*stencil_depth
+    stencil_size =  1 + nfaces_re_h*stencil_depth
     allocate( cell_stencil( stencil_size ) )
 
     !$omp parallel default(shared), private(cell, cell_stencil, i)
@@ -1510,7 +1520,7 @@ end subroutine invoke_calc_deppts
       ! Populate cell_stencil array used for operators
       ! (this is the id of each cell in the stencil)
       cell_stencil(1) = cell
-      do i = 1,4
+      do i = 1,nfaces_re_h
         cell_stencil(i+1) = mesh%get_cell_next(i, cell)
       end do
       call helmholtz_operator_code(stencil_size,                     &
@@ -1563,6 +1573,165 @@ end subroutine invoke_calc_deppts
     !$omp end parallel
     !
   end subroutine invoke_helmholtz_operator_kernel_type
+
+  !----------------------------------------------------------------------------
+  ! This requires a stencil of horizontal cells for the operators
+  ! see PSyclone #1103: https://github.com/stfc/PSyclone/issues/1103
+  ! The LFRic infrastructure for this will be introduced in #2532
+  subroutine invoke_elim_helmholtz_operator_kernel_type(helmholtz_operator, hb_lumped_inv, stencil_depth, &
+                                                   u_normalisation, div_star, &
+                                                   m3_exner_star, Q32, &
+                                                   w2_mask)
+    use elim_helmholtz_operator_kernel_mod, only: elim_helmholtz_operator_code
+    use mesh_mod, only: mesh_type
+    use stencil_dofmap_mod, only: stencil_cross
+    use stencil_dofmap_mod, only: stencil_dofmap_type
+    use reference_element_mod, only: reference_element_type
+
+    implicit none
+
+    type(field_type), intent(in) :: helmholtz_operator(9), hb_lumped_inv, u_normalisation, w2_mask
+    type(operator_type), intent(in) :: div_star, m3_exner_star, Q32
+    integer(kind=i_def), intent(in) :: stencil_depth
+    integer(kind=i_def) :: stencil_size
+    integer(kind=i_def) cell
+    integer(kind=i_def) nlayers
+    type(operator_proxy_type) div_star_proxy, m3_exner_star_proxy, Q32_proxy
+    type(field_proxy_type) helmholtz_operator_proxy(9), hb_lumped_inv_proxy, u_normalisation_proxy, &
+                           w2_mask_proxy
+    integer(kind=i_def), pointer :: map_w2(:,:) => null(), map_w3(:,:) => null()
+    integer(kind=i_def) ndf_w3, undf_w3, ndf_w2, undf_w2
+    type(mesh_type), pointer :: mesh => null()
+    integer(kind=i_def) hb_lumped_inv_stencil_size
+    integer(kind=i_def), pointer :: hb_lumped_inv_stencil_dofmap(:,:,:) => null()
+    type(stencil_dofmap_type), pointer :: hb_lumped_inv_stencil_map => null()
+    integer(kind=i_def) :: i
+    integer(kind=i_def), allocatable :: cell_stencil(:)
+    integer(kind=i_def) nfaces_re_h
+    class(reference_element_type), pointer :: reference_element => null()
+    !
+    ! Initialise field and/or operator proxies
+    !
+    helmholtz_operator_proxy(1) = helmholtz_operator(1)%get_proxy()
+    helmholtz_operator_proxy(2) = helmholtz_operator(2)%get_proxy()
+    helmholtz_operator_proxy(3) = helmholtz_operator(3)%get_proxy()
+    helmholtz_operator_proxy(4) = helmholtz_operator(4)%get_proxy()
+    helmholtz_operator_proxy(5) = helmholtz_operator(5)%get_proxy()
+    helmholtz_operator_proxy(6) = helmholtz_operator(6)%get_proxy()
+    helmholtz_operator_proxy(7) = helmholtz_operator(7)%get_proxy()
+    helmholtz_operator_proxy(8) = helmholtz_operator(8)%get_proxy()
+    helmholtz_operator_proxy(9) = helmholtz_operator(9)%get_proxy()
+    hb_lumped_inv_proxy = hb_lumped_inv%get_proxy()
+    u_normalisation_proxy = u_normalisation%get_proxy()
+    div_star_proxy = div_star%get_proxy()
+    m3_exner_star_proxy = m3_exner_star%get_proxy()
+    Q32_proxy = Q32%get_proxy()
+    w2_mask_proxy = w2_mask%get_proxy()
+    !
+    ! Initialise number of layers
+    !
+    nlayers = helmholtz_operator_proxy(1)%vspace%get_nlayers()
+    !
+    ! Create a mesh object
+    !
+    mesh => helmholtz_operator_proxy(1)%vspace%get_mesh()
+    !
+    ! Initialise stencil dofmaps
+    !
+    hb_lumped_inv_stencil_map => hb_lumped_inv_proxy%vspace%get_stencil_dofmap(STENCIL_CROSS,stencil_depth)
+    hb_lumped_inv_stencil_dofmap => hb_lumped_inv_stencil_map%get_whole_dofmap()
+    hb_lumped_inv_stencil_size = hb_lumped_inv_stencil_map%get_size()
+    !
+    ! Look-up dofmaps for each function space
+    !
+    map_w3 => helmholtz_operator_proxy(1)%vspace%get_whole_dofmap()
+    map_w2 => hb_lumped_inv_proxy%vspace%get_whole_dofmap()
+    !
+    ! Initialise number of DoFs for w3
+    !
+    ndf_w3 = helmholtz_operator_proxy(1)%vspace%get_ndf()
+    undf_w3 = helmholtz_operator_proxy(1)%vspace%get_undf()
+    !
+    ! Initialise number of DoFs for w2
+    !
+    ndf_w2 = hb_lumped_inv_proxy%vspace%get_ndf()
+    undf_w2 = hb_lumped_inv_proxy%vspace%get_undf()
+    !
+    ! Call kernels and communication routines
+    !
+    if (hb_lumped_inv_proxy%is_dirty(depth=1)) then
+      call hb_lumped_inv_proxy%halo_exchange(depth=1)
+    end if
+    if (u_normalisation_proxy%is_dirty(depth=1)) then
+      call u_normalisation_proxy%halo_exchange(depth=1)
+    end if
+    if (w2_mask_proxy%is_dirty(depth=1)) then
+      call w2_mask_proxy%halo_exchange(depth=1)
+    end if
+    !
+    ! Get the reference element and query its properties
+    !
+    reference_element => mesh%get_reference_element()
+    nfaces_re_h = reference_element%get_number_horizontal_faces()
+    !
+    ! Create cell stencil of the correct size
+    stencil_size =  1 + nfaces_re_h*stencil_depth
+    allocate( cell_stencil( stencil_size ) )
+
+    !$omp parallel default(shared), private(cell, cell_stencil, i)
+    !$omp do schedule(static)
+    do cell=1,mesh%get_last_edge_cell()
+      !
+      ! Populate cell_stencil array used for operators
+      ! (this is the id of each cell in the stencil)
+      cell_stencil(1) = cell
+      do i = 1,nfaces_re_h
+        cell_stencil(i+1) = mesh%get_cell_next(i, cell)
+      end do
+      call elim_helmholtz_operator_code(stencil_size,                &
+                                   cell_stencil, nlayers,            &
+                                   helmholtz_operator_proxy(1)%data, &
+                                   helmholtz_operator_proxy(2)%data, &
+                                   helmholtz_operator_proxy(3)%data, &
+                                   helmholtz_operator_proxy(4)%data, &
+                                   helmholtz_operator_proxy(5)%data, &
+                                   helmholtz_operator_proxy(6)%data, &
+                                   helmholtz_operator_proxy(7)%data, &
+                                   helmholtz_operator_proxy(8)%data, &
+                                   helmholtz_operator_proxy(9)%data, &
+                                   hb_lumped_inv_proxy%data, &
+                                   hb_lumped_inv_stencil_size, &
+                                   hb_lumped_inv_stencil_dofmap(:,:,cell), &
+                                   u_normalisation_proxy%data, &
+                                   div_star_proxy%ncell_3d, &
+                                   div_star_proxy%local_stencil, &
+                                   m3_exner_star_proxy%ncell_3d, &
+                                   m3_exner_star_proxy%local_stencil, &
+                                   Q32_proxy%ncell_3d, &
+                                   Q32_proxy%local_stencil, &
+                                   w2_mask_proxy%data, &
+                                   ndf_w3, undf_w3, map_w3(:,cell), &
+                                   ndf_w2, undf_w2, map_w2(:,cell))
+    end do
+    !$omp end do
+    !
+    ! Set halos dirty/clean for fields modified in the above loop
+    !
+    !$omp master
+    call helmholtz_operator_proxy(1)%set_dirty()
+    call helmholtz_operator_proxy(2)%set_dirty()
+    call helmholtz_operator_proxy(3)%set_dirty()
+    call helmholtz_operator_proxy(4)%set_dirty()
+    call helmholtz_operator_proxy(5)%set_dirty()
+    call helmholtz_operator_proxy(6)%set_dirty()
+    call helmholtz_operator_proxy(7)%set_dirty()
+    call helmholtz_operator_proxy(8)%set_dirty()
+    call helmholtz_operator_proxy(9)%set_dirty()
+    !$omp end master
+    !
+    !$omp end parallel
+    !
+  end subroutine invoke_elim_helmholtz_operator_kernel_type
 
   !----------------------------------------------------------------------------
   !> Requires GH_INC field to be halo swapped before updating. #

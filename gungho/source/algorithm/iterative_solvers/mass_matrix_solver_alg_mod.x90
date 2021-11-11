@@ -60,29 +60,30 @@ contains
   !> @param[in]    bc_flag optional flag to overide the default application of
   !>               boundary conditions
   subroutine mass_matrix_solver_alg(y, x, bc_flag)
-    use solver_config_mod,           only: maximum_iterations,                 &
-                                           tolerance,                          &
-                                           method,                             &
-                                           gcrk,                               &
-                                           method_cg,                          &
-                                           method_bicgstab,                    &
-                                           method_gmres,                       &
-                                           method_fgmres,                      &
-                                           method_gcr,                         &
-                                           method_prec_only,                   &
-                                           method_jacobi,                      &
-                                           method_chebyshev,                   &
-                                           preconditioner,                     &
-                                           preconditioner_diagonal,            &
-                                           preconditioner_none,                &
-                                           diagnostic_norm,                    &
-                                           fixed_iterations
-    use fem_constants_mod,           only: get_mass_matrix,                    &
-                                           get_mass_matrix_diagonal,           &
-                                           get_inverse_w3_mass_matrix
-    use fs_continuity_mod,           only: W1, W2, W3, W2v, W2h, Wtheta, W0
-    use fs_eigenvalues_mod,          only: get_minmax_eigenvalues
-    use dg_matrix_vector_kernel_mod, only: dg_matrix_vector_kernel_type
+    use solver_config_mod,             only: maximum_iterations,               &
+                                             tolerance,                        &
+                                             method,                           &
+                                             gcrk,                             &
+                                             method_cg,                        &
+                                             method_bicgstab,                  &
+                                             method_gmres,                     &
+                                             method_fgmres,                    &
+                                             method_gcr,                       &
+                                             method_prec_only,                 &
+                                             method_jacobi,                    &
+                                             method_chebyshev,                 &
+                                             preconditioner,                   &
+                                             preconditioner_diagonal,          &
+                                             preconditioner_none,              &
+                                             diagnostic_norm,                  &
+                                             fixed_iterations
+    use fem_constants_mod,             only: get_mass_matrix,                  &
+                                             get_mass_matrix_diagonal,         &
+                                             get_inverse_w3_mass_matrix
+    use fs_continuity_mod,             only: W1, W2, W3, W2v, W2h, Wtheta, W0
+    use fs_eigenvalues_mod,            only: get_minmax_eigenvalues
+    use dg_matrix_vector_kernel_mod,   only: dg_matrix_vector_kernel_type
+    use operator_tri_solve_kernel_mod, only: operator_tri_solve_kernel_type
     implicit none
 
     ! Prognostic fields
@@ -122,6 +123,9 @@ contains
       mass_matrix => get_inverse_w3_mass_matrix(mesh_id)
 
       call invoke( dg_matrix_vector_kernel_type(y, x, mass_matrix) )
+    else if ( fs == Wtheta .and. x%get_element_order() == 0 ) then
+      mass_matrix => get_mass_matrix(fs, mesh_id)
+      call invoke( operator_tri_solve_kernel_type(y, x, mass_matrix) )
     else
     ! Iterative solve for (semi-)continuous spaces
 

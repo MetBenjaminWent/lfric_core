@@ -156,24 +156,26 @@
 /
 
 &mixed_solver
+  eliminate_variables            = 'analytic'
   si_method                      = 'block_gcr'
   si_preconditioner              = 'pressure'
   si_maximum_iterations          = 10
   gcrk                           = 18
   si_tolerance                   = 1.0e-6
-  guess_np1                      = .F
+  guess_np1                      = .false.
   reference_reset_freq           = 4
-  normalise                      = .T
+  normalise                      = .true.
+  split_w                        = .true.
 /
 
 &helmholtz_solver
   gcrk                           = 18
   method                         = 'prec_only'
-  diagnostic_norm                =.F
+  diagnostic_norm                = .false.
   preconditioner                 = 'multigrid'
   si_pressure_tolerance          = 1.0e-6
   si_pressure_maximum_iterations = 100
-  normalise                      = .T
+  normalise                      = .true.
 /
 
 &subgrid
@@ -188,10 +190,10 @@
   dt                 = 3600.0
   alpha              = 0.5
   tau_u              = 0.5
-  tau_t              = 0.5
+  tau_t              = 1.0
   tau_r              = 0.5
-  outer_iterations   = 4
-  inner_iterations   = 1
+  outer_iterations   = 2
+  inner_iterations   = 2
   runge_kutta_method = 'ssp5'
   spinup_period      = 1
   spinup_alpha       = .false.
@@ -215,6 +217,7 @@
   theta_splitting = 'none'
   log_rho=.true.
   log_theta=.true.
+  use_density_predictor = .true.
 /
 
 &partitioning

@@ -16,6 +16,7 @@
 !>          of the face and one from the left side, using the potential
 !>          temperature on the left side of the face.
 !>
+!> @todo Create unit test for this kernel, see #2935
 module weighted_div_bd_kernel_mod
 
   use argument_mod,      only : arg_type, func_type,         &

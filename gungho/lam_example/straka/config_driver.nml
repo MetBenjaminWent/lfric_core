@@ -133,6 +133,7 @@ write_minmax_tseries=.false.,
 run_log_level='info',
 /
 &mixed_solver
+eliminate_variables='discrete',
 gcrk=6,
 guess_np1=.false.,
 mixed_solver_a_tol=1.0e-6,

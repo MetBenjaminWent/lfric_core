@@ -4,8 +4,8 @@
 ! under which the code may be used.
 !-----------------------------------------------------------------------------
 
-!>@brief A two time-level iterative time-discretisation of the nonlinear
-!>       3D equations
+!> @brief A two time-level iterative time-discretisation of the nonlinear
+!!        3D equations.
 module semi_implicit_timestep_alg_mod
 
   use clock_mod,                 only: clock_type
