@@ -24,6 +24,7 @@ module bl_imp_kernel_mod
   use cloud_config_mod,          only : scheme, scheme_smith, scheme_pc2, &
                                         scheme_bimodal
   use constants_mod,             only : i_def, i_um, r_def, r_um
+  use empty_data_mod,            only : empty_real_data
   use fs_continuity_mod,         only : W3, Wtheta
   use kernel_mod,                only : kernel_type
   use timestepping_config_mod,   only : outer_iterations
@@ -45,7 +46,7 @@ module bl_imp_kernel_mod
   !>
   type, public, extends(kernel_type) :: bl_imp_kernel_type
     private
-    type(arg_type) :: meta_args(83) = (/                                          &
+    type(arg_type) :: meta_args(89) = (/                                          &
          arg_type(GH_SCALAR, GH_INTEGER, GH_READ),                                &! outer
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      WTHETA),                   &! theta_in_wth
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      W3),                       &! wetrho_in_w3
@@ -68,6 +69,9 @@ module bl_imp_kernel_mod
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      ANY_DISCONTINUOUS_SPACE_4),&! sea_ice_thickness
          arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, ANY_DISCONTINUOUS_SPACE_4),&! sea_ice_temperature
          arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, ANY_DISCONTINUOUS_SPACE_2),&! tile_temperature
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, ANY_DISCONTINUOUS_SPACE_2),&! screen_temperature
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1),&! time_since_transition
+         arg_type(GH_FIELD,  GH_REAL,    GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! latitude
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      ANY_DISCONTINUOUS_SPACE_2),&! tile_snow_mass
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      ANY_DISCONTINUOUS_SPACE_2),&! n_snow_layers
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      ANY_DISCONTINUOUS_SPACE_2),&! snow_depth
@@ -128,7 +132,13 @@ module bl_imp_kernel_mod
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! zh_nonloc
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! zh_2d
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! zhsc_2d
-         arg_type(GH_FIELD,  GH_REAL,    GH_READ,      ANY_DISCONTINUOUS_SPACE_7) &! bl_type_ind
+         arg_type(GH_FIELD,  GH_REAL,    GH_READ,      ANY_DISCONTINUOUS_SPACE_7),&! bl_type_ind
+         ! diag(surface__t1p5m)
+         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&
+         ! diag(surface__q1p5m)
+         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&
+         ! diag(surface__rh1p5m)
+         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1) &
          /)
     integer :: operates_on = CELL_COLUMN
   contains
@@ -167,6 +177,9 @@ contains
   !> @param[in]     sea_ice_thickness    Depth of sea-ice (m)
   !> @param[in,out] sea_ice_temperature  Bulk temperature of sea-ice (K)
   !> @param[in,out] tile_temperature     Surface tile temperatures
+  !> @param[in,out] screen_temperature   Tiled screen level liquid temperature
+  !> @param[in,out] time_since_transition Time since decoupled screen transition
+  !> @param[in]     latitude             Latitude of cell centre
   !> @param[in]     tile_snow_mass       Snow mass on tiles (kg/m2)
   !> @param[in]     n_snow_layers        Number of snow layers on tiles
   !> @param[in]     snow_depth           Snow depth on tiles
@@ -228,6 +241,9 @@ contains
   !> @param[in]     zh_2d                Total BL depth
   !> @param[in]     zhsc_2d              Height of decoupled layer top
   !> @param[in]     bl_type_ind          Diagnosed BL types
+  !> @param[in,out] t1p5m                Diagnostic: 1.5m temperature
+  !> @param[in,out] q1p5m                Diagnostic: 1.5m specific humidity
+  !> @param[in,out] rh1p5m               Diagnostic: 1.5m relative humidity
   !> @param[in]     ndf_wth              Number of DOFs per cell for potential temperature space
   !> @param[in]     undf_wth             Number of unique DOFs for potential temperature space
   !> @param[in]     map_wth              Dofmap for the cell at the base of the column for potential temperature space
@@ -278,6 +294,9 @@ contains
                          sea_ice_thickness,                  &
                          sea_ice_temperature,                &
                          tile_temperature,                   &
+                         screen_temperature,                 &
+                         time_since_transition,              &
+                         latitude,                           &
                          tile_snow_mass,                     &
                          n_snow_layers,                      &
                          snow_depth,                         &
@@ -339,6 +358,7 @@ contains
                          zh_2d,                              &
                          zhsc_2d,                            &
                          bl_type_ind,                        &
+                         t1p5m, q1p5m, rh1p5m,               &
                          ndf_wth,                            &
                          undf_wth,                           &
                          map_wth,                            &
@@ -376,12 +396,13 @@ contains
     use nlsizes_namelist_mod, only: row_length, rows, land_field, &
          sm_levels, ntiles, bl_levels, tr_vars
     use pftparm, only: emis_pft
-    use planet_constants_mod, only: p_zero, kappa, planet_radius
+    use planet_constants_mod, only: p_zero, kappa, planet_radius, two_omega
     use nvegparm, only: emis_nvg
     use rad_input_mod, only: co2_mmr
 
     ! spatially varying fields used from modules
     use level_heights_mod, only: r_theta_levels, r_rho_levels
+    use dyn_coriolis_mod, only: f3_at_u
 
     ! subroutines used
     use bl_diags_mod, only: bl_diag, dealloc_bl_imp, alloc_bl_expl
@@ -389,6 +410,8 @@ contains
                             alloc_sf_expl
     use ni_imp_ctl_mod, only: ni_imp_ctl
     use tilepts_mod, only: tilepts
+    use ls_cld_mod, only: ls_cld
+    use qsat_mod, only: qsat
 
     !---------------------------------------
     ! JULES modules
@@ -469,6 +492,9 @@ contains
 
     real(kind=r_def), intent(in)    :: tile_fraction(undf_tile)
     real(kind=r_def), intent(inout) :: tile_temperature(undf_tile)
+    real(kind=r_def), intent(inout) :: screen_temperature(undf_tile)
+    real(kind=r_def), intent(inout) :: time_since_transition(undf_2d)
+    real(kind=r_def), intent(in)    :: latitude(undf_2d)
     real(kind=r_def), intent(in)    :: tile_snow_mass(undf_tile)
     real(kind=r_def), intent(in)    :: n_snow_layers(undf_tile)
     real(kind=r_def), intent(in)    :: snow_depth(undf_tile)
@@ -511,6 +537,8 @@ contains
                                                            chr1p5m_tile,     &
                                                            resfs_tile,       &
                                                            canhc_tile
+
+    real(kind=r_def), pointer, intent(inout) :: t1p5m(:), q1p5m(:), rh1p5m(:)
 
     !-----------------------------------------------------------------------
     ! Local variables for the kernel
@@ -555,7 +583,8 @@ contains
          dtstar_sea, ice_fract, tstar_sice, alpha1_sea,                      &
          ashtf_prime_sea, bl_type_1, bl_type_2, bl_type_3, bl_type_4,        &
          bl_type_5, bl_type_6, bl_type_7, chr1p5m_sice, flandg, rhokh_sea,   &
-         u_s, z0hssi, z0mssi, zhnl, zlcl_mix, zlcl, dzh, qcl_inv_top
+         u_s, z0hssi, z0mssi, zhnl, zlcl_mix, zlcl, dzh, qcl_inv_top,        &
+         work_2d_1, work_2d_2, work_2d_3, qcl1p5m
 
     ! single level real fields on u/v points
     real(r_um), dimension(row_length,rows) :: u_0, v_0, taux_land, tauy_land,&
@@ -700,7 +729,6 @@ contains
     kent = 2
     kent_dsc = 2
     olr = 300.0_r_um
-    tstbtrans      = 0.0_r_um
     fluxes%fqw_surft = 0.0_r_um
     cdr10m_u       = 0.0_r_um
     cdr10m_v       = 0.0_r_um
@@ -708,12 +736,14 @@ contains
     conv_snow      = 0.0_r_um
     cca0           = 0.0_r_um
     epot_surft     = 0.0_r_um
-    tscrndcl_ssi   = 0.0_r_um
-    tscrndcl_surft = 0.0_r_um
 
     !-----------------------------------------------------------------------
     ! Mapping of LFRic fields into UM variables
     !-----------------------------------------------------------------------
+
+    ! Fields for decoupled screen temperature diagnostic
+    tstbtrans      = time_since_transition(map_2d(1))
+    f3_at_u        = two_omega * sin(latitude(map_2d(1)))
 
     ! Land tile fractions
     flandg = 0.0_r_um
@@ -810,6 +840,7 @@ contains
     tstar_land = 0.0_r_um
     do i = 1, n_land_tile
       tstar_surft(1, i) = real(tile_temperature(map_tile(1)+i-1), r_um)
+      tscrndcl_surft(1, i) = real(screen_temperature(map_tile(1)+i-1), r_um)
       tstar_land = tstar_land + frac_surft(1, i) * tstar_surft(1, i)
       ! sensible heat flux
       fluxes%ftl_surft(1, i) = real(tile_heat_flux(map_tile(1)+i-1), r_um)
@@ -825,6 +856,7 @@ contains
     if (tile_fraction(map_tile(1)+first_sea_tile-1) > 0.0_r_def) then
       tstar_sea = real(tile_temperature(map_tile(1)+first_sea_tile-1), r_um)
     end if
+    tscrndcl_ssi=real(screen_temperature(map_tile(1)+first_sea_tile-1), r_um)
 
     ! Sea-ice temperatures
     fluxes%ftl_sicat = 0.0_r_um
@@ -1275,6 +1307,7 @@ contains
       ! Update land tiles
       do i = 1, n_land_tile
         tile_temperature(map_tile(1)+i-1) = real(tstar_surft(1, i), r_def)
+        screen_temperature(map_tile(1)+i-1) = real(tscrndcl_surft(1, i), r_def)
         tile_heat_flux(map_tile(1)+i-1) = real(fluxes%ftl_surft(1, i), r_def)
         tile_moisture_flux(map_tile(1)+i-1) = real(fluxes%fqw_surft(1, i), r_def)
         ! Sum the fluxes over the land for use in sea point calculation
@@ -1295,6 +1328,8 @@ contains
 
       ! Update sea tile
       tile_temperature(map_tile(1)+first_sea_tile-1) = real(tstar_sea(1,1), r_def)
+      screen_temperature(map_tile(1)+first_sea_tile-1) = real(tscrndcl_ssi(1, 1), r_def)
+      time_since_transition(map_2d(1)) = tstbtrans(1,1)
 
       ! Update sea-ice tiles
       i_sice = 0
@@ -1342,7 +1377,30 @@ contains
         water_extraction(map_soil(1)+i-1) = real(fluxes%ext_soilt(1, 1, i), r_def)
       end do
 
-    endif
+      ! diagnostics
+      if (.not. associated(t1p5m, empty_real_data) .or. &
+          .not. associated(q1p5m, empty_real_data) .or. &
+          .not. associated(rh1p5m, empty_real_data) ) then
+        call ls_cld(                                                           &
+           p_star, rhcpt, 1, bl_levels, 1, 1, ntml, cumulus, .false.,          &
+           sf_diag%t1p5m, work_2d_1, sf_diag%q1p5m, qcf_latest, qcl1p5m,       &
+           work_2d_2, work_2d_3, error_code )
+      end if
+
+      if (.not. associated(t1p5m, empty_real_data) ) then
+        t1p5m(map_2d(1)) = sf_diag%t1p5m(1,1)
+      end if
+      if (.not. associated(q1p5m, empty_real_data) ) then
+        q1p5m(map_2d(1)) = sf_diag%q1p5m(1,1)
+      end if
+
+      if (.not. associated(rh1p5m, empty_real_data) ) then
+        ! qsat needed since q1p5m always a specific humidity
+        call qsat(work_2d_1,sf_diag%t1p5m,p_star,pdims%i_end,pdims%j_end)
+        rh1p5m(map_2d(1)) = max(0.0, sf_diag%q1p5m(1,1)) * 100.0 / work_2d_1(1,1)
+      end if
+
+    end if
 
     ! deallocate diagnostics deallocated in atmos_physics2
     call dealloc_bl_imp(bl_diag)

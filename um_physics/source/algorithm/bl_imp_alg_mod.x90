@@ -9,11 +9,11 @@ module bl_imp_alg_mod
 
   use constants_mod,                 only: i_def
   use clock_mod,                     only: clock_type
-  use diagnostics_io_mod,            only: write_vector_diagnostic
   use field_mod,                     only: field_type
   use field_collection_mod,          only: field_collection_type
   use fs_continuity_mod,             only: W1, W2, W3, Wtheta
-  use geometric_constants_mod,       only: get_height, get_da_at_w2
+  use geometric_constants_mod,       only: get_height, get_da_at_w2, &
+                                           get_latitude
   use physical_op_constants_mod,     only: get_rdz_fd1, get_dtrdz_fd2
   use mr_indices_mod,                only: nummr, imr_v, imr_cl, imr_ci
   use timestepping_config_mod,       only: outer_iterations
@@ -22,6 +22,8 @@ module bl_imp_alg_mod
   use timer_mod,     only: timer
   ! xios output
   use io_config_mod, only: write_diag, use_xios_io
+  use bl_imp_diags_mod, only: initialise_diags_for_bl_imp, &
+                              output_diags_for_bl_imp
   use log_mod,              only: log_event, LOG_LEVEL_INFO
 
   use map_fd_to_prognostics_alg_mod, only: set_wind
@@ -151,6 +153,8 @@ contains
     type( field_type ), pointer :: sea_ice_thickness   => null()
     type( field_type ), pointer :: sea_ice_temperature => null()
     type( field_type ), pointer :: tile_temperature   => null()
+    type( field_type ), pointer :: screen_temperature  => null()
+    type( field_type ), pointer :: time_since_transition => null()
     type( field_type ), pointer :: canopy_water       => null()
     type( field_type ), pointer :: tile_heat_flux => null()
     type( field_type ), pointer :: tile_moisture_flux => null()
@@ -190,11 +194,13 @@ contains
     type( field_type ), pointer :: height_wth => null()
     type( field_type ), pointer :: rdz => null()
     type( field_type ), pointer :: dtrdz => null()
+    type( field_type ), pointer :: latitude => null()
 
     type( field_type ) :: du_conv_w2, dw_conv
     type( field_type ) :: dissip, diss_u, diss_v, diss_w
     type( field_type ) :: wind10m_w2, u10m, v10m, w10m
-    type( field_type ) :: dmv_bl, dt_bl, tauz_ssi
+    type( field_type ) :: dmv_bl, tauz_ssi
+    type( field_type ) :: t1p5m, q1p5m, rh1p5m
 
     integer(kind=i_def) :: mesh_id
 
@@ -269,6 +275,8 @@ contains
     sea_ice_thickness => surface_fields%get_field('sea_ice_thickness')
     sea_ice_temperature => surface_fields%get_field('sea_ice_temperature')
     tile_temperature   => surface_fields%get_field('tile_temperature')
+    screen_temperature => surface_fields%get_field('screen_temperature')
+    time_since_transition => surface_fields%get_field('time_since_transition')
     canopy_water       => surface_fields%get_field('canopy_water')
     tile_heat_flux => surface_fields%get_field('tile_heat_flux')
     tile_moisture_flux => surface_fields%get_field('tile_moisture_flux')
@@ -307,6 +315,7 @@ contains
     dA => get_da_at_w2(mesh_id)
     rdz => get_rdz_fd1(mesh_id)
     dtrdz => get_dtrdz_fd2(mesh_id)
+    latitude => get_latitude(zh%get_mesh_id())
 
     ! Local surface fields that need creating
     call tile_temperature%copy_field_properties(snow_sublimation)
@@ -317,7 +326,10 @@ contains
 
     ! Set up the BL increments
     call theta%copy_field_properties(dtheta_bl)
-    call mr(imr_v)%copy_field_properties(dmv_bl)
+
+    ! Initialise the BL diagnostics
+    call initialise_diags_for_bl_imp(mr(imr_v), zh, dmv_bl, t1p5m, q1p5m, &
+                                     rh1p5m)
 
     ! Map the convection wind increments into w2 space
     call u_physics%copy_field_properties(du_conv_w2)
@@ -364,18 +376,17 @@ contains
       call map_physics_winds(diss_u, diss_v, diss_w, dissip)
     end if
 
-                ! Save vapour value for diagnostic increment
-    call invoke(a_times_X(dmv_bl, -1.0_r_def, mr(imr_v)),                      &
-
                 ! Call the implicit scheme for scalars
-                bl_imp_kernel_type( outer, theta, wetrho_in_w3,                &
+    call invoke(bl_imp_kernel_type( outer, theta, wetrho_in_w3,                &
                            wetrho_in_wth, exner, exner_in_wth,                 &
                            mr_n(imr_v), mr_n(imr_cl), mr_n(imr_ci), theta_star,&
                            height_w3, height_wth, ntml, cumulus,               &
                            tile_fraction, leaf_area_index, canopy_height,      &
                            peak_to_trough_orog, silhouette_area_orog,          &
                            sea_ice_thickness, sea_ice_temperature,             &
-                           tile_temperature, tile_snow_mass, n_snow_layers,    &
+                           tile_temperature, screen_temperature,               &
+                           time_since_transition, latitude,                    &
+                           tile_snow_mass, n_snow_layers,                      &
                            snow_depth, canopy_water, soil_temperature,         &
                            tile_heat_flux, tile_moisture_flux,                 &
                            sw_up_tile, sw_down_surf, lw_down_surf,             &
@@ -393,55 +404,40 @@ contains
                            chr1p5m_tile, resfs_tile, canhc_tile,               &
                            tile_water_extract, z_lcl, inv_depth,               &
                            qcl_at_inv_top, blend_height_tq, ustar,             &
-                           soil_moist_avail, zh_nonloc, zh, zhsc, bl_type_ind),&
-
-                ! Calculate diagnostic vapour increment
-                inc_X_plus_Y(dmv_bl, mr(imr_v)) )
+                           soil_moist_avail, zh_nonloc, zh, zhsc, bl_type_ind, &
+                           t1p5m, q1p5m, rh1p5m) )
 
     if ( subroutine_timers ) call timer("bl_imp_alg")
 
     ! Output diagnostics on last iteration only
     if (write_diag .and. use_xios_io .and. outer == outer_iterations) then
-      if ( subroutine_timers ) call timer("bl_imp_alg_xios")
 
-      ! BL diagnostics
-      call dtheta_bl%copy_field_properties(dt_bl)
-      call invoke(    X_times_Y(dt_bl,dtheta_bl,exner_in_wth), &
-                  inc_X_minus_Y(dt_bl,dt_conv) )
-      call dt_bl%write_field('dt_bl')
-      call dmv_bl%write_field('dmv_bl')
-      call write_vector_diagnostic('du_bl',du_bl,clock,du_bl%get_mesh_id(),.false.)
-
-      call zh%write_field('zh')
-
-      ! Surface diagnostics
-      call tile_heat_flux%write_field('tile_heat_flux')
-      call tile_moisture_flux%write_field('tile_moisture_flux')
-      call tile_temperature%write_field('tile_temperature')
-      call tile_fraction%write_field('tile_fraction')
-      call canopy_evap%write_field('canopy_evap')
-
+    ! Calculate zonal and meridional wind speeds - done here as it's needed
+    ! for coupling
       call zh%copy_field_properties(u10m)
       call zh%copy_field_properties(v10m)
       call zh%copy_field_properties(w10m)
-      ! Calculate zonal and meridional wind speeds
       call map_physics_winds(u10m, v10m, w10m, wind10m_w2)
-      call u10m%write_field('u10m')
-      call v10m%write_field('v10m')
+      call u10m%write_field('surface__u10m')
+      call v10m%write_field('surface__v10m')
       ! Calculate the 10m windspeed
       call invoke(inc_X_powint_n(u10m, 2_i_def),    &
                   inc_X_powint_n(v10m, 2_i_def),    &
                   X_plus_Y(wspd10m,u10m,v10m),      &
                   inc_X_powreal_a(wspd10m, 0.5_r_def) )
-      call wspd10m%write_field('wspd10m')
 
-      call zh%copy_field_properties(tauz_ssi)
       ! Calculate zonal and meridional wind stresses
+      call zh%copy_field_properties(tauz_ssi)
       call map_physics_winds(taux_ssi, tauy_ssi, tauz_ssi, tau_ssi_w2)
-      call taux_ssi%write_field('taux_ssi')
-      call tauy_ssi%write_field('tauy_ssi')
 
-      if ( subroutine_timers ) call timer("bl_imp_alg_xios")
+      ! Output the BL diagnostics
+      call output_diags_for_bl_imp(mr(imr_v), dmv_bl, zh, du_bl, clock,        &
+                                   tile_heat_flux, tile_moisture_flux,         &
+                                   tile_temperature, canopy_evap, wspd10m,     &
+                                   tile_fraction, taux_ssi, tauy_ssi,          &
+                                   dtheta_bl, exner_in_wth, dt_conv,           &
+                                   t1p5m, q1p5m, rh1p5m)
+
     end if
 
   end subroutine bl_imp_alg

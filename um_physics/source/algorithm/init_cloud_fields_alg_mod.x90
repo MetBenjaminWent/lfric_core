@@ -57,6 +57,8 @@ contains
                  setval_c(bulk_fraction,   0.0_r_def),            &
                  setval_c(liquid_fraction, 0.0_r_def),            &
                  setval_c(ice_fraction,    0.0_r_def),            &
+                 ! Needed for screen diagnostics even if cloud scheme off
+                 setval_c(rh_crit,         0.99_r_def),           &
                  setval_c(sigma_qcw,       cloud_horizontal_fsd)  )
 
     ! If cloud scheme is on, initialised 3D rh_crit from namelist

@@ -1,0 +1,141 @@
+!-------------------------------------------------------------------------------
+! (c) Crown copyright 2021 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-------------------------------------------------------------------------------
+!> @brief Processes diagnostics for bl_imp_alg
+
+module bl_imp_diags_mod
+
+  use clock_mod,               only: clock_type
+  use constants_mod,           only: l_def
+  use diagnostics_io_mod,      only: write_vector_diagnostic
+  use field_mod,               only: field_type
+  use jules_control_init_mod,  only: n_surf_tile
+  use weighted_ave_kernel_mod, only: weighted_ave_kernel_type
+
+  use io_config_mod,           only: subroutine_timers
+  use timer_mod,               only: timer
+
+  implicit none
+
+  private
+
+  ! Logical indicating whether diagnostics are requested
+  logical( l_def ) :: dt_bl_flag
+  logical( l_def ) :: dmv_bl_flag
+  logical( l_def ) :: t1p5m_flag
+  logical( l_def ) :: q1p5m_flag
+  logical( l_def ) :: rh1p5m_flag
+  logical( l_def ) :: grid_surface_temperature_flag
+
+  public :: initialise_diags_for_bl_imp
+  public :: output_diags_for_bl_imp
+
+contains
+
+  !> @brief Initialise fields for locally-computed diagnostics
+  subroutine initialise_diags_for_bl_imp(mv, zh, dmv_bl, t1p5m, q1p5m, &
+                                         rh1p5m)
+
+    implicit none
+
+    ! Fields passed in to copy properties from
+    type( field_type ), intent(in)    :: mv, zh
+
+    ! Diagnostic fields to initialise
+    type( field_type ), intent(inout) :: dmv_bl, t1p5m, q1p5m, rh1p5m
+
+    if ( subroutine_timers ) call timer("bl_imp_diags")
+
+    ! 3D fields in wtheta space
+    dmv_bl_flag = .true.
+    call mv%copy_field_properties(dmv_bl)
+    call invoke(a_times_X(dmv_bl, -1.0_r_def, mv))
+
+    ! 2D fields
+    t1p5m_flag = .true.
+    call zh%copy_field_properties(t1p5m)
+
+    q1p5m_flag = .true.
+    call zh%copy_field_properties(q1p5m)
+
+    rh1p5m_flag = .true.
+    call zh%copy_field_properties(rh1p5m)
+
+    if ( subroutine_timers ) call timer("bl_imp_diags")
+
+  end subroutine initialise_diags_for_bl_imp
+
+  !> @brief Output diagnostics from bl_imp_alg
+  subroutine output_diags_for_bl_imp(mv, dmv_bl, zh, du_bl, clock,             &
+                                     tile_heat_flux, tile_moisture_flux,       &
+                                     tile_temperature, canopy_evap, wspd10m,   &
+                                     tile_fraction, taux_ssi, tauy_ssi,        &
+                                     dtheta_bl, exner_in_wth, dt_conv,         &
+                                     t1p5m, q1p5m, rh1p5m)
+
+    implicit none
+
+    class(clock_type),  intent(in)    :: clock
+
+    ! Prognostic fields to output
+    type( field_type ), intent(in)    :: mv, du_bl, zh, tile_heat_flux,        &
+                                         tile_moisture_flux, tile_temperature, &
+                                         canopy_evap, wspd10m, tile_fraction,  &
+                                         taux_ssi, tauy_ssi, dtheta_bl
+
+    ! Diagnostics locally computed here from other fields
+    type( field_type ), intent(in)    :: exner_in_wth, dt_conv
+    type( field_type ), intent(inout) :: dmv_bl
+    type( field_type )                :: dt_bl, grid_surface_temperature
+
+    ! Diagnostics computed within the kernel
+    type( field_type ), intent(in)    :: t1p5m, q1p5m, rh1p5m
+
+    if ( subroutine_timers ) call timer("bl_imp_diags")
+
+    ! Prognostic fields
+    call dtheta_bl%write_field('turbulence__dtheta')
+    call zh%write_field('turbulence__zh')
+    call write_vector_diagnostic('turbulence__du',du_bl,clock,du_bl%get_mesh_id(),.false.)
+
+    call tile_heat_flux%write_field('surface__tile_heat_flux')
+    call tile_moisture_flux%write_field('surface__tile_moisture_flux')
+    call tile_temperature%write_field('surface__tile_temperature')
+    call canopy_evap%write_field('surface__canopy_evap')
+    call wspd10m%write_field('surface__wspd10m')
+    call taux_ssi%write_field('surface__taux_ssi')
+    call tauy_ssi%write_field('surface__tauy_ssi')
+
+    ! Diagnostics locally computed here from other fields
+    if (dmv_bl_flag) then
+      call invoke(inc_X_plus_Y(dmv_bl, mv))
+      call dmv_bl%write_field('turbulence__dmv')
+    end if
+    dt_bl_flag = .true.
+    if (dt_bl_flag) then
+      call dtheta_bl%copy_field_properties(dt_bl)
+      call invoke(    X_times_Y(dt_bl,dtheta_bl,exner_in_wth), &
+                  inc_X_minus_Y(dt_bl,dt_conv) )
+      call dt_bl%write_field('turbulence__dt')
+    end if
+
+    grid_surface_temperature_flag = .true.
+    if (grid_surface_temperature_flag) then
+      call zh%copy_field_properties(grid_surface_temperature)
+      call invoke(weighted_ave_kernel_type(grid_surface_temperature,          &
+                                            tile_temperature, tile_fraction,  &
+                                            1, n_surf_tile) )
+      call grid_surface_temperature%write_field('surface__grid_surface_temperature')
+    end if
+
+    ! Diagnostics computed within the kernel
+    if (t1p5m_flag) call t1p5m%write_field('surface__t1p5m')
+    if (q1p5m_flag) call q1p5m%write_field('surface__q1p5m')
+    if (rh1p5m_flag) call rh1p5m%write_field('surface__rh1p5m')
+
+    if ( subroutine_timers ) call timer("bl_imp_diags")
+
+  end subroutine output_diags_for_bl_imp
+end module bl_imp_diags_mod

@@ -682,6 +682,10 @@ contains
     call add_physics_field( surface_fields, depository, prognostic_fields,     &
       'tile_temperature', surft_space, checkpoint_flag=checkpoint_flag, twod=.true. )
     call add_physics_field( surface_fields, depository, prognostic_fields,     &
+      'screen_temperature', surft_space, checkpoint_flag=checkpoint_flag, twod=.true. )
+    call add_physics_field( surface_fields, depository, prognostic_fields,     &
+      'time_since_transition', twod_space, checkpoint_flag=checkpoint_flag, twod=.true. )
+    call add_physics_field( surface_fields, depository, prognostic_fields,     &
       'canopy_water', surft_space, checkpoint_flag=checkpoint_flag, twod=.true. )
 
     vector_space=>function_space_collection%get_fs(twod_mesh_id, 0, W3, &
