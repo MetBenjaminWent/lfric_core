@@ -89,6 +89,7 @@ class MetadataIodefGenerator:
         LOGGER.debug("Initialising iodef presenter")
         self._metadata = metadata
         self._root_node = None
+        self._context_node = None
         self._axis_def = None
         self._grid_def = None
         self._field_def = None
@@ -101,16 +102,23 @@ class MetadataIodefGenerator:
         to append metadata to
         """
         LOGGER.info("Creating root nodes")
-        self._root_node = ElementTree.Element('context', id="diagnostics")
-        self._axis_def = ElementTree.SubElement(self._root_node,
+        self._root_node = ElementTree.Element('simulation')
+        self._context_node = ElementTree.SubElement(self._root_node,
+                                                    'context',
+                                                    id="diagnostics")
+        ElementTree.SubElement(self._context_node,
+                               "calendar",
+                               type="Gregorian",
+                               start_date="1997-10-29 12:00:00")
+        self._axis_def = ElementTree.SubElement(self._context_node,
                                                 'axis_definition')
-        self._grid_def = ElementTree.SubElement(self._root_node,
+        self._grid_def = ElementTree.SubElement(self._context_node,
                                                 'grid_definition',
                                                 prec="8")
-        self._field_def = ElementTree.SubElement(self._root_node,
+        self._field_def = ElementTree.SubElement(self._context_node,
                                                  'field_definition',
                                                  prec="8")
-        self._file_def = ElementTree.SubElement(self._root_node,
+        self._file_def = ElementTree.SubElement(self._context_node,
                                                 'file_definition')
         self._file_def.set('par_access', "collective")
         self._file_def.set('time_counter', "none")
@@ -316,9 +324,12 @@ class MetadataIodefGenerator:
         :param output_path: Path to output XML
         """
         LOGGER.info("Writing XML file")
-        xml_text = minidom.parseString(ElementTree.tostring(
-            self._root_node)).toprettyxml(indent="    ", encoding="UTF-8")
-        with open(output_path, 'wb') as output_file:
+
+        xml = minidom.parseString(ElementTree.tostring(self._root_node))
+        xml_text = '\n'.join([line for line in xml.toprettyxml(
+            indent=' ' * 4).split('\n') if line.strip()])
+
+        with open(output_path, 'w') as output_file:
             output_file.write(xml_text)
 
     def generate(self, output_file_path: str, template_file_path: str = None,

@@ -1,22 +1,10 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" ?>
 <simulation>
-    
-
     <context id="diagnostics">
-        
-
         <calendar start_date="2016-01-01 15:00:00" time_origin="2016-01-01 15:00:00" type="Gregorian"/>
-        
-
         <axis_definition>
-            
-
             <axis id="vert_axis_half_levels" name="half_levels"/>
-            
-
             <axis id="vert_axis_full_levels" name="full_levels"/>
-            
-
             <axis id="fixed_vert_axis_1" n_glo="2" name="fixed_vert_axis_1" positive="up" unit="m" value="(0, 1) [111.0 1949.0]"/>
             <axis id="fixed_vert_axis_2" n_glo="1" name="fixed_vert_axis_2" positive="up" unit="m" value="(0, 0) [0.0]"/>
             <axis id="model_vert_axis_1_half_levels" n_glo="3" name="test_vertical_dimension_1_half_levels" positive="down" unit="m" value="(0, 2) [0.5 1.5 2.5]"/>
@@ -26,95 +14,35 @@
             <axis id="green_Categorical_NSD" label="(0, 2) [A B C]" n_glo="3" name="green_Categorical_NSD" unit="None"/>
             <axis id="red_numerical_NSD" label="(0, 3) [0 1 2 3]" n_glo="4" name="red_numerical_NSD" unit="None"/>
         </axis_definition>
-        
-
         <domain_definition>
-            
-
             <domain id="node" name="Mesh2d_node" nvertex="1"/>
-            
-
             <domain id="face" name="Mesh2d_face" nvertex="4"/>
-            
-
             <domain id="edge" name="Mesh2d_edge" nvertex="2"/>
-            
-
             <domain id="checkpoint_W0" name="checkpoint_W0" nvertex="1"/>
-            
-
             <domain id="checkpoint_W1" name="checkpoint_W1" nvertex="1"/>
-            
-
             <domain id="checkpoint_W2" name="checkpoint_W2" nvertex="1"/>
-            
-
             <domain id="checkpoint_W3" name="checkpoint_W3" nvertex="1"/>
-            
-
             <domain id="checkpoint_Wtheta" name="checkpoint_Wtheta" nvertex="1"/>
-            
-
             <domain id="fd_checkpoint_W3" name="fd_checkpoint_W3" nvertex="1"/>
-            
-
             <domain id="fd_checkpoint_Wtheta" name="fd_checkpoint_Wtheta" nvertex="1"/>
-            
-
         </domain_definition>
-        
-
         <grid_definition>
-            
-
             <grid id="node_grid">
-                
-
                 <domain domain_ref="node"/>
-                
-
                 <axis axis_ref="vert_axis_full_levels"/>
-                
-
             </grid>
-            
-
             <grid id="half_level_face_grid">
-                
-
                 <domain domain_ref="face"/>
-                
-
                 <axis axis_ref="vert_axis_half_levels"/>
-                
-
             </grid>
-            
-
             <grid id="full_level_face_grid">
-                
-
                 <domain domain_ref="face"/>
-                
-
                 <axis axis_ref="vert_axis_full_levels"/>
-                
-
             </grid>
-            
-
             <grid id="half_level_edge_grid">
-                
-
                 <domain domain_ref="edge"/>
-                
-
                 <axis axis_ref="vert_axis_half_levels"/>
-                
-
             </grid>
-            
-
             <grid id="fixed_vert_axis_1__mutable_non_spatial_dimension__mutable_non_spatial_dimension_2__face_grid">
                 <domain domain_ref="face"/>
                 <axis axis_ref="fixed_vert_axis_1"/>
@@ -140,56 +68,22 @@
                 <axis axis_ref="red_numerical_NSD"/>
             </grid>
         </grid_definition>
-        
-
         <field_definition prec="8">
-            
-
             <!-- Main diagnostic group -->
-            
-
             <field_group enabled=".TRUE." freq_op="1ts" id="diagnostics" operation="instant">
-                
-
                 <!-- Theta after timestep (STASH sec 0, item 4) -->
-                
-
                 <field grid_ref="full_level_face_grid" id="theta" long_name="air_potential_temperature" name="theta" standard_name="air_potential_temperature" unit="K"/>
-                
-
                 <!-- Dry Rho after timestep (STASH sec 0, item 389) -->
-                
-
                 <field grid_ref="half_level_face_grid" id="rho" long_name="air_density" name="rho" standard_name="air_density" unit="kg m-3"/>
-                
-
                 <!-- U component of wind after timestep (STASH sec 0, item 2) -->
-                
-
                 <field grid_ref="half_level_edge_grid" id="u1" long_name="eastward_wind" name="u1" standard_name="eastward_wind" unit="m s-1"/>
-                
-
                 <!-- V component of wind after timestep (STASH sec 0, item 3) -->
-                
-
                 <field grid_ref="half_level_edge_grid" id="u2" long_name="northward_wind" name="u2" standard_name="northward_wind" unit="m s-1"/>
-                
-
                 <!-- W component of wind after timestep (STASH sec 0, item 150) -->
-                
-
                 <field grid_ref="full_level_face_grid" id="u3" long_name="upward_air_velocity" name="u3" standard_name="upward_air_velocity" unit="m s-1"/>
-                
-
                 <!-- Exner pressure after timestep (STASH sec 0, item 255) -->
-                
-
                 <field grid_ref="half_level_face_grid" id="exner" long_name="exner_pressure" name="exner" unit="1"/>
-                
-
             </field_group>
-            
-
             <field_group enabled=".TRUE." freq_op="1ts" id="another_science_section__another_field_group" operation="instant">
                 <field grid_ref="fixed_vert_axis_1__mutable_non_spatial_dimension__mutable_non_spatial_dimension_2__face_grid" id="another_science_section__low_type_cloud_area_fraction" standard_name="low_type_cloud_area_fraction" unit="1">
                     <variable name="checksum" type="bool">false</variable>
@@ -237,38 +131,16 @@
                 </field>
             </field_group>
         </field_definition>
-        
-
         <file_definition par_access="collective" time_counter="none" type="one_file">
-            
-
             <!-- File definition for main diagnostics -->
-            
-
             <file convention="UGRID" enabled=".TRUE." id="lfric_diagnostics" name="lfric_diagnostics" output_freq="10ts">
-                
-
                 <field field_ref="theta"/>
-                
-
                 <field field_ref="rho"/>
-                
-
                 <field field_ref="u1"/>
-                
-
                 <field field_ref="u2"/>
-                
-
                 <field field_ref="u3"/>
-                
-
                 <field field_ref="exner"/>
-                
-
             </file>
-            
-
             <file convention="UGRID" enabled=".TRUE." id="awseomfile" name="awseomfile" output_freq="1ts">
                 <field field_ref="example_science_section__air_potential_temperature" name="example_science_section__air_potential_temperature__minimum_1ts" operation="minimum"/>
                 <field field_ref="example_science_section__surface_altitude" name="example_science_section__surface_altitude__minimum_1ts" operation="minimum"/>
@@ -278,48 +150,18 @@
                 <field field_ref="example_science_section__lwe_thickness_of_moisture_content_of_soil_layer" name="example_science_section__lwe_thickness_of_moisture_content_of_soil_layer__minimum_1ts" operation="minimum"/>
             </file>
         </file_definition>
-        
-
     </context>
-    
-
     <context id="xios">
-        
-
         <variable_definition>
-            
-
             <variable_group id="buffer">
-                
-
                 <variable id="optimal_buffer_size" type="string">performance</variable>
-                
-
                 <variable id="buffer_factor_size" type="double">1.0</variable>
-                
-
             </variable_group>
-            
-
             <variable_group id="parameters">
-                
-
                 <variable id="using_server" type="bool">true</variable>
-                
-
                 <variable id="info_level" type="int">50</variable>
-                
-
                 <variable id="print_file" type="bool">true</variable>
-                
-
             </variable_group>
-            
-
         </variable_definition>
-        
-
     </context>
-    
-
 </simulation>
