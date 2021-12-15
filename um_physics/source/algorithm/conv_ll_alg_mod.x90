@@ -84,10 +84,10 @@ contains
                 setval_X(dbcf_conv,dcfl_conv) )
 
     if (write_diag .and. use_xios_io .and. outer == outer_iterations) then
-      call dt_conv%write_field('dt_conv')
-      call dmv_conv%write_field('dmv_conv')
-      call conv_rain%write_field('conv_rain')
-      call conv_snow%write_field('conv_snow')
+      call dt_conv%write_field('convection__dt_conv')
+      call dmv_conv%write_field('convection__dmv_conv')
+      call conv_rain%write_field('convection__conv_rain')
+      call conv_snow%write_field('convection__conv_snow')
     end if
 
     if ( subroutine_timers ) call timer("conv_ll_alg")

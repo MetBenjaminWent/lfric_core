@@ -390,49 +390,63 @@
         <field id="cloud__icing_sfip_li_bcf" name="icing_sfip_li_bcf" long_name="simplified_icing_potential_using_liquid_and_ice_condensate_and_bulk_cloud_fraction" unit="1" grid_ref="full_level_face_grid" />
         <field id="cloud__icing_sfip_lir_com" name="icing_sfip_lir_com" long_name="simplified_icing_potential_using_liquid_ice_and_rain_and_combined_cloud_amount" unit="1" grid_ref="full_level_face_grid" />
 	<!-- convection fields -->
-	<field id="dt_conv" name="dt_conv" long_name="temperature_increment_from_convection" unit="K" grid_ref="full_level_face_grid" />
-	<field id="dmv_conv" name="dmv_conv" long_name="vapour_increment_from_convection" unit="kg kg-1" grid_ref="full_level_face_grid" />
-	<field id="du_conv" name="du_conv" long_name="u_increment_from_convection" unit="m s-2" grid_ref="half_level_face_grid" />
-	<field id="dv_conv" name="dv_conv" long_name="v_increment_from_convection" unit="m s-2" grid_ref="half_level_face_grid" />
-	<field id="cca" name="cca" long_name="convective_cloud_amount" unit="1" grid_ref="full_level_face_grid" />
-	<field id="ccw" name="ccw" long_name="convective_cloud_water" unit="kg kg-1" grid_ref="full_level_face_grid" />
-	<field id="massflux_up" name="massflux_up" long_name="convection_upward_massflux" unit="Pa s-1" grid_ref="full_level_face_grid" />
-	<field id="massflux_down" name="massflux_down" long_name="convection_downward_massflux" unit="Pa s-1" grid_ref="full_level_face_grid" />
-	<field id="entrain_up" name="entrain_up" long_name="convection_upward_entrain" unit="1" grid_ref="full_level_face_grid" />
-	<field id="entrain_down" name="entrain_down" long_name="convection_downward_entrain" unit="1" grid_ref="full_level_face_grid" />
-	<field id="detrain_up" name="detrain_up" long_name="convection_upward_detrain" unit="1" grid_ref="full_level_face_grid" />
-	<field id="detrain_down" name="detrain_down" long_name="convection_downward_detrain" unit="1" grid_ref="full_level_face_grid" />
-	<field id="dd_dt" name="dd_dt" long_name="temperature_increment_from_downdraughts" unit="K s-1" grid_ref="full_level_face_grid" />
-	<field id="dd_dq" name="dd_dq" long_name="vapour_increment_from_downdraughts" unit="kg kg-1 s-1" grid_ref="full_level_face_grid" />
-	<field id="deep_dt" name="deep_dt" long_name="temperature_increment_from_deep_convection" unit="K s-1" grid_ref="full_level_face_grid" />
-	<field id="deep_dq" name="deep_dq" long_name="vapour_increment_from_deep_convection" unit="kg kg-1 s-1" grid_ref="full_level_face_grid" />
-	<field id="deep_massflux" name="deep_massflux" long_name="massflux_for_deep_convection" unit="Pa s-1" grid_ref="full_level_face_grid" />
-	<field id="deep_tops" name="deep_tops" long_name="frequency_of_deep_terminating_at_level" unit="1" grid_ref="full_level_face_grid" />
-	<field id="shallow_dt" name="shallow_dt" long_name="temperature_increment_from_shallow_convection" unit="K s-1" grid_ref="full_level_face_grid" />
-	<field id="shallow_dq" name="shallow_dq" long_name="vapour_increment_from_shallow_convection" unit="kg kg-1 s-1" grid_ref="full_level_face_grid" />
-	<field id="shallow_massflux" name="shallow_massflux" long_name="massflux_for_shallow_convection" unit="Pa s-1" grid_ref="full_level_face_grid" />
-	<field id="mid_dt" name="mid_dt" long_name="temperature_increment_from_mid_convection" unit="K s-1" grid_ref="full_level_face_grid" />
-	<field id="mid_dq" name="mid_dq" long_name="vapour_increment_from_mid_convection" unit="kg kg-1 s-1" grid_ref="full_level_face_grid" />
-	<field id="mid_massflux" name="mid_massflux" long_name="massflux_for_mid_convection" unit="Pa s-1" grid_ref="full_level_face_grid" />
-	<field id="conv_rain_3d" name="conv_rain_3d" long_name="convective_rainfall_rate" unit="kg m-2 s-1" grid_ref="full_level_face_grid" />
-	<field id="conv_snow_3d" name="conv_snow_3d" long_name="convective_snowfall_rate" unit="kg m-2 s-1" grid_ref="full_level_face_grid" />
-	<field id="conv_rain" name="conv_rain" long_name="surface_convective_rainfall_rate" unit="kg m-2 s-1" domain_ref="face" />
-	<field id="conv_snow" name="conv_snow" long_name="surface_convective_snowfall_rate" unit="kg m-2 s-1" domain_ref="face" />
-	<field id="cca_2d" name="cca_2d" long_name="convective_cloud_amount_(2d)_with_no_anvil" unit="1" domain_ref="face" />
-	<field id="deep_in_col" name="deep_in_col" long_name="frequency_of_deep_convection" unit="1" domain_ref="face" />
-	<field id="shallow_in_col" name="shallow_in_col" long_name="frequency_of_shallow_convection" unit="1" domain_ref="face" />
-	<field id="mid_in_col" name="mid_in_col" long_name="frequency_of_midlevel_convection" unit="1" domain_ref="face" />
-	<field id="deep_prec" name="deep_prec" long_name="deep_convective_precipitation_rate" unit="kg m-2 s-1" domain_ref="face" />
-	<field id="shallow_prec" name="shallow_prec" long_name="shallow_convective_precipitation_rate" unit="kg m-2 s-1" domain_ref="face" />
-	<field id="mid_prec" name="mid_prec" long_name="midlevel_convection_precipitation_rate" unit="kg m-2 s-1" domain_ref="face" />
-	<field id="deep_term" name="deep_term" long_name="termination_level_of_deep_convection" unit="level number" domain_ref="face" />
-	<field id="cape_diluted" name="cape_diluted" long_name="cape_diluted" unit="J/kg" domain_ref="face" />
-	<field id="cape_timescale" name="cape_timescale" long_name="cape_timescale" unit="s" domain_ref="face" />
-	<field id="freeze_level" name="freeze_level" long_name="freeze_level" unit="model level" domain_ref="face" />
-	<field id="lowest_cv_base" name="lowest_cv_base" long_name="lowest_cv_base" unit="model level" domain_ref="face" />
-	<field id="lowest_cv_top" name="lowest_cv_top" long_name="lowest_cv_top" unit="model level" domain_ref="face" />
-	<field id="cv_base" name="cv_base" long_name="cv_base" unit="model level" domain_ref="face" />
-	<field id="cv_top" name="cv_top" long_name="cv_top" unit="model level" domain_ref="face" />
+	<field id="convection__dt_conv" name="dt_conv" long_name="temperature_increment_from_convection" unit="K" grid_ref="full_level_face_grid" />
+	<field id="convection__dmv_conv" name="dmv_conv" long_name="vapour_increment_from_convection" unit="kg kg-1" grid_ref="full_level_face_grid" />
+	<field id="convection__dmcl_conv" name="dmcl_conv" long_name="liquid_increment_from_convection" unit="kg kg-1" grid_ref="full_level_face_grid" />
+	<field id="convection__dmcf_conv" name="dmcf_conv" long_name="frozen_increment_from_convection" unit="kg kg-1" grid_ref="full_level_face_grid" />
+	<field id="convection__du_conv" name="du_conv" long_name="u_increment_from_convection" unit="m s-2" grid_ref="half_level_face_grid" />
+	<field id="convection__dv_conv" name="dv_conv" long_name="v_increment_from_convection" unit="m s-2" grid_ref="half_level_face_grid" />
+	<field id="convection__cca" name="cca" long_name="convective_cloud_amount" unit="1" grid_ref="full_level_face_grid" />
+	<field id="convection__ccw" name="ccw" long_name="convective_cloud_water" unit="kg kg-1" grid_ref="full_level_face_grid" />
+	<field id="convection__massflux_up" name="massflux_up" long_name="convection_upward_massflux" unit="Pa s-1" grid_ref="full_level_face_grid" />
+	<field id="convection__massflux_down" name="massflux_down" long_name="convection_downward_massflux" unit="Pa s-1" grid_ref="full_level_face_grid" />
+	<field id="convection__massflux_up_half" name="massflux_up_half" long_name="conv_upward_massflux_half_levs" unit="Pa s-1" grid_ref="full_level_face_grid" />
+	<field id="convection__massflux_up_cmpta" name="massflux_up_cmpta" long_name="conv_upward_mfx_component_a" unit="Pa s-1" grid_ref="half_level_face_grid" />
+	<field id="convection__entrain_up" name="entrain_up" long_name="convection_upward_entrain" unit="1" grid_ref="full_level_face_grid" />
+	<field id="convection__entrain_down" name="entrain_down" long_name="convection_downward_entrain" unit="1" grid_ref="full_level_face_grid" />
+	<field id="convection__detrain_up" name="detrain_up" long_name="convection_upward_detrain" unit="1" grid_ref="full_level_face_grid" />
+	<field id="convection__detrain_down" name="detrain_down" long_name="convection_downward_detrain" unit="1" grid_ref="full_level_face_grid" />
+	<field id="convection__dd_dt" name="dd_dt" long_name="temperature_increment_from_downdraughts" unit="K s-1" grid_ref="full_level_face_grid" />
+	<field id="convection__dd_dq" name="dd_dq" long_name="vapour_increment_from_downdraughts" unit="kg kg-1 s-1" grid_ref="full_level_face_grid" />
+	<field id="convection__deep_dt" name="deep_dt" long_name="temperature_increment_from_deep_convection" unit="K s-1" grid_ref="full_level_face_grid" />
+	<field id="convection__deep_dq" name="deep_dq" long_name="vapour_increment_from_deep_convection" unit="kg kg-1 s-1" grid_ref="full_level_face_grid" />
+	<field id="convection__deep_massflux" name="deep_massflux" long_name="massflux_for_deep_convection" unit="Pa s-1" grid_ref="full_level_face_grid" />
+	<field id="convection__deep_tops" name="deep_tops" long_name="frequency_of_deep_terminating_at_level" unit="1" grid_ref="full_level_face_grid" />
+	<field id="convection__shallow_dt" name="shallow_dt" long_name="temperature_increment_from_shallow_convection" unit="K s-1" grid_ref="full_level_face_grid" />
+	<field id="convection__shallow_dq" name="shallow_dq" long_name="vapour_increment_from_shallow_convection" unit="kg kg-1 s-1" grid_ref="full_level_face_grid" />
+	<field id="convection__shallow_massflux" name="shallow_massflux" long_name="massflux_for_shallow_convection" unit="Pa s-1" grid_ref="full_level_face_grid" />
+	<field id="convection__mid_dt" name="mid_dt" long_name="temperature_increment_from_mid_convection" unit="K s-1" grid_ref="full_level_face_grid" />
+	<field id="convection__mid_dq" name="mid_dq" long_name="vapour_increment_from_mid_convection" unit="kg kg-1 s-1" grid_ref="full_level_face_grid" />
+	<field id="convection__mid_massflux" name="mid_massflux" long_name="massflux_for_mid_convection" unit="Pa s-1" grid_ref="full_level_face_grid" />
+	<field id="convection__cca_unadjusted" name="cca_unadjusted" long_name="convective_cloud_amount_unadjusted_for_rad" unit="1" grid_ref="full_level_face_grid" />
+	<field id="convection__conv_rain" name="conv_rain" long_name="surface_convective_rainfall_rate" unit="kg m-2 s-1" domain_ref="face" />
+	<field id="convection__conv_snow" name="conv_snow" long_name="surface_convective_snowfall_rate" unit="kg m-2 s-1" domain_ref="face" />
+	<field id="convection__conv_rain_3d" name="conv_rain_3d" long_name="convective_rainfall_rate" unit="kg m-2 s-1" grid_ref="full_level_face_grid" />
+	<field id="convection__conv_snow_3d" name="conv_snow_3d" long_name="convective_snowfall_rate" unit="kg m-2 s-1" grid_ref="full_level_face_grid" />
+	<field id="convection__cca_2d" name="cca_2d" long_name="convective_cloud_amount_(2d)_with_no_anvil" unit="1" domain_ref="face" />
+	<field id="convection__deep_in_col" name="deep_in_col" long_name="frequency_of_deep_convection" unit="1" domain_ref="face" />
+	<field id="convection__shallow_in_col" name="shallow_in_col" long_name="frequency_of_shallow_convection" unit="1" domain_ref="face" />
+	<field id="convection__mid_in_col" name="mid_in_col" long_name="frequency_of_midlevel_convection" unit="1" domain_ref="face" />
+	<field id="convection__deep_prec" name="deep_prec" long_name="deep_convective_precipitation_rate" unit="kg m-2 s-1" domain_ref="face" />
+	<field id="convection__shallow_prec" name="shallow_prec" long_name="shallow_convective_precipitation_rate" unit="kg m-2 s-1" domain_ref="face" />
+	<field id="convection__mid_prec" name="mid_prec" long_name="midlevel_convection_precipitation_rate" unit="kg m-2 s-1" domain_ref="face" />
+	<field id="convection__deep_term" name="deep_term" long_name="model_level_number_at_deep_conv_termination" unit="1" domain_ref="face" />
+	<field id="convection__cape_diluted" name="cape_diluted" long_name="cape_diluted" unit="J/kg" domain_ref="face" />
+	<field id="convection__cape_timescale" name="cape_timescale" long_name="cape_timescale" unit="s" domain_ref="face" />
+	<field id="convection__freeze_level" name="freeze_level" long_name="model_level_number_at_freezing_level" unit="1" domain_ref="face" />
+	<field id="convection__lowest_cv_base" name="lowest_cv_base" long_name="model_level_number_at_lowest_conv_cloud_base" unit="1" domain_ref="face" />
+	<field id="convection__lowest_cv_top" name="lowest_cv_top" long_name="model_level_number_at_lowest_conv_cloud_top" unit="1" domain_ref="face" />
+	<field id="convection__cv_base" name="cv_base" long_name="model_level_number_at_conv_cloud_base" unit="1" domain_ref="face" />
+	<field id="convection__cv_top" name="cv_top" long_name="model_level_number_at_conv_cloud_top" unit="1" domain_ref="face" />
+	<field id="convection__dbcf_conv" name="dbcf_conv" long_name="bulk_cloud_volume_increment" unit="1" grid_ref="full_level_face_grid" />
+	<field id="convection__dcfl_conv" name="dcfl_conv" long_name="liquid_cloud_volume_increment" unit="1" grid_ref="full_level_face_grid" />
+	<field id="convection__dcff_conv" name="dcff_conv" long_name="frozen_cloud_volume_increment" unit="1" grid_ref="full_level_face_grid" />
+	<field id="convection__pres_cv_base" name="pres_cv_base" long_name="pressure_at_convective_cloud_base" unit="Pa" domain_ref="face" />
+	<field id="convection__pres_cv_top" name="pres_cv_top" long_name="pressure_at_convective_cloud_top" unit="Pa" domain_ref="face" />
+	<field id="convection__deep_cfl_limited" name="deep_cfl_limited" long_name="deep_convection_cfl_limited" unit="1" domain_ref="face" />
+	<field id="convection__mid_cfl_limited" name="mid_cfl_limited" long_name="midlevel_convection_cfl_limited" unit="1" domain_ref="face" />
+        <!-- derived convection diagnostics -->
+        <field id="convection__conv_prec" name="conv_prec" long_name="surface_convective_precipitation_rate" unit="kg m-2 s-1" domain_ref="face"> convection__conv_rain + convection__conv_snow </field>
 	<!-- microphysics fields -->
 	<field id="microphysics__ls_rain" name="ls_rain" long_name="surface_microphysical_rainfall_rate" unit="kg m-2 s-1" domain_ref="face" />
 	<field id="microphysics__ls_snow" name="ls_snow" long_name="surface_microphysical_snowfall_rate" unit="kg m-2 s-1" domain_ref="face" />
@@ -849,8 +863,9 @@
 	<field field_ref="ice_fraction"/>
 	<field field_ref="liquid_fraction"/>
 	<field field_ref="bulk_fraction"/>
-	<field field_ref="conv_rain"/>
-	<field field_ref="conv_snow"/>
+	<field field_ref="convection__conv_rain"/>
+	<field field_ref="convection__conv_snow"/>
+	<field field_ref="convection__massflux_up_cmpta"/>
 	<field field_ref="microphysics__ls_rain"/>
 	<field field_ref="microphysics__ls_snow"/>
 	<field field_ref="surface__tile_heat_flux"/>

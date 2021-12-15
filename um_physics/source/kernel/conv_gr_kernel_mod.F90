@@ -15,6 +15,7 @@ module conv_gr_kernel_mod
                                       ANY_DISCONTINUOUS_SPACE_1, &
                                       ANY_DISCONTINUOUS_SPACE_2
   use constants_mod,           only : i_def, i_um, r_def, r_um
+  use empty_data_mod,          only : empty_real_data
   use fs_continuity_mod,       only : W3, Wtheta
   use kernel_mod,              only : kernel_type
   use mixing_config_mod,       only : smagorinsky
@@ -31,7 +32,7 @@ module conv_gr_kernel_mod
   !>
   type, public, extends(kernel_type) :: conv_gr_kernel_type
     private
-    type(arg_type) :: meta_args(85) = (/                                          &
+    type(arg_type) :: meta_args(92) = (/                                          &
          arg_type(GH_SCALAR, GH_INTEGER, GH_READ),                                &! outer
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      W3),                       &! rho_in_w3
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      WTHETA),                   &! rho_in_wth
@@ -65,44 +66,15 @@ module conv_gr_kernel_mod
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      WTHETA),                   &! cf_bulk
          arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! cca
          arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! ccw
-         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! deep_in_col
-         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! shallow_in_col
-         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! mid_in_col
-         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! freeze_level
-         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! deep_prec
-         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! shallow_prec
-         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! mid_prec
-         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! deep_term
          arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! cape_diluted
-         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! cape_timescale
          arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! conv_rain
          arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! conv_snow
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! conv_rain_3d 
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! conv_snow_3d 
          arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! cca_2d
-         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! lowest_cv_base
-         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! lowest_cv_top
-         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! cv_base
-         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! cv_top
          arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! dd_mf_cb
          arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! massflux_up
          arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! massflux_down
-         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! entrain_up
-         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! entrain_down
-         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! detrain_up
-         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! detrain_down
-         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! dd_dt
-         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! dd_dq
-         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! deep_dt
-         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! deep_dq
-         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! deep_massflux
-         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! deep_tops
-         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! shallow_dt
-         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! shallow_dq
-         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! shallow_massflux
-         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! mid_dt
-         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! mid_dq
-         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! mid_massflux
-         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! conv_rain_3d 
-         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! conv_snow_3d 
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! zh_2d
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! shallow_flag
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! uw0_flux
@@ -116,7 +88,43 @@ module conv_gr_kernel_mod
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! qsat_at_lcl
          arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! dcfl_conv
          arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! dcff_conv
-         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA)                    &! dbcf_conv
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! dbcf_conv
+         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! deep_in_col
+         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! shallow_in_col
+         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! mid_in_col
+         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! freeze_level
+         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! deep_prec
+         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! shallow_prec
+         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! mid_prec
+         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! deep_term
+         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! cape_timescale
+         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! lowest_cv_base
+         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! lowest_cv_top
+         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! cv_base
+         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! cv_top
+         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! pres_cv_base
+         arg_type(GH_FIELD,  GH_REAL,    GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! pres_cv_top
+         arg_type(GH_FIELD,  GH_REAL,    GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! deep_cfl_limited
+         arg_type(GH_FIELD,  GH_REAL,    GH_READ,      ANY_DISCONTINUOUS_SPACE_1),&! mid_cfl_limited
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! entrain_up
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! entrain_down
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! detrain_up
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! detrain_down
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! dd_dt
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! dd_dq
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! deep_dt
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! deep_dq
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! deep_massflux
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! shallow_dt
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! shallow_dq
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! shallow_massflux
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! mid_dt
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! mid_dq
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! mid_massflux
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! deep_tops
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA),                   &! massflux_up_half
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, W3),                       &! massflux_up_cmpta
+         arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, WTHETA)                    &! cca_unadjusted
         /)
     integer :: operates_on = CELL_COLUMN
   contains
@@ -165,44 +173,15 @@ contains
   !> @param[in]     cf_bulk              Bulk cloud fraction
   !> @param[in,out] cca                  Convective cloud amount (fraction)
   !> @param[in,out] ccw                  Convective cloud water (kg/kg) (can be ice or liquid)
-  !> @param[in,out] deep_in_col          Indicator of deep in column
-  !> @param[in,out] shallow_in_col       Indicator of shallow in column
-  !> @param[in,out] mid_in_col           Indicator of mid in column
-  !> @param[in,out] freeze_level         Level number of freezing level
-  !> @param[in,out] deep_prec            Precipitation rate from deep convection(kg/m2/s)
-  !> @param[in,out] shallow_prec         Precipitation rate from shallow convection(kg/m2/s)
-  !> @param[in,out] mid_prec             Precipitation rate from mid convection(kg/m2/s)
-  !> @param[in,out] deep_term            Termination level number of deep convection
   !> @param[in,out] cape_diluted         CAPE value
-  !> @param[in,out] cape_timescale       CAPE timescale (s)
   !> @param[in,out] conv_rain            Surface rainfall rate from convection (kg/m2/s)
   !> @param[in,out] conv_snow            Surface snowfall rate from convection (kg/m2/s)
+  !> @param[in,out] conv_rain_3d         Rainfall rate from convection (kg/m2/s)
+  !> @param[in,out] conv_snow_3d         Snowfall rate from convection (kg/m2/s)
   !> @param[in,out] cca_2d               Convective cloud amout (2d) with no anvil
-  !> @param[in,out] lowest_cv_base       Level number for start of convection in column
-  !> @param[in,out] lowest_cv_top        Level number for end of lowest convection in column
-  !> @param[in,out] cv_base              Level number of base of highest convection in column
-  !> @param[in,out] cv_top               Level number for end of highest convection in column
   !> @param[in,out] dd_mf_cb             Downdraft massflux at cloud base (Pa/s)
   !> @param[in,out] massflux_up          Convective upwards mass flux (Pa/s)
   !> @param[in,out] massflux_down        Convective downwards mass flux (Pa/s)
-  !> @param[in,out] entrain_up           Convective upwards entrainment
-  !> @param[in,out] entrain_down         Convective downwards entrainment
-  !> @param[in,out] detrain_up           Convective upwards detrainment
-  !> @param[in,out] detrain_down         Convective downwards detrainment
-  !> @param[in,out] dd_dt                Temperature increment from downdraughts per timestep
-  !> @param[in,out] dd_dq                Vapour increment from downdraughts per timestep
-  !> @param[in,out] deep_dt              Temperature increment from deep convection per timestep
-  !> @param[in,out] deep_dq              Vapour increment from deep convection per timestep
-  !> @param[in,out] deep_massflux        Upward mass flux from deep convection
-  !> @param[in,out] deep_tops            Set to 1.0 if deep stops at this model level
-  !> @param[in,out] shallow_dt           Temperature increment from shallow convection per timestep
-  !> @param[in,out] shallow_dq           Vapour increment from shallow convection per timestep
-  !> @param[in,out] shallow_massflux     Upward mass flux from shallow convection
-  !> @param[in,out] mid_dt               Temperature increment from mid convection per timestep
-  !> @param[in,out] mid_dq               Vapour increment from mid convection per timestep
-  !> @param[in,out] mid_massflux         Upward mass flux from mid convection
-  !> @param[in,out] conv_rain_3d         Rainfall rate from convection (kg/m2/s)
-  !> @param[in,out] conv_snow_3d         Snowfall rate from convection (kg/m2/s)
   !> @param[in]     zh_2d                Boundary layer depth
   !> @param[in]     shallow_flag         Indicator of shallow convection
   !> @param[in]     uw0_flux             'Zonal' surface momentum flux
@@ -217,6 +196,42 @@ contains
   !> @param[in,out] dcfl_conv            Increment to liquid cloud fraction from convection
   !> @param[in,out] dcff_conv            Increment to ice cloud fraction from convection
   !> @param[in,out] dbcf_conv            Increment to bulk cloud fraction from convection
+  !> @param[in,out] deep_in_col          Indicator of deep in column
+  !> @param[in,out] shallow_in_col       Indicator of shallow in column
+  !> @param[in,out] mid_in_col           Indicator of mid in column
+  !> @param[in,out] freeze_level         Level number of freezing level
+  !> @param[in,out] deep_prec            Precipitation rate from deep convection(kg/m2/s)
+  !> @param[in,out] shallow_prec         Precipitation rate from shallow convection(kg/m2/s)
+  !> @param[in,out] mid_prec             Precipitation rate from mid convection(kg/m2/s)
+  !> @param[in,out] deep_term            Termination level number of deep convection
+  !> @param[in,out] cape_timescale       CAPE timescale (s)
+  !> @param[in,out] lowest_cv_base       Level number for start of convection in column
+  !> @param[in,out] lowest_cv_top        Level number for end of lowest convection in column
+  !> @param[in,out] cv_base              Level number of base of highest convection in column
+  !> @param[in,out] cv_top               Level number for end of highest convection in column
+  !> @param[in,out] pres_cv_base         Pressure at base of highest convection in column
+  !> @param[in,out] pres_cv_top          Pressure at end of highest convection in column
+  !> @param[in,out] deep_cfl_limited     Deep convection CFL limited
+  !> @param[in,out] mid_cfl_limited      Mid convection CFL limited
+  !> @param[in,out] entrain_up           Convective upwards entrainment
+  !> @param[in,out] entrain_down         Convective downwards entrainment
+  !> @param[in,out] detrain_up           Convective upwards detrainment
+  !> @param[in,out] detrain_down         Convective downwards detrainment
+  !> @param[in,out] dd_dt                Temperature increment from downdraughts per timestep
+  !> @param[in,out] dd_dq                Vapour increment from downdraughts per timestep
+  !> @param[in,out] deep_dt              Temperature increment from deep convection per timestep
+  !> @param[in,out] deep_dq              Vapour increment from deep convection per timestep
+  !> @param[in,out] deep_massflux        Upward mass flux from deep convection
+  !> @param[in,out] shallow_dt           Temperature increment from shallow convection per timestep
+  !> @param[in,out] shallow_dq           Vapour increment from shallow convection per timestep
+  !> @param[in,out] shallow_massflux     Upward mass flux from shallow convection
+  !> @param[in,out] mid_dt               Temperature increment from mid convection per timestep
+  !> @param[in,out] mid_dq               Vapour increment from mid convection per timestep
+  !> @param[in,out] mid_massflux         Upward mass flux from mid convection
+  !> @param[in,out] deep_tops            Set to 1.0 if deep stops at this model level
+  !> @param[in,out] massflux_up_half     Convective upwards mass flux on half-levels (Pa/s)
+  !> @param[in,out] massflux_up_cmpta    Convective upwards mass flux component A (Pa/s)
+  !> @param[in,out] cca_unadjusted       Convective cloud amout unadjusted for radiation calc.
   !> @param[in]     ndf_w3               Number of DOFs per cell for density space
   !> @param[in]     undf_w3              Number of unique DOFs  for density space
   !> @param[in]     map_w3               Dofmap for the cell at the base of the column for density space
@@ -263,44 +278,15 @@ contains
                           cf_bulk,                           &
                           cca,                               &
                           ccw,                               &
-                          deep_in_col,                       &
-                          shallow_in_col,                    &
-                          mid_in_col,                        &
-                          freeze_level,                      &
-                          deep_prec,                         &
-                          shallow_prec,                      &
-                          mid_prec,                          &
-                          deep_term,                         &
                           cape_diluted,                      &
-                          cape_timescale,                    &
                           conv_rain,                         &
                           conv_snow,                         &
+                          conv_rain_3d,                      &
+                          conv_snow_3d,                      &
                           cca_2d,                            &
-                          lowest_cv_base,                    &
-                          lowest_cv_top,                     &
-                          cv_base,                           &
-                          cv_top,                            &
                           dd_mf_cb,                          &
                           massflux_up,                       &
                           massflux_down,                     &
-                          entrain_up,                        &
-                          entrain_down,                      &
-                          detrain_up,                        &
-                          detrain_down,                      &
-                          dd_dt,                             &
-                          dd_dq,                             &
-                          deep_dt,                           &
-                          deep_dq,                           &
-                          deep_massflux,                     &
-                          deep_tops,                         &
-                          shallow_dt,                        &
-                          shallow_dq,                        &
-                          shallow_massflux,                  &
-                          mid_dt,                            &
-                          mid_dq,                            &
-                          mid_massflux,                      &
-                          conv_rain_3d,                      &
-                          conv_snow_3d,                      &
                           zh_2d,                             &
                           shallow_flag,                      &
                           uw0_flux,                          &
@@ -315,6 +301,42 @@ contains
                           dcfl_conv,                         &
                           dcff_conv,                         &
                           dbcf_conv,                         &
+                          deep_in_col,                       &
+                          shallow_in_col,                    &
+                          mid_in_col,                        &
+                          freeze_level,                      &
+                          deep_prec,                         &
+                          shallow_prec,                      &
+                          mid_prec,                          &
+                          deep_term,                         &
+                          cape_timescale,                    &
+                          lowest_cv_base,                    &
+                          lowest_cv_top,                     &
+                          cv_base,                           &
+                          cv_top,                            &
+                          pres_cv_base,                      &
+                          pres_cv_top,                       &
+                          deep_cfl_limited,                  &
+                          mid_cfl_limited,                   &
+                          entrain_up,                        &
+                          entrain_down,                      &
+                          detrain_up,                        &
+                          detrain_down,                      &
+                          dd_dt,                             &
+                          dd_dq,                             &
+                          deep_dt,                           &
+                          deep_dq,                           &
+                          deep_massflux,                     &
+                          shallow_dt,                        &
+                          shallow_dq,                        &
+                          shallow_massflux,                  &
+                          mid_dt,                            &
+                          mid_dq,                            &
+                          mid_massflux,                      &
+                          deep_tops,                         &
+                          massflux_up_half,                  &
+                          massflux_up_cmpta,                 &
+                          cca_unadjusted,                    &
                           ndf_w3,                            &
                           undf_w3,                           &
                           map_w3,                            &
@@ -324,7 +346,9 @@ contains
                           ndf_2d,                            &
                           undf_2d,                           &
                           map_2d,                            &
-                          ndf_tile, undf_tile, map_tile)
+                          ndf_tile,                          &
+                          undf_tile,                         &
+                          map_tile )
 
     !---------------------------------------
     ! LFRic modules
@@ -337,6 +361,7 @@ contains
     use cloud_inputs_mod, only: i_cld_vn
     use cv_run_mod, only: n_conv_calls, iconv_deep, iconv_shallow, l_mom, &
                           qmin_conv, l_safe_conv
+    use cv_param_mod, only: max_mf_fall
     use jules_surface_mod, only: ISrfExCnvGust, IP_SrfExWithCnv
     use mphys_inputs_mod, only: l_mcr_qcf2, l_mcr_qgraup, l_mcr_qrain
     use nlsizes_namelist_mod, only: row_length, rows, bl_levels, n_cca_lev
@@ -386,13 +411,9 @@ contains
                                                          delta
 
     real(kind=r_def), dimension(undf_wth), intent(inout) :: dt_conv, dmv_conv, &
-                          dmcl_conv, dmcf_conv, cca, ccw,                      &
-                          massflux_up, massflux_down, entrain_up,entrain_down, &
-                          detrain_up, detrain_down, dd_dt, dd_dq,              &
-                          deep_dt, deep_dq, deep_massflux, deep_tops,          &
-                          shallow_dt, shallow_dq, shallow_massflux,            &
-                          mid_dt, mid_dq, mid_massflux,                        &
-                          conv_rain_3d, conv_snow_3d
+                                          dmcl_conv, dmcf_conv, cca, ccw,      &
+                                          massflux_up, massflux_down,          &
+                                          conv_rain_3d, conv_snow_3d
 
     real(kind=r_def), dimension(undf_w3), intent(inout) :: du_conv, dv_conv
 
@@ -409,12 +430,46 @@ contains
                                                         parcel_buoyancy,      &
                                                         qsat_at_lcl
 
-    real(kind=r_def), dimension(undf_2d), intent(inout) :: deep_in_col,     &
-                           shallow_in_col, mid_in_col,                      &
-                           freeze_level, deep_prec, shallow_prec, mid_prec, &
-                           deep_term, cape_diluted, cape_timescale,         &
-                           conv_rain, conv_snow, cca_2d, lowest_cv_base,    &
-                           lowest_cv_top, cv_base, cv_top, dd_mf_cb
+    real(kind=r_def), dimension(undf_2d), intent(inout) :: cape_diluted,  &
+                                   conv_rain, conv_snow, cca_2d, dd_mf_cb
+
+    real(kind=r_def), pointer, intent(inout) :: deep_in_col(:),      &
+                                                shallow_in_col(:),   &
+                                                mid_in_col(:),       &
+                                                freeze_level(:),     &
+                                                deep_prec(:),        &
+                                                shallow_prec(:),     &
+                                                mid_prec(:),         &
+                                                deep_term(:),        &
+                                                cape_timescale(:),   &
+                                                lowest_cv_base(:),   &
+                                                lowest_cv_top(:),    &
+                                                cv_base(:),          &
+                                                cv_top(:),           &
+                                                pres_cv_base(:),     &
+                                                pres_cv_top(:),      &
+                                                deep_cfl_limited(:), &
+                                                mid_cfl_limited(:)
+
+    real(kind=r_def), pointer, intent(inout) :: entrain_up(:),       &
+                                                entrain_down(:),     &
+                                                detrain_up(:),       &
+                                                detrain_down(:),     &
+                                                dd_dt(:),            &
+                                                dd_dq(:),            &
+                                                deep_dt(:),          &
+                                                deep_dq(:),          &
+                                                deep_massflux(:),    &
+                                                shallow_dt(:),       &
+                                                shallow_dq(:),       &
+                                                shallow_massflux(:), &
+                                                mid_dt(:),           &
+                                                mid_dq(:),           &
+                                                mid_massflux(:),     &
+                                                deep_tops(:),        &
+                                                massflux_up_half(:), &
+                                                massflux_up_cmpta(:),&
+                                                cca_unadjusted(:)
 
     real(kind=r_def), dimension(undf_wth), intent(inout) :: dcfl_conv
     real(kind=r_def), dimension(undf_wth), intent(inout) :: dcff_conv
@@ -449,6 +504,7 @@ contains
          it_cca0, it_w2p, it_cca0_dp, it_cca0_md, it_cca0_sh, it_up_flux,    &
          it_dwn_flux, it_entrain_up, it_detrain_up, it_entrain_dwn,          &
          it_detrain_dwn, it_mf_deep, it_mf_shall, it_mf_midlev,              &
+         it_up_flux_half,                                                    &
          it_dt_deep, it_dt_shall, it_dt_midlev,                              &
          it_dq_deep, it_dq_shall, it_dq_midlev,                              &
          it_du_deep, it_du_shall, it_du_midlev,                              &
@@ -490,7 +546,7 @@ contains
     real(r_um), dimension(row_length,rows,nlayers) ::                        &
          it_mf_congest, it_dt_congest, it_dq_congest, it_du_congest,         &
          it_dv_congest, it_du_dd, it_dv_dd, it_area_ud, it_area_dd,          &
-         it_up_flux_half, it_uw_dp, it_vw_dp, it_uw_shall, it_vw_shall,      &
+         it_uw_dp, it_vw_dp, it_uw_shall, it_vw_shall,                       &
          it_uw_mid, it_vw_mid, it_wqt_flux, it_wthetal_flux, it_wthetav_flux,&
          it_wql_flux, conv_prog_flx
 
@@ -825,8 +881,12 @@ contains
       cct(1,1) = max( cct(1,1),it_cct(1,1))
       ! min ccb across total number of calls to convection
       ! excluding ccb=0
-      if (cv_base(map_2d(1)) > 0 .AND. it_ccb(1,1) > 0) then
-        ccb(1,1) = min(ccb(1,1),it_ccb(1,1))
+      if (.not. associated(cv_base, empty_real_data) ) then
+        if (cv_base(map_2d(1)) > 0 .AND. it_ccb(1,1) > 0) then
+          ccb(1,1) = min(ccb(1,1),it_ccb(1,1))
+        else
+          ccb(1,1) = max(ccb(1,1),it_ccb(1,1))
+        end if
       else
         ccb(1,1) = max(ccb(1,1),it_ccb(1,1))
       end if
@@ -852,44 +912,68 @@ contains
       end do
 
       ! single level convection diagnostics
-      freeze_level(map_2d(1)) = freeze_level(map_2d(1)) +                   &
-                                  real(freeze_lev(1,1)) *one_over_conv_calls
-
-      if (it_mid_level(1,1)) then
-        mid_in_col(map_2d(1)) = mid_in_col(map_2d(1)) + one_over_conv_calls
-      end if
-      deep_in_col(map_2d(1)) = deep_in_col(map_2d(1)) +                     &
-                                 it_ind_deep(1,1)*one_over_conv_calls
-      shallow_in_col(map_2d(1)) = shallow_in_col(map_2d(1)) +               &
-                                    it_ind_shall(1,1)*one_over_conv_calls
-
-      deep_term(map_2d(1)) = deep_term(map_2d(1))+                          &
-                               real(it_kterm_deep(1,1)) *one_over_conv_calls
-
-      cape_timescale(map_2d(1)) =cape_timescale(map_2d(1))     +            &
-                                   cape_ts_used(1,1) *one_over_conv_calls
-
       conv_rain(map_2d(1)) = conv_rain(map_2d(1))+                          &
                                it_conv_rain(1,1) *one_over_conv_calls
       conv_snow(map_2d(1)) = conv_snow(map_2d(1))+                          &
                                it_conv_snow(1,1) *one_over_conv_calls
       cca_2d(map_2d(1)) = cca_2d(map_2d(1))+                                &
                                it_cca_2d(1,1) *one_over_conv_calls
-      deep_prec(map_2d(1)) = deep_prec(map_2d(1))+                          &
-                               it_precip_dp(1,1) *one_over_conv_calls
-      shallow_prec(map_2d(1)) = shallow_prec(map_2d(1))+                    &
-                                  it_precip_sh(1,1) *one_over_conv_calls
-      mid_prec(map_2d(1)) = mid_prec(map_2d(1))+                            &
-                              it_precip_md(1,1) *one_over_conv_calls
-
       cape_diluted(map_2d(1)) = cape_diluted(map_2d(1)) +                   &
                               it_cape_diluted(1,1)*one_over_conv_calls
 
+      if (.not. associated(deep_in_col, empty_real_data) ) then
+        deep_in_col(map_2d(1)) = deep_in_col(map_2d(1)) +                   &
+                                   it_ind_deep(1,1)*one_over_conv_calls
+      end if
+      if (.not. associated(shallow_in_col, empty_real_data) ) then
+        shallow_in_col(map_2d(1)) = shallow_in_col(map_2d(1)) +             &
+                                      it_ind_shall(1,1)*one_over_conv_calls
+      end if
+      if (.not. associated(mid_in_col, empty_real_data) ) then
+        if (it_mid_level(1,1)) then
+          mid_in_col(map_2d(1)) = mid_in_col(map_2d(1)) + one_over_conv_calls
+        end if
+      end if
+      if (.not. associated(freeze_level, empty_real_data) ) then
+        freeze_level(map_2d(1)) = freeze_level(map_2d(1)) +                 &
+                                  real(freeze_lev(1,1)) *one_over_conv_calls
+      end if
+      if (.not. associated(deep_prec, empty_real_data) ) then
+        deep_prec(map_2d(1)) = deep_prec(map_2d(1)) +                       &
+                                 it_precip_dp(1,1) *one_over_conv_calls
+      end if
+      if (.not. associated(shallow_prec, empty_real_data) ) then
+        shallow_prec(map_2d(1)) = shallow_prec(map_2d(1)) +                 &
+                                    it_precip_sh(1,1) *one_over_conv_calls
+      end if
+      if (.not. associated(mid_prec, empty_real_data) ) then
+        mid_prec(map_2d(1)) = mid_prec(map_2d(1)) +                         &
+                              it_precip_md(1,1) *one_over_conv_calls
+      end if
+      if (.not. associated(deep_term, empty_real_data) ) then
+        deep_term(map_2d(1)) = deep_term(map_2d(1)) +                       &
+                               real(it_kterm_deep(1,1)) *one_over_conv_calls
+      end if
+      if (.not. associated(cape_timescale, empty_real_data) ) then
+        cape_timescale(map_2d(1)) =cape_timescale(map_2d(1)) +              &
+                                   cape_ts_used(1,1) *one_over_conv_calls
+      end if
+      if (.not. associated(deep_cfl_limited, empty_real_data) ) then
+        deep_cfl_limited(map_2d(1)) = deep_cfl_limited(map_2d(1)) +         &
+                                it_dp_cfl_limited(1,1) *one_over_conv_calls
+      end if
+      if (.not. associated(mid_cfl_limited, empty_real_data) ) then
+        mid_cfl_limited(map_2d(1)) = mid_cfl_limited(map_2d(1)) +           &
+                                it_md_cfl_limited(1,1) *one_over_conv_calls
+      end if
+
       ! Frequency of deep convection terminating on level k
-      if (it_ind_deep(1,1) == 1.0_r_um) then
-        k = it_kterm_deep(1,1)
-        if (k > 0) then  ! in case still get a zero value
-          deep_tops(map_wth(1)+k) = deep_tops(map_wth(1)+k) + one_over_conv_calls
+      if (.not. associated(deep_tops, empty_real_data) ) then
+        if (it_ind_deep(1,1) == 1.0_r_um) then
+          k = it_kterm_deep(1,1)
+          if (k > 0) then  ! in case still get a zero value
+            deep_tops(map_wth(1)+k) = deep_tops(map_wth(1)+k) + one_over_conv_calls
+          end if
         end if
       end if
 
@@ -924,36 +1008,7 @@ contains
                                        it_up_flux(1,1,k)*one_over_conv_calls
         massflux_down(map_wth(1) + k) = massflux_down(map_wth(1) + k)+       &
                                        it_dwn_flux(1,1,k)*one_over_conv_calls
-        entrain_up(map_wth(1) + k) = entrain_up(map_wth(1) + k) +            &
-                                       it_entrain_up(1,1,k)*one_over_conv_calls
-        entrain_down(map_wth(1) + k) = entrain_down(map_wth(1) + k) +        &
-                                       it_entrain_dwn(1,1,k)*one_over_conv_calls
-        detrain_up(map_wth(1) + k) = detrain_up(map_wth(1) + k) +            &
-                                       it_detrain_up(1,1,k)*one_over_conv_calls
-        detrain_down(map_wth(1) + k) = detrain_down(map_wth(1) + k) +        &
-                                       it_detrain_dwn(1,1,k)*one_over_conv_calls
-        dd_dt(map_wth(1) + k) = dd_dt(map_wth(1) + k) +                      &
-                                       it_dt_dd(1,1,k)*one_over_conv_calls
-        dd_dq(map_wth(1) + k) = dd_dq(map_wth(1) + k) +                      &
-                                       it_dq_dd(1,1,k)*one_over_conv_calls
-        deep_massflux(map_wth(1) + k) = deep_massflux(map_wth(1) + k) +      &
-                                       it_mf_deep(1,1,k)*one_over_conv_calls
-        deep_dt(map_wth(1) + k) = deep_dt(map_wth(1) + k) +                  &
-                                       it_dt_deep(1,1,k)*one_over_conv_calls
-        deep_dq(map_wth(1) + k) = deep_dq(map_wth(1) + k) +                  &
-                                       it_dq_deep(1,1,k)*one_over_conv_calls
-        shallow_massflux(map_wth(1) + k) = shallow_massflux(map_wth(1) + k) +&
-                                       it_mf_shall(1,1,k)*one_over_conv_calls
-        shallow_dt(map_wth(1) + k) = shallow_dt(map_wth(1) + k) +            &
-                                       it_dt_shall(1,1,k)*one_over_conv_calls
-        shallow_dq(map_wth(1) + k) = shallow_dq(map_wth(1) + k) +            &
-                                       it_dq_shall(1,1,k)*one_over_conv_calls
-        mid_massflux(map_wth(1) + k) = mid_massflux(map_wth(1) + k) +        &
-                                       it_mf_midlev(1,1,k)*one_over_conv_calls
-        mid_dt(map_wth(1) + k) = mid_dt(map_wth(1) + k) +                    &
-                                       it_dt_midlev(1,1,k)*one_over_conv_calls
-        mid_dq(map_wth(1) + k) = mid_dq(map_wth(1) + k) +                    &
-                                       it_dq_midlev(1,1,k)*one_over_conv_calls
+
         conv_rain_3d(map_wth(1) + k) = conv_rain_3d(map_wth(1) + k) +        &
                                        it_conv_rain_3d(1,1,k) *              &
                                        one_over_conv_calls
@@ -961,6 +1016,110 @@ contains
                                        it_conv_snow_3d(1,1,k) *              &
                                        one_over_conv_calls
       end do
+
+        ! Update optional diagnostics
+      if (.not. associated(entrain_up, empty_real_data) ) then
+        do k = 1, n_conv_levels
+          entrain_up(map_wth(1) + k) = entrain_up(map_wth(1) + k) +            &
+                                         it_entrain_up(1,1,k)*one_over_conv_calls
+        end do
+      end if
+      if (.not. associated(entrain_down, empty_real_data) ) then
+        do k = 1, n_conv_levels
+          entrain_down(map_wth(1) + k) = entrain_down(map_wth(1) + k) +        &
+                                         it_entrain_dwn(1,1,k)*one_over_conv_calls
+        end do
+      end if
+      if (.not. associated(detrain_up, empty_real_data) ) then
+        do k = 1, n_conv_levels
+          detrain_up(map_wth(1) + k) = detrain_up(map_wth(1) + k) +            &
+                                         it_detrain_up(1,1,k)*one_over_conv_calls
+        end do
+      end if
+      if (.not. associated(detrain_down, empty_real_data) ) then
+        do k = 1, n_conv_levels
+          detrain_down(map_wth(1) + k) = detrain_down(map_wth(1) + k) +        &
+                                         it_detrain_dwn(1,1,k)*one_over_conv_calls
+        end do
+      end if
+      if (.not. associated(dd_dt, empty_real_data) ) then
+        do k = 1, n_conv_levels
+          dd_dt(map_wth(1) + k) = dd_dt(map_wth(1) + k) +                      &
+                                         it_dt_dd(1,1,k)*one_over_conv_calls
+        end do
+      end if
+      if (.not. associated(dd_dq, empty_real_data) ) then
+        do k = 1, n_conv_levels
+          dd_dq(map_wth(1) + k) = dd_dq(map_wth(1) + k) +                      &
+                                         it_dq_dd(1,1,k)*one_over_conv_calls
+        end do
+      end if
+      if (.not. associated(deep_massflux, empty_real_data) ) then
+        do k = 1, n_conv_levels
+          deep_massflux(map_wth(1) + k) = deep_massflux(map_wth(1) + k) +      &
+                                         it_mf_deep(1,1,k)*one_over_conv_calls
+        end do
+      end if
+      if (.not. associated(deep_dt, empty_real_data) ) then
+        do k = 1, n_conv_levels
+          deep_dt(map_wth(1) + k) = deep_dt(map_wth(1) + k) +                  &
+                                         it_dt_deep(1,1,k)*one_over_conv_calls
+        end do
+      end if
+      if (.not. associated(deep_dq, empty_real_data) ) then
+        do k = 1, n_conv_levels
+          deep_dq(map_wth(1) + k) = deep_dq(map_wth(1) + k) +                  &
+                                         it_dq_deep(1,1,k)*one_over_conv_calls
+         end do
+     end if
+      if (.not. associated(shallow_massflux, empty_real_data) ) then
+        do k = 1, n_conv_levels
+          shallow_massflux(map_wth(1) + k) = shallow_massflux(map_wth(1) + k) +&
+                                         it_mf_shall(1,1,k)*one_over_conv_calls
+        end do
+      end if
+      if (.not. associated(shallow_dt, empty_real_data) ) then
+        do k = 1, n_conv_levels
+          shallow_dt(map_wth(1) + k) = shallow_dt(map_wth(1) + k) +            &
+                                         it_dt_shall(1,1,k)*one_over_conv_calls
+        end do
+      end if
+      if (.not. associated(shallow_dq, empty_real_data) ) then
+        do k = 1, n_conv_levels
+          shallow_dq(map_wth(1) + k) = shallow_dq(map_wth(1) + k) +            &
+                                         it_dq_shall(1,1,k)*one_over_conv_calls
+        end do
+      end if
+      if (.not. associated(mid_massflux, empty_real_data) ) then
+        do k = 1, n_conv_levels
+          mid_massflux(map_wth(1) + k) = mid_massflux(map_wth(1) + k) +        &
+                                         it_mf_midlev(1,1,k)*one_over_conv_calls
+        end do
+      end if
+      if (.not. associated(mid_dt, empty_real_data) ) then
+        do k = 1, n_conv_levels
+          mid_dt(map_wth(1) + k) = mid_dt(map_wth(1) + k) +                    &
+                                         it_dt_midlev(1,1,k)*one_over_conv_calls
+        end do
+      end if
+      if (.not. associated(mid_dq, empty_real_data) ) then
+        do k = 1, n_conv_levels
+          mid_dq(map_wth(1) + k) = mid_dq(map_wth(1) + k) +                    &
+                                         it_dq_midlev(1,1,k)*one_over_conv_calls
+        end do
+      end if
+      if (.not. associated(cca_unadjusted, empty_real_data) ) then
+        do k = 1, n_conv_levels
+          cca_unadjusted(map_wth(1) + k) = cca_unadjusted(map_wth(1) + k) +    &
+                                         it_cca(1,1,k)*one_over_conv_calls
+        end do
+      end if
+      if (.not. associated(massflux_up_half, empty_real_data) ) then
+        do k = 1, n_conv_levels
+          massflux_up_half(map_wth(1) + k) = massflux_up_half(map_wth(1) + k) +&
+                                         it_up_flux_half(1,1,k)*one_over_conv_calls
+        end do
+      end if
 
       if (l_mom) then
         do k = 1, n_conv_levels
@@ -1045,10 +1204,47 @@ contains
     end do
 
     ! Copy integers into real diagnostic arrays
-    cv_top(map_2d(1))        = real(cct(1,1))
-    cv_base(map_2d(1))       = real(ccb(1,1))
-    lowest_cv_top(map_2d(1)) = real(lctop(1,1))
-    lowest_cv_base(map_2d(1)) = real(lcbase(1,1))
+    if (.not. associated(cv_top, empty_real_data) ) then
+      cv_top(map_2d(1))        = real(cct(1,1))
+    end if
+    if (.not. associated(cv_base, empty_real_data) ) then
+      cv_base(map_2d(1))       = real(ccb(1,1))
+    end if
+    if (.not. associated(lowest_cv_top, empty_real_data) ) then
+      lowest_cv_top(map_2d(1)) = real(lctop(1,1))
+    end if
+    if (.not. associated(lowest_cv_base, empty_real_data) ) then
+      lowest_cv_base(map_2d(1)) = real(lcbase(1,1))
+    end if
+
+    ! pressure at cv top/base
+    if (.not. associated(pres_cv_top, empty_real_data) ) then
+      if (cct(1,1) > 0) then
+        pres_cv_top(map_2d(1)) = p_rho_levels(1,1,cct(1,1))
+      else
+        pres_cv_top(map_2d(1)) = 0.0_r_def
+      end if
+    end if
+    if (.not. associated(pres_cv_base, empty_real_data) ) then
+      if (ccb(1,1) > 0) then
+        pres_cv_base(map_2d(1)) = p_rho_levels(1,1,ccb(1,1))
+      else
+        pres_cv_base(map_2d(1))= 0.0_r_def
+      end if
+    end if
+
+    ! component A of upward mass flux
+    if (.not. associated(massflux_up_cmpta, empty_real_data) ) then
+      do k = 1, n_conv_levels - 1
+        if ( (1.0 - max_mf_fall) * massflux_up_half(map_wth(1) + k) < &
+                                   massflux_up_half(map_wth(1) + k+1) ) then
+          massflux_up_cmpta(map_w3(1) + k-1) = massflux_up_half(map_wth(1) + k) &
+                                             * (1.0 - shallow_in_col(map_2d(1)))
+        else
+          massflux_up_cmpta(map_w3(1) + k-1) = 0.0_r_def
+        end if
+      end do
+    end if
 
     ! Would need to copy tracers back!
     deallocate(tot_tracer)
