@@ -15,10 +15,11 @@ module multires_coupling_diagnostics_driver_mod
   use constants_mod,                      only : i_def
   use field_mod,                          only : field_type
   use field_collection_mod,               only : field_collection_type
-  use multires_coupling_mappings_alg_mod, only : map_w2_vectors_alg, &
-                                                 map_scalars_alg
-  use diagnostics_io_mod,                 only : write_scalar_diagnostic, &
-                                                 write_vector_diagnostic
+  use formulation_config_mod,             only : use_physics
+  use gungho_model_data_mod,              only : model_data_type
+  use gungho_diagnostics_driver_mod,      only : gungho_diagnostics_driver
+  use map_physics_fields_alg_mod,         only : map_physics_fields_alg
+
   implicit none
 
   private
@@ -26,61 +27,55 @@ module multires_coupling_diagnostics_driver_mod
 
 contains
 
-  !> @brief Outputs the diagnostics from the multires_coupling miniapp by mapping across
-  !>        the state from the dynamics mesh to the output mesh. Note in future
-  !>        some fields may also be mapped across from the physics mesh
-  !> @param [in] output_mesh_id The identifier of the output mesh
+  !> @brief Outputs the diagnostics from the multires_coupling miniapp.
   !> @param [in] dynamics_mesh_id The identifier of the dynamics mesh
-  !> @param [in,out] output_state A collection containing the fields that will
-  !>                be written to diagnostic output
-  !> @param [in,out] dynamics_state A collection containing the fields on the
+  !> @param [in,out] dynamics_model_data A collection containing the fields on the
   !>                dynamics mesh
   !> @param [in] clock Model time.
   !> @param [in] W3_project Flag that determines if vector fields should be
   !>                        projected to W3
-  subroutine multires_coupling_diagnostics_driver( output_mesh_id, dynamics_mesh_id, &
-                                                   output_state, dynamics_state,     &
+  subroutine multires_coupling_diagnostics_driver( dynamics_mesh_id,       &
+                                                   dynamics_model_data,    &
                                                    clock, W3_project )
 
     implicit none
 
-    type(field_collection_type), intent(inout) :: output_state
-    type(field_collection_type), intent(inout) :: dynamics_state
-    integer(kind=i_def),         intent(in)    :: output_mesh_id
-    integer(kind=i_def),         intent(in)    :: dynamics_mesh_id
-    class(clock_type),           intent(in)    :: clock
-    logical,                     intent(in)    :: W3_project
+    type(model_data_type), intent(inout), target   :: dynamics_model_data
+    integer(kind=i_def),   intent(in)              :: dynamics_mesh_id
+    class(clock_type),     intent(in)              :: clock
+    logical,               intent(in)              :: W3_project
 
-    type(field_type), pointer :: output_u => null()
-    type(field_type), pointer :: output_rho => null()
-    type(field_type), pointer :: output_theta => null()
+    type( field_collection_type ), pointer :: dynamics_prognostic_fields => null()
+    type( field_collection_type ), pointer :: dynamics_derived_fields => null()
+    type( field_type ),            pointer :: dynamics_mr(:) => null()
+    type( field_type ),            pointer :: dynamics_moist_dyn(:) => null()
 
     type(field_type), pointer :: dynamics_u => null()
     type(field_type), pointer :: dynamics_rho => null()
     type(field_type), pointer :: dynamics_theta => null()
+    type(field_type), pointer :: dynamics_exner => null()
+
+    dynamics_prognostic_fields => dynamics_model_data%prognostic_fields
+    dynamics_derived_fields => dynamics_model_data%derived_fields
+    dynamics_mr => dynamics_model_data%mr
+    dynamics_moist_dyn => dynamics_model_data%moist_dyn
 
     ! Can't just iterate through the collection as some fields are scalars
     ! and some fields are vectors, so explicitly extract all fields from
     ! the collection and output each of them
-    output_u => output_state%get_field('u')
-    output_rho => output_state%get_field('rho')
-    output_theta => output_state%get_field('theta')
-    dynamics_u => dynamics_state%get_field('u')
-    dynamics_rho => dynamics_state%get_field('rho')
-    dynamics_theta => dynamics_state%get_field('theta')
+    dynamics_u => dynamics_prognostic_fields%get_field('u')
+    dynamics_rho => dynamics_prognostic_fields%get_field('rho')
+    dynamics_theta => dynamics_prognostic_fields%get_field('theta')
+    dynamics_exner => dynamics_prognostic_fields%get_field('exner')
 
-    ! Map dynamics state to output state on output mesh
-    call map_w2_vectors_alg( dynamics_u, output_u )
-    call map_scalars_alg( dynamics_rho, output_rho )
-    call map_scalars_alg( dynamics_theta, output_theta )
+    if (use_physics) then
+      call map_physics_fields_alg(dynamics_u, dynamics_exner,      &
+                                  dynamics_rho, dynamics_theta,    &
+                                  dynamics_moist_dyn, dynamics_derived_fields)
+    end if
 
-    ! Calculation and output of diagnostics
-    call write_vector_diagnostic( 'u', output_u, &
-                                  clock, output_mesh_id, W3_project )
-    call write_scalar_diagnostic( 'rho', output_rho, &
-                                  clock, output_mesh_id, W3_project )
-    call write_scalar_diagnostic( 'theta', output_theta, &
-                                  clock, output_mesh_id, W3_project )
+    call gungho_diagnostics_driver( dynamics_mesh_id, dynamics_model_data, &
+                                    clock, W3_project )
 
   end subroutine multires_coupling_diagnostics_driver
 

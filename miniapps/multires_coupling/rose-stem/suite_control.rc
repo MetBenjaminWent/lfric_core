@@ -82,12 +82,9 @@
     'check_config_dump_graph()',
     'check_style_graph()',
     'api_documentation_graph(publish=True)',
-    'run_application("multires_coupling", "coupling_test", resolutions=[("C24",)])',
-    'run_application("multires_coupling", "coupling_test_coarse", resolutions=[("C24_C12",)])',
-    'run_application("multires_coupling", "coupling_test_fine", resolutions=[("C24_C12",)])',
-    'check_compilers("multires_coupling", "coupling_test", "fast-debug", resolution=("C24",))',
-    'check_compilers("multires_coupling", "coupling_test", "full-debug", resolution=("C24",))',
-    'canned_test("multires_coupling")' ],
+    'run_application("multires_coupling", "coupling_test", checkkgo=False, resolutions=[("C24",)])',
+    'run_application("multires_coupling", "coupling_test_coarse", checkkgo=False, resolutions=[("C24_C12",)])',
+    'run_application("multires_coupling", "coupling_test_fine", checkkgo=False, resolutions=[("C24_C12",)])'],
 'nightly': [
     'null_task_graph()' ]
  } %}

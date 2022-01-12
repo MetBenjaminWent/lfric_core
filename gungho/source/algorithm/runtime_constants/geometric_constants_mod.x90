@@ -33,6 +33,7 @@ module geometric_constants_mod
                                                 primary_mesh_label,         &
                                                 shifted_mesh_label,         &
                                                 twod_mesh_label,            &
+                                                extra_mesh_label,           &
                                                 multigrid_mesh_label
 
   ! Configuration
@@ -199,6 +200,7 @@ contains
 
       if ( label_list(i) == primary_mesh_label .or. &
            label_list(i) == shifted_mesh_label .or. &
+           label_list(i) == extra_mesh_label .or. &
            label_list(i) == multigrid_mesh_label) then
         call height_w1_list(i)%initialise( vector_space = w1_k0_fs )
         call height_w2_list(i)%initialise( vector_space = w2_k0_fs )
