@@ -130,11 +130,6 @@ build: ALWAYS
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
 	          SOURCE_DIR=$(ROOT_DIR)/components/lfric-xios/source
 	$(call MESSAGE,========================================)
-	$(call MESSAGE,Extracting coupler-oasis component)
-	$(call MESSAGE,========================================)
-	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
-		SOURCE_DIR=$(ROOT_DIR)/components/coupler-oasis/source
-	$(call MESSAGE,========================================)
 	$(call MESSAGE,Extracting Gungho dynamical core)
 	$(call MESSAGE,========================================)
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
@@ -165,11 +160,6 @@ build: ALWAYS
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone.mk \
 	          SOURCE_DIR=$(ROOT_DIR)/gungho/source \
 	          OPTIMISATION_PATH=$(OPTIMISATION_PATH)
-	$(call MESSAGE,========================================)
-	$(call MESSAGE,PSycloning coupler-oasis component)
-	$(call MESSAGE,========================================)
-	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone.mk \
-	        SOURCE_DIR=$(ROOT_DIR)/components/coupler-oasis/source
 	$(call MESSAGE,========================================)
 	$(call MESSAGE,PSycloning $(PROJECT_NAME))
 	$(call MESSAGE,========================================)
@@ -203,7 +193,6 @@ unit-tests: export ADDITIONAL_EXTRACTION = "$(ROOT_DIR)/infrastructure/source \
                                             $(ROOT_DIR)/gungho/source \
                                             $(ROOT_DIR)/gungho/unit-test/support \
                                             $(ROOT_DIR)/components/lfric-xios/source \
-                                            $(ROOT_DIR)/components/coupler-oasis/source \
                                             $(ROOT_DIR)/um_physics/source/diagnostics_meta/meta_types"
 
 unit-tests: export BIN_DIR ?= $(PROJECT_DIR)/test

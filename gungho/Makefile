@@ -129,11 +129,6 @@ build: ALWAYS
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
 	          SOURCE_DIR=$(ROOT_DIR)/components/lfric-xios/source
 	$(call MESSAGE,========================================)
-	$(call MESSAGE,Extracting coupler-oasis component)
-	$(call MESSAGE,========================================)
-	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
-                  SOURCE_DIR=$(ROOT_DIR)/components/coupler-oasis/source
-	$(call MESSAGE,========================================)
 	$(call MESSAGE,Extracting $(PROJECT_NAME))
 	$(call MESSAGE,========================================)
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk \
@@ -149,12 +144,6 @@ build: ALWAYS
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone.mk \
 	          SOURCE_DIR=$(ROOT_DIR)/components/lfric-xios/source \
 	          OPTIMISATION_PATH=$(OPTIMISATION_PATH)
-	$(call MESSAGE,========================================)
-	$(call MESSAGE,PSycloning coupler-oasis component)
-	$(call MESSAGE,========================================)
-	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone.mk \
-                  SOURCE_DIR=$(ROOT_DIR)/components/coupler-oasis/source \
-                  OPTIMISATION_PATH=$(OPTIMISATION_PATH)
 	$(call MESSAGE,========================================)
 	$(call MESSAGE,PSycloning $(PROJECT_NAME))
 	$(call MESSAGE,========================================)
@@ -183,7 +172,6 @@ build: ALWAYS
 .PHONY: unit-tests
 unit-tests: export ADDITIONAL_EXTRACTION = "$(ROOT_DIR)/infrastructure/source \
                                             $(ROOT_DIR)/components/driver/source \
-                                            $(ROOT_DIR)/components/coupler-oasis/source \
                                             $(ROOT_DIR)/components/lfric-xios/source"
 unit-tests: export BIN_DIR ?= $(PROJECT_DIR)/test
 unit-tests: export CXX_LINK = TRUE
@@ -205,7 +193,6 @@ unit-tests: do-unit-tests
 .PHONY: integration-tests
 integration-tests: export ADDITIONAL_EXTRACTION = "$(ROOT_DIR)/infrastructure/source \
                                                    $(ROOT_DIR)/components/driver/source \
-                                                   $(ROOT_DIR)/components/coupler-oasis/source \
                                                    $(ROOT_DIR)/components/lfric-xios/source"
 integration-tests: export BIN_DIR ?= $(PROJECT_DIR)/test
 integration-tests: export META_FILE_DIR = rose-meta/lfric-gungho/HEAD
