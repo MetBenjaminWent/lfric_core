@@ -42,8 +42,8 @@ module create_physics_prognostics_mod
                                              convection, convection_um
   use cloud_config_mod,               only : scheme, &
                                              scheme_pc2
-  use surface_config_mod,             only : albedo_obs, srf_ex_cnv_gust,      &
-                                             sea_alb_var_chl
+  use jules_surface_config_mod,       only : srf_ex_cnv_gust
+  use surface_config_mod,             only : albedo_obs, sea_alb_var_chl
   use spectral_gwd_config_mod,        only : add_cgw
   use microphysics_config_mod,        only : turb_gen_mixph
 

@@ -31,10 +31,10 @@ module init_ancils_mod
   use jules_control_init_mod,         only : n_land_tile
   use jules_surface_types_mod,        only : npft
   use dust_parameters_mod,            only : ndiv
-  use surface_config_mod,             only : l_vary_z0m_soil, sea_alb_var_chl, &
-                                             albedo_obs
   use initialization_config_mod,      only : ancil_option,ancil_option_updating
   use aerosol_config_mod,             only : glomap_mode, glomap_mode_ukca
+  use jules_surface_config_mod,       only : l_vary_z0m_soil
+  use surface_config_mod,             only : sea_alb_var_chl, albedo_obs
 
   implicit none
 

@@ -36,9 +36,9 @@ module bl_exp_kernel_mod
   use convection_config_mod,  only : use_jules_flux
   use microphysics_config_mod, only: turb_gen_mixph
   use mixing_config_mod,      only : smagorinsky
+  use jules_surface_config_mod, only : formdrag, formdrag_dist_drag
   use surface_config_mod,     only : albedo_obs, sea_surf_alg, &
                                      sea_surf_alg_fixed_roughness, &
-                                     formdrag, formdrag_dist_drag, &
                                      buddy_sea, buddy_sea_on
   use timestepping_config_mod, only: outer_iterations
   use water_constants_mod,     only: tfs

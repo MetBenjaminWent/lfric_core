@@ -11,6 +11,23 @@ module jules_physics_init_mod
   ! Other LFRic modules used
   use constants_mod,          only : r_um, i_def
   use jules_control_init_mod, only : n_sea_ice_tile, n_land_tile
+  use jules_surface_config_mod, only :                                         &
+                                     cor_mo_iter_in => cor_mo_iter,            &
+                                     cor_mo_iter_lim_oblen,                    &
+                                     cor_mo_iter_improved,                     &
+                                     srf_ex_cnv_gust_in => srf_ex_cnv_gust,    &
+                                     formdrag_in => formdrag, formdrag_none,   &
+                                     formdrag_eff_z0, formdrag_dist_drag,      &
+                                     fd_stability_dep_in => fd_stability_dep,  &
+                                     fd_stability_dep_none,                    &
+                                     fd_stability_dep_surf_ri,                 &
+                                     l_variable_soil_z0m => l_vary_z0m_soil
+  use jules_vegetation_config_mod, only :                                      &
+                                     canopy_radiation_model => can_rad_mod,    &
+                                     can_rad_mod_one, can_rad_mod_four,        &
+                                     can_rad_mod_five, can_rad_mod_six,        &
+                                     l_limit_canhc_pft => l_limit_canhc,       &
+                                     l_spec_z0_pft => l_spec_veg_z0
   use surface_config_mod,     only : use_hydrology,                            &
                                      l_variable_rainfraction => l_var_rainfrac,&
                                      fixed_sea_albedo_in => fixed_sea_albedo,  &
@@ -38,13 +55,6 @@ module jules_physics_init_mod
                                      relayer_opt_original, relayer_opt_inverse,&
                                      rho_snow_fresh_in => rho_snow_fresh,      &
                                      dpsids_dsdz, soil_sat_down,               &
-                                     cor_mo_iter_in => cor_mo_iter,            &
-                                     cor_mo_iter_lim_oblen,                    &
-                                     cor_mo_iter_improved, srf_ex_cnv_gust,    &
-                                     formdrag_in => formdrag, formdrag_none,   &
-                                     formdrag_eff_z0, formdrag_dist_drag,      &
-                                     fd_stability_dep, fd_stability_dep_none,  &
-                                     fd_stability_dep_surf_ri,                 &
                                      alb_snocov_nvg, alb_snofree_nvg,          &
                                      can_cap_nvg, heat_cap_nvg,                &
                                      alb_snocov_max,                           &
@@ -53,9 +63,6 @@ module jules_physics_init_mod
                                      scat_coef_nir, z0hm_ratio_pft,            &
                                      z0hm_ratio_nveg,                          &
                                      z0_pft => z0v,                            &
-                                     l_variable_soil_z0m => l_vary_z0m_soil,   &
-                                     l_spec_z0_pft => l_spec_veg_z0,           &
-                                     l_limit_canhc_pft => l_limit_canhc,       &
                                      l_10m_neutral => l_10m_neut,              &
                                      high_wind_drag => i_high_wind_drag,       &
                                      i_high_wind_drag_null,                    &
@@ -65,9 +72,6 @@ module jules_physics_init_mod
                                      cdn_maximum_sea => cdn_max_sea,           &
                                      u_cdn_highwind => u_cdn_hw,               &
                                      u_cdn_maximum => u_cdn_max,               &
-                                     canopy_radiation_model => can_rad_mod,    &
-                                     can_rad_mod_one, can_rad_mod_four,        &
-                                     can_rad_mod_five, can_rad_mod_six,        &
                                      can_clump_pft => can_clump,               &
                                      can_snow_pft => cansnowpft,               &
                                      exposed_lai => n_lai_exposed,             &
@@ -197,8 +201,8 @@ contains
          t0_ch4, ch4_cpow, tau_ch4, k2_ch4, rho_ch4, q10_mic_ch4, cue_ch4,  &
          mu_ch4, frz_ch4, alpha_ch4, ch4_cpow, ev_ch4, q10_ev_ch4
     use jules_surface_mod, only: l_epot_corr, cor_mo_iter, iscrntdiag,      &
-         isrfexcnvgust, Limit_ObukhovL, ip_scrndecpl2, IP_SrfExWithCnv,     &
-         fd_stab_dep, orog_drag_param, check_jules_surface,                 &
+         srf_ex_cnv_gust, Limit_ObukhovL, ip_scrndecpl2, IP_SrfExWithCnv,   &
+         fd_stability_dep, orog_drag_param, check_jules_surface,            &
          Improve_Initial_Guess, formdrag, beta_cnv_bl, fd_hill_option,      &
          i_modiscopt, l_land_ice_imp, no_drag, effective_z0,                &
          capped_lowhill, explicit_stress, l_vary_z0m_soil
@@ -422,11 +426,11 @@ contains
         cor_mo_iter = Improve_Initial_Guess
     end select
     fd_hill_option  = capped_lowhill
-    select case (fd_stability_dep)
+    select case (fd_stability_dep_in)
       case(fd_stability_dep_none)
-        fd_stab_dep = 0
+        fd_stability_dep = 0
       case(fd_stability_dep_surf_ri)
-        fd_stab_dep = 1
+        fd_stability_dep = 1
     end select
     select case (formdrag_in)
       case(formdrag_none)
@@ -438,7 +442,7 @@ contains
     end select
     i_modiscopt     = 1
     iscrntdiag      = ip_scrndecpl2
-    if (srf_ex_cnv_gust) isrfexcnvgust = IP_SrfExWithCnv
+    if (srf_ex_cnv_gust_in) srf_ex_cnv_gust = IP_SrfExWithCnv
     l_epot_corr     = .true.
     l_land_ice_imp  = .true.
     l_vary_z0m_soil = l_variable_soil_z0m

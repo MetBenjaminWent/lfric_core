@@ -16,7 +16,7 @@ module bl_exp_du_kernel_mod
   use fs_continuity_mod,        only: W1, W2
   use kernel_mod,               only: kernel_type
   use nlsizes_namelist_mod,     only: bl_levels
-  use surface_config_mod,       only: formdrag, formdrag_dist_drag
+  use jules_surface_config_mod, only: formdrag, formdrag_dist_drag
 
   implicit none
 

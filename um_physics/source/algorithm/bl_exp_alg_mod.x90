@@ -22,8 +22,8 @@ module bl_exp_alg_mod
                                            get_rdz_fd1
   use map_fd_to_prognostics_alg_mod, only: set_wind
   use jules_control_init_mod,        only: n_surf_interp
-  use surface_config_mod,            only: formdrag, formdrag_dist_drag, &
-                                           buddy_sea, buddy_sea_on
+  use jules_surface_config_mod,      only: formdrag, formdrag_dist_drag
+  use surface_config_mod,            only: buddy_sea, buddy_sea_on
 
   use io_config_mod,        only: subroutine_timers
   use timer_mod,            only: timer

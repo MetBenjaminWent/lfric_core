@@ -362,7 +362,7 @@ contains
     use cv_run_mod, only: n_conv_calls, iconv_deep, iconv_shallow, l_mom, &
                           qmin_conv, l_safe_conv
     use cv_param_mod, only: max_mf_fall
-    use jules_surface_mod, only: ISrfExCnvGust, IP_SrfExWithCnv
+    use jules_surface_mod, only: srf_ex_cnv_gust, IP_SrfExWithCnv
     use mphys_inputs_mod, only: l_mcr_qcf2, l_mcr_qgraup, l_mcr_qrain
     use nlsizes_namelist_mod, only: row_length, rows, bl_levels, n_cca_lev
     use pc2_constants_mod, only: i_cld_pc2
@@ -1189,7 +1189,7 @@ contains
 
     ! Store convective downdraught mass fluxes at cloud base
     ! if required for surface exchange.
-    if (isrfexcnvgust == ip_srfexwithcnv) then
+    if (srf_ex_cnv_gust == ip_srfexwithcnv) then
       if (ccb(1,1) > 0) then
         dd_mf_cb(map_2d(1))=massflux_down( map_wth(1) + ccb(1,1))
       else
