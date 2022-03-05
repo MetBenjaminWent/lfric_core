@@ -19,6 +19,9 @@ module mol_advective_alg_mod
                                       only: get_transport_runtime
   use transport_config_mod,           only: runge_kutta_method
   use enforce_lower_bound_kernel_mod, only: enforce_lower_bound_kernel_type
+  use boundaries_config_mod,          only: limited_area, transport_boundary_depth
+  use limited_area_lbc_alg_mod,       only: overwrite_blending_zone
+  use base_mesh_config_mod,           only: topology, topology_non_periodic
 
   implicit none
 
@@ -116,10 +119,34 @@ contains
                      inc_X_minus_bY(advection_inc,                   &
                                     ak_adv(nstage, stage), rk_rhs(stage)) )
 
+        if ( limited_area .and. topology==topology_non_periodic ) then
+          ! This code is required while LAMs loop over cells right up to
+          ! the edge of a limited area domain.  It can be removed if
+          ! we only loop over columns in the interior domain.
+
+          ! Don't update the field near the edge of the domain. A depth of 1 is chosen
+          ! here to avoid problems right at the lateral boundary edge,
+          ! but ticket #3112 will investigate further options.
+          call overwrite_blending_zone(field_np1, field_n, depth=1)
+        end if
+
       end do  ! end rk-stages
 
       ! Compute the initial state (field_np1) for the next substep
       call invoke( aX_plus_Y(field_np1, dt_substep, advection_inc, field_n) )
+
+      if ( limited_area .and. topology==topology_non_periodic ) then
+        ! This code is required while LAMs loop over cells right up to
+        ! the edge of a limited area domain.  It can be removed if
+        ! we only loop over columns in the interior domain.
+
+        ! Don't update the field near the edge of the domain. A configurable depth of using
+        ! the transport_boundary_depth is chosen here.  This will depend
+        ! on the number of RK stages and spatial reconstruction order.
+        ! Ticket #3112 will investigate further options.
+        call overwrite_blending_zone(field_np1, field_n, depth=transport_boundary_depth)
+      end if
+
       call field_np1%copy_field(field_n)
 
     end do

@@ -43,6 +43,7 @@ module pressure_operator_alg_mod
                                                 get_helm_diag, &
                                                 get_hb_lumped_inv
   use boundaries_config_mod,              only: limited_area
+  use base_mesh_config_mod,               only: topology, topology_non_periodic
   use function_space_mod,                 only: function_space_type
   use function_space_chain_mod,           only: multigrid_function_space_chain
 
@@ -191,7 +192,11 @@ contains
       select type (y)
       type is (field_vector_type)
         ! Compute M3*p + H[ D{\theta*}*p ]
-        if ( element_order == 0 ) then
+        ! If limited_area then apply_helmholtz_operator_kernel_type stencils
+        ! will currently go out of bounds. #2957 records the technical
+        ! debt associated with this.
+        if ( element_order == 0 .and. &
+           .not. (limited_area .and. topology==topology_non_periodic) ) then
           Helmholtz_operator => get_helmholtz_operator(self%level)
           call invoke( name="apply_H",&
                        apply_helmholtz_operator_kernel_type(y%vector(1), &

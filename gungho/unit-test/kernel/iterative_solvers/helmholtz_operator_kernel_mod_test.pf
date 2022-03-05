@@ -95,6 +95,8 @@ contains
     ! Number of dofs in a single column: 4*nlayers horizontal dofs
     ! and (nlayers + 1) vertical dofs
     integer(kind=i_def), parameter :: ndofs_col = 5*nlayers+1
+    integer(kind=i_def) :: wsen_map(4)
+    integer(kind=i_def) :: wsen_map_count
 
     integer(kind=i_def) :: df, k
     real(kind=r_def)    :: answer
@@ -145,9 +147,16 @@ contains
     m3_exner_star = 1.0_r_def
     p3theta = 1.0_r_def
 
+    ! Set up W,S,E,N direction map
+    ! Defaulting to full stencil
+    wsen_map(:) = [ 1, 2, 3, 4 ]
+    wsen_map_count = 4
+
     ! Compute Helmholtz operator
     call helmholtz_operator_code(smap_size_w2,                     &
                                  cell_map,                         &
+                                 wsen_map,                         &
+                                 wsen_map_count,                   &
                                  nlayers,                          &
                                  helm_c,                           &
                                  helm_n, helm_e, helm_s, helm_w,   &

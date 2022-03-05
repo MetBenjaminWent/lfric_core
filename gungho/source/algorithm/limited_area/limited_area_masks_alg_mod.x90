@@ -11,11 +11,20 @@
 
 module limited_area_masks_alg_mod
 
-  use field_mod,                      only: field_type
-  use constants_mod,                  only: i_def, r_def, l_def
-  use log_mod,                        only: log_event,         &
-                                            log_scratch_space, &
-                                            LOG_LEVEL_ERROR
+  use field_mod,                          only: field_type
+  use constants_mod,                      only: i_def, r_def, l_def
+  use log_mod,                            only: log_event,         &
+                                                log_scratch_space, &
+                                                LOG_LEVEL_ERROR,   &
+                                                LOG_LEVEL_INFO
+  use create_edge_mask_kernel_mod,        only: create_edge_mask_kernel_type
+  use propagate_onion_layers_kernel_mod,  only: propagate_onion_layers_kernel_type
+  use create_threshold_mask_kernel_mod,   only: create_threshold_mask_kernel_type
+  use set_blending_weights_kernel_mod,    only: set_blending_weights_kernel_type
+  use set_blending_weights_w2_kernel_mod, only: set_blending_weights_w2_kernel_type
+  use create_boundary_mask_kernel_mod,    only: create_boundary_mask_kernel_type
+  use boundaries_config_mod,              only: rim_width_ns, lbc_method, &
+                                                lbc_method_onion_layer
 
   implicit none
 
@@ -27,6 +36,17 @@ module limited_area_masks_alg_mod
   public :: create_parallel_boundary_mask
   public :: create_limited_area_mask
   public :: create_boundary_mask
+  public :: create_onion_layers
+
+  ! parameters passed through to the masking kernels to determine
+  ! whether active areas are ON or OFF
+  real(r_def), parameter :: ON  = 1.0_r_def
+  real(r_def), parameter :: OFF = 0.0_r_def
+
+  ! The width of the blending region
+  ! Only set up when lbc_method=onion_layer
+  ! Otherwise 0 by default
+  integer(i_def), public :: rim_width = 0
 
 contains
 
@@ -195,11 +215,61 @@ contains
 
   end subroutine calculate_boundary_coordinates
 
+
+  !> @brief Create 2D onion_layers
+  !> @details The onion_layers identifies the cells in each concentric
+  !>          layer of the LAM blending zone.
+  !>          The DoF data at these cells are populated with an integer to
+  !>          number each layer of cells. Integers begin from 1 increasing
+  !>          to the number of concentric cell layers radiating outward
+  !>          across the blending zone. DoF data for cells located in the
+  !>          domain interior are set to 0.
+  !> @param[in,out] onion_layers Generated field
+  subroutine create_onion_layers( onion_layers )
+
+    use boundaries_config_mod,        only: blending_weights
+
+    implicit none
+
+    type(field_type), intent(inout)  :: onion_layers
+    type(field_type) :: edge_mask, tmp_mask
+    integer(kind=i_def) :: iter
+    integer(i_def) :: tmp_mask_stencil_extent = 1
+    integer(i_def) :: stencil_depth = 1
+
+    call onion_layers%copy_field_properties(edge_mask)
+    call onion_layers%copy_field_properties(tmp_mask)
+
+    call invoke(setval_c(edge_mask, 0.0_r_def),                               &
+                setval_c(onion_layers, 0.0_r_def),                            &
+                create_edge_mask_kernel_type( edge_mask,                      &
+                                           tmp_mask, tmp_mask_stencil_extent, &
+                                           stencil_depth ),                   &
+                setval_x(tmp_mask, edge_mask)                                 &
+                )
+
+    if ( lbc_method == lbc_method_onion_layer )then
+      rim_width = size( blending_weights )
+      ! Propagate the edge into the domain to provide a 'distance' from
+      ! the interior region.
+      do iter = 1, rim_width - 1
+        call invoke( propagate_onion_layers_kernel_type( onion_layers,             &
+                                                         tmp_mask,                 &
+                                                         tmp_mask_stencil_extent), &
+                     setval_x(tmp_mask, onion_layers)                              &
+                     )
+      end do
+    end if
+
+  end subroutine create_onion_layers
+
   !> @brief Create the mask (1s and 0s) to define the LBC region.
   !> @details The LBC region is a donut with width given by the rim_widths.
-  !> @param[in] chi           Chi coordinates field
   !> @param[in,out] mask      Mask to create LBCs
-  subroutine create_lbc_mask( mask, chi )
+  !> @param[in] onion_layers  Mask identifying distance (in cells) from
+  !>                          interior to the edge of the domain
+  !> @param[in] chi           Chi coordinates field
+  subroutine create_lbc_mask( mask, onion_layers, chi )
 
     use create_w3mask_lbc_kernel_mod, only: create_w3mask_lbc_kernel_type
     use create_w2mask_lbc_kernel_mod, only: create_w2mask_lbc_kernel_type
@@ -214,8 +284,9 @@ contains
     implicit none
 
     type(field_type), intent(inout)  :: mask
+    type(field_type), intent(in)     :: onion_layers
     type(field_type), intent(in)     :: chi(:)
-    integer(i_def)                   :: function_space
+    integer(i_def)                   :: fs_enum
     integer(i_def)                   :: rim_s, rim_n, &
                                         rim_e, rim_w
     integer(i_def)                   :: outer_s, outer_n, &
@@ -224,6 +295,29 @@ contains
                                         coord_outer_e, coord_outer_w, &
                                         coord_rim_s,   coord_rim_n,   &
                                         coord_rim_e,   coord_rim_w
+    real(r_def) :: threshold
+
+    if ( lbc_method == lbc_method_onion_layer )then
+
+
+    !     |<---------blending region---------->|
+    !     |            |                       |
+    !     |            |                       |
+    !     |            |                       |
+    !     |            |                       |
+    !  edge of         |                   interface
+    !   mesh           |                     with
+    !             linear-solver          interior domain
+    !                boundary
+
+
+      threshold = 0.0_r_def
+      ! Set the mask ON in the blending region
+      call invoke( setval_c(mask, OFF), &
+         create_threshold_mask_kernel_type(mask, onion_layers, threshold, ON))
+
+    else
+
 
     !     |<-------------rim_width------------>|
     !     |            |           |           |
@@ -259,7 +353,7 @@ contains
       rim_e = boundary_e
     endif
 
-    function_space = mask%which_function_space()
+    fs_enum = mask%which_function_space()
 
     call calculate_boundary_coordinates( &
       coord_outer_s, &
@@ -281,7 +375,7 @@ contains
       rim_e,       &
       rim_w )
 
-    select case(function_space)
+    select case(fs_enum)
       case(W3)
         call invoke( create_w3mask_lbc_kernel_type ( &
           coord_outer_s, &
@@ -328,17 +422,22 @@ contains
           LOG_LEVEL_ERROR)
 
     end select
+  end if
+
 
   end subroutine create_lbc_mask
 
-  !> @brief Create the mask to define the blending region weights
-  !> @details The blending region weights w are defined so that the blended
+  !> @brief Create the field that is used for the blending region weights
+  !> @details The field containing the blending region weights (w) is
+  !!          created for later application, such that the blended
   !!          result is given by  w driving_model + (1-w) nested_model. The
   !!          weights are 1 near the edge of the domain, and then ramp down
-  !!          to zero in the centre.
-  !> @param[in] chi           Chi coordinates field
+  !!          to zero in the interior.
   !> @param[in,out] mask      Mask to create blended lbcs
-  subroutine create_blend_mask( mask, chi )
+  !> @param[in] onion_layers  Mask identifying distance (in cells) from
+  !>                          interior to the edge of the domain
+  !> @param[in] chi           Chi coordinates field
+  subroutine create_blend_mask( mask, onion_layers, chi )
     use create_w3mask_blend_kernel_mod, &
                                       only: create_w3mask_blend_kernel_type
     use create_w2mask_blend_kernel_mod, &
@@ -350,14 +449,16 @@ contains
                                             rim_width_ns,   rim_width_ew,   &
                                             outer_width_ns, outer_width_ew, &
                                             inner_width_ns, inner_width_ew, &
-                                            edge_cells_ns,  edge_cells_ew
+                                            edge_cells_ns,  edge_cells_ew,  &
+                                            blending_weights
     use fs_continuity_mod,            only: W3, Wtheta, W2
 
     implicit none
 
     type(field_type), intent(inout)  :: mask
+    type(field_type), intent(in)     :: onion_layers
     type(field_type), intent(in)     :: chi(:)
-    integer(i_def)                   :: function_space
+    integer(i_def)                   :: fs_enum
     integer(i_def)                   :: rim_s, rim_n,                 &
                                         rim_e, rim_w
     integer(i_def)                   :: blend_s, blend_n,             &
@@ -370,6 +471,28 @@ contains
                                         coord_rim_e,   coord_rim_w,   &
                                         coord_blend_s, coord_blend_n, &
                                         coord_blend_e, coord_blend_w
+
+    if ( lbc_method == lbc_method_onion_layer )then
+
+      fs_enum = mask%which_function_space()
+
+      select case(fs_enum)
+
+      case(W3,Wtheta)
+        call invoke(&
+           set_blending_weights_kernel_type(mask, onion_layers, rim_width) &
+         )
+
+      case(W2)
+        call invoke(setval_c(mask, 0.0_r_def), &
+           set_blending_weights_w2_kernel_type(mask, onion_layers, rim_width) )
+
+      case default
+        call log_event("No blend mask rule for this function space", &
+          LOG_LEVEL_ERROR)
+      end select
+
+    else
 
     !     |<-------------rim_width------------>|
     !     |            |           |           |
@@ -413,7 +536,7 @@ contains
       blend_e = boundary_e
     endif
 
-    function_space = mask%which_function_space()
+    fs_enum = mask%which_function_space()
 
     call calculate_boundary_coordinates( &
       coord_outer_s, &
@@ -445,7 +568,7 @@ contains
       blend_e,       &
       blend_w )
 
-    select case(function_space)
+    select case(fs_enum)
       case(W3)
         call invoke( create_w3mask_blend_kernel_type ( &
           coord_outer_s, &
@@ -505,6 +628,8 @@ contains
 
     end select
 
+  end if
+
   end subroutine create_blend_mask
 
   !> @brief Create the mask used to construct the W2 boundary dofs.
@@ -525,7 +650,7 @@ contains
 
     type(field_type), intent(inout)  :: mask
     type(field_type), intent(in)     :: chi(:)
-    integer(i_def)                   :: function_space
+    integer(i_def)                   :: fs_enum
     integer(i_def)                   :: rim_s, rim_n, &
                                         rim_e, rim_w
     real(r_def)                      :: coord_bound_s, coord_bound_n, &
@@ -540,7 +665,7 @@ contains
     rim_w = boundary_w + 1
     rim_e = boundary_e + 1
 
-    function_space = mask%which_function_space()
+    fs_enum = mask%which_function_space()
 
     call calculate_boundary_coordinates( &
       coord_bound_s, &
@@ -562,7 +687,7 @@ contains
       rim_e,         &
       rim_w )
 
-    select case(function_space)
+    select case(fs_enum)
       case(W2)
         call invoke(create_w2mask_tang_kernel_type ( &
           coord_bound_s, &
@@ -587,123 +712,158 @@ contains
   end subroutine create_parallel_boundary_mask
 
   !> @brief  Create the mask to define the dofs on the interior.
-  !> @param[in] chi         Chi coordinates field
   !> @param[in,out] mask    Mask for interior: W2, W3 and Wtheta
-  subroutine create_limited_area_mask( mask, chi )
+  !> @param[in] onion_layer Mask identifying distance (in cells) from
+  !>                        interior to the edge of the domain
+  !> @param[in] chi         Chi coordinates field
+  subroutine create_limited_area_mask( mask, onion_layers, chi )
 
     use create_w2mask_kernel_mod,      only: create_w2mask_kernel_type
     use create_w3mask_kernel_mod,      only: create_w3mask_kernel_type
     use create_wthetamask_kernel_mod,  only: create_wthetamask_kernel_type
-    use boundaries_config_mod,         only: boundary_s, boundary_n, &
-                                             boundary_e, boundary_w, &
-                                             rim_width_ns, rim_width_ew
+    use boundaries_config_mod,         only: boundary_s, boundary_n,     &
+                                             boundary_e, boundary_w,     &
+                                             inner_width_ns,             &
+                                             rim_width_ns, rim_width_ew, &
+                                             blending_weights,           &
+                                             solver_boundary_depth
     use fs_continuity_mod,             only: W3, Wtheta, W2
 
     implicit none
 
     type(field_type), intent(inout)  :: mask
+    type(field_type), intent(in)     :: onion_layers
     type(field_type), intent(in)     :: chi(:)
-    integer(i_def)                   :: function_space
+    integer(i_def)                   :: fs_enum
     real(r_def)                      :: coord_bound_s, coord_bound_n, &
                                         coord_bound_e, coord_bound_w
+    real(r_def) :: threshold
 
-    function_space = mask%which_function_space()
+    if ( lbc_method == lbc_method_onion_layer )then
 
-    call calculate_boundary_coordinates( &
-      coord_bound_s, &
-      coord_bound_n, &
-      coord_bound_e, &
-      coord_bound_w, &
-      boundary_s,    &
-      boundary_n,    &
-      boundary_e,    &
-      boundary_w )
+      threshold = size( blending_weights ) - solver_boundary_depth
+      ! Set the mask OFF in the region between solver boundary and domain edge
+      call invoke(setval_c(mask, ON), &
+         create_threshold_mask_kernel_type(mask, onion_layers, threshold, OFF) )
+    else
 
-    select case(function_space)
+      fs_enum = mask%which_function_space()
+
+      call calculate_boundary_coordinates( &
+         coord_bound_s, &
+         coord_bound_n, &
+         coord_bound_e, &
+         coord_bound_w, &
+         boundary_s,    &
+         boundary_n,    &
+         boundary_e,    &
+         boundary_w )
+
+      select case(fs_enum)
       case(W2)
         call invoke( create_w2mask_kernel_type ( &
-          coord_bound_s, &
-          coord_bound_n, &
-          coord_bound_e, &
-          coord_bound_w, &
-          rim_width_ns,  &
-          rim_width_ew,  &
-          mask,          &
-          chi ) )
+           coord_bound_s, &
+           coord_bound_n, &
+           coord_bound_e, &
+           coord_bound_w, &
+           rim_width_ns,  &
+           rim_width_ew,  &
+           mask,          &
+           chi ) )
 
       case(W3)
         call invoke( create_w3mask_kernel_type ( &
-          coord_bound_s, &
-          coord_bound_n, &
-          coord_bound_e, &
-          coord_bound_w, &
-          mask,          &
-          chi ) )
+           coord_bound_s, &
+           coord_bound_n, &
+           coord_bound_e, &
+           coord_bound_w, &
+           mask,          &
+           chi ) )
 
       case(Wtheta)
         call invoke( create_wthetamask_kernel_type ( &
-          coord_bound_s, &
-          coord_bound_n, &
-          coord_bound_e, &
-          coord_bound_w, &
-          mask,          &
-          chi ) )
+           coord_bound_s, &
+           coord_bound_n, &
+           coord_bound_e, &
+           coord_bound_w, &
+           mask,          &
+           chi ) )
 
       case default
         call log_event("No limited area mask rule for this function space", &
-          LOG_LEVEL_ERROR)
+           LOG_LEVEL_ERROR)
 
-    end select
+      end select
+
+    end if
 
   end subroutine create_limited_area_mask
 
-  !> @brief Create the mask identifying the dofs on the boundary.
-  !> @param[in] chi         Chi coordinates field
-  !> @param[in,out] mask    Mask for W2 boundary
-  subroutine create_boundary_mask( mask, chi )
+  !> @brief Create the mask identifying the dofs on the solver boundary.
+  !> @param[in,out] boundary_mask  Mask for W2 boundary
+  !> @param[in] onion_layer        Mask identifying distance (in cells) from
+  !>                               interior to the edge of the domain
+  !> @param[in] chi                Chi coordinates field
+  subroutine create_boundary_mask( boundary_mask, onion_layers, chi )
 
     use create_w2bmask_kernel_mod,    only: create_w2bmask_kernel_type
     use boundaries_config_mod,        only: boundary_s, boundary_n, &
                                             boundary_e, boundary_w, &
-                                            rim_width_ns, rim_width_ew
+                                            rim_width_ns, rim_width_ew, &
+                                            blending_weights, solver_boundary_depth
     use fs_continuity_mod,            only: W2
 
     implicit none
 
-    type(field_type), intent(inout)  :: mask
+    type(field_type), intent(inout)  :: boundary_mask
+    type(field_type), intent(in)     :: onion_layers
     type(field_type), intent(in)     :: chi(:)
-    integer(i_def)                   :: function_space
+    integer(i_def)                   :: fs_enum
     real(r_def)                      :: coord_bound_s, coord_bound_n, &
                                         coord_bound_e, coord_bound_w
+    real(r_def)                      :: inner_boundary_cell
+    integer(i_def) :: stencil_depth = 1
 
-    function_space = mask%which_function_space()
+    if ( lbc_method == lbc_method_onion_layer )then
 
-    call calculate_boundary_coordinates( &
-      coord_bound_s, &
-      coord_bound_n, &
-      coord_bound_e, &
-      coord_bound_w, &
-      boundary_s,    &
-      boundary_n,    &
-      boundary_e,    &
-      boundary_w )
+      inner_boundary_cell = real( &
+         size( blending_weights ) - solver_boundary_depth, r_def )
+      call invoke( setval_c(boundary_mask, 0.0_r_def),                                  &
+                   create_boundary_mask_kernel_type(boundary_mask, onion_layers,        &
+                                                    stencil_depth, inner_boundary_cell) &
+                 )
 
-    select case(function_space)
+    else
+      fs_enum = boundary_mask%which_function_space()
+
+      call calculate_boundary_coordinates( &
+         coord_bound_s, &
+         coord_bound_n, &
+         coord_bound_e, &
+         coord_bound_w, &
+         boundary_s,    &
+         boundary_n,    &
+         boundary_e,    &
+         boundary_w )
+
+      select case(fs_enum)
       case(W2)
         call invoke( create_w2bmask_kernel_type ( &
-          coord_bound_s, &
-          coord_bound_n, &
-          coord_bound_e, &
-          coord_bound_w, &
-          rim_width_ns,  &
-          rim_width_ew,  &
-          mask,          &
-          chi ) )
+           coord_bound_s, &
+           coord_bound_n, &
+           coord_bound_e, &
+           coord_bound_w, &
+           rim_width_ns,  &
+           rim_width_ew,  &
+           boundary_mask, &
+           chi ) )
       case default
         call log_event("No boundary mask rule for this function space", &
-          LOG_LEVEL_ERROR)
+           LOG_LEVEL_ERROR)
 
-    end select
+      end select
+
+    end if
 
   end subroutine create_boundary_mask
 

@@ -1372,13 +1372,15 @@ end subroutine invoke_calc_deppts
     integer(kind=i_def), pointer :: map_w2(:,:) => null(), map_w3(:,:) => null(), map_wtheta(:,:) => null()
     integer(kind=i_def) ndf_w3, undf_w3, ndf_w2, undf_w2, ndf_wtheta, undf_wtheta
     type(mesh_type), pointer :: mesh => null()
-    integer(kind=i_def) hb_lumped_inv_stencil_size
+    integer(kind=i_def), pointer :: hb_lumped_inv_stencil_sizes(:) => null()
     integer(kind=i_def), pointer :: hb_lumped_inv_stencil_dofmap(:,:,:) => null()
     type(stencil_dofmap_type), pointer :: hb_lumped_inv_stencil_map => null()
-    integer(kind=i_def) :: i
+    integer(kind=i_def) :: i,j
     integer(kind=i_def), allocatable :: cell_stencil(:)
     integer(kind=i_def) nfaces_re_h
     class(reference_element_type), pointer :: reference_element => null()
+    integer(kind=i_def) :: wsen_map(4)
+    integer(kind=i_def) :: wsen_map_count
     !
     ! Initialise field and/or operator proxies
     !
@@ -1413,7 +1415,7 @@ end subroutine invoke_calc_deppts
     !
     hb_lumped_inv_stencil_map => hb_lumped_inv_proxy%vspace%get_stencil_dofmap(STENCIL_CROSS,stencil_depth)
     hb_lumped_inv_stencil_dofmap => hb_lumped_inv_stencil_map%get_whole_dofmap()
-    hb_lumped_inv_stencil_size = hb_lumped_inv_stencil_map%get_size()
+    hb_lumped_inv_stencil_sizes => hb_lumped_inv_stencil_map%get_stencil_sizes()
     !
     ! Look-up dofmaps for each function space
     !
@@ -1460,18 +1462,28 @@ end subroutine invoke_calc_deppts
     stencil_size =  1 + nfaces_re_h*stencil_depth
     allocate( cell_stencil( stencil_size ) )
 
-    !$omp parallel default(shared), private(cell, cell_stencil, i)
+    !$omp parallel default(shared), private(cell, cell_stencil, wsen_map, wsen_map_count, i, j)
     !$omp do schedule(static)
     do cell=1,mesh%get_last_edge_cell()
       !
       ! Populate cell_stencil array used for operators
       ! (this is the id of each cell in the stencil)
+      cell_stencil(:) = 0
       cell_stencil(1) = cell
+      j=0
+      wsen_map(:) = 0
       do i = 1,nfaces_re_h
-        cell_stencil(i+1) = mesh%get_cell_next(i, cell)
+        if (mesh%get_cell_next(i, cell) /= 0)then
+          j=j+1
+          cell_stencil(j+1) = mesh%get_cell_next(i, cell)
+          wsen_map(j) = i
+        end if
       end do
+      ! Last entry gives a count of the number of neighbours
+      wsen_map_count = count(wsen_map/=0)
       call helmholtz_operator_code(stencil_size,                     &
-                                   cell_stencil, nlayers,            &
+                                   cell_stencil, wsen_map,           &
+                                   wsen_map_count, nlayers,          &
                                    helmholtz_operator_proxy(1)%data, &
                                    helmholtz_operator_proxy(2)%data, &
                                    helmholtz_operator_proxy(3)%data, &
@@ -1482,7 +1494,7 @@ end subroutine invoke_calc_deppts
                                    helmholtz_operator_proxy(8)%data, &
                                    helmholtz_operator_proxy(9)%data, &
                                    hb_lumped_inv_proxy%data, &
-                                   hb_lumped_inv_stencil_size, &
+                                   hb_lumped_inv_stencil_sizes(cell), &
                                    hb_lumped_inv_stencil_dofmap(:,:,cell), &
                                    u_normalisation_proxy%data, &
                                    div_star_proxy%ncell_3d, &

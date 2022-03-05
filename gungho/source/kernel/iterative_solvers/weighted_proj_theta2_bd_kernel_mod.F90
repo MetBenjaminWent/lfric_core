@@ -151,6 +151,11 @@ contains
 
     logical(kind=l_def), parameter :: upwind = .false.
 
+    ! If we're near the edge of the regional domain then the
+    ! stencil size will be less that 5 so don't do anything here
+    ! This should be removed with lfric ticket #2958
+    if (stencil_wtheta_size < 5)return
+
     ! Assumes same number of horizontal qp in x and y
     do k = 0, nlayers-1
       ik = k + 1 + (cell-1)*nlayers

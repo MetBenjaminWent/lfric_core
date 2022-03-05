@@ -312,7 +312,7 @@ subroutine write_vector_diagnostic( field_name, field, &
         !---- Output wind as w2h and wtheta fluxes ----
 
         ! Convert u to w2h (h_wind) and wtheta (v_wind)
-        call extract_w2h_diagnostic_alg( h_wind, v_wind, field, mesh )
+        call extract_w2h_diagnostic_alg( h_wind, v_wind, field )
 
         tmp_write_ptr => write_field_face
         call v_wind%set_write_behaviour(tmp_write_ptr)

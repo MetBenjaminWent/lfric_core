@@ -250,9 +250,7 @@ contains
                                       label_list, dt )
 
     if ( limited_area ) then
-      call create_limited_area_constants(mesh_id_list, &
-                                         chi_list,     &
-                                         label_list    )
+      call create_limited_area_constants( chi )
     end if
 
     if ( moisture_eqn == moisture_eqn_conservative ) then

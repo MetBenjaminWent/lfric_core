@@ -900,6 +900,25 @@
        <field id="init_readlbc_h_u2" name="h_wind2" long_name="horizontal_wind" unit="m s-1" grid_ref="half_level_edge_grid"/>
        <field id="init_readlbc_h_u3" name="h_wind3" long_name="horizontal_wind" unit="m s-1" grid_ref="full_level_face_grid"/>
      </field_group>
+     <field_group id="masks" freq_op="1ts" operation="once" enabled=".TRUE." >
+       <field id="w3_mask_1" name="w3_mask_1" long_name="w3_mask_1" unit="1"  grid_ref="half_level_face_grid"/>
+       <field id="wtheta_mask_1" name="wtheta_mask_1" long_name="wtheta_mask_1" unit="1"  grid_ref="full_level_face_grid"/>
+       <field id="w3lbc_mask_1" name="w3lbc_mask_1" long_name="w3lbc_mask_1" unit="1"  grid_ref="half_level_face_grid"/>
+       <field id="wthetalbc_mask_1" name="wthetalbc_mask_1" long_name="wthetalbc_mask_1" unit="1"  grid_ref="full_level_face_grid"/>
+       <field id="w3blend_mask_1" name="w3blend_mask_1" long_name="w3blend_mask_1" unit="1"  grid_ref="half_level_face_grid"/>
+       <field id="wthetablend_mask_1" name="wthetablend_mask_1" long_name="wthetablend_mask_1" unit="1"  grid_ref="full_level_face_grid"/>
+       <field id="onion_layers" name="onion_layers" long_name="onion_layers1" unit="1"  domain_ref="face"/>
+       <field id="h_w2_mask_1" name="h_w2_mask_1" long_name="h_w2_mask_1" unit="1"  grid_ref="half_level_edge_grid"/>
+       <field id="h_w2lbc_mask_1" name="h_w2lbc_mask_1" long_name="h_w2lbc_mask_1" unit="1"  grid_ref="half_level_edge_grid"/>
+       <field id="h_w2boundary_mask_1" name="h_w2boundary_mask_1" long_name="h_w2boundary_mask_1" unit="1"  grid_ref="half_level_edge_grid"/>
+       <field id="h_w2blend_mask_1" name="h_w2blend_mask_1" long_name="h_w2blend_mask_1" unit="1"  grid_ref="half_level_edge_grid"/>
+       <field id="v_w2_mask_1" name="v_w2_mask_1" long_name="v_w2_mask_1" unit="1"  grid_ref="full_level_face_grid"/>
+       <field id="v_w2lbc_mask_1" name="v_w2lbc_mask_1" long_name="v_w2lbc_mask_1" unit="1"  grid_ref="full_level_face_grid"/>
+       <field id="v_w2blend_mask_1" name="v_w2blend_mask_1" long_name="v_w2blend_mask_1" unit="1"  grid_ref="full_level_face_grid"/>
+       <field id="v_w2boundary_mask_1" name="v_w2boundary_mask_1" long_name="v_w2boundary_mask_1" unit="1"  grid_ref="full_level_face_grid"/>
+     </field_group>
+
+
 
     </field_definition>
 
@@ -1251,7 +1270,7 @@
 	<field field_ref="radiation__sw_aer_optical_depth_rts"/>
 	<field field_ref="radiation__lw_aer_optical_depth_rts"/>
         <field field_ref="tot_col_dry_air_mass" />
-        <field field_ref="tot_col_wetplusdry_mass" />        
+        <field field_ref="tot_col_wetplusdry_mass" />
         <field field_ref="wbig" />
 	<field_group group_ref="lbc_diags" />
       </file>
@@ -1269,6 +1288,7 @@
       <file id="lfric_initial" name="lfric_initial" output_freq="1ts" convention="UGRID" enabled=".TRUE.">
         <field_group group_ref="initial_fields" />
 	<field_group group_ref="init_lbc_diags" />
+        <field_group group_ref="masks" />
       </file>
 
       <!-- File definition for writing an FD dump -->

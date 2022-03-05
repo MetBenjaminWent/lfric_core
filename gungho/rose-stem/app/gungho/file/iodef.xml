@@ -164,6 +164,24 @@
        <field id="mcf_in_wtheta" name="mcf_in_wtheta" long_name="cloud_ice_mixing_ratio"  unit="1" grid_ref="full_level_face_grid" />
      </field_group>
 
+     <field_group id="masks" freq_op="1ts" operation="once" enabled=".TRUE." >
+       <field id="w3_mask_1" name="w3_mask_1" long_name="w3_mask_1" unit="1"  grid_ref="half_level_face_grid"/>
+       <field id="wtheta_mask_1" name="wtheta_mask_1" long_name="wtheta_mask_1" unit="1"  grid_ref="full_level_face_grid"/>
+       <field id="w3lbc_mask_1" name="w3lbc_mask_1" long_name="w3lbc_mask_1" unit="1"  grid_ref="half_level_face_grid"/>
+       <field id="wthetalbc_mask_1" name="wthetalbc_mask_1" long_name="wthetalbc_mask_1" unit="1"  grid_ref="full_level_face_grid"/>
+       <field id="w3blend_mask_1" name="w3blend_mask_1" long_name="w3blend_mask_1" unit="1"  grid_ref="half_level_face_grid"/>
+       <field id="wthetablend_mask_1" name="wthetablend_mask_1" long_name="wthetablend_mask_1" unit="1"  grid_ref="full_level_face_grid"/>
+       <field id="onion_layers" name="onion_layers" long_name="onion_layers1" unit="1"  domain_ref="face"/>
+       <field id="h_w2_mask_1" name="h_w2_mask_1" long_name="h_w2_mask_1" unit="1"  grid_ref="half_level_edge_grid"/>
+       <field id="h_w2lbc_mask_1" name="h_w2lbc_mask_1" long_name="h_w2lbc_mask_1" unit="1"  grid_ref="half_level_edge_grid"/>
+       <field id="h_w2boundary_mask_1" name="h_w2boundary_mask_1" long_name="h_w2boundary_mask_1" unit="1"  grid_ref="half_level_edge_grid"/>
+       <field id="h_w2blend_mask_1" name="h_w2blend_mask_1" long_name="h_w2blend_mask_1" unit="1"  grid_ref="half_level_edge_grid"/>
+       <field id="v_w2_mask_1" name="v_w2_mask_1" long_name="v_w2_mask_1" unit="1"  grid_ref="full_level_face_grid"/>
+       <field id="v_w2lbc_mask_1" name="v_w2lbc_mask_1" long_name="v_w2lbc_mask_1" unit="1"  grid_ref="full_level_face_grid"/>
+       <field id="v_w2blend_mask_1" name="v_w2blend_mask_1" long_name="v_w2blend_mask_1" unit="1"  grid_ref="full_level_face_grid"/>
+       <field id="v_w2boundary_mask_1" name="v_w2boundary_mask_1" long_name="v_w2boundary_mask_1" unit="1"  grid_ref="full_level_face_grid"/>
+     </field_group>
+
    </field_definition>
 
    <file_definition
@@ -251,6 +269,7 @@
         <field field_ref="init_u3"/>
         <field field_ref="init_divergence"/>
         <field field_ref="init_exner"/>
+        <field_group group_ref="masks" />
       </file>
 
      <!-- File definition for writing an FD dump -->

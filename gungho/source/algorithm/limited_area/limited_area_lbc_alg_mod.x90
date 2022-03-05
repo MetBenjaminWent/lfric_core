@@ -12,20 +12,23 @@ module limited_area_lbc_alg_mod
 
   use field_mod,                      only: field_type
   use field_collection_mod,           only: field_collection_type
+  use mesh_mod,                       only: mesh_type
   use formulation_config_mod,         only: use_moisture
   use mr_indices_mod,                 only: nummr, mr_names
   use mesh_mod,                       only: mesh_type
   use limited_area_constants_mod,     only: get_boundary_mask, &
                                             get_blend_mask,    &
-                                            get_lbc_mask
+                                            get_lbc_mask,      &
+                                            get_onion_layers
+  use limited_area_masks_alg_mod,     only: rim_width
   use fs_continuity_mod,              only: W2, W3, Wtheta
-  use constants_mod,                  only: i_def, str_def
-
+  use constants_mod,                  only: i_def, str_def, r_def
   implicit none
 
   private :: blend_field
   public  :: lam_solver_lbc
   public  :: lam_blend_lbc
+  public  :: overwrite_blending_zone
 
 contains
 
@@ -114,6 +117,59 @@ contains
 
   end subroutine lam_blend_lbc
 
+
+  !> @brief   Overwrite field data with another field data in the defined
+  !>          blending zone for a given depth (in cells) from the edge of
+  !>          the domain.
+  !> @param[in,out] lam_field   LAM field to be modified.
+  !> @param[in]     fill_field  field containing data to update lam_field
+  !> @param[in]     depth       depth to which field is overwritten
+  subroutine overwrite_blending_zone(lam_field, fill_field, depth)
+
+    use splice_fields_kernel_mod, only: splice_fields_kernel_type
+    implicit none
+
+    type(field_type), intent(inout)  :: lam_field
+    type(field_type), intent(in)     :: fill_field
+    integer(kind=i_def), intent(in)  :: depth
+    type(field_type), pointer        :: onion_layers => null()
+    type(mesh_type),  pointer        :: mesh => null()
+    integer(kind=i_def)              :: fs_enum
+    real(r_def) :: threshold
+
+    ! Define the function space required for masks.
+    fs_enum =  lam_field%which_function_space()
+    mesh    => lam_field%get_mesh()
+
+    onion_layers => get_onion_layers()
+
+    ! For example given onion layers:
+    !  _ _ _ _ _
+    ! |5 5 5 5 5 5
+    ! |5 4 4 4 4 4
+    ! |5 4 3 3 3 3
+    ! |5 4 3 2 2 2
+    ! |5 4 3 2 1 1
+    ! |5 4 3 2 1 0
+    !
+    ! which is associated with rim_width=5 (where the rim_width is
+    ! the total depth of the blending zone)
+    !
+    ! With depth=2 this gives a threshold of 3 and overwrites
+    ! the following cells marked with a 'X'
+    !  _ _ _ _ _
+    ! |X X X X X
+    ! |X X X X X
+    ! |X X 0 0 0
+    ! |X X 0 0 0
+    ! |X X 0 0 0
+    !
+    threshold = rim_width - depth - epsilon(1.0_r_def)
+
+    call invoke( splice_fields_kernel_type( lam_field, fill_field, onion_layers, threshold ) )
+
+  end subroutine overwrite_blending_zone
+
   !> @brief   Blend the LAM data with the driving model, for a given field.
   !> @details The data around the edge of the domain is overwritten by the
   !!          driving model LBC data using x_new = w * x_driving + (1-w) * x_lam
@@ -134,18 +190,16 @@ contains
                                                blend_mask    => null(), &
                                                lbc_mask      => null()
     type(field_type)                        :: lam_lbc, driving_lbc, inc
-    integer(kind=i_def)                     :: function_space
-
+    integer(kind=i_def)                     :: fs_enum
     type(mesh_type), pointer :: mesh => null()
 
     ! Define the function space required for masks.
-    function_space = lam_field%which_function_space()
-
-    mesh       => lam_field%get_mesh()
-    blend_mask => get_blend_mask( function_space, mesh%get_id() )
-    lbc_mask   => get_lbc_mask( function_space, mesh%get_id() )
+    fs_enum = lam_field%which_function_space()
+    mesh    => lam_field%get_mesh()
 
     driving_field => lbc_fields%get_field( name )
+    blend_mask    => get_blend_mask( fs_enum, mesh%get_id() )
+    lbc_mask      => get_lbc_mask( fs_enum, mesh%get_id() )
 
     ! Setup the temporary fields.
     call lam_field%copy_field_properties( lam_lbc )

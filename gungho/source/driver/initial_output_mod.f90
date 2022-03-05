@@ -18,7 +18,9 @@ module initial_output_mod
   use mesh_mod,                   only : mesh_type
   use io_context_mod,             only : io_context_type
   use lfric_xios_context_mod,     only : lfric_xios_context_type
-
+  use limited_area_constants_mod, only : write_masks
+  use boundaries_config_mod,      only : limited_area, lbc_method, &
+                                         lbc_method_onion_layer
   implicit none
 
   private
@@ -60,7 +62,11 @@ contains
                                       model_data, &
                                       clock,      &
                                       nodal_output_on_w3 )
-  end if
+
+      if ( limited_area )then
+        if ( lbc_method == lbc_method_onion_layer ) call write_masks()
+      end if
+    end if
 
   end subroutine write_initial_output
 

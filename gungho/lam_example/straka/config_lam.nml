@@ -91,7 +91,7 @@ test='cold_bubble_y',
 /
 &initialization
 ancil_option='none',
-lbc_option='file',
+lbc_option='gungho_file',
 init_option='analytic',
 /
 &initial_density

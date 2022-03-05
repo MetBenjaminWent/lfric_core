@@ -221,6 +221,17 @@ subroutine poly1d_flux_coeffs_code(nlayers,                    &
   ! ( 1, 3, 5 )
   ! First cell is always the centre cell
   stencil_depth = order/2
+
+  ! If the stencil is too small (i.e. we're near the edge of a LAM domain)
+  ! then just set coeff=1 and return. This will be done more
+  ! sensibly once PSyclone issue #1246 enables the global stencil size to be
+  ! passed. https://github.com/stfc/PSyclone/issues/1246
+  if (stencil_depth*4+1 > stencil_size_w3) then
+    coeff(:) = 0.0_r_def
+    coeff(1) = 1.0_r_def
+    return
+  end if
+
   map1d(1,:) = 1
   do face = 1,nfaces_qr
     depth=1

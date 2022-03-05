@@ -65,6 +65,9 @@ contains
 !!        or vertical level that component applies to.
 !> @param[in]     stencil_size    Number of cells in the horizontal stencil
 !> @param[in]     cell_stencil    Stencil of horizontal cell indices
+!> @param[in]     wsen_map        Index map for cells to the W,S,E and N
+!> @param[in]     wsen_map_count  Number of non-zero entries in WSEN index map
+!> @param[in]     cell_stencil    Stencil of horizontal cell indices
 !> @param[in]     nlayers         Number of layers
 !> @param[in,out] helm_c          Diagonal entry to Helmholtz matrix
 !> @param[in,out] helm_n          North (j+1) entry to Helmholtz matrix
@@ -105,6 +108,8 @@ contains
 !> @param[in]     map_wt          Dofmap for the cell at the base of the column for the temperature space
 subroutine helmholtz_operator_code(stencil_size,                     &
                                    cell_stencil,                     &
+                                   wsen_map,                         &
+                                   wsen_map_count,                   &
                                    nlayers,                          &
                                    helm_c,                           &
                                    helm_n, helm_e, helm_s, helm_w,   &
@@ -134,6 +139,8 @@ subroutine helmholtz_operator_code(stencil_size,                     &
   integer(kind=i_def),                                  intent(in) :: nlayers
   integer(kind=i_def),                                  intent(in) :: stencil_size
   integer(kind=i_def), dimension(stencil_size),         intent(in) :: cell_stencil
+  integer(kind=i_def), dimension(4),                    intent(in) :: wsen_map
+  integer(kind=i_def),                                  intent(in) :: wsen_map_count
   integer(kind=i_def),                                  intent(in) :: ncell_3d_1, ncell_3d_2, &
                                                                       ncell_3d_3, ncell_3d_4, &
                                                                       ncell_3d_5
@@ -211,7 +218,7 @@ subroutine helmholtz_operator_code(stencil_size,                     &
   ! The Compass points needed to match the location
   ! of W2 DoF's in neighbouring cells
   integer(kind=i_def), dimension(4) :: adjacent_face
-  integer(kind=i_def)               :: d1, d2
+  integer(kind=i_def)               :: d1, d2, dir
 
   ! Integer mappings for neighbours in Wtheta spaces
   ! ( x, z )
@@ -294,10 +301,17 @@ subroutine helmholtz_operator_code(stencil_size,                     &
   ! Since this kernel is only valid for lowest order we can use
   ! the W2 dofmap (one DoF per face) to compute this.
   adjacent_face(:) = -1
-  do d1 = 1, nfaces_h
+  do d1 = 1, wsen_map_count
+    dir = wsen_map(d1)
     do d2 = 1, nfaces_h
-      if ( smap_w2(d2,1+d1) == smap_w2(d1,1) ) adjacent_face(d1) = d2
+      if ( smap_w2(d2,1+dir) == smap_w2(dir,1) ) adjacent_face(dir) = d2
     end do
+  end do
+
+  ! if the adjacent face is missing, then we arbitrarily assign this to be
+  ! the same as the centre face
+  do d1 = 1, nfaces_h
+    if (adjacent_face(d1) == -1) adjacent_face(d1) = d1
   end do
 
   do k = 0, nlayers - 1
@@ -319,14 +333,30 @@ subroutine helmholtz_operator_code(stencil_size,                     &
       ! |              |              |              |
       ! |      A(E,1,W)|              |      A(E,1,E)|
       ! |--------------|--------------|--------------|
-      !                |   A(S,1,N)   |
+      !                |   A(N,1,S)   |
       ! y              |              |
       ! |              |   A(S,1,S)   |
       ! 0--x           |--------------|
 
+      ! First the centre value
+      e=1
+      stencil_ik = 1 + k + (cell_stencil(e)-1)*nlayers
+      a_op(df,:,e-1) = -u_normalisation(smap_w2(df,e)+k) &
+                       *w2_mask(smap_w2(df,e)+k)         &
+                       *hb_lumped_inv(smap_w2(df,e)+k)   &
+                       *div_star(df,:,stencil_ik)
+
+      ! Initialise to zero to allow for missing neighbours
+      ! in order to fill in any missing horizontal neighbours
       do e = 1,stencil_size
+        a_op(df,:,e) = 0.0
+      end do
+
+      ! Next the horizontal neighbours (where they exist)
+      do e = 2, smap_size_w2
+        dir = wsen_map(e-1)
         stencil_ik = 1 + k + (cell_stencil(e)-1)*nlayers
-        a_op(df,:,e-1) = -u_normalisation(smap_w2(df,e)+k) &
+        a_op(df,:,dir) = -u_normalisation(smap_w2(df,e)+k) &
                          *w2_mask(smap_w2(df,e)+k)         &
                          *hb_lumped_inv(smap_w2(df,e)+k)   &
                          *div_star(df,:,stencil_ik)

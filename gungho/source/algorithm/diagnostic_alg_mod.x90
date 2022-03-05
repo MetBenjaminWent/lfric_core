@@ -531,20 +531,19 @@ contains
 
   end subroutine vorticity_diagnostic_alg
 
-  subroutine extract_w2h_diagnostic_alg( h_wind, v_wind, wind, mesh )
+  subroutine extract_w2h_diagnostic_alg( h_wind, v_wind, wind)
     use split_w2_field_kernel_mod,        only: split_w2_field_kernel_type
 
     implicit none
 
     type(field_type), intent(inout)  :: h_wind, v_wind
     type(field_type), intent(in)     :: wind
-    type(mesh_type),  intent(in), pointer :: mesh
 
     call h_wind%initialise( vector_space = &
-              function_space_collection%get_fs(mesh,element_order, W2H) )
+              function_space_collection%get_fs(wind%get_mesh(), element_order, W2H) )
 
     call v_wind%initialise( vector_space = &
-              function_space_collection%get_fs(mesh,element_order, Wtheta) )
+              function_space_collection%get_fs(wind%get_mesh(), element_order, Wtheta) )
 
     call invoke( split_w2_field_kernel_type(h_wind, v_wind, wind) )
 

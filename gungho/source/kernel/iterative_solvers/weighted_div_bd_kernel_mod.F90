@@ -160,6 +160,10 @@ contains
     real(kind=r_def) :: theta_at_fquad, theta_next_at_fquad
     real(kind=r_def) :: this_bd_term, next_bd_term
 
+    ! If we're near the edge of the regional domain then the
+    ! stencil size will be less that 5 so don't do anything here
+    ! This should be removed with lfric ticket #2958
+    if (stencil_wtheta_size < 5)return
 
     do k = 0, nlayers - 1
       ik = k + 1 + (cell-1)*nlayers

@@ -14,6 +14,7 @@
 !>          where average(pi) needs to be considered as both exner and theta
 !>          are discontinuous in the horizontal direction.
 !>
+!>          Requires stencil with depth 1.
 module pressure_gradient_bd_kernel_mod
 
   use argument_mod,             only : arg_type, func_type,         &
@@ -174,6 +175,11 @@ contains
     real(kind=r_def) :: v(3)
     real(kind=r_def) :: exner_av
     real(kind=r_def) :: theta_v_at_fquad, bdary_term
+
+    ! If we're near the edge of the regional domain then the
+    ! stencil size will be less that 5 so don't do anything here
+    ! This should be removed with lfric ticket #2958
+    if (stencil_w3_size < 5)return
 
     do k = 0, nlayers-1
 

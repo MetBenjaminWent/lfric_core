@@ -122,7 +122,7 @@
        <field id="readlbc_h_u3" name="lbc_u3" long_name="Upward wind derived from LBC values of vertical flux (in computational space)" standard_name="upward_air_velocity" unit="m s-1" grid_ref="full_level_face_grid" />
        <field id="h_readlbc_h_u" name="h_readlbc_h_u" long_name="Horizontal flux (in computational space) derived from LBC values of horizontal flux" standard_name="horizontal_flux" unit="m s-1" grid_ref="half_level_edge_grid" />
        <field id="v_readlbc_h_u" name="v_readlbc_h_u" long_name="Vertical flux (in computational space) derived from LBC values of horizontal flux" standard_name="vertical_flux" unit="m s-1" grid_ref="full_level_face_grid" />
-      
+
        <field id="theta" name="theta" long_name="air_potential_temperature" standard_name="air_potential_temperature" unit="K" grid_ref="full_level_face_grid" />
        <field id="m_v" name="m_v" long_name="m_v" unit="kg/kg" grid_ref="full_level_face_grid" />
        <field id="m_cl" name="m_cl" long_name="m_cl" unit="kg/kg" grid_ref="full_level_face_grid" />
@@ -207,6 +207,23 @@
        <field id="mv_in_wtheta" name="mv_in_wtheta" long_name="humidity_mixing_ratio"  unit="1" grid_ref="full_level_face_grid" />
        <field id="mcl_in_wtheta" name="mcl_in_wtheta" long_name="cloud_liquid_water_mixing_ratio"  unit="1" grid_ref="full_level_face_grid" />
        <field id="mcf_in_wtheta" name="mcf_in_wtheta" long_name="cloud_ice_mixing_ratio"  unit="1" grid_ref="full_level_face_grid" />
+     </field_group>
+     <field_group id="masks" freq_op="1ts" operation="once" enabled=".TRUE." >
+       <field id="w3_mask_1" name="w3_mask_1" long_name="w3_mask_1" unit="1"  grid_ref="half_level_face_grid"/>
+       <field id="wtheta_mask_1" name="wtheta_mask_1" long_name="wtheta_mask_1" unit="1"  grid_ref="full_level_face_grid"/>
+       <field id="w3lbc_mask_1" name="w3lbc_mask_1" long_name="w3lbc_mask_1" unit="1"  grid_ref="half_level_face_grid"/>
+       <field id="wthetalbc_mask_1" name="wthetalbc_mask_1" long_name="wthetalbc_mask_1" unit="1"  grid_ref="full_level_face_grid"/>
+       <field id="w3blend_mask_1" name="w3blend_mask_1" long_name="w3blend_mask_1" unit="1"  grid_ref="half_level_face_grid"/>
+       <field id="wthetablend_mask_1" name="wthetablend_mask_1" long_name="wthetablend_mask_1" unit="1"  grid_ref="full_level_face_grid"/>
+       <field id="onion_layers" name="onion_layers" long_name="onion_layers1" unit="1"  domain_ref="face"/>
+       <field id="h_w2_mask_1" name="h_w2_mask_1" long_name="h_w2_mask_1" unit="1"  grid_ref="half_level_edge_grid"/>
+       <field id="h_w2lbc_mask_1" name="h_w2lbc_mask_1" long_name="h_w2lbc_mask_1" unit="1"  grid_ref="half_level_edge_grid"/>
+       <field id="h_w2boundary_mask_1" name="h_w2boundary_mask_1" long_name="h_w2boundary_mask_1" unit="1"  grid_ref="half_level_edge_grid"/>
+       <field id="h_w2blend_mask_1" name="h_w2blend_mask_1" long_name="h_w2blend_mask_1" unit="1"  grid_ref="half_level_edge_grid"/>
+       <field id="v_w2_mask_1" name="v_w2_mask_1" long_name="v_w2_mask_1" unit="1"  grid_ref="full_level_face_grid"/>
+       <field id="v_w2lbc_mask_1" name="v_w2lbc_mask_1" long_name="v_w2lbc_mask_1" unit="1"  grid_ref="full_level_face_grid"/>
+       <field id="v_w2blend_mask_1" name="v_w2blend_mask_1" long_name="v_w2blend_mask_1" unit="1"  grid_ref="full_level_face_grid"/>
+       <field id="v_w2boundary_mask_1" name="v_w2boundary_mask_1" long_name="v_w2boundary_mask_1" unit="1"  grid_ref="full_level_face_grid"/>
      </field_group>
 
    </field_definition>
@@ -308,6 +325,7 @@
         <field field_ref="init_u3"/>
         <field field_ref="init_divergence"/>
         <field field_ref="init_exner"/>
+        <field_group group_ref="masks" />
       </file>
 
      <!-- File definition for writing an FD dump -->

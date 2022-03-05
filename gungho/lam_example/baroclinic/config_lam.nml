@@ -14,6 +14,7 @@ edge_cells_ew=24,
 edge_cells_ns=24,
 inner_width_ew=2,
 inner_width_ns=2,
+lbc_method='coordinate_based'
 limited_area=.true.,
 normal_only=.true.,
 outer_width_ew=2,
@@ -21,6 +22,7 @@ outer_width_ns=2,
 output_lbcs=.true.,
 rim_width_ew=7,
 rim_width_ns=7,
+transport_boundary_depth=6,
 /
 &checks
 limit_cfl=.false.,
@@ -86,7 +88,7 @@ test='deep_baroclinic_wave',
 /
 &initialization
 ancil_option='none',
-lbc_option='file',
+lbc_option='gungho_file',
 init_option='analytic',
 /
 &initial_density
