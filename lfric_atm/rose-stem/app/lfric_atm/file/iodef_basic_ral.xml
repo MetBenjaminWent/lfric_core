@@ -606,6 +606,7 @@
     <field id="orographic_drag__taux_orographic_drag" name="taux_orog" long_name="orographic_drag_U_wind_stress" unit="Pa" grid_ref="full_level_face_grid"> orographic_drag__taux_orog_blk + orographic_drag__taux_orog_gwd </field>
 	<field id="orographic_drag__tauy_orographic_drag" name="tauy_orog" long_name="orographic_drag_V_wind_stress" unit="Pa" grid_ref="full_level_face_grid"> orographic_drag__tauy_orog_blk + orographic_drag__tauy_orog_gwd </field>
 	<!-- surface fields -->
+	<field id="pmsl" name="pmsl" long_name="air_pressure_at_mean_sea_level" unit="Pa" domain_ref="face" />
 	<field id="surface__tile_fraction" name="tile_fraction" long_name="surface_tile_fraction" unit="1" domain_ref="face" axis_ref="surface_tiles"/>
 	<field id="surface__z0m" name="z0m" long_name="surface_roughness_length" unit="m" domain_ref="face" />
         <field id="surface__z0m_eff" name="z0m_eff" long_name="effective_surface_roughness_length_for_momentum_in_air" unit="m" domain_ref='face' />
@@ -1165,6 +1166,7 @@
       </file>
 
       <file id="lfric_diag" name="lfric_diag" output_freq="6h" convention="UGRID" enabled=".TRUE.">
+	<field field_ref="pmsl"/>
 	<field field_ref="theta"/>
 	<field field_ref="m_v"/>
 	<field field_ref="m_cl"/>

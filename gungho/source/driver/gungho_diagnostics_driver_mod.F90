@@ -41,6 +41,10 @@ module gungho_diagnostics_driver_mod
   use mesh_mod,                  only : mesh_type
   use geometric_constants_mod,   only : get_panel_id
 
+#ifdef UM_PHYSICS
+  use pmsl_alg_mod,              only : pmsl_alg
+#endif
+
   implicit none
 
   private
@@ -233,6 +237,13 @@ contains
     call write_divergence_diagnostic( u, clock, mesh )
     call write_hydbal_diagnostic( theta, moist_dyn, exner, mesh )
     call column_total_diagnostics_alg( rho, mr, mesh, twod_mesh )
+
+#ifdef UM_PHYSICS
+    ! Call PMSL algorithm
+    exner => prognostic_fields%get_field('exner')
+    theta => prognostic_fields%get_field('theta')
+    call pmsl_alg(exner, derived_fields, theta, twod_mesh)
+#endif
 
 
   end subroutine gungho_diagnostics_driver
