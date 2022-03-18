@@ -16,10 +16,11 @@ module transport_enumerated_types_mod
   integer(kind=i_def), parameter :: equation_conservative = 421_i_def
   integer(kind=i_def), parameter :: equation_advective    = 311_i_def
 
-  integer(kind=i_def), parameter :: splitting_none   = 1_i_def
-  integer(kind=i_def), parameter :: splitting_strang = 2_i_def
-  integer(kind=i_def), parameter :: splitting_vh     = 3_i_def
-  integer(kind=i_def), parameter :: splitting_hv     = 4_i_def
+  integer(kind=i_def), parameter :: splitting_none       = 1_i_def
+  integer(kind=i_def), parameter :: splitting_strang_vhv = 2_i_def
+  integer(kind=i_def), parameter :: splitting_strang_hvh = 3_i_def
+  integer(kind=i_def), parameter :: splitting_vh         = 4_i_def
+  integer(kind=i_def), parameter :: splitting_hv         = 5_i_def
 
   integer(kind=i_def), parameter :: scheme_mol_3d  = 1_i_def
   integer(kind=i_def), parameter :: scheme_ffsl_3d = 2_i_def

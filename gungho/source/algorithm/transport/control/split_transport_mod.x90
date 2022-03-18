@@ -13,7 +13,8 @@ module split_transport_mod
   use field_mod,                        only: field_type
   use log_mod,                          only: log_event, LOG_LEVEL_ERROR
   use transport_metadata_mod,           only: transport_metadata_type
-  use transport_enumerated_types_mod,   only: splitting_strang,      &
+  use transport_enumerated_types_mod,   only: splitting_strang_vhv,  &
+                                              splitting_strang_hvh,  &
                                               splitting_hv,          &
                                               splitting_vh,          &
                                               direction_h,           &
@@ -71,7 +72,7 @@ contains
     ! -------------------------------------------------------------------------!
     ! Strang splitting
     ! -------------------------------------------------------------------------!
-    case ( splitting_strang )
+    case ( splitting_strang_vhv )
 
       vert_dt = model_dt / 2.0_r_def
       hori_dt = model_dt
@@ -82,6 +83,18 @@ contains
                                  hori_dt, transport_metadata)
       call split_transport_field(field_np1, field_temp_2, direction_v,    &
                                  vert_dt, transport_metadata)
+
+    case ( splitting_strang_hvh )
+
+      vert_dt = model_dt
+      hori_dt = model_dt / 2.0_r_def
+
+      call split_transport_field(field_temp_1, field_n, direction_h,      &
+                                 hori_dt, transport_metadata)
+      call split_transport_field(field_temp_2, field_temp_1, direction_v, &
+                                 vert_dt, transport_metadata)
+      call split_transport_field(field_np1, field_temp_2, direction_h,    &
+                                 hori_dt, transport_metadata)
 
     ! -------------------------------------------------------------------------!
     ! Vertical then horizontal splitting

@@ -21,7 +21,7 @@ module vertical_sl_advective_alg_mod
                                                 vertical_sl_order_quintic
   use log_mod,                            only: log_event, LOG_LEVEL_ERROR
   use mesh_mod,                           only: mesh_type
-  use transport_enumerated_types_mod,     only: splitting_strang
+  use transport_enumerated_types_mod,     only: splitting_strang_vhv
   use transport_metadata_mod,             only: transport_metadata_type
   use transport_runtime_alg_mod,          only: transport_runtime_type
   use transport_runtime_collection_mod,   only: get_transport_runtime
@@ -73,8 +73,7 @@ contains
     call invoke( setval_X(dep_pts_z, dep_pts_z_get) )
 
     ! If Strang splitting divide departure distance by 2
-    ! TODO do we need an extra check for half step =  vertical direction?
-    if ( transport_metadata%get_splitting() ==  splitting_strang ) then
+    if ( transport_metadata%get_splitting() ==  splitting_strang_vhv ) then
       call invoke( inc_a_times_X(0.5_r_def, dep_pts_z) )
     end if
 

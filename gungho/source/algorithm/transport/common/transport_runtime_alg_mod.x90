@@ -566,10 +566,11 @@ contains
     use transport_config_mod,           only: cfl_mol_3d_stab, &
                                               cfl_mol_2d_stab, &
                                               cfl_mol_1d_stab
-    use transport_enumerated_types_mod, only: direction_h, &
-                                              direction_v, &
-                                              direction_3d, &
-                                              splitting_strang
+    use transport_enumerated_types_mod, only: direction_h,          &
+                                              direction_v,          &
+                                              direction_3d,         &
+                                              splitting_strang_vhv, &
+                                              splitting_strang_hvh
     implicit none
 
     class(transport_runtime_type), intent(in) :: self
@@ -586,14 +587,18 @@ contains
         number_substeps = int( self%vertical_cfl_max(idx)        &
                               /(cfl_mol_1d_stab+tiny_eps),i_def) &
                          + 1_i_def
-        ! Strang splitting uses half timestep for the vertical stage
-        if ( splitting  == splitting_strang ) then
+        ! Strang_vhv splitting uses half timestep for the vertical stage
+        if ( splitting  == splitting_strang_vhv ) then
           number_substeps = max(1_i_def, number_substeps/2_i_def)
         end if
       case (direction_h)
         number_substeps = int( self%horizontal_cfl_max(idx)      &
                               /(cfl_mol_2d_stab+tiny_eps),i_def) &
                          + 1_i_def
+        ! Strang_hvh splitting uses half timestep for the horizontal stage
+        if ( splitting  == splitting_strang_hvh ) then
+          number_substeps = max(1_i_def, number_substeps/2_i_def)
+        end if
 
       case (direction_3d)
         number_substeps = int( max( self%horizontal_cfl_max(idx), &
@@ -613,7 +618,10 @@ contains
   !> @param[in] splitting  A transport splitting enumerator
   !> @return dt_substep  The dt for MoL substeps
   function get_dt_substep(self, mesh_id, direction, splitting) result(dt_substep)
-    use transport_enumerated_types_mod, only: direction_v, splitting_strang
+    use transport_enumerated_types_mod, only: direction_v,          &
+                                              direction_h,          &
+                                              splitting_strang_vhv, &
+                                              splitting_strang_hvh
 
     implicit none
 
@@ -626,7 +634,9 @@ contains
 
     number_substeps = self%get_number_substeps(mesh_id, direction, splitting)
     dt_substep = self%dt_model/real(number_substeps, r_def)
-    if ( splitting  == splitting_strang .and. direction==direction_v ) then
+    if ( splitting  == splitting_strang_vhv .and. direction == direction_v ) then
+        dt_substep = dt_substep / 2.0_r_def
+    else if ( splitting  == splitting_strang_hvh .and. direction == direction_h ) then
         dt_substep = dt_substep / 2.0_r_def
     end if
 
@@ -928,7 +938,8 @@ contains
                                               direction_h,            &
                                               direction_v,            &
                                               direction_3d,           &
-                                              splitting_strang,       &
+                                              splitting_strang_hvh,   &
+                                              splitting_strang_vhv,   &
                                               splitting_hv,           &
                                               splitting_vh,           &
                                               splitting_none
@@ -961,7 +972,7 @@ contains
 
     ! Compute total number of split steps
     select case(splitting(dry_config))
-    case(splitting_strang)
+    case(splitting_strang_hvh, splitting_strang_vhv)
       num_dry_steps = 3
     case(splitting_hv, splitting_vh)
       num_dry_steps = 2

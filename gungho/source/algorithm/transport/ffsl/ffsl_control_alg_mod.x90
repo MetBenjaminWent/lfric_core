@@ -27,8 +27,11 @@ module ffsl_control_alg_mod
                                               ffsl_scheme_yz_bip,    &
                                               dry_field_name
   use transport_metadata_mod,           only: transport_metadata_type
-  use transport_enumerated_types_mod,   only: direction_v,  &
-                                              splitting_strang
+  use transport_enumerated_types_mod,   only: direction_v,          &
+                                              direction_h,          &
+                                              splitting_strang_vhv, &
+                                              splitting_strang_hvh
+
   use transport_runtime_alg_mod,        only: transport_runtime_type
   use transport_runtime_collection_mod, only: get_transport_runtime
 
@@ -71,10 +74,12 @@ contains
     type(field_type)          :: increment
     type(field_type), pointer :: cell_orientation => null()
     type(field_type), pointer :: detj_at_w2 => null()
-    type(field_type), pointer :: dep_pts_x => null()
-    type(field_type), pointer :: dep_pts_y => null()
+    type(field_type), pointer :: dep_pts_x_get => null()
+    type(field_type), pointer :: dep_pts_y_get => null()
     type(field_type), pointer :: dep_pts_z_get => null()
-    type(field_type)          :: dep_pts_z
+    type(field_type)          :: dep_pts_z, &
+                                 dep_pts_x, &
+                                 dep_pts_y
     type(field_type)          :: flux
     integer(kind=i_def)       :: mesh_id
     type(mesh_type),  pointer :: mesh => null()
@@ -93,8 +98,8 @@ contains
 
     ! Get Det(J) and departure points
     detj_at_w2    => transport_runtime%get_detj_at_w2_transport(mesh_id)
-    dep_pts_x     => transport_runtime%get_departure_points_x_w2(mesh_id)
-    dep_pts_y     => transport_runtime%get_departure_points_y_w2(mesh_id)
+    dep_pts_x_get => transport_runtime%get_departure_points_x_w2(mesh_id)
+    dep_pts_y_get => transport_runtime%get_departure_points_y_w2(mesh_id)
     dep_pts_z_get => transport_runtime%get_departure_points_z_w2(mesh_id)
 
     ! Get correct departure points based on splitting
@@ -102,9 +107,23 @@ contains
     call invoke( setval_X(dep_pts_z, dep_pts_z_get) )
 
     ! If vertical scheme for Strang splitting divide departure distance by 2
-    if ( transport_metadata%get_splitting() ==  splitting_strang .AND. &
+    if ( transport_metadata%get_splitting() ==  splitting_strang_vhv .and. &
          direction == direction_v ) then
       call invoke( inc_a_times_X(0.5_r_def, dep_pts_z) )
+    end if
+
+    ! Get correct departure points based on splitting
+    call dep_pts_x%initialise( vector_space = dep_pts_x_get%get_function_space() )
+    call dep_pts_y%initialise( vector_space = dep_pts_y_get%get_function_space() )
+    ! Use copy instead of setval_X as we need to preserve halo values
+    call dep_pts_x_get%copy_field(dep_pts_x)
+    call dep_pts_y_get%copy_field(dep_pts_y)
+
+    ! If horizontal scheme for Strang splitting divide departure distance by 2
+    if ( transport_metadata%get_splitting() ==  splitting_strang_hvh .and. &
+         direction == direction_h ) then
+      call invoke( inc_a_times_X(0.5_r_def, dep_pts_x), &
+                   inc_a_times_X(0.5_r_def, dep_pts_y) )
     end if
 
     call increment%initialise( vector_space=field_n%get_function_space() )
@@ -152,7 +171,7 @@ contains
     end if
 
     nullify(transport_runtime, mesh, detj_at_w2, cell_orientation, &
-            dep_pts_x, dep_pts_y, dep_pts_z_get)
+            dep_pts_x_get, dep_pts_y_get, dep_pts_z_get)
 
   end subroutine ffsl_conservative_control
 
@@ -186,10 +205,12 @@ contains
     type(field_type)          :: field_to_adv
     type(field_type), pointer :: cell_orientation => null()
     type(field_type), pointer :: detj_at_w2 => null()
-    type(field_type), pointer :: dep_pts_x => null()
-    type(field_type), pointer :: dep_pts_y => null()
+    type(field_type), pointer :: dep_pts_x_get => null()
+    type(field_type), pointer :: dep_pts_y_get => null()
     type(field_type), pointer :: dep_pts_z_get => null()
-    type(field_type)          :: dep_pts_z
+    type(field_type)          :: dep_pts_z, &
+                                 dep_pts_x, &
+                                 dep_pts_y
     type(mesh_type),  pointer :: mesh => null()
     type(transport_runtime_type), pointer :: transport_runtime => null()
 
@@ -229,19 +250,33 @@ contains
     transport_runtime => get_transport_runtime(mesh)
 
     ! Get Det(J) and departure points
-    detj_at_w2     => transport_runtime%get_detj_at_w2_transport(mesh_id)
-    dep_pts_x      => transport_runtime%get_departure_points_x_w2(mesh_id)
-    dep_pts_y      => transport_runtime%get_departure_points_y_w2(mesh_id)
-    dep_pts_z_get  => transport_runtime%get_departure_points_z_w2(mesh_id)
+    detj_at_w2    => transport_runtime%get_detj_at_w2_transport(mesh_id)
+    dep_pts_x_get => transport_runtime%get_departure_points_x_w2(mesh_id)
+    dep_pts_y_get => transport_runtime%get_departure_points_y_w2(mesh_id)
+    dep_pts_z_get => transport_runtime%get_departure_points_z_w2(mesh_id)
 
     ! Get correct departure points based on splitting
     call dep_pts_z%initialise( vector_space = dep_pts_z_get%get_function_space() )
     call invoke( setval_X(dep_pts_z, dep_pts_z_get) )
 
     ! If vertical scheme for Strang splitting divide departure distance by 2
-    if ( transport_metadata%get_splitting() ==  splitting_strang .AND. &
+    if ( transport_metadata%get_splitting() ==  splitting_strang_vhv .and. &
          direction == direction_v ) then
       call invoke( inc_a_times_X(0.5_r_def, dep_pts_z) )
+    end if
+
+    ! Get correct departure points based on splitting
+    call dep_pts_x%initialise( vector_space = dep_pts_x_get%get_function_space() )
+    call dep_pts_y%initialise( vector_space = dep_pts_y_get%get_function_space() )
+    ! Use copy instead of setval_X as we need to preserve halo values
+    call dep_pts_x_get%copy_field(dep_pts_x)
+    call dep_pts_y_get%copy_field(dep_pts_y)
+
+    ! If horizontal scheme for Strang splitting divide departure distance by 2
+    if ( transport_metadata%get_splitting() ==  splitting_strang_hvh .and. &
+         direction == direction_h ) then
+      call invoke( inc_a_times_X(0.5_r_def, dep_pts_x), &
+                   inc_a_times_X(0.5_r_def, dep_pts_y) )
     end if
 
     call increment%initialise( vector_space=field_to_adv%get_function_space() )
@@ -270,7 +305,7 @@ contains
     call invoke( X_minus_bY( field_np1, field_n, step_dt, adv_increment) )
 
     nullify(transport_runtime, mesh, detj_at_w2, cell_orientation, &
-            dep_pts_x, dep_pts_y, dep_pts_z_get)
+            dep_pts_x_get, dep_pts_y_get, dep_pts_z_get)
 
   end subroutine ffsl_advective_control
 

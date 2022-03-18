@@ -21,7 +21,7 @@ module transport_metadata_mod
 
     character(len=str_def) :: fname ! Name of the field (or field_group)
     integer(kind=i_def)    :: equation  ! Advection or transport equation ( = transport, advection)
-    integer(kind=i_def)    :: splitting ! Horizontal/vertical splitting ( = none, strang, hv, vh)
+    integer(kind=i_def)    :: splitting ! Horizontal/vertical splitting ( = none, strang_vhv/_hvh, hv, vh)
     integer(kind=i_def)    :: scheme    ! Transport scheme (= mol3d, ffsl3d, split)
     integer(kind=i_def)    :: horizontal_method ! Horizontal transport method (= mol, ffsl)
     integer(kind=i_def)    :: vertical_method ! Vertical transport method (= mol, sl/slice, ffsl)
