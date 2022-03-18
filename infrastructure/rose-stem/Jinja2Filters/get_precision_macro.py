@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 ##############################################################################
-# Copyright (c) 2019,  Met Office, on behalf of HMSO and Queen's Printer
-# For further details please refer to the file LICENCE.original which you
-# should have received as part of this distribution.
+# (c) Crown copyright 2022 Met Office. All rights reserved.
+# The file LICENCE, distributed with this code, contains details of the terms
+# under which the code may be used.
 ##############################################################################
 '''
 Implements a Jinja2 filter to strip the resolutions info.
 '''
+from __future__ import absolute_import
 import ast
 import re
 import utilities
@@ -22,7 +23,7 @@ def get_precision_macro(call):
     requested real-variable precision levels for the given
     application/configuration.
     ...
-    @param [in] context Jinja2 instance to run macro against.
+    @param [in] call Invocation string.
     @return List resulting from retrieving the requested precisions.
     '''
     # pylint: disable=too-many-locals, too-many-branches

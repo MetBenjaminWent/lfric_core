@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 ##############################################################################
-# (c) Crown copyright 2017 Met Office. All rights reserved.
+# (c) Crown copyright 2022 Met Office. All rights reserved.
 # The file LICENCE, distributed with this code, contains details of the terms
 # under which the code may be used.
 ##############################################################################
@@ -11,13 +11,13 @@ This is for debug purposes only.
 '''
 
 from __future__ import print_function
-
-from __future__ import absolute_import
 import sys
 
 
 def debug_print(value):
     '''
-    Sends the argument string to standard out for debug.
+    Sends the argument string to standard error for debug.
+
+    @param [in] value Value to print to standard error.
     '''
     print(value, file=sys.stderr)

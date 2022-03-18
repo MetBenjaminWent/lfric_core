@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 ##############################################################################
-# Copyright (c) 2017,  Met Office, on behalf of HMSO and Queen's Printer
-# For further details please refer to the file LICENCE.original which you
-# should have received as part of this distribution.
+# (c) Crown copyright 2022 Met Office. All rights reserved.
+# The file LICENCE, distributed with this code, contains details of the terms
+# under which the code may be used.
 ##############################################################################
 '''
-Implements a Jinja2 filter to break appart a macro call and extract the
-environment arguments.
+Implements a Jinja2 filter to run a macro specified by a string.
 '''
 from __future__ import absolute_import
 import ast
@@ -17,13 +16,17 @@ import utilities
 
 
 @contextfilter
-def getEnvMacro(context, call):
+def execute_macro(context, call):
     '''
-    Takes a string and parses any instances of an env dictionary.
-    @param [inout] context Jinja2 instance to run macro against.
-    @param [in]    call    Invocation string.
-    @return Tuple of application name, Configuration name,
-            Dictionary of environment arguments and Macro name.
+    Takes a string and executes it as though it were a Jinja2 macro call.
+
+    The call string has the syntax <macro name>([<argument>]...).
+
+    Arguments can be either position or keyword based.
+
+    @param [in,out] context Jinja2 instance to run macro against.
+    @param [in]     call     Invocation string.
+    @return String resulting from calling the macro.
     '''
     if call.find('(') == -1:
         macro_name = call
@@ -47,17 +50,4 @@ def getEnvMacro(context, call):
         key, value = re.split(' *= *', argument)
         argument_dictionary[key.strip()] = ast.literal_eval(value.strip())
 
-    # We only do work on the 'env' dictionary
-    if 'env' in argument_dictionary:
-        environment_dictionary = argument_dictionary['env']
-    else:
-        environment_dictionary = {}
-
-    if len(normal_arguments) >= 2:
-        app_name = argument_list[0]
-        key = app_name + '_' + argument_list[1]
-        return_value = app_name, key, environment_dictionary, macro_name
-    else:
-        return_value = None, None, None, None
-
-    return return_value
+    return context.vars[macro_name](*argument_list, **argument_dictionary)

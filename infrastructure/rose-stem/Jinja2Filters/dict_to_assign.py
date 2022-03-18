@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 ##############################################################################
-# Copyright (c) 2017,  Met Office, on behalf of HMSO and Queen's Printer
-# For further details please refer to the file LICENCE.original which you
-# should have received as part of this distribution.
+# (c) Crown copyright 2022 Met Office. All rights reserved.
+# The file LICENCE, distributed with this code, contains details of the terms
+# under which the code may be used.
 ##############################################################################
 '''
 Implements a Jinja2 filter to convert a dictionary into assignment strings.
@@ -14,7 +14,8 @@ def dict_to_assign(context, indent):
     '''
     Takes a dictionary and returns a string of assigments "key = value".
 
-    @param [in] context Dictionary
+    @param [in] context Dictionary.
+    @param [in] indent Indentation string
     @return String resulting from setting the environment.
     '''
     env_variables = []

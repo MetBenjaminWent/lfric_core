@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 ##############################################################################
-# Copyright (c) 2017,  Met Office, on behalf of HMSO and Queen's Printer
-# For further details please refer to the file LICENCE.original which you
-# should have received as part of this distribution.
+# (c) Crown copyright 2022 Met Office. All rights reserved.
+# The file LICENCE, distributed with this code, contains details of the terms
+# under which the code may be used.
 ##############################################################################
 '''
 Implements a Jinja2 filter which removes duplicates from a Cylc task schedule.
 '''
-from __future__ import absolute_import
 import re
 
 _LINE_TEMPLATE = '{indent}{prerequisite} => {result}'
@@ -22,7 +21,7 @@ _DEPENDENCY_PATTERN = re.compile(r'\s*(\S+)\s*=>\s*(\S+)')
 
 def deduplicate_schedule(schedule):
     '''
-    Takes a Cylc task schedule and removes duplicates.  It also combines
+    Takes a Cylc task schedule and removes duplicates. It also combines
     scheduling dependencies into groups with the same cycling pattern.
 
     For example, if schedule is:
@@ -48,7 +47,7 @@ def deduplicate_schedule(schedule):
            graph = """
               a[-P1] => a
               """
-    i.e. tasks at the beginning of the schedule that aren't explicitly
+    i.e. tasks at the beginning of the schedule that are not explicitly
          associated with a cycle period are put into the [[[R1]]] group of
          tasks.
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 ##############################################################################
-# Copyright (c) 2017,  Met Office, on behalf of HMSO and Queen's Printer
-# For further details please refer to the file LICENCE.original which you
-# should have received as part of this distribution.
+# (c) Crown copyright 2022 Met Office. All rights reserved.
+# The file LICENCE, distributed with this code, contains details of the terms
+# under which the code may be used.
 ##############################################################################
 '''
 Implements a Jinja2 filter to break appart a macro call and extract the
@@ -17,11 +17,12 @@ import utilities
 
 
 @contextfilter
-def getEnvMacro(context, call):
+def get_env_macro(context, call):
     '''
     Takes a string and parses any instances of an env dictionary.
-    @param [inout] context Jinja2 instance to run macro against.
-    @param [in]    call    Invocation string.
+
+    @param [in,out] context Jinja2 instance to run macro against. Dummy var.
+    @param [in]     call    Invocation string.
     @return Tuple of application name, Configuration name,
             Dictionary of environment arguments and Macro name.
     '''

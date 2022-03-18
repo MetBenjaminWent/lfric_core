@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 ##############################################################################
-# (c) Crown copyright 2017 Met Office. All rights reserved.
+# (c) Crown copyright 2022 Met Office. All rights reserved.
 # The file LICENCE, distributed with this code, contains details of the terms
 # under which the code may be used.
 ##############################################################################
@@ -13,17 +13,16 @@ Implements a Jinja2 filter to generate strings for resolution labels/options.
 def get_resolution_labels(resolution):
     '''
     Returns labels used by Jinja2 to generate app information for
-    mesh resolution and timestep options
+    mesh resolution and timestep options.
 
-    @param [in] context    Jinja2 instance to run macro against.
     @param [in] resolution List in format where 1st entry is always spatial
                            the option code for the mesh resolution, followed by
-                           the timestep resolutions to run at (if any)
-    @return Mesh resolution option
+                           the timestep resolutions to run at (if any).
+    @return Mesh resolution option,
             Time resolution value(s),
             Mesh resolution label,
             Time resolution labels,
-            Rose mesh resolution option string
+            Rose mesh resolution option string.
     '''
     mesh_resolution_label = ''
     time_resolution_labels = []

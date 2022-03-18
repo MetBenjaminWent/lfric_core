@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 ##############################################################################
-# Copyright (c) 2017,  Met Office, on behalf of HMSO and Queen's Printer
-# For further details please refer to the file LICENCE.original which you
-# should have received as part of this distribution.
+# (c) Crown copyright 2022 Met Office. All rights reserved.
+# The file LICENCE, distributed with this code, contains details of the terms
+# under which the code may be used.
 ##############################################################################
 '''
 Implements a Jinja2 filter to strip the resolutions info.
@@ -19,7 +19,7 @@ def get_resolution_macro(call):
     Takes a string return list of resolutions to use
         crun: Number of runs to do in the crun.
         ...
-    @param [in] context Jinja2 instance to run macro against.
+    @param [in] call Invocation string..
     @return List resulting from retrieving the resolutions.
     '''
     # pylint: disable=too-many-locals, too-many-branches
@@ -85,7 +85,6 @@ def get_resolution_macro(call):
                         resource_support_meshes)
 
     else:
-
         return_value = None, None, None, None
 
     return return_value

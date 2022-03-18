@@ -1,18 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 ##############################################################################
-# Copyright (c) 2017,  Met Office, on behalf of HMSO and Queen's Printer
-# For further details please refer to the file LICENCE.original which you
-# should have received as part of this distribution.
+# (c) Crown copyright 2022 Met Office. All rights reserved.
+# The file LICENCE, distributed with this code, contains details of the terms
+# under which the code may be used.
 ##############################################################################
 '''
 Implements a Jinja 2 filter which inserts values into batch manager directive
 strings.
 '''
 
-from __future__ import print_function
-
-from __future__ import absolute_import
 import math
 import re
 
@@ -20,6 +17,13 @@ import re
 def directive_modifier(directive, cores, walltime, xios_nodes=0, memory='30GB'):
     '''
     Substitutes values into batch manager directives.
+
+    @param directive  Directive string or list of directives
+    @param cores      Total system cores
+    @param walltime   Walltime
+    @param xios_nodes Number of xios nodes
+
+    @return List of directives with substitutions made
     '''
     def choose_replacement(name, arguments, xios_nodes, memory):
         '''

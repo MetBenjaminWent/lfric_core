@@ -6,31 +6,25 @@
 # under which the code may be used.
 ##############################################################################
 '''
-Implements a Jinja2 filter to run a macro specified by a string.
+Implements a Jinja2 filter to strip the crun info.
 '''
 import re
 from jinja2 import contextfilter
 
 
 @contextfilter
-def execute_macro_crun(context, call):
+def get_crun_info(call):
     '''
-    Takes a string and executes it as though it were a Jinja2 macro call, but
-    overrides keyword do_crun to be True.
-
-    The call string has the syntax <macro name>([<argument>]...).
-
-    Arguments can be either position or keyword based.
-
-    @param [in,out] context Jinja2 instance to run macro against.
-    @param [in]     call     Invocation string.
-    @return String resulting from calling the macro.
+    Takes a string return dictionary values related to crunning:
+        crun: Number of runs to do in the crun.
+        ...
+    @param [in] context Jinja2 instance to run macro against.
+    @param [in] call    Invocation string.
+    @return String resulting from setting the environment.
     '''
     if call.find('(') == -1:
-        macro_name = call
         arguments = []
     else:
-        macro_name = call[:call.index('(')]
         arguments = re.split(', *', call[call.index('(')+1:call.rindex(')')])
 
     normal_arguments = [argument for argument in arguments
@@ -41,7 +35,7 @@ def execute_macro_crun(context, call):
     argument_list = []
     for argument in normal_arguments:
         if argument[0] == '"':
-            argument_list.append(argument[1:-2])
+            argument_list.append(argument[1:-1])
         else:
             argument_list.append(argument)
 
@@ -50,5 +44,9 @@ def execute_macro_crun(context, call):
         key, value = re.split(' *= *', argument)
         argument_dictionary[key] = value
 
-    argument_dictionary['do_crun'] = True
-    return context.vars[macro_name](*argument_list, **argument_dictionary)
+    # Return info about the crun arguments
+    return_value = {}
+    if 'crun' in argument_dictionary:
+        return_value.update({'crun': int(argument_dictionary['crun'])})
+
+    return return_value

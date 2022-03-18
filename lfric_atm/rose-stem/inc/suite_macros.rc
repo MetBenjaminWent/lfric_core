@@ -341,7 +341,7 @@
 {%-   for group in groupsToRun %}
 {%-     if group in groups.keys() %}
 {%-       for mission in groups[group] %}
-{{          mission | executeMacro() }}
+{{          mission | execute_macro() }}
 {%-       endfor %}
 {%-     endif %}
 {%-   endfor %}
