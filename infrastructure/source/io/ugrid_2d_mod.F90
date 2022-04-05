@@ -104,13 +104,9 @@ contains
   procedure :: get_coord_units
   procedure :: get_node_coords
   procedure :: get_face_coords
-  procedure :: get_node_coords_transpose
   procedure :: get_face_node_connectivity
   procedure :: get_face_edge_connectivity
   procedure :: get_face_face_connectivity
-  procedure :: get_face_node_connectivity_transpose
-  procedure :: get_face_edge_connectivity_transpose
-  procedure :: get_face_face_connectivity_transpose
   procedure :: write_coordinates
 
   !> Routine to destroy object
@@ -716,33 +712,6 @@ function get_face_coords(self) result(face_coords)
   return
 end function get_face_coords
 
-
-!-------------------------------------------------------------------------------
-!> @brief   Gets node coordinates with transposed ugrid array index ordering.
-!> @details Returns a rank-two array of node coordinates, with the
-!>          coordinate dimension index outermost, and the node number
-!>          innermost. This is the transpose of the ugrid index ordering.
-!>          Format: [long, lat, radius].
-!>
-!> @param[in]   self        Calling ugrid object.
-!> @param[out]  node_coords Node coordinate array.
-!-------------------------------------------------------------------------------
-
-subroutine get_node_coords_transpose(self, node_coords)
-  implicit none
-
-  class(ugrid_2d_type), intent(in)  :: self
-  real(r_def),          intent(out) :: node_coords(:,:)
-
-  integer(i_def) :: i
-
-  do i = 1, self%num_nodes
-    node_coords(i,1:2) = self%node_coordinates(1:2,i)
-  end do
-
-  return
-end subroutine get_node_coords_transpose
-
 !-------------------------------------------------------------------------------
 !> @brief   Gets an array of node indices surrounding each face.
 !> @details Returns a rank-two array of nodes surrounding each face, with
@@ -770,36 +739,6 @@ subroutine get_face_node_connectivity(self, face_node_connectivity)
 end subroutine get_face_node_connectivity
 
 !-------------------------------------------------------------------------------
-!> @brief   Gets an array of node indices surrounding each face with transposed
-!>          ugrid index ordering.
-!> @details Returns a rank-two array of nodes surrounding each face, with the
-!>          face indices being contiguous and the nodes surrounding any single
-!>          face being non-contiguous. This is the transpose of the ugrid
-!>          index ordering. This transpose routine is needed to interface
-!>          with the current Dynamo index ordering.
-!>
-!> @param[in]    self                   Calling ugrid object
-!> @param[out]   face_node_connectivity Indices of nodes adjacent to faces.
-!-------------------------------------------------------------------------------
-
-subroutine get_face_node_connectivity_transpose(self, face_node_connectivity)
-  implicit none
-
-  class(ugrid_2d_type), intent(in)  :: self
-  integer(i_def),       intent(out) :: face_node_connectivity(:,:)
-
-  integer(i_def) :: i,j
-
-  do j = 1, self%num_faces
-    do i = 1, self%num_nodes_per_face
-      face_node_connectivity(j,i) = self%face_node_connectivity(i,j)
-    end do
-  end do
-
-  return
-end subroutine get_face_node_connectivity_transpose
-
-!-------------------------------------------------------------------------------
 !> @brief   Gets an array of edge indices surrounding each face.
 !> @details Returns a rank-two array of edges surrounding each face, with
 !>          the edges surrounding any single face being contiguous.
@@ -825,35 +764,6 @@ subroutine get_face_edge_connectivity(self, face_edge_connectivity)
   return
 end subroutine get_face_edge_connectivity
 
-!-------------------------------------------------------------------------------
-!> @brief   Gets an array of edge indices surrounding each face with transposed
-!>          ugrid index ordering.
-!> @details Returns a rank-two array of edges surrounding each face, with the
-!>          face indices being contiguous and the edges surrounding any single
-!>          face being non-contiguous. This is the transpose of the ugrid
-!>          index ordering. This transpose routine is needed to interface
-!>          with the current Dynamo index ordering.
-!>
-!> @param[in]    self                   Calling ugrid object
-!> @param[out]   face_edge_connectivity Indices of edges adjacent to faces.
-!-------------------------------------------------------------------------------
-
-subroutine get_face_edge_connectivity_transpose(self, face_edge_connectivity)
-  implicit none
-
-  class(ugrid_2d_type), intent(in)  :: self
-  integer(i_def),       intent(out) :: face_edge_connectivity(:,:)
-
-  integer(i_def) :: i,j
-
-  do j = 1, self%num_faces
-    do i = 1, self%num_edges_per_face
-      face_edge_connectivity(j,i) = self%face_edge_connectivity(i,j)
-    end do
-  end do
-
-  return
-end subroutine get_face_edge_connectivity_transpose
 
 !-------------------------------------------------------------------------------
 !> @brief   Gets an array of face indices surrounding each face.
@@ -881,34 +791,6 @@ subroutine get_face_face_connectivity(self, face_face_connectivity)
   return
 end subroutine get_face_face_connectivity
 
-!-------------------------------------------------------------------------------
-!> @brief   Gets an array of face indices surrounding each face with transposed
-!>          ugrid index ordering.
-!> @details Returns a rank-two array of faces surrounding each face, with the
-!>          face indices being contiguous and the the faces surrounding any
-!>          single face being non-contiguous. This transpose routine is needed
-!>          to interface with the current Dynamo index ordering.
-!>
-!> @param[in]  self                   Calling ugrid object
-!> @param[out] face_face_connectivity Indices of faces adjacent to faces.
-!-------------------------------------------------------------------------------
-
-subroutine get_face_face_connectivity_transpose(self, face_face_connectivity)
-  implicit none
-
-  class(ugrid_2d_type), intent(in)  :: self
-  integer(i_def),       intent(out) :: face_face_connectivity(:,:)
-
-  integer(i_def) :: i,j
-
-  do j = 1, self%num_faces
-    do i = 1, self%num_nodes_per_face
-      face_face_connectivity(j,i) = self%face_face_connectivity(i,j)
-    end do
-  end do
-
-  return
-end subroutine get_face_face_connectivity_transpose
 
 !-------------------------------------------------------------------------------
 !> @brief   Writes coordinates to a .dat file in the units they are held in

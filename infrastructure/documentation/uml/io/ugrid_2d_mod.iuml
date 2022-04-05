@@ -56,13 +56,10 @@ class ugrid_2d_mod::ugrid_2d_type {
   +get_coord_units( <<out>> coords_units_x: string, <<out>> coord_units_y: string )
   +get_node_coords( <<out>> node_coords: real[::] )
   +get_face_coords( <<out>> face_coords: real[::] )
-  +get_node_coords_transpose( <<out>> node_coords: real[::] )
   +get_face_node_connectivity( <<out>> face_node_connectivity: integer[::] )
   +get_face_edge_connectivity( <<out>> face_edge_connectivity: integer[::] )
   +get_face_face_connectivity( <<out>> face_face_connectivity: integer[::] )
-  +get_face_node_connectivity_transpose( <<out>> face_node_connectivity: integer[::] )
-  +get_face_edge_connectivity_transpose( <<out>> face_edge_connectivity: integer[::] )
-  +get_face_face_connectivity_transpose( <<out>> face_face_connectivity: integer[::] )
+
   +write_coordinates()
 
 }
