@@ -17,6 +17,8 @@ module ffsl_control_alg_mod
   use geometric_constants_mod,          only: get_cell_orientation
   use ffsl_transport_alg_mod,           only: ffsl_conservative_transport_step, &
                                               ffsl_advective_transport_step
+  use inject_sh_w3_to_wt_kernel_mod,    only: inject_sh_w3_to_wt_kernel_type
+  use inject_wt_to_sh_w3_kernel_mod,    only: inject_wt_to_sh_w3_kernel_type
   use log_mod,                          only: log_event, &
                                               LOG_LEVEL_INFO
   use mesh_mod,                         only: mesh_type
@@ -220,9 +222,7 @@ contains
     ! Function Spaces
     integer(kind=i_def)                :: function_space
     type(function_space_type), pointer :: w3_shifted_fs => null()
-    type(mesh_type),           pointer :: shifted_mesh  => null()
-
-    ! TODO in #2223: Mapping from Wtheta to W3_shifted
+    type(mesh_type),           pointer :: shifted_mesh => null()
 
     call log_event('Advective FFSL transport', LOG_LEVEL_INFO)
 
@@ -234,7 +234,7 @@ contains
       shifted_mesh => mesh_collection%get_mesh(field_n%get_mesh(), SHIFTED)
       w3_shifted_fs   => function_space_collection%get_fs(shifted_mesh, 0_i_def, W3)
       call field_to_adv%initialise( vector_space = w3_shifted_fs )
-      call invoke( setval_X(field_to_adv, field_n) )
+      call invoke( inject_wt_to_sh_w3_kernel_type(field_to_adv, field_n) )
     else
       ! Stay on current mesh
       call field_to_adv%initialise( field_n%get_function_space() )
@@ -295,7 +295,7 @@ contains
     if (function_space == Wtheta) then
       ! If Wtheta variable move back to Wtheta mesh
       call adv_increment%initialise( field_n%get_function_space() )
-      call invoke( setval_X(adv_increment, increment) )
+      call invoke( inject_sh_w3_to_wt_kernel_type(adv_increment, increment) )
     else
       ! Stay on current mesh
       call adv_increment%initialise( field_n%get_function_space() )

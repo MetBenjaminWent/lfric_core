@@ -20,23 +20,27 @@ module intermesh_constants_mod
   use function_space_mod,                only: function_space_type
   use function_space_collection_mod,     only: function_space_collection
   use fs_continuity_mod,                 only: W2, W3, Wtheta
-  use io_config_mod,                     only: subroutine_timers
   use log_mod,                           only: log_event, LOG_LEVEL_INFO
   use mesh_mod,                          only: mesh_type
+  use operator_mod,                      only: operator_type
   use quadrature_xyoz_mod,               only: quadrature_xyoz_type
   use timer_mod,                         only: timer
 
   ! Configuration
   use finite_element_config_mod,         only: element_order, nqp_exact
-
+  use io_config_mod,                     only: subroutine_timers
+  use transport_config_mod,              only: moisture_eqn, &
+                                               moisture_eqn_consistent
   ! Other algorithms
-  use fem_constants_mod,                 only: get_qr
+  use fem_constants_mod,                 only: get_qr, get_mass_matrix, &
+                                               get_inverse_W3_mass_matrix
 
   ! Kernels
   use proj_mr_to_sh_rho_rhs_op_kernel_mod, &
                                          only: proj_mr_to_sh_rho_rhs_op_kernel_type
   use proj_w3_to_sh_w3_rhs_op_kernel_mod,  &
                                          only: proj_w3_to_sh_w3_rhs_op_kernel_type
+  use consist_w3_to_sh_w3_op_kernel_mod, only: consist_w3_to_sh_w3_op_kernel_type
 
   implicit none
 
@@ -48,6 +52,7 @@ module intermesh_constants_mod
   ! Double level mesh features
   type(field_type), target, dimension(:), allocatable :: proj_mr_to_sh_rho_rhs_op
   type(field_type), target, dimension(:), allocatable :: proj_w3_to_sh_w3_rhs_op
+  type(field_type), target, dimension(:), allocatable :: consist_w3_to_sh_w3_op
 
   ! Public functions to create and access the module contents
 
@@ -55,6 +60,7 @@ module intermesh_constants_mod
   public :: final_intermesh_constants
   public :: get_proj_mr_to_sh_rho_rhs_op
   public :: get_proj_w3_to_sh_w3_rhs_op
+  public :: get_consist_w3_to_sh_w3_op
 
 
 contains
@@ -88,7 +94,9 @@ contains
     type(function_space_type),  pointer :: w3_fs       => null()
     type(function_space_type),  pointer :: wtheta_fs   => null()
     type(function_space_type),  pointer :: w3_shift_fs => null()
-    type(quadrature_xyoz_type), pointer :: qr
+    type(operator_type),        pointer :: mm_w3 => null()
+    type(operator_type),        pointer :: mm_inv_sh_w3 => null()
+    type(quadrature_xyoz_type), pointer :: qr => null()
     type(field_type)                    :: dummy_theta
     type(field_type)                    :: dummy_w3_shifted
 
@@ -114,27 +122,45 @@ contains
     end do
 
     call dummy_theta%initialise( vector_space = wtheta_fs )
-    call invoke( proj_mr_to_sh_rho_rhs_op_kernel_type(                 &
+    call invoke( proj_mr_to_sh_rho_rhs_op_kernel_type(                  &
                                               proj_mr_to_sh_rho_rhs_op, &
-                                              double_level_chi,        &
-                                              panel_id,                &
-                                              dummy_theta,             &
+                                              double_level_chi,         &
+                                              panel_id,                 &
+                                              dummy_theta,              &
                                               qr ) )
     !========== Create transform matrix stuff for W3 to shifted W3 ==========!
 
-    allocate(proj_w3_to_sh_w3_rhs_op(2))
-    do i = 1, 2
-      call proj_w3_to_sh_w3_rhs_op(i)%initialise( vector_space = w3_fs )
-      call invoke( setval_c(proj_w3_to_sh_w3_rhs_op(i), 0.0_r_def) )
-    end do
+    if (moisture_eqn == moisture_eqn_consistent) then
+      allocate(consist_w3_to_sh_w3_op(2))
+      do i = 1, 2
+        call consist_w3_to_sh_w3_op(i)%initialise( vector_space = w3_fs )
+      end do
 
-    call dummy_w3_shifted%initialise( vector_space = w3_shift_fs )
-    call invoke( proj_w3_to_sh_w3_rhs_op_kernel_type(                    &
-                                              proj_w3_to_sh_w3_rhs_op,     &
-                                              dummy_w3_shifted,          &
-                                              double_level_chi,          &
-                                              panel_id,                  &
-                                              qr ) )
+      mm_w3 => get_mass_matrix(W3, mesh%get_id())
+      mm_inv_sh_w3 => get_inverse_W3_mass_matrix(shifted_mesh%get_id())
+
+      call invoke( consist_w3_to_sh_w3_op_kernel_type(                &
+                                              consist_w3_to_sh_w3_op, &
+                                              mm_inv_sh_w3,           &
+                                              mm_w3 ) )
+
+      nullify( mm_w3, mm_inv_sh_w3 )
+
+    else
+      allocate(proj_w3_to_sh_w3_rhs_op(2))
+      do i = 1, 2
+        call proj_w3_to_sh_w3_rhs_op(i)%initialise( vector_space = w3_fs )
+        call invoke( setval_c(proj_w3_to_sh_w3_rhs_op(i), 0.0_r_def) )
+      end do
+
+      call dummy_w3_shifted%initialise( vector_space = w3_shift_fs )
+      call invoke( proj_w3_to_sh_w3_rhs_op_kernel_type(                    &
+                                                proj_w3_to_sh_w3_rhs_op,   &
+                                                dummy_w3_shifted,          &
+                                                double_level_chi,          &
+                                                panel_id,                  &
+                                                qr ) )
+    end if
 
     nullify( w3_fs  )
     nullify( wtheta_fs )
@@ -157,14 +183,23 @@ contains
 
   end function get_proj_mr_to_sh_rho_rhs_op
 
-  !> @brief Returns a pointer to the W3 to shifted W3 ints
-  !> @return The integrals for transforming from W3 to shifted W3
+  !> @brief Returns a pointer to the W3 to shifted W3 projection operator
+  !> @return The operator for transforming from W3 to shifted W3
   function get_proj_w3_to_sh_w3_rhs_op() result(ptr)
     implicit none
     type(field_type), pointer :: ptr(:)
     ptr => proj_w3_to_sh_w3_rhs_op
 
   end function get_proj_w3_to_sh_w3_rhs_op
+
+  !> @brief Returns a pointer to the W3 to shifted W3 consistent operator
+  !> @return The operator for transforming from W3 to shifted W3
+  function get_consist_w3_to_sh_w3_op() result(ptr)
+    implicit none
+    type(field_type), pointer :: ptr(:)
+    ptr => consist_w3_to_sh_w3_op
+
+  end function get_consist_w3_to_sh_w3_op
 
 
   !> @brief Explicitly reclaim memory from module scope variables
@@ -175,6 +210,7 @@ contains
 
     if (allocated(proj_mr_to_sh_rho_rhs_op)) deallocate(proj_mr_to_sh_rho_rhs_op)
     if (allocated(proj_w3_to_sh_w3_rhs_op)) deallocate(proj_w3_to_sh_w3_rhs_op)
+    if (allocated(consist_w3_to_sh_w3_op)) deallocate(consist_w3_to_sh_w3_op)
 
 
   end subroutine final_intermesh_constants

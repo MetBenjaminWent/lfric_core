@@ -18,6 +18,7 @@ module transport_runtime_alg_mod
                                             str_def, tiny_eps, imdi
   use field_mod,                      only: field_type
   use function_space_mod,             only: function_space_type
+  use function_space_collection_mod,  only: function_space_collection
   use local_mesh_mod,                 only: local_mesh_type
   use log_mod,                        only: log_event,            &
                                             log_scratch_space,    &
@@ -436,12 +437,23 @@ contains
   !> @param[in]     dry_flux  Flux field used to transport dry density
   subroutine set_dry_fields(self, rho_d_n, rho_d_np1, dry_flux)
 
+    use apply_w3_to_sh_w3_kernel_mod,   only: apply_w3_to_sh_w3_kernel_type
+    use consist_w2_to_sh_w2_kernel_mod, only: consist_w2_to_sh_w2_kernel_type
+    use fem_constants_mod,              only: get_rmultiplicity
+    use fs_continuity_mod,              only: W2
+    use intermesh_constants_mod,        only: get_consist_w3_to_sh_w3_op
+    use transport_config_mod,           only: moisture_eqn, &
+                                              moisture_eqn_consistent
+
     implicit none
 
     class(transport_runtime_type), target, intent(inout) :: self
     type(field_type),                      intent(in)    :: rho_d_n
     type(field_type),                      intent(in)    :: rho_d_np1
     type(field_type),                      intent(in)    :: dry_flux
+
+    type(field_type), pointer :: consist_w3_to_sh_w3_op(:) => null()
+    type(field_type), pointer :: rmultiplicity_w2 => null()
 
     ! Only set fields for primal mesh
     if (rho_d_n%get_mesh_id() /= self%mesh_ids(1)) then
@@ -452,7 +464,25 @@ contains
     call rho_d_np1%copy_field(self%rho_d_np1(1,self%dry_step_ctr))
     call dry_flux%copy_field(self%dry_flux(1,self%dry_step_ctr))
 
-    ! TODO: #2223 Transform these densities and dry fluxes to the shifted mesh
+    if (self%n_meshes > 1 .and. moisture_eqn == moisture_eqn_consistent) then
+      ! Transform these densities and dry fluxes to the shifted mesh
+      consist_w3_to_sh_w3_op => get_consist_w3_to_sh_w3_op()
+      rmultiplicity_w2 => get_rmultiplicity(W2, dry_flux%get_mesh_id())
+
+      call invoke( name='shift_dry_quantities',                               &
+          setval_c(self%dry_flux(2,self%dry_step_ctr), 0.0_r_def),            &
+          consist_w2_to_sh_w2_kernel_type(self%dry_flux(2,self%dry_step_ctr), &
+                                          self%dry_flux(1,self%dry_step_ctr), &
+                                          rmultiplicity_w2),                  &
+          apply_w3_to_sh_w3_kernel_type(self%rho_d_n(2,self%dry_step_ctr),    &
+                                        self%rho_d_n(1,self%dry_step_ctr),    &
+                                        consist_w3_to_sh_w3_op),              &
+          apply_w3_to_sh_w3_kernel_type(self%rho_d_np1(2,self%dry_step_ctr),  &
+                                        self%rho_d_np1(1,self%dry_step_ctr),  &
+                                        consist_w3_to_sh_w3_op) )
+
+      nullify( rmultiplicity_w2, consist_w3_to_sh_w3_op )
+    end if
 
     ! Increment counter for dry substep
     self%dry_step_ctr = self%dry_step_ctr + 1
@@ -466,7 +496,8 @@ contains
   subroutine copy_all_dry_fields(self, source_transport_runtime)
 
     use fem_constants_mod,         only: get_rmultiplicity
-    use fs_continuity_mod,         only: W2
+    use finite_element_config_mod,      only: element_order
+    use fs_continuity_mod,         only: W2, W3
     use mesh_collection_mod,       only: mesh_collection
     use restrict_kernel_mod,       only: restrict_kernel_type
     use restrict_w2_kernel_mod,    only: restrict_w2_kernel_type
@@ -475,12 +506,17 @@ contains
 
     class(transport_runtime_type), target, intent(inout) :: self
     class(transport_runtime_type),         intent(in)    :: source_transport_runtime
+    type(function_space_type),             pointer       :: w2_fs => null()
+    type(function_space_type),             pointer       :: w3_fs => null()
     type(mesh_type),                       pointer       :: source_mesh => null()
     type(mesh_type),                       pointer       :: target_mesh => null()
     type(field_type),                      pointer       :: source_rho_d_n => null()
     type(field_type),                      pointer       :: source_rho_d_np1 => null()
     type(field_type),                      pointer       :: source_dry_flux => null()
     type(field_type),                      pointer       :: rmultiplicity_w2 => null()
+    type(field_type)                                     :: target_rho_d_n
+    type(field_type)                                     :: target_rho_d_np1
+    type(field_type)                                     :: target_dry_flux
     integer(kind=i_def)                                  :: source_ncells
     integer(kind=i_def)                                  :: target_ncells
     integer(kind=i_def)                                  :: source_mesh_id
@@ -502,6 +538,14 @@ contains
     ! Get rmultiplicity
     rmultiplicity_w2 => get_rmultiplicity(W2, source_mesh_id)
 
+    w2_fs => function_space_collection%get_fs(target_mesh, element_order, W2)
+    w3_fs => function_space_collection%get_fs(target_mesh, element_order, W3)
+
+    ! Initialise target fields
+    call target_rho_d_n%initialise( vector_space = w3_fs )
+    call target_rho_d_np1%initialise( vector_space = w3_fs )
+    call target_dry_flux%initialise( vector_space = w2_fs )
+
     if (source_ncells > target_ncells) then
       ! Loop through fields for each step for primary extrusion
       do i = 1, source_transport_runtime%get_num_dry_steps()
@@ -509,25 +553,29 @@ contains
         source_rho_d_np1 => source_transport_runtime%get_rho_d_np1(source_mesh_id, i)
         source_dry_flux => source_transport_runtime%get_dry_flux(source_mesh_id, i)
         ! Intergrid kernels have to be called in separate invokes
-        call invoke(                                                       &
-            setval_c(self%dry_flux(1,i), 0.0_r_def),                       &
-            restrict_w2_kernel_type(self%dry_flux(1,i), source_dry_flux,   &
+        call invoke(                                                    &
+            setval_c(target_dry_flux, 0.0_r_def),                       &
+            restrict_w2_kernel_type(target_dry_flux, source_dry_flux,   &
                                     rmultiplicity_w2) )
-        call invoke(                                                       &
-            setval_c(self%rho_d_n(1,i), 0.0_r_def),                        &
-            restrict_kernel_type(self%rho_d_n(1,i), source_rho_d_n) )
-        call invoke(                                                       &
-            setval_c(self%rho_d_np1(1,i), 0.0_r_def),                      &
-            restrict_kernel_type(self%rho_d_np1(1,i), source_rho_d_np1) )
+        call invoke(                                                    &
+            setval_c(target_rho_d_n, 0.0_r_def),                        &
+            restrict_kernel_type(target_rho_d_n, source_rho_d_n) )
+        call invoke(                                                    &
+            setval_c(target_rho_d_np1, 0.0_r_def),                      &
+            restrict_kernel_type(target_rho_d_np1, source_rho_d_np1) )
+
+        ! Set dry fields
+        call self%set_dry_fields(target_rho_d_n, target_rho_d_np1, target_dry_flux)
+
       end do
-      ! TODO: #2223 Transform these densities and dry fluxes to the shifted mesh
+
     else
       call log_event( 'Can only call copy_all_dry_fields when ' // &
                       'target mesh is coarser than source mesh', LOG_LEVEL_ERROR)
     end if
 
     nullify( source_mesh, target_mesh, rmultiplicity_w2, source_rho_d_n, &
-             source_rho_d_np1, source_dry_flux )
+             source_rho_d_np1, source_dry_flux, w3_fs, w2_fs )
 
   end subroutine copy_all_dry_fields
 

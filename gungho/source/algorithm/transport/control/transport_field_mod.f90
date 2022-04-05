@@ -16,14 +16,18 @@ module transport_field_mod
                                               ffsl_advective_control
   use split_transport_mod,              only: split_transport_control
   use transport_metadata_mod,           only: transport_metadata_type
+  use transport_runtime_alg_mod,        only: transport_runtime_type
+  use transport_runtime_collection_mod, only: get_transport_runtime
   use transport_enumerated_types_mod,   only: scheme_mol_3d,         &
                                               scheme_ffsl_3d,        &
                                               scheme_split,          &
                                               direction_3d,          &
                                               equation_conservative, &
-                                              equation_advective
+                                              equation_advective,    &
+                                              equation_consistent
   use mol_conservative_alg_mod,         only: mol_conservative_alg
   use mol_advective_alg_mod,            only: mol_advective_alg
+  use mol_consistent_alg_mod,           only: mol_consistent_alg
 
   implicit none
 
@@ -50,6 +54,12 @@ contains
     type(field_type),              intent(in)    :: field_n
     real(kind=r_def),              intent(in)    :: model_dt
     type(transport_metadata_type), intent(in)    :: transport_metadata
+    type(transport_runtime_type),  pointer       :: transport_runtime => null()
+
+    ! Reset the counter for tracer transport steps
+    transport_runtime => get_transport_runtime(field_n%get_mesh())
+    call transport_runtime%reset_tracer_step_ctr()
+    nullify( transport_runtime )
 
     ! First choose scheme, and for full 3D schemes then choose equation
     select case ( transport_metadata%get_scheme() )
@@ -67,6 +77,10 @@ contains
       case ( equation_advective )
          call mol_advective_alg(field_np1, field_n, &
                                 direction_3d, transport_metadata)
+
+      case ( equation_consistent )
+         call mol_consistent_alg(field_np1, field_n, &
+                                 direction_3d, transport_metadata)
 
       case default
         call log_event('Trying to solve unrecognised form of transport equation', &

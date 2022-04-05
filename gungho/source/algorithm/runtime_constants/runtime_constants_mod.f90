@@ -26,7 +26,8 @@ module runtime_constants_mod
                                                extra_mesh_label
   use timer_mod,                         only: timer
   use transport_config_mod,              only: moisture_eqn, &
-                                               moisture_eqn_conservative
+                                               moisture_eqn_conservative, &
+                                               moisture_eqn_consistent
 
   implicit none
 
@@ -253,7 +254,8 @@ contains
       call create_limited_area_constants( chi )
     end if
 
-    if ( moisture_eqn == moisture_eqn_conservative ) then
+    if ( moisture_eqn == moisture_eqn_conservative .or. &
+         moisture_eqn == moisture_eqn_consistent ) then
       call create_intermesh_constants(mesh,              &
                                       chi,               &
                                       panel_id,          &

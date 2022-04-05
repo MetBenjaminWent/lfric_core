@@ -19,9 +19,11 @@ module gungho_transport_control_alg_mod
   use mesh_collection_mod,               only: mesh_collection
   use mesh_mod,                          only: mesh_type
   use transport_config_mod,              only: moisture_eqn, &
-                                               moisture_eqn_conservative
+                                               moisture_eqn_conservative, &
+                                               moisture_eqn_consistent
   use transport_enumerated_types_mod,    only: equation_conservative, &
                                                equation_advective,    &
+                                               equation_consistent,   &
                                                scheme_mol_3d
   use transport_metadata_mod,            only: transport_metadata_type
   use transport_runtime_alg_mod,         only: transport_runtime_type
@@ -92,6 +94,9 @@ contains
           (trim(field_names(config)) == 'moisture' .and. &
            moisture_eqn == moisture_eqn_conservative ) ) then
         equation_form = equation_conservative
+      else if ( trim(field_names(config)) == 'moisture' .and. &
+                moisture_eqn == moisture_eqn_consistent ) then
+        equation_form = equation_consistent
       else
         equation_form = equation_advective
       end if
@@ -233,7 +238,8 @@ contains
     any_ffsl = check_any_scheme_ffsl()
 
     ! Create transport_runtime object (advecting wind etc)
-    if ( moisture_eqn == moisture_eqn_conservative .or. any_ffsl ) then
+    if ( moisture_eqn == moisture_eqn_conservative .or. &
+         moisture_eqn == moisture_eqn_consistent .or. any_ffsl ) then
       primary_mesh => wind_n%get_mesh()
       shifted_mesh => mesh_collection%get_mesh(primary_mesh, SHIFTED)
 

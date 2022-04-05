@@ -19,9 +19,11 @@ module transport_control_alg_mod
   use mr_indices_mod,                    only: nummr
   use runtime_tools_mod,                 only: find_mesh_index
   use transport_config_mod,              only: moisture_eqn, &
-                                               moisture_eqn_conservative
+                                               moisture_eqn_conservative, &
+                                               moisture_eqn_consistent
   use transport_enumerated_types_mod,    only: equation_conservative, &
-                                               equation_advective
+                                               equation_advective,    &
+                                               equation_consistent
   use transport_metadata_mod,            only: transport_metadata_type
   use transport_runtime_alg_mod,         only: transport_runtime_type
   use transport_runtime_collection_mod,  only: set_transport_runtime
@@ -143,6 +145,9 @@ contains
           (trim(field_names(config)) == 'mr' .and. &
            moisture_eqn == moisture_eqn_conservative ) ) then
         equation_form = equation_conservative
+      else if ( trim(field_names(config)) == 'mr' .and. &
+                moisture_eqn == moisture_eqn_consistent ) then
+        equation_form = equation_consistent
       else
         equation_form = equation_advective
       end if

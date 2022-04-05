@@ -24,9 +24,11 @@ module split_transport_mod
                                               split_method_ffsl,     &
                                               split_method_sl,       &
                                               equation_conservative, &
-                                              equation_advective
+                                              equation_advective,    &
+                                              equation_consistent
   use mol_conservative_alg_mod,         only: mol_conservative_alg
   use mol_advective_alg_mod,            only: mol_advective_alg
+  use mol_consistent_alg_mod,           only: mol_consistent_alg
 
   implicit none
 
@@ -194,6 +196,10 @@ contains
       case ( equation_advective )
          call mol_advective_alg(field_np1, field_n, direction, &
                                 transport_metadata)
+
+      case ( equation_consistent )
+         call mol_consistent_alg(field_np1, field_n, direction, &
+                                 transport_metadata)
 
       case default
         call log_event('Trying to solve unrecognised form of transport equation', &
