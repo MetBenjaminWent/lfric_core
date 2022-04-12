@@ -250,17 +250,17 @@
     'nci-gadi' : {
         'hostname' : '$(rose host-select gadi.nci.org.au)',
         'batcher' : 'pbs',
-        'build_root' : '\${CYLC_TASK_WORK_DIR}/\${CYLC_SUITE_NAME}_\$USER',
+        'build_root' : '${CYLC_TASK_WORK_DIR}/${CYLC_SUITE_NAME}_${USER}',
         'update' : 'interupt',
         'setup' : {
             'base' : [
-                'umask 0022',
                 'module use /g/data/dk92/apps/Modules/modulefiles',
-                'module load NCI-data-analysis/2021.09',
                 'module use /g/data/access/projects/access/modules',
-                'module load xconv/1.94 hdf5/1.10.5p netcdf/4.7.4p zlib/1.2.11',
+                'module load xconv/1.94 hdf5/1.10.5p netcdf/4.7.4p zlib/1.2.11 python3/3.10.0',
                 'module load jinja2/3.0.1 psyclone/2.1.0 rose-picker/2.0',
-                'export PATH=\$PWD:\$PATH'
+                'module unload python2-as-python',
+                'ln -fs /apps/python3/3.10.0/bin/python3 python',
+                'export PATH=$PWD:$PATH'
             ],
             'build' : [
                 'export FPP="cpp -traditional-cpp"',
@@ -284,6 +284,7 @@
                 'module load NCI-data-analysis/2021.09 udunits/2.2.26 geos/3.8.0 proj/6.2.1 netcdf/4.7.4p'
             ],
             'reveal' : ['module list 2>&1', 'export'],
+            'run' : [],
             'tech' : ['']
         },
         'teardown' : {
@@ -297,10 +298,10 @@
                     '-l ncpus=6',
                     '-l mem=12GB',
                     '-l jobfs=2GB',
-                    '-l walltime=00:30:00',
+                    '-l walltime=01:00:00',
                     '-q=normal',
                     '-W umask=0022',
-                    '-l storage=gdata/access+gdata/dk92+gdata/dp9+gdata/hr22+scratch/access'
+                    '-l storage=gdata/access+gdata/dk92+gdata/dp9+gdata/hr22+gdata/ki32+scratch/access'
                 ]
             },
             'run' : {
@@ -308,21 +309,21 @@
                 'directives' : [
                     '-l ncpus=24',
                     '-l mem=30GB',
-                    '-l walltime=00:10:00',
+                    '-l walltime=02:00:00',
                     '-q=normal',
                     '-W umask=0022',
-                    '-l storage=gdata/access+gdata/dk92+gdata/dp9+gdata/hr22+scratch/access'
+                    '-l storage=gdata/access+gdata/dk92+gdata/dp9+gdata/hr22+gdata/ki32+scratch/access'
                 ]
             },
             'tech' : {
                 'launcher' : 'mpiexec',
                 'directives' : [
-                    '-l ncpus=1',
+                    '-l ncpus=4',
                     '-l mem=3GB',
                     '-l walltime=00:20:00',
                     '-q=normal',
                     '-W umask=0022',
-                    '-l storage=gdata/access+gdata/dk92+gdata/dp9+gdata/hr22+scratch/access'
+                    '-l storage=gdata/access+gdata/dk92+gdata/dp9+gdata/hr22+gdata/ki32+scratch/access'
                 ]
             }
         }
