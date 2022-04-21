@@ -298,8 +298,8 @@
           ['base', 'compiler.'+compiler, 'build', 'tech'],
           ['base'],
           script="""UNIT_TESTS=\"\"
-if [[ -d \$SOURCE_DIRECTORY/unit-test ]] ; then
-    UNIT_TESTS=$(find \$SOURCE_DIRECTORY/unit-test -name \"*test.pf\")
+if [[ -d $SOURCE_DIRECTORY/unit-test ]] ; then
+    UNIT_TESTS=$(find $SOURCE_DIRECTORY/unit-test -name \"*test.pf\")
 fi
 if [[ \"${UNIT_TESTS}\" != \"\" ]] ; then
     rose task-run --app-key=compile
