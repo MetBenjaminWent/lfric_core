@@ -11,27 +11,31 @@ module lfric_xios_context_mod
   use constants_mod,        only : i_native, &
                                    r_second, &
                                    l_def
-  use io_context_mod,       only : io_context_type, &
-                                   io_context_initialiser_type
-  use lfric_xios_clock_mod, only : lfric_xios_clock_type
-  use lfric_xios_file_mod,  only : xios_file_type
+  use field_mod,            only : field_type
+  use file_mod,             only : file_type
+  use io_context_mod,       only : io_context_type
+  use lfric_xios_file_mod,  only : lfric_xios_file_type
   use log_mod,              only : log_event,       &
                                    log_level_error, &
                                    log_level_info
   use step_calendar_mod,    only : step_calendar_type
+  use lfric_xios_clock_mod, only : lfric_xios_clock_type
+  use lfric_xios_setup_mod, only : init_xios_dimensions, &
+                                   setup_xios_files
+  use lfric_xios_file_mod,  only : lfric_xios_file_type
   use lfric_xios_utils_mod, only : parse_date_as_xios
-  use xios,                 only : xios_close_context_definition, &
-                                   xios_context,                  &
-                                   xios_context_finalize,         &
+  use xios,                 only : xios_context,                  &
                                    xios_context_initialize,       &
+                                   xios_close_context_definition, &
+                                   xios_context_finalize,         &
                                    xios_date,                     &
                                    xios_define_calendar,          &
                                    xios_get_handle,               &
-                                   xios_set_current_context
+                                   xios_set_current_context,      &
+                                   xios_context_finalize
 
   implicit none
 
-  public :: filelist_populator
   private
 
   !> Manages interactions with XIOS.
@@ -41,7 +45,7 @@ module lfric_xios_context_mod
     character(:),                 allocatable :: id
     type(xios_context)                        :: handle
     class(lfric_xios_clock_type), allocatable :: clock
-    type(xios_file_type),         allocatable :: filelist(:)
+    type(lfric_xios_file_type),   allocatable :: filelist(:)
 
   contains
     private
@@ -51,16 +55,6 @@ module lfric_xios_context_mod
     final :: finalise
   end type lfric_xios_context_type
 
-abstract interface
-
-  subroutine filelist_populator(files_list, clock)
-    import xios_file_type, clock_type
-    type(xios_file_type), allocatable, intent(out) :: files_list(:)
-    class(clock_type),                 intent(in)  :: clock
-  end subroutine filelist_populator
-
-end interface
-
 contains
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -68,41 +62,38 @@ contains
   !>
   !> @param [in]     id                Unique identifying string.
   !> @param [in]     communicator      MPI communicator used by context.
-  !> @param [in,out] callback          Object to handle model specifics.
+  !> @param [in]     chi               Array of coordinate fields
+  !> @param [in]     panel_id          Panel ID field
   !> @param [in]     start_time        Time of first step.
   !> @param [in]     finish_time       Time of last step.
   !> @param [in]     spinup_period     Number of seconds in spinup period.
   !> @param [in]     seconds_per_step  Number of seconds in a time step.
   !> @param [in]     calendar_start    Start date for calendar
   !> @param [in]     calendar_type     Type of calendar.
-  !> @param [in]     timer_flag        Flag for use of subroutine timers.
-  !> @param [in]     populate_filelist Procedure use to populate list of files
+  !> @param [in]     list_of_files     List of file objects attached to the
+  !!                                   context
   !>
-  subroutine initialise( this, id, communicator,  &
-                         callback,                &
-                         start_time, finish_time, &
-                         spinup_period,           &
-                         seconds_per_step,        &
-                         calendar_start,          &
-                         calendar_type,           &
-                         timer_flag,              &
-                         populate_filelist )
+  subroutine initialise( this, id, communicator,          &
+                         chi, panel_id,                   &
+                         start_time, finish_time,         &
+                         spinup_period, seconds_per_step, &
+                         calendar_start, calendar_type,   &
+                         list_of_files)
 
     implicit none
 
-    class(lfric_xios_context_type),     intent(inout) :: this
-    character(*),                       intent(in)    :: id
-    integer(i_native),                  intent(in)    :: communicator
-    class(io_context_initialiser_type), intent(inout) :: callback
-    character(*),                       intent(in)    :: start_time
-    character(*),                       intent(in)    :: finish_time
-    real(r_second),                     intent(in)    :: spinup_period
-    real(r_second),                     intent(in)    :: seconds_per_step
-    character(*),                       intent(in)    :: calendar_start
-    character(*),                       intent(in)    :: calendar_type
-    logical(l_def), optional,           intent(in)    :: timer_flag
-    procedure(filelist_populator),  &
-                     pointer, optional, intent(in)    :: populate_filelist
+    class(lfric_xios_context_type), intent(inout) :: this
+    character(*),                   intent(in)    :: id
+    integer(i_native),              intent(in)    :: communicator
+    class(field_type),              intent(in)    :: chi(:)
+    class(field_type),              intent(in)    :: panel_id
+    character(*),                   intent(in)    :: start_time
+    character(*),                   intent(in)    :: finish_time
+    real(r_second),                 intent(in)    :: spinup_period
+    real(r_second),                 intent(in)    :: seconds_per_step
+    character(*),                   intent(in)    :: calendar_start
+    character(*),                   intent(in)    :: calendar_type
+    class(file_type),     optional, intent(in)    :: list_of_files(:)
 
     type(step_calendar_type), allocatable :: calendar
     integer(i_native)                     :: rc
@@ -127,25 +118,29 @@ contains
               source=lfric_xios_clock_type( calendar,                &
                                             start_time, finish_time, &
                                             seconds_per_step,        &
-                                            spinup_period,           &
-                                            timer_flag=timer_flag ), &
+                                            spinup_period ),         &
               stat=rc )
     if (rc /= 0) then
       call log_event( "Unable to allocate clock", log_level_error )
     end if
 
-    if (present(populate_filelist)) then
-      call populate_filelist(this%filelist, this%clock)
+    ! Attach optional file list
+    if (present(list_of_files)) then
+      select type(list_of_files)
+      type is (lfric_xios_file_type)
+        this%filelist = list_of_files
+
+      class default
+        call log_event("Files attached to lfric_xios_context_type must be "// &
+                       "of lfric_xios_file_type", log_level_error)
+      end select
     else
       allocate(this%filelist(0))
     end if
 
-    !> @todo Rather than using this callback we might prefer to pass arrays
-    !>       of objects which describe things to be set up. Alternatively we
-    !>       could provide calls to "add axis" and "add file" with a final
-    !>       "complete context".
-    !>
-    call callback%callback( this )
+    ! Run XIOS setup routines
+    call init_xios_dimensions(chi, panel_id)
+    call setup_xios_files(this%filelist, this%clock)
 
     call xios_close_context_definition()
 
@@ -189,10 +184,10 @@ contains
 
     implicit none
 
-    class(lfric_xios_context_type), intent(in) :: this
-    type(xios_file_type), allocatable :: filelist(:)
+    class(lfric_xios_context_type), target, intent(in) :: this
+    class(file_type), pointer :: filelist(:)
 
-    filelist = this%filelist
+    filelist => this%filelist
 
   end function get_filelist
 

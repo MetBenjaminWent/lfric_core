@@ -10,19 +10,12 @@ module io_dev_model_mod
 
   ! Infrastructure
   use base_mesh_config_mod,       only : prime_mesh_name
-  use clock_mod,                  only : clock_type
   use constants_mod,              only : i_def, i_native, &
                                          PRECISION_REAL
   use convert_to_upper_mod,       only : convert_to_upper
   use field_mod,                  only : field_type
   use halo_comms_mod,             only : initialise_halo_comms, &
                                          finalise_halo_comms
-  use io_context_mod,             only : io_context_type, &
-                                         io_context_initialiser_type
-  use lfric_xios_context_mod,     only : filelist_populator
-  use lfric_xios_clock_mod,       only : lfric_xios_clock_type
-  use lfric_xios_file_mod,        only : xios_file_type
-  use lfric_xios_io_mod,          only : initialise_xios
   use local_mesh_collection_mod,  only : local_mesh_collection, &
                                          local_mesh_collection_type
   use log_mod,                    only : log_event,          &
@@ -45,20 +38,16 @@ module io_dev_model_mod
   use timer_mod,                  only : timer, output_timer, init_timer
   ! Configuration
   use configuration_mod,          only : final_configuration
-  use io_config_mod,              only : use_xios_io, subroutine_timers, &
+  use io_config_mod,              only : subroutine_timers, &
                                          timer_output_path
-  use time_config_mod,            only : timestep_end,   &
-                                         timestep_start, &
-                                         calendar_start, &
-                                         calendar_type,  &
-                                         key_from_calendar_type
-  use timestepping_config_mod,    only : dt, spinup_period
   ! IO_Dev driver modules
   use io_dev_mod,                 only : load_configuration
   use io_dev_init_files_mod,      only : init_io_dev_files
   ! Driver modules
   use driver_fem_mod,             only : init_fem, final_fem
   use driver_mesh_mod,            only : init_mesh, final_mesh
+  use driver_io_mod,              only : init_io, final_io, &
+                                         filelist_populator
   ! External libraries
   use xios,                       only : xios_context_finalize
 
@@ -69,15 +58,6 @@ module io_dev_model_mod
          finalise_infrastructure
 
 contains
-
-  !> @brief Populate I/O context's list of interesting files.
-  !>
-  subroutine initialise_context( file_list, clock )
-    implicit none
-    type(xios_file_type), allocatable, intent(out) :: file_list(:)
-    class(clock_type),       intent(in)    :: clock
-    call init_io_dev_files( file_list, clock )
-  end subroutine initialise_context
 
   !> @brief Initialises the infrastructure components of the model.
   !>
@@ -90,7 +70,6 @@ contains
   !> @param[in,out] chi          A size 3 array of fields holding the
   !>                             coordinates of the mesh
   !> @param[in,out] panel_id     A 2D field holding the cubed sphere panel id
-  !> @param[out]    io_context   Initialise context for interacting with I/O.
   !>
   subroutine initialise_infrastructure( filename,     &
                                         program_name, &
@@ -98,8 +77,7 @@ contains
                                         mesh,         &
                                         twod_mesh,    &
                                         chi,          &
-                                        panel_id,     &
-                                        io_context )
+                                        panel_id )
 
     use logging_config_mod, only: run_log_level,          &
                                   key_from_run_log_level, &
@@ -121,13 +99,11 @@ contains
 
     type(field_type),       intent(inout) :: chi(3)
     type(field_type),       intent(inout) :: panel_id
-    class(io_context_type), intent(out), &
-                            allocatable   :: io_context
 
     ! Local variables
     character(*), parameter :: xios_context_id = 'io_dev'
 
-    procedure( filelist_populator ), pointer :: files_init_ptr
+    procedure(filelist_populator), pointer :: files_init_ptr => null()
 
     integer(i_def)    :: total_ranks, local_rank, stencil_depth
     integer(i_native) :: log_level
@@ -192,26 +168,11 @@ contains
     ! Create FEM specifics (function spaces and chi field)
     call init_fem( mesh, chi, panel_id )
 
-
-    ! Set up XIOS domain and context
+    ! Set up IO
     files_init_ptr => init_io_dev_files
-    if ( subroutine_timers ) call timer('initialise_xios')
-    call initialise_xios( io_context,                            &
-                          xios_context_id,                       &
-                          communicator,                          &
-                          mesh,                                  &
-                          twod_mesh,                             &
-                          chi,                                   &
-                          panel_id,                              &
-                          timestep_start,                        &
-                          timestep_end,                          &
-                          spinup_period,                         &
-                          dt,                                    &
-                          calendar_start,                        &
-                          key_from_calendar_type(calendar_type), &
-                          timer_flag=subroutine_timers,          &
-                          populate_filelist=files_init_ptr )
-    if ( subroutine_timers ) call timer('initialise_xios')
+    call init_io( xios_context_id, communicator, &
+                  chi, panel_id,                 &
+                  populate_filelist=files_init_ptr )
 
   end subroutine initialise_infrastructure
 
@@ -224,9 +185,7 @@ contains
     character(*), intent(in) :: program_name
 
     ! Finalise XIOS context if we used it for diagnostic output or checkpointing
-    if ( use_xios_io ) then
-      call xios_context_finalize()
-    end if
+    call final_io()
 
     ! Finalise timer
     if ( subroutine_timers ) then

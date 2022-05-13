@@ -21,8 +21,7 @@ program lfric_coupled
   use mod_wait,           only : init_wait
   use mpi_mod,            only : initialise_comm, &
                                  finalise_comm
-  use xios,               only : xios_initialize, &
-                                 xios_finalize
+  use xios,               only : xios_initialize
   use derived_config_mod, only : l_esm_couple
   use coupler_mod,        only : cpl_initialize, cpl_finalize
 
@@ -36,19 +35,18 @@ program lfric_coupled
 
   call get_initial_filename( filename )
 
-  ! Initialse mpi and create the default communicator: mpi_comm_world
+  ! Initialse MPI and create the default communicator: mpi_comm_world
   call initialise_comm( world_communicator )
 
   ! Initialise XIOS and get back the split mpi communicator
-  if(l_esm_couple) then
-   !mpi already initialized
-       call cpl_initialize( model_communicator )
-       call xios_initialize(xios_id, local_comm = model_communicator)
+  if (l_esm_couple) then
+    ! MPI already initialized
+    call cpl_initialize( model_communicator )
+    call xios_initialize(xios_id, local_comm = model_communicator)
   else
-       call init_wait()
-       call xios_initialize(xios_id, return_comm = model_communicator)
+    call init_wait()
+    call xios_initialize(xios_id, return_comm = model_communicator)
   endif
-
 
   call initialise( filename, model_communicator )
   deallocate( filename )
@@ -57,14 +55,11 @@ program lfric_coupled
 
   call finalise()
 
-  ! Finalise XIOS
-  call xios_finalize()
-
-  if(l_esm_couple) then
-     call cpl_finalize()
+  if (l_esm_couple) then
+    call cpl_finalize()
   endif
 
-  ! Finalise mpi and release the communicator
+  ! Finalise MPI and release the communicator
   call finalise_comm()
 
 end program lfric_coupled

@@ -11,6 +11,7 @@ module gungho_driver_mod
 
   use clock_mod,                  only : clock_type
   use constants_mod,              only : i_def, i_native, imdi
+  use driver_io_mod,              only : get_clock, get_io_context
   use field_mod,                  only : field_type
   use gungho_mod,                 only : program_name
   use gungho_diagnostics_driver_mod, &
@@ -66,8 +67,6 @@ module gungho_driver_mod
   type(mesh_type), pointer :: shifted_mesh      => null()
   type(mesh_type), pointer :: double_level_mesh => null()
 
-  class(io_context_type), allocatable :: io_context
-
 contains
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -84,37 +83,31 @@ contains
     character(*),      intent(in) :: filename
     integer(i_native), intent(in) :: model_communicator
 
-    class(clock_type), pointer :: clock
+    class(io_context_type), pointer :: io_context => null()
 
-   ! Initialise infrastructure and setup constants
+    ! Initialise infrastructure and setup constants
     call initialise_infrastructure( model_communicator,   &
                                     filename,             &
                                     program_name,         &
-                                    io_context,           &
                                     mesh,                 &
                                     twod_mesh,            &
                                     shifted_mesh,         &
                                     double_level_mesh,    &
                                     model_data            )
 
-    clock => io_context%get_clock()
     ! Instantiate the fields stored in model_data
-    call create_model_data( model_data, mesh, twod_mesh, &
-                            clock )
+    call create_model_data( model_data, mesh, twod_mesh )
 
     ! Initialise the fields stored in the model_data
-    call initialise_model_data( model_data, clock )
-
-
+    call initialise_model_data( model_data )
 
     ! Initial output
+    io_context => get_io_context()
     call write_initial_output( mesh, twod_mesh, model_data, &
                                io_context, nodal_output_on_w3 )
 
     ! Model configuration initialisation
-    call initialise_model( clock, &
-                           mesh,  &
-                           model_data )
+    call initialise_model( mesh, model_data )
 
 #ifdef COUPLED
     ! Placeholder for ESM coupling initialisation code.
@@ -138,7 +131,7 @@ contains
 #ifdef COUPLED
     integer(i_def)             :: cpl_step
 #endif
-    class(clock_type), pointer :: clock
+    class(clock_type), pointer :: clock => null()
 
     write(log_scratch_space,'(A)') 'Running '//program_name//' ...'
     call log_event( log_scratch_space, LOG_LEVEL_ALWAYS )
@@ -151,7 +144,7 @@ contains
       call log_event( log_scratch_space, LOG_LEVEL_ALWAYS )
     endif
 
-    clock => io_context%get_clock()
+    clock => get_clock()
     do while (clock%tick())
 
 #ifdef COUPLED
@@ -222,14 +215,10 @@ contains
 
     implicit none
 
-    class(clock_type), pointer :: clock
-
     call log_event( 'Finalising '//program_name//' ...', LOG_LEVEL_ALWAYS )
 
-    clock => io_context%get_clock()
-
     ! Output the fields stored in the model_data (checkpoint and dump)
-    call output_model_data( model_data, clock )
+    call output_model_data( model_data )
 
     ! Model configuration finalisation
     call finalise_model( model_data, &
@@ -240,7 +229,6 @@ contains
 
     ! Finalise infrastructure and constants
     call finalise_infrastructure( program_name )
-    deallocate( io_context )
 
   end subroutine finalise
 

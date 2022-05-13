@@ -17,6 +17,7 @@ module multires_coupling_driver_mod
                                                        multires_coupling_mode,      &
                                                        multires_coupling_mode_test
   use variable_fields_mod,                      only : update_variable_fields
+  use driver_io_mod,                            only : get_clock
   use gungho_step_mod,                          only : gungho_step
   use clock_mod,                                only : clock_type
   use constants_mod,                            only : i_def, i_native, &
@@ -50,8 +51,6 @@ module multires_coupling_driver_mod
 
   private
   public initialise, run, finalise
-
-  class(io_context_type), allocatable :: io_context
 
   ! Model run working data set
   type (model_data_type) :: dynamics_mesh_model_data
@@ -104,7 +103,6 @@ contains
     call initialise_infrastructure( model_communicator,        &
                                     filename,                  &
                                     program_name,              &
-                                    io_context,                &
                                     prime_mesh,                &
                                     prime_2D_mesh,             &
                                     prime_shifted_mesh,        &
@@ -124,22 +122,20 @@ contains
     !-------------------------------------------------------------------------
     call log_event( 'Creating and Initialising Model Data...', LOG_LEVEL_ALWAYS )
 
-    clock => io_context%get_clock()
+    clock => get_clock()
 
     ! Instantiate the fields stored in model_data
     call create_model_data( dynamics_mesh_model_data, &
                             dynamics_mesh,            &
-                            dynamics_2D_mesh,         &
-                            clock )
+                            dynamics_2D_mesh )
     call create_model_data( physics_mesh_model_data, &
                             physics_mesh,            &
-                            physics_2D_mesh,         &
-                            clock )
+                            physics_2D_mesh )
 
 
     ! Initialise the fields stored in the model_data
-    call initialise_model_data( dynamics_mesh_model_data, clock )
-    call initialise_model_data( physics_mesh_model_data, clock )
+    call initialise_model_data( dynamics_mesh_model_data )
+    call initialise_model_data( physics_mesh_model_data )
 
    ! Initial output
    ! We only want these once at the beginning of a run
@@ -170,7 +166,7 @@ contains
 
     class(clock_type), pointer :: clock
 
-    clock => io_context%get_clock()
+    clock => get_clock()
 
     if ( multires_coupling_mode == multires_coupling_mode_test ) then
       ! Call coupling test algorithm
@@ -210,7 +206,7 @@ contains
 
     class(clock_type), pointer :: clock
 
-    clock => io_context%get_clock()
+    clock => get_clock()
 
     !-----------------------------------------------------------------------------
     ! Model finalise

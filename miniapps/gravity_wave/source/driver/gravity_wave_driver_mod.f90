@@ -10,10 +10,9 @@ module gravity_wave_driver_mod
 
   use clock_mod,                      only: clock_type
   use constants_mod,                  only: i_def, i_native, r_def
+  use driver_io_mod,                  only: get_clock
   use gravity_wave_infrastructure_mod,only: initialise_infrastructure, &
                                             finalise_infrastructure
-  use gravity_wave_io_mod,            only: initialise_io, &
-                                            finalise_io
   use create_gravity_wave_prognostics_mod, &
                                       only: create_gravity_wave_prognostics
   use field_mod,                      only: field_type
@@ -68,8 +67,6 @@ module gravity_wave_driver_mod
   type( mesh_type ), pointer :: mesh      => null()
   type( mesh_type ), pointer :: twod_mesh => null()
 
-  class(io_context_type), allocatable :: io_context
-
 contains
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -88,7 +85,6 @@ contains
   call initialise_infrastructure( model_communicator, &
                                   filename,           &
                                   program_name,       &
-                                  io_context,         &
                                   mesh,               &
                                   twod_mesh)
 
@@ -119,7 +115,7 @@ contains
   ! Create the prognostic fields
   call create_gravity_wave_prognostics(mesh, wind, pressure, buoyancy)
 
-  clock => io_context%get_clock()
+  clock => get_clock()
 
   ! Initialise prognostic fields
   if (checkpoint_read) then                 ! R ecorded check point to start from
@@ -172,7 +168,7 @@ contains
   write(log_scratch_space,'(A,I0,A)') 'Running '//program_name//' ...'
   call log_event( log_scratch_space, LOG_LEVEL_ALWAYS )
 
-  clock => io_context%get_clock()
+  clock => get_clock()
 
   !--------------------------------------------------------------------------
   ! Model step
@@ -225,7 +221,7 @@ contains
 
   class(clock_type), pointer :: clock
 
-  clock => io_context%get_clock()
+  clock => get_clock()
 
   !--------------------------------------------------------------------------
   ! Model finalise
@@ -260,8 +256,6 @@ contains
   !--------------------------------------------------------------------------
   ! Driver layer finalise
   !--------------------------------------------------------------------------
-
-  call finalise_io()
 
   call log_event( program_name//' completed.', LOG_LEVEL_ALWAYS )
 

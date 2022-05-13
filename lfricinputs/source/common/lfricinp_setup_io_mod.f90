@@ -5,13 +5,13 @@
 ! *****************************COPYRIGHT*******************************
 MODULE lfricinp_setup_io_mod
 
-USE clock_mod,                     ONLY: clock_type
 USE constants_mod,                 ONLY: i_def, str_max_filename
+USE driver_io_mod,                 ONLY: append_file_to_list
+USE file_mod,                      ONLY: file_type
 USE log_mod,                       ONLY: log_event, log_scratch_space,         &
                                          LOG_LEVEL_INFO, LOG_LEVEL_ERROR
-USE lfric_xios_file_mod,           ONLY: xios_file_type,                       &
-                                         append_file_to_list
-
+USE lfric_xios_file_mod,           ONLY: lfric_xios_file_type
+USE time_config_mod,               ONLY: timestep_end
 IMPLICIT NONE
 
 INTEGER, PARAMETER              :: max_number_ancfiles = 20
@@ -58,14 +58,13 @@ CLOSE(unit_number)
 END SUBROUTINE init_io_setup
 
 
-SUBROUTINE init_lfricinp_files(files_list, clock)
+SUBROUTINE init_lfricinp_files(files_list)
 
 IMPLICIT NONE
 
-TYPE(xios_file_type), ALLOCATABLE, INTENT(OUT) :: files_list(:)
-CLASS(clock_type),               INTENT(IN)    :: clock
+CLASS(file_type), ALLOCATABLE, INTENT(OUT) :: files_list(:)
 
-TYPE(xios_file_type)                   :: tmp_file
+TYPE(lfric_xios_file_type) :: tmp_file
 
 INTEGER, PARAMETER                     :: checkpoint_frequency = 1
 CHARACTER(LEN=str_max_filename)        :: ancil_xios_file_id,                  &
@@ -73,12 +72,8 @@ CHARACTER(LEN=str_max_filename)        :: ancil_xios_file_id,                  &
                                           afm
 INTEGER                                :: split_idx, i
 
-WRITE(log_scratch_space, *) 'Setting up file list. Current clock step is: ',   &
-                            clock % get_step()
-CALL log_event(log_scratch_space, LOG_LEVEL_INFO)
-
 IF (ancil_read) THEN
-  ! Set ancil file reading context informatio for all required ancil files
+  ! Set ancil file reading context information for all required ancil files
   DO i = 1, max_number_ancfiles
     ! Exit loop if entry in acil file map is unset
     afm = ancil_file_map(i)
@@ -88,8 +83,8 @@ IF (ancil_read) THEN
     ancil_xios_file_id = afm(1:split_idx-1)
     ancil_file_path = afm(split_idx+1:)
     ! Initial ancil file and insert file in file list
-    CALL tmp_file%init_xios_file(TRIM(ancil_xios_file_id),                     &
-                               path=TRIM(ancil_file_path))
+    CALL tmp_file%file_new(TRIM(ancil_file_path))
+    CALL tmp_file%configure(xios_id=TRIM(ancil_xios_file_id))
     CALL append_file_to_list(tmp_file, files_list)
   END DO
 END IF
@@ -97,17 +92,17 @@ END IF
 ! Setup checkpoint writing context information
 IF (checkpoint_write) THEN
   ! Create checkpoint filename from stem and first timestep
-  CALL tmp_file%init_xios_file("lfric_checkpoint_write",                       &
-                               path=TRIM(checkpoint_write_file),               &
-                               freq=checkpoint_frequency)
+  CALL tmp_file%file_new(TRIM(checkpoint_write_file))
+  CALL tmp_file%configure(xios_id="lfric_checkpoint_write",               &
+                          freq=checkpoint_frequency)
   CALL append_file_to_list(tmp_file, files_list)
 END IF
 
 ! Setup checkpoint reading context information
 IF (checkpoint_read) THEN
   ! Create checkpoint filename from stem
-  CALL tmp_file%init_xios_file("lfric_checkpoint_read",                       &
-                               path=TRIM(checkpoint_read_file))
+  CALL tmp_file%file_new(TRIM(checkpoint_read_file))
+  CALL tmp_file%configure(xios_id="lfric_checkpoint_read")
   CALL append_file_to_list(tmp_file, files_list)
 END IF
 

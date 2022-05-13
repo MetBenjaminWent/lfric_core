@@ -13,6 +13,8 @@ module gungho_model_mod
   use checksum_alg_mod,           only : checksum_alg
   use clock_mod,                  only : clock_type
   use driver_fem_mod,             only : init_fem, final_fem
+  use driver_io_mod,              only : init_io, final_io, get_clock, &
+                                         filelist_populator
   use driver_mesh_mod,            only : init_mesh, final_mesh
   use configuration_mod,          only : final_configuration
   use check_configuration_mod,    only : get_required_stencil_depth
@@ -48,13 +50,6 @@ module gungho_model_mod
                                          write_minmax_tseries,    &
                                          timer_output_path,       &
                                          counter_output_suffix
-  use io_context_mod,             only : io_context_type
-  use lfric_xios_clock_mod,       only : lfric_xios_clock_type
-  use lfric_xios_context_mod,     only : lfric_xios_context_type, &
-                                         filelist_populator
-  use lfric_xios_io_mod,          only : initialise_xios
-  use lfric_xios_write_mod,       only : write_state, &
-                                         write_field_single_face
   use linked_list_mod,            only : linked_list_type
   use local_mesh_collection_mod,  only : local_mesh_collection, &
                                          local_mesh_collection_type
@@ -92,13 +87,6 @@ module gungho_model_mod
   use section_choice_config_mod,  only : radiation,         &
                                          radiation_socrates,&
                                          surface, surface_jules
-  use simple_io_mod,              only : initialise_simple_io
-  use simple_io_context_mod,      only : simple_io_context_type
-  use time_config_mod,            only : timestep_start, &
-                                         timestep_end,   &
-                                         calendar_start, &
-                                         calendar_type,  &
-                                         key_from_calendar_type
   use timer_mod,                  only : timer, output_timer, init_timer
   use timestepping_config_mod,    only : dt,                     &
                                          method,                 &
@@ -146,7 +134,6 @@ contains
   !>                              (not XIOS' communicator)
   !> @param [in]     filename     The name of the configuration namelist file
   !> @param [in]     program_name An identifier given to the model begin run
-  !> @param [out]    clock Model  time
   !> @param [in,out] mesh         The current 3d mesh
   !> @param [in,out] twod_mesh    The current 2d mesh
   !> @param [in,out] shifted_mesh The vertically shifted 3d mesh
@@ -155,7 +142,6 @@ contains
   subroutine initialise_infrastructure( communicator,         &
                                         filename,             &
                                         program_name,         &
-                                        io_context,           &
                                         mesh,                 &
                                         twod_mesh,            &
                                         shifted_mesh,         &
@@ -175,7 +161,6 @@ contains
     integer(i_native),      intent(in)               :: communicator
     character(*),           intent(in)               :: filename
     character(*),           intent(in)               :: program_name
-    class(io_context_type), intent(out), allocatable :: io_context
 
     type(mesh_type), intent(inout), pointer :: mesh
     type(mesh_type), intent(inout), pointer :: shifted_mesh
@@ -186,7 +171,7 @@ contains
 
     character(len=*), parameter :: io_context_name = "gungho_atm"
 
-    procedure(filelist_populator), pointer :: files_init_ptr
+    procedure(filelist_populator), pointer :: files_init_ptr => null()
 
     integer(i_def)    :: total_ranks, local_rank, stencil_depth
     integer(i_native) :: log_level
@@ -333,32 +318,12 @@ contains
 
     call log_event("Initialising I/O context", LOG_LEVEL_INFO)
 
-    if ( use_xios_io ) then
-      files_init_ptr => init_gungho_files
-      call initialise_xios( io_context,                            &
-                            io_context_name,                       &
-                            communicator,                          &
-                            mesh,                                  &
-                            twod_mesh,                             &
-                            chi,                                   &
-                            panel_id,                              &
-                            timestep_start,                        &
-                            timestep_end,                          &
-                            spinup_period,                         &
-                            dt,                                    &
-                            calendar_start,                        &
-                            key_from_calendar_type(calendar_type), &
-                            populate_filelist=files_init_ptr )
-    else
-      call initialise_simple_io( &
-                            io_context,                    &
-                            timestep_start,                &
-                            timestep_end,                  &
-                            spinup_period,                 &
-                            dt )
-    end if
+    files_init_ptr => init_gungho_files
+    call init_io( io_context_name, communicator, &
+                  chi, panel_id,                 &
+                  populate_filelist=files_init_ptr )
 
-    clock => io_context%get_clock()
+    clock => get_clock()
     dt_model = real(clock%get_seconds_per_step(), r_def)
 
     ! Set up surface altitude field - this will be used to generate orography
@@ -432,18 +397,15 @@ contains
   !---------------------------------------------------------------------------
   !> @brief Initialises the gungho application
   !>
-  !> @param[in] clock Model time
   !> @param[in] mesh  The primary mesh
   !> @param[in,out] model_data The working data set for the model run
   !>
-  subroutine initialise_model( clock, &
-                               mesh,  &
+  subroutine initialise_model( mesh,  &
                                model_data )
     implicit none
 
-    class(clock_type),       intent(in), pointer   :: clock
-    type(mesh_type),         intent(in), pointer   :: mesh
-    type( model_data_type ), intent(inout), target :: model_data
+    type(mesh_type),         intent(in),    pointer :: mesh
+    type( model_data_type ), intent(inout), target  :: model_data
 
     type( field_collection_type ), pointer :: prognostic_fields => null()
     type( field_collection_type ), pointer :: diagnostic_fields => null()
@@ -453,6 +415,10 @@ contains
     type( field_type), pointer :: u => null()
     type( field_type), pointer :: rho => null()
     type( field_type), pointer :: exner => null()
+
+    class(clock_type), pointer :: clock => null()
+
+    clock => get_clock()
 
     use_moisture = ( moisture_formulation /= moisture_formulation_dry )
 
@@ -522,6 +488,12 @@ contains
     implicit none
 
     character(*), intent(in) :: program_name
+
+    !-------------------------------------------------------------------------
+    ! Finalise I/O
+    !-------------------------------------------------------------------------
+
+    call final_io()
 
     !-------------------------------------------------------------------------
     ! Finalise constants

@@ -12,6 +12,9 @@ module diagnostics_driver_mod
   use clock_mod,                     only : clock_type
   use constants_mod,                 only : i_def, i_native, str_def, r_def
   use diagnostics_configuration_mod, only : load_configuration, program_name
+  use driver_fem_mod,                only : init_fem
+  use driver_io_mod,                 only : init_io, final_io, get_clock
+  use driver_mesh_mod,               only : init_mesh
   use field_mod,                     only : field_type
   use field_parent_mod,              only : field_parent_type
   use field_collection_mod,          only : field_collection_type
@@ -41,7 +44,6 @@ module diagnostics_driver_mod
   use mpi_mod,                       only : store_comm,    &
                                             get_comm_size, &
                                             get_comm_rank
-  use simple_io_mod,                 only : initialise_simple_io
 
   implicit none
 
@@ -58,9 +60,6 @@ module diagnostics_driver_mod
   type(mesh_type), pointer :: mesh      => null()
   type(mesh_type), pointer :: twod_mesh => null()
 
-
-  class(io_context_type), allocatable :: io_context
-
   character(len = *), public, parameter :: xios_ctx = program_name
   character(len = *), public, parameter :: xios_id = "lfric_client"
 
@@ -75,11 +74,8 @@ contains
   subroutine initialise( filename, model_communicator )
 
     use convert_to_upper_mod,       only : convert_to_upper
-    use driver_fem_mod,             only : init_fem
-    use driver_mesh_mod,            only : init_mesh
     use fieldspec_xml_parser_mod,   only : populate_fieldspec_collection
     use init_diagnostics_mod,       only : init_diagnostics
-    use lfric_xios_io_mod,          only : initialise_xios
     use logging_config_mod,         only : run_log_level, &
                                            key_from_run_log_level, &
                                            RUN_LOG_LEVEL_ERROR, &
@@ -89,11 +85,6 @@ contains
                                            RUN_LOG_LEVEL_WARNING
     use mod_wait,                   only : init_wait
     use seed_diagnostics_mod,       only : seed_diagnostics
-    use time_config_mod,            only : timestep_end,   &
-                                           timestep_start, &
-                                           calendar_start, &
-                                           calendar_type,  &
-                                           key_from_calendar_type
     use timestepping_config_mod,    only : dt, &
                                            spinup_period
     use diagnostics_miniapp_config_mod, only : iodef_path
@@ -174,30 +165,12 @@ contains
     call log_event("Populating fieldspec collection", LOG_LEVEL_INFO)
     call populate_fieldspec_collection(iodef_path)
 
-    if (use_xios_io) then
-      call log_event( "init XIOS", log_level_info )
-      call initialise_xios( io_context,         &
-                            xios_ctx,           &
-                            model_communicator, &
-                            mesh,               &
-                            twod_mesh,          &
-                            chi,                &
-                            panel_id,           &
-                            timestep_start,     &
-                            timestep_end,       &
-                            spinup_period,      &
-                            dt,                 &
-                            calendar_start,     &
-                            key_from_calendar_type(calendar_type) )
-    else
-      call initialise_simple_io( io_context,     &
-                                 timestep_start, &
-                                 timestep_end,   &
-                                 spinup_period,  &
-                                 dt )
-    end if
+    call init_io( xios_ctx,           &
+                  model_communicator, &
+                  chi,                &
+                  panel_id )
 
-    clock => io_context%get_clock()
+    clock => get_clock()
     dt_model = real(clock%get_seconds_per_step(), r_def)
 
     ! Create and initialise prognostic fields
@@ -224,7 +197,7 @@ contains
 
     class(clock_type), pointer :: clock
 
-    clock => io_context%get_clock()
+    clock => get_clock()
 
     ! standard timestepping from gungho
     do while (clock%tick())
@@ -286,7 +259,7 @@ contains
     ! Driver layer finalise
     !----------------------------------------------------------------------
 
-    deallocate( io_context )
+    call final_io()
 
     ! Finalise namelist configurations
     call final_configuration()

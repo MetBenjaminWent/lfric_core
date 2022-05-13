@@ -16,8 +16,7 @@ program io_dev
   use mod_wait,          only: init_wait
   use mpi_mod,           only: finalise_comm, &
                                initialise_comm
-  use xios,              only: xios_finalize, &
-                               xios_initialize
+  use xios,              only: xios_initialize
 
   implicit none
 
@@ -41,9 +40,6 @@ program io_dev
   call run()
 
   call finalise()
-
-  ! Finalise XIOS
-  call xios_finalize()
 
   ! Finalise mpi and release the communicator
   call finalise_comm()

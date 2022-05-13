@@ -11,6 +11,7 @@ module tl_test_driver_mod
 
   use clock_mod,                  only : clock_type
   use constants_mod,              only : i_def, i_native, imdi
+  use driver_io_mod,              only : get_clock
   use gungho_mod,                 only : program_name
   use gungho_model_mod,           only : initialise_infrastructure, &
                                          initialise_model,          &
@@ -66,8 +67,6 @@ module tl_test_driver_mod
   type(mesh_type), pointer :: shifted_mesh      => null()
   type(mesh_type), pointer :: double_level_mesh => null()
 
-  class(io_context_type), allocatable :: io_context
-
 contains
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -88,19 +87,17 @@ contains
     call initialise_infrastructure( model_communicator,   &
                                     filename,             &
                                     program_name,         &
-                                    io_context,           &
                                     mesh,                 &
                                     twod_mesh,            &
                                     shifted_mesh,         &
                                     double_level_mesh,    &
                                     model_data  )
 
-    clock => io_context%get_clock()
+    clock => get_clock()
     ! Instantiate the fields stored in model_data
     call create_model_data( model_data, &
                             mesh,       &
-                            twod_mesh,  &
-                            clock )
+                            twod_mesh )
 
     ! Instantiate the linearisation state
     call linear_create_ls( model_data, &
@@ -109,11 +106,10 @@ contains
 
     ! Initialise the fields stored in the model_data prognostics. This needs
     ! to be done before initialise_model.
-    call initialise_model_data( model_data, clock )
+    call initialise_model_data( model_data )
 
     ! Model configuration initialisation
-    call initialise_model( clock, &
-                           mesh,  &
+    call initialise_model( mesh,  &
                            model_data )
 
     ! Initialise the linearisation state
@@ -132,7 +128,7 @@ contains
 
     class(clock_type), pointer :: clock
 
-    clock => io_context%get_clock()
+    clock => get_clock()
 
     call test_timesteps( model_data, &
                          mesh,       &
@@ -216,7 +212,7 @@ contains
     implicit none
 
     class(clock_type), pointer :: clock
-    clock => io_context%get_clock()
+    clock => get_clock()
 
     call test_rk_alg( model_data, &
                       mesh,       &
@@ -229,6 +225,9 @@ contains
 
     implicit none
 
+    class(clock_type), pointer :: clock
+    clock => get_clock()
+
     call test_transport_control( model_data, &
                                  mesh,       &
                                  twod_mesh )
@@ -240,7 +239,7 @@ contains
     implicit none
 
     class(clock_type), pointer :: clock
-    clock => io_context%get_clock()
+    clock => get_clock()
 
     call test_semi_imp_alg( model_data, &
                             mesh,       &

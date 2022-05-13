@@ -18,14 +18,13 @@ module skeleton_driver_mod
   use convert_to_upper_mod,       only : convert_to_upper
   use driver_mesh_mod,            only : init_mesh
   use driver_fem_mod,             only : init_fem
+  use driver_io_mod,              only : init_io, final_io, &
+                                         get_clock
   use field_mod,                  only : field_type
   use halo_comms_mod,             only : initialise_halo_comms, &
                                          finalise_halo_comms
   use init_skeleton_mod,          only : init_skeleton
-  use lfric_xios_io_mod,          only : initialise_xios
-  use io_config_mod,              only : write_diag, &
-                                         use_xios_io
-  use io_context_mod,             only : io_context_type
+  use io_config_mod,              only : write_diag
   use lfric_xios_clock_mod,       only : lfric_xios_clock_type
   use lfric_xios_context_mod,     only : lfric_xios_context_type
   use local_mesh_collection_mod,  only : local_mesh_collection, &
@@ -49,26 +48,14 @@ module skeleton_driver_mod
                                          get_comm_size, &
                                          get_comm_rank
   use planet_config_mod,          only : scaled_radius
-  use simple_io_mod,              only : initialise_simple_io
-  use simple_io_context_mod,      only : simple_io_context_type
   use skeleton_mod,               only : load_configuration, program_name
   use skeleton_alg_mod,           only : skeleton_alg
-  use time_config_mod,            only : timestep_start, &
-                                         timestep_end,   &
-                                         calendar_start, &
-                                         calendar_type,  &
-                                         key_from_calendar_type
-  use timestepping_config_mod,    only : dt, &
-                                         spinup_period
-  use xios,                       only : xios_context_finalize, &
-                                         xios_update_calendar
+  use xios,                       only : xios_context_finalize
 
   implicit none
 
   private
   public initialise, run, finalise
-
-  class(io_context_type), allocatable :: io_context
 
   ! Prognostic fields
   type( field_type ) :: field_1
@@ -102,8 +89,8 @@ contains
     integer(i_def)    :: total_ranks, local_rank, stencil_depth
     integer(i_native) :: log_level
 
-    class(clock_type), pointer         :: clock
-    real(r_def)                        :: dt_model
+    class(clock_type),      pointer :: clock => null()
+    real(r_def)                     :: dt_model
 
     !Store the MPI communicator for later use
     call store_comm( model_communicator )
@@ -165,36 +152,11 @@ contains
     ! Create FEM specifics (function spaces and chi field)
     call init_fem( mesh, chi, panel_id )
 
-    !-------------------------------------------------------------------------
-    ! IO init
-    !-------------------------------------------------------------------------
+    ! Initialise I/O context
+    call init_io( program_name, model_communicator, chi, panel_id )
 
-    ! If using XIOS for diagnostic output or checkpointing, then set up
-    ! XIOS domain and context
-
-    if ( use_xios_io ) then
-      call initialise_xios( io_context,         &
-                            program_name,       &
-                            model_communicator, &
-                            mesh,               &
-                            twod_mesh,          &
-                            chi,                &
-                            panel_id,           &
-                            timestep_start,     &
-                            timestep_end,       &
-                            spinup_period,      &
-                            dt,                 &
-                            calendar_start,     &
-                            key_from_calendar_type(calendar_type) )
-    else
-      call initialise_simple_io( io_context,     &
-                                 timestep_start, &
-                                 timestep_end,   &
-                                 spinup_period,  &
-                                 dt )
-    end if
-
-    clock => io_context%get_clock()
+    ! Get dt from model clock
+    clock => get_clock()
     dt_model = real(clock%get_seconds_per_step(), r_def)
 
     ! Create and initialise prognostic fields
@@ -209,10 +171,10 @@ contains
 
     implicit none
 
-    class(clock_type), pointer :: clock
-    logical                    :: running
+    class(clock_type),      pointer :: clock => null()
+    logical                         :: running
 
-    clock => io_context%get_clock()
+    clock => get_clock()
     running = clock%tick()
 
     ! Call an algorithm
@@ -249,10 +211,8 @@ contains
     ! Driver layer finalise
     !-------------------------------------------------------------------------
 
-   ! Finalise XIOS context if we used it for diagnostic output or checkpointing
-    if ( use_xios_io ) then
-      call xios_context_finalize()
-    end if
+    ! Finalise IO
+    call final_io()
 
     ! Finalise namelist configurations
     call final_configuration()

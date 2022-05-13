@@ -76,6 +76,7 @@ module gungho_model_data_mod
 #endif
   use linked_list_mod,                    only : linked_list_type, &
                                                  linked_list_item_type
+  use driver_io_mod,                      only : get_clock
 
   implicit none
 
@@ -338,15 +339,17 @@ contains
   !> @param[in]    twod_mesh The current 2d mesh
   subroutine create_model_data( model_data, &
                                 mesh,       &
-                                twod_mesh,  &
-                                clock )
+                                twod_mesh )
 
     implicit none
 
     type( model_data_type ), intent(inout) :: model_data
     type( mesh_type ), intent(in), pointer :: mesh
     type( mesh_type ), intent(in), pointer :: twod_mesh
-    class(clock_type), intent(in)          :: clock
+
+    class(clock_type), pointer :: clock => null()
+
+    clock => get_clock()
 
     !-------------------------------------------------------------------------
     ! Select how to initialize model prognostic fields
@@ -438,17 +441,20 @@ contains
   !-------------------------------------------------------------------------------
   !> @brief Initialises the working data set dependent of namelist configuration
   !> @param [inout] model_data The working data set for a model run
-  subroutine initialise_model_data( model_data, clock )
+  subroutine initialise_model_data( model_data )
 
     implicit none
 
     type( model_data_type ), intent(inout) :: model_data
-    class(clock_type),       intent(in)    :: clock
+
+    class(clock_type), pointer :: clock => null()
 
     type( field_type ), pointer :: theta => null()
     type( field_type ), pointer :: rho   => null()
     type( field_type ), pointer :: u     => null()
     type( field_type ), pointer :: exner => null()
+
+    clock => get_clock()
 
     ! Initialise all the physics fields here. We'll then re initialise
     ! them below if need be
@@ -607,16 +613,18 @@ contains
   !> @param[inout] model_data The working data set for the model run
   !> @param[in] clock Model time.
   !>
-  subroutine output_model_data( model_data, &
-                                clock )
+  subroutine output_model_data( model_data )
 
     implicit none
 
     type( model_data_type ), intent(inout), target :: model_data
-    class(clock_type),       intent(in)            :: clock
 
     type( field_collection_type ), pointer :: fd_fields => null()
     type( field_collection_type ), pointer :: prognostic_fields => null()
+
+    class(clock_type), pointer :: clock => null()
+
+    clock => get_clock()
 
     ! Get pointers to field collections for use downstream
     fd_fields => model_data%fd_fields

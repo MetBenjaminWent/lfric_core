@@ -12,26 +12,25 @@ USE log_mod,                    ONLY: log_event, log_scratch_space,            &
                                       finalise_logging
 
 ! LFRic Modules
-USE lfric_xios_io_mod,          ONLY: initialise_xios
-USE clock_mod,                  ONLY: clock_type
 USE driver_mesh_mod,            ONLY: init_mesh
 use driver_fem_mod,             ONLY: init_fem
 USE derived_config_mod,         ONLY: set_derived_config
 USE extrusion_mod,              ONLY: extrusion_type
 USE field_collection_mod,       ONLY: field_collection_type
 USE field_mod,                  ONLY: field_type
+USE file_mod,                   ONLY: file_type
 USE gungho_extrusion_mod,       ONLY: create_extrusion
 USE halo_comms_mod,             ONLY: initialise_halo_comms
-USE io_context_mod,             ONLY: io_context_type
 USE mod_wait,                   ONLY: init_wait
-USE lfric_xios_context_mod,     ONLY: filelist_populator
+USE lfric_xios_context_mod,     ONLY: lfric_xios_context_type
 USE lfricinp_setup_io_mod,      ONLY: init_lfricinp_files
 USE local_mesh_collection_mod,  ONLY: local_mesh_collection,                   &
                                       local_mesh_collection_type
 USE mesh_collection_mod,        ONLY: mesh_collection,                         &
                                       mesh_collection_type
 USE mesh_mod,                   ONLY: mesh_type
-
+USE time_config_mod,            ONLY: calendar_start, calendar_type, &
+                                      key_from_calendar_type
 ! Interface to mpi
 USE mpi_mod,                    ONLY: initialise_comm, store_comm,             &
                                       get_comm_size, get_comm_rank,            &
@@ -69,7 +68,7 @@ TYPE(mesh_type), PUBLIC, pointer :: twod_mesh => null()
 ! Container for all input fields
 TYPE(field_collection_type) :: lfric_fields
 
-CLASS(io_context_type), ALLOCATABLE :: io_context
+type(lfric_xios_context_type) :: io_context
 
 CONTAINS
 
@@ -93,14 +92,12 @@ INTEGER(KIND=i_def), INTENT(IN) :: first_step, last_step
 REAL(r_second),      INTENT(IN) :: spinup_period
 REAL(r_second),      INTENT(IN) :: seconds_per_step
 
-PROCEDURE(filelist_populator), POINTER :: populate_pointer
-
 CHARACTER(LEN=10) :: char_first_step, char_last_step
 
 INTEGER(KIND=i_def) :: stencil_depth
 
 CLASS(extrusion_type), ALLOCATABLE :: extrusion
-
+CLASS(file_type),      ALLOCATABLE :: file_list(:)
 
 ! Set module variables
 program_name = program_name_arg
@@ -156,21 +153,18 @@ CALL init_fem(mesh, chi, panel_id)
 ! XIOS domain initialisation
 WRITE(char_first_step,'(I8)') first_step
 WRITE(char_last_step,'(I8)') last_step
-populate_pointer => init_lfricinp_files
-CALL initialise_xios( io_context,                          &
-                      xios_ctx,                            &
-                      comm,                                &
-                      mesh,                                &
-                      twod_mesh,                           &
-                      chi,                                 &
-                      panel_id,                            &
-                      TRIM(ADJUSTL(char_first_step)),      &
-                      TRIM(ADJUSTL(char_last_step)),       &
-                      spinup_period,                       &
-                      seconds_per_step,                    &
-                      time_origin,                         &
-                      calendar,                            &
-                      populate_filelist=populate_pointer )
+CALL init_lfricinp_files(file_list)
+CALL io_context%initialise( xios_ctx,                                   &
+                            comm,                                       &
+                            chi,                                        &
+                            panel_id,                                   &
+                            TRIM(ADJUSTL(char_first_step)),             &
+                            TRIM(ADJUSTL(char_last_step)),              &
+                            spinup_period,                              &
+                            seconds_per_step,                           &
+                            calendar_start,                             &
+                            key_from_calendar_type(calendar_type),      &
+                            file_list )
 
 END SUBROUTINE lfricinp_initialise_lfric
 

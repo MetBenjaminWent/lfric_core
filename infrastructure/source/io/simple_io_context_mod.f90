@@ -9,7 +9,9 @@ module simple_io_context_mod
 
   use clock_mod,         only : clock_type
   use constants_mod,     only : i_native, r_second
-  use io_context_mod,    only : io_context_type, io_context_initialiser_type
+  use field_mod,         only : field_type
+  use file_mod,          only : file_type
+  use io_context_mod,    only : io_context_type
   use log_mod,           only : log_event, log_level_error
   use model_clock_mod,   only : model_clock_type
   use step_calendar_mod, only : step_calendar_type
@@ -26,10 +28,12 @@ module simple_io_context_mod
   type, public, extends(io_context_type) :: simple_io_context_type
     private
     type(model_clock_type), allocatable :: clock
+    class(file_type),       allocatable :: filelist(:)
   contains
     private
     procedure, public :: initialise
     procedure, public :: get_clock
+    procedure, public :: get_filelist
   end type simple_io_context_type
 
 contains
@@ -37,26 +41,43 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> @brief Set up a declared simple_io_context object.
   !>
-  !> @param[in] callback          Object to call mid initialisation.
-  !> @param[in] start_time        Tim of first step.
-  !> @param[in] finish_time       Time at end of last step.
-  !> @param[in] spinup_period     Number of seconds in spinup period.
-  !> @param[in] seconds_per_step  Number of seconds in a timestep.
+  !> @param [in]     id                Unique identifying string.
+  !> @param [in]     communicator      MPI communicator used by context.
+  !> @param [in]     chi               Array of coordinate fields
+  !> @param [in]     panel_id          Panel ID field
+  !> @param [in]     start_time        Time of first step.
+  !> @param [in]     finish_time       Time of last step.
+  !> @param [in]     spinup_period     Number of seconds in spinup period.
+  !> @param [in]     seconds_per_step  Number of seconds in a time step.
+  !> @param [in]     calendar_start    Start date for calendar
+  !> @param [in]     calendar_type     Type of calendar.
+  !> @param [in]     list_of_files     List of file objects attached to the
+  !!                                   context
   !>
   subroutine initialise( this,                    &
-                         callback,                &
+                         id, communicator,        &
+                         chi, panel_id,           &
                          start_time, finish_time, &
                          spinup_period,           &
-                         seconds_per_step )
+                         seconds_per_step,        &
+                         calendar_start,          &
+                         calendar_type,           &
+                         list_of_files )
 
     implicit none
 
-    class(simple_io_context_type),      intent(inout), target :: this
-    class(io_context_initialiser_type), intent(inout)         :: callback
-    character(*),                       intent(in) :: start_time
-    character(*),                       intent(in) :: finish_time
-    real(r_second),                     intent(in) :: spinup_period
-    real(r_second),                     intent(in) :: seconds_per_step
+    class(simple_io_context_type), intent(inout) :: this
+    character(*),                  intent(in)    :: id
+    integer(i_native),             intent(in)    :: communicator
+    class(field_type),             intent(in)    :: chi(:)
+    class(field_type),             intent(in)    :: panel_id
+    character(*),                  intent(in)    :: start_time
+    character(*),                  intent(in)    :: finish_time
+    real(r_second),                intent(in)    :: spinup_period
+    real(r_second),                intent(in)    :: seconds_per_step
+    character(*),                  intent(in)    :: calendar_start
+    character(*),                  intent(in)    :: calendar_type
+    class(file_type),    optional, intent(in)    :: list_of_files(:)
 
     type(step_calendar_type), allocatable :: calendar
     integer(i_native)                     :: rc
@@ -73,12 +94,10 @@ contains
     this%clock = model_clock_type( calendar, start_time, finish_time, &
                                    seconds_per_step, spinup_period )
 
-    !> @todo Rather than using this callback we might prefer to pass arrays
-    !>       of objects which describe things to be set up. Alternatively we
-    !>       could provide calls to "add axis" and "add file" with a final
-    !>       "complete context".
-    !>
-    call callback%callback( this )
+    ! Attach optional file list
+    if (present(list_of_files)) then
+        allocate( this%filelist, source=list_of_files )
+    end if
 
   end subroutine initialise
 
@@ -97,5 +116,21 @@ contains
     clock => this%clock
 
   end function get_clock
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !> Gets the context's file list
+  !>
+  !> @return  The list of file objects used by the model
+  !>
+  function get_filelist( this ) result(filelist)
+
+    implicit none
+
+    class(simple_io_context_type), target, intent(in) :: this
+    class(file_type), pointer :: filelist(:)
+
+    filelist => this%filelist
+
+  end function get_filelist
 
 end module simple_io_context_mod

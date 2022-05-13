@@ -30,6 +30,7 @@ module io_dev_driver_mod
                                         write_dump,                &
                                         diagnostic_frequency
   ! IO_Dev driver modules
+  use driver_io_mod,              only: get_clock
   use io_dev_mod,                 only: program_name
   use io_dev_data_mod,            only: io_dev_data_type,          &
                                         create_model_data,         &
@@ -56,8 +57,6 @@ module io_dev_driver_mod
   type( mesh_type ), pointer :: mesh      => null()
   type( mesh_type ), pointer :: twod_mesh => null()
 
-  class(io_context_type), allocatable :: io_context
-
   contains
 
   !> @brief Sets up required state in preparation for run.
@@ -78,8 +77,7 @@ module io_dev_driver_mod
                                     mesh,         &
                                     twod_mesh,    &
                                     chi,          &
-                                    panel_id,     &
-                                    io_context )
+                                    panel_id )
 
     ! Instantiate the fields stored in model_data
     call create_model_data( model_data, &
@@ -87,7 +85,7 @@ module io_dev_driver_mod
                             twod_mesh )
 
     ! Initialise the fields stored in the model_data
-    call initialise_model_data( model_data, chi, panel_id, io_context%get_clock() )
+    call initialise_model_data( model_data, chi, panel_id )
 
 
   end subroutine initialise
@@ -98,30 +96,30 @@ module io_dev_driver_mod
 
     implicit none
 
-    class(clock_type), pointer :: clock
+    class(clock_type), pointer :: clock => null()
 
     write(log_scratch_space,'(A)') 'Running '//program_name//' ...'
     call log_event( log_scratch_space, LOG_LEVEL_ALWAYS )
 
     ! Output initial data after initial step
-    clock => io_context%get_clock()
+    clock => get_clock()
     select type (clock)
     type is (lfric_xios_clock_type)
         call clock%initial_step()
     end select
 
-    call output_model_data( model_data, clock )
+    call output_model_data( model_data )
 
     ! Model step
     do while( clock%tick() )
 
       ! Update fields
-      call update_model_data( model_data, clock )
+      call update_model_data( model_data )
 
       ! Write out the fields
       if ( (mod( clock%get_step(), diagnostic_frequency ) == 0) ) then
         call log_event( program_name//': Writing XIOS output', LOG_LEVEL_INFO)
-        call output_model_data( model_data, clock )
+        call output_model_data( model_data )
       end if
 
     end do
@@ -136,7 +134,7 @@ module io_dev_driver_mod
     call log_event( 'Finalising '//program_name//' ...', LOG_LEVEL_ALWAYS )
 
     ! Destroy the fields stored in model_data
-    call finalise_model_data( model_data, io_context%get_clock() )
+    call finalise_model_data( model_data )
 
     ! Finalise infrastructure and constants
     call finalise_infrastructure( program_name )

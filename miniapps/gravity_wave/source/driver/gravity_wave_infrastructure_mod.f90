@@ -38,9 +38,9 @@ module gravity_wave_infrastructure_mod
   use local_mesh_collection_mod,  only : local_mesh_collection, &
                                          local_mesh_collection_type
   use driver_fem_mod,             only : init_fem
+  use driver_io_mod,              only : init_io, final_io, get_clock
   use driver_mesh_mod,            only : init_mesh
   use runtime_constants_mod,      only : create_runtime_constants
-  use gravity_wave_io_mod,        only : initialise_io
   use formulation_config_mod,     only : l_multigrid
 
   implicit none
@@ -61,7 +61,6 @@ contains
   subroutine initialise_infrastructure(comm,         &
                                        filename,     &
                                        program_name, &
-                                       io_context,   &
                                        mesh,         &
                                        twod_mesh)
 
@@ -77,7 +76,6 @@ contains
     integer(i_native), intent(in) :: comm
     character(*),      intent(in) :: filename
     character(*),      intent(in) :: program_name
-    class(io_context_type), intent(out), allocatable :: io_context
     type(mesh_type),   intent(inout), pointer :: mesh
     type(mesh_type),   intent(inout), pointer :: twod_mesh
 
@@ -170,19 +168,12 @@ contains
     !-------------------------------------------------------------------------
     ! Initialise aspects of output
     !-------------------------------------------------------------------------
-
-    call initialise_io( comm,      &
-                        mesh,      &
-                        twod_mesh, &
-                        chi,       &
-                        panel_id,  &
-                        xios_ctx,  &
-                        io_context )
+    call init_io( xios_ctx, comm, chi, panel_id )
 
     !-------------------------------------------------------------------------
     ! Setup constants
     !-------------------------------------------------------------------------
-    clock => io_context%get_clock()
+    clock => get_clock()
     dt_model = real(clock%get_seconds_per_step(), r_def)
 
     ! Create runtime_constants object. This in turn creates various things
@@ -203,6 +194,9 @@ contains
   subroutine finalise_infrastructure()
 
     implicit none
+
+    ! Finalise I/O
+    call final_io()
 
     ! Finalise namelist configurations
     call final_configuration()

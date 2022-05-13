@@ -27,11 +27,12 @@ CHARACTER(LEN=file_name_len), PUBLIC :: scintelapi_nl
 CHARACTER(LEN=file_name_len), PUBLIC :: io_nl
 
 ! Array containing required LFRic configuration namelists
-CHARACTER(*), PARAMETER  :: required_lfric_namelists(5) = ['finite_element',   &
+CHARACTER(*), PARAMETER  :: required_lfric_namelists(6) = ['finite_element',   &
                                                            'base_mesh     ',   &
                                                            'planet        ',   &
                                                            'extrusion     ',   &
-                                                           'domain_size   ']
+                                                           'domain_size   ',   &
+                                                           'io            ']
 
 CONTAINS
 

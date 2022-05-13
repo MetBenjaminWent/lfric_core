@@ -17,8 +17,7 @@ program multires_coupling
   use mpi_mod,                      only : finalise_comm, &
                                            initialise_comm
   use multires_coupling_driver_mod, only : initialise, run, finalise
-  use xios,                         only : xios_finalize, &
-                                           xios_initialize
+  use xios,                         only : xios_initialize
 
   implicit none
 
@@ -42,9 +41,6 @@ program multires_coupling
   call run()
 
   call finalise()
-
-  ! Finalise XIOS
-  call xios_finalize()
 
   ! Finalise mpi and release the communicator
   call finalise_comm()

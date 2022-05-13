@@ -8,9 +8,9 @@
 module simple_io_context_mod_test
 
   use clock_mod,             only : clock_type
-  use constants_mod,         only : r_second
-  use io_context_mod,        only : io_context_type, &
-                                    io_context_initialiser_type
+  use constants_mod,         only : r_second, i_native
+  use field_mod,             only : field_type
+  use io_context_mod,        only : io_context_type
   use pfunit_mod
   use simple_io_context_mod, only : simple_io_context_type
 
@@ -19,24 +19,7 @@ module simple_io_context_mod_test
   private
   public :: test_initialisation
 
-  type, extends(io_context_initialiser_type) :: telltale_callback_type
-    private
-    logical, public :: flagged
-  contains
-    private
-    procedure, public :: callback
-  end type telltale_callback_type
-
 contains
-
-  subroutine callback( this, context )
-    implicit none
-    class(telltale_callback_type), intent(inout) :: this
-    class(io_context_type),        intent(in) :: context
-    ! Check clock has been set up at this point.
-    call clock_val( context%get_clock() )
-    this%flagged = .true.
-  end subroutine callback
 
   @test
   subroutine test_initialisation()
@@ -44,16 +27,19 @@ contains
     implicit none
 
     type(simple_io_context_type) :: test_unit
-    type(telltale_callback_type) :: telltale_callback
     class(clock_type), pointer   :: clock
 
-    telltale_callback%flagged = .false.
-    call test_unit%initialise( telltale_callback, &
-                               '4', '7',          &
-                               2.5_r_second, 1.2_r_second )
-    @assertTrue( telltale_callback%flagged )
-    ! Check clock is still correct.
+    ! These arguments are, as yet, unused by the context so can be passed
+    ! through un-initialised
+    type(field_type) :: chi(3)
+    type(field_type) :: panel_id
 
+    call test_unit%initialise( 'test_context', 1_i_native, &
+                               chi, panel_id, '4', '7',    &
+                               2.5_r_second, 1.2_r_second, &
+                               "test_date", "test_calendar" )
+
+    ! Check clock is still correct.
     call clock_val( test_unit%get_clock() )
 
   end subroutine test_initialisation

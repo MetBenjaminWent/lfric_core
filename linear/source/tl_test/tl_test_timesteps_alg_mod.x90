@@ -278,8 +278,7 @@ module tl_test_timesteps_alg_mod
         enddo
         call  moist_dyn_factors_alg( moist_dyn, mr )
 
-        call initialise_model( clock, &
-                               mesh,  &
+        call initialise_model( mesh,  &
                                model_data )
 
         call gungho_step( mesh,       &
@@ -360,8 +359,7 @@ module tl_test_timesteps_alg_mod
         call moist_dyn_factors_alg( moist_dyn, mr )
 
 
-        call initialise_model( clock, &
-                               mesh,  &
+        call initialise_model( mesh,  &
                                model_data )
 
         call gungho_step( mesh,       &

@@ -15,8 +15,7 @@ program transport
   use transport_driver_mod, only: initialise_transport, &
                                   run_transport,        &
                                   finalise_transport
-  use xios,                 only: xios_finalize, &
-                                  xios_initialize
+  use xios,                 only: xios_initialize
 
   implicit none
 
@@ -40,9 +39,6 @@ program transport
   call run_transport()
 
   call finalise_transport()
-
-  ! Finalise XIOS
-  call xios_finalize()
 
   ! Finalise mpi and release the communicator
   call finalise_comm()

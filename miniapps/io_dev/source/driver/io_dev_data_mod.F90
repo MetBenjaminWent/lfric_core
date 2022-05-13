@@ -18,6 +18,7 @@ module io_dev_data_mod
   use constants_mod,                    only : i_def
   use field_mod,                        only : field_type
   use field_collection_mod,             only : field_collection_type
+  use io_context_mod,                   only : io_context_type
   use linked_list_mod,                  only : linked_list_type
   use log_mod,                          only : log_event,      &
                                                LOG_LEVEL_INFO, &
@@ -46,6 +47,7 @@ module io_dev_data_mod
   use io_dev_init_fields_alg_mod,       only : io_dev_init_fields_alg
   use io_dev_checksum_alg_mod,          only : io_dev_checksum_alg
   use io_dev_timestep_alg_mod,          only : io_dev_timestep_alg
+  use driver_io_mod,                    only : get_clock
 
   implicit none
 
@@ -106,15 +108,17 @@ contains
   !> @param[in,out] model_data The working data set for a model run
   !> @param[in]     chi        A size 3 array of fields holding the mesh coordinates
   !> @param[in]     panel_id   A field with the IDs of mesh panels
-  !> @param[in]     clock      The model clock object
-  subroutine initialise_model_data( model_data, chi, panel_id, clock )
+  subroutine initialise_model_data( model_data, chi, panel_id )
 
     implicit none
 
     type( io_dev_data_type ), intent(inout) :: model_data
     type( field_type ),       intent(in)    :: chi(3)
     type( field_type ),       intent(in)    :: panel_id
-    class( clock_type ),      intent(in)    :: clock
+
+    class( clock_type ),      pointer :: clock      => null()
+
+    clock => get_clock()
 
     ! Initialise all the model fields here analytically
     call io_dev_init_fields_alg( model_data%core_fields, chi, panel_id )
@@ -153,13 +157,15 @@ contains
 
   !> @brief Updates the working data set dependent of namelist configuration
   !> @param[in,out] model_data The working data set for a model run
-  !> @param[in]     clock      The model clock object
-  subroutine update_model_data( model_data, clock )
+  subroutine update_model_data( model_data )
 
     implicit none
 
     type( io_dev_data_type ), intent(inout) :: model_data
-    class( clock_type ),      intent(in)    :: clock
+
+    class( clock_type ),      pointer :: clock      => null()
+
+    clock => get_clock()
 
     !---------------------------------------------------------------
     ! Separate update calls are made based on model configuration
@@ -192,13 +198,15 @@ contains
 
   !> @brief Writes out a checkpoint and dump file dependent on namelist options
   !> @param[in,out] model_data The working data set for the model run
-  !> @param[in]     clock      The model clock object
-  subroutine output_model_data( model_data, clock )
+  subroutine output_model_data( model_data )
 
     implicit none
 
     type( io_dev_data_type ), intent(inout), target :: model_data
-    class( clock_type ),      intent(in)            :: clock
+
+    class( clock_type ),      pointer :: clock      => null()
+
+    clock => get_clock()
 
     !===================== Write initial output ======================!
     if ( clock%is_initialisation() ) then
@@ -227,13 +235,15 @@ contains
 
   !> @brief Routine to destroy all the field collections in the working data set
   !> @param[in,out] model_data The working data set for a model run
-  !> @param[in]     clock      The model clock object
-  subroutine finalise_model_data( model_data, clock )
+  subroutine finalise_model_data( model_data )
 
     implicit none
 
       type(io_dev_data_type), intent(inout) :: model_data
-      class(clock_type),      intent(in)    :: clock
+
+      class( clock_type ),      pointer :: clock      => null()
+
+      clock => get_clock()
 
       !=================== Write fields to checkpoint files ====================
       if ( checkpoint_write ) then

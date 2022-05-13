@@ -17,8 +17,7 @@ program skeleton
   use mpi_mod,             only : finalise_comm, &
                                   initialise_comm
   use skeleton_driver_mod, only : initialise, run, finalise
-  use xios,                only : xios_finalize, &
-                                  xios_initialize
+  use xios,                only : xios_initialize
 
   implicit none
 
@@ -42,9 +41,6 @@ program skeleton
   call run()
 
   call finalise()
-
-  ! Finalise XIOS
-  call xios_finalize()
 
   ! Finalise mpi and release the communicator
   call finalise_comm()

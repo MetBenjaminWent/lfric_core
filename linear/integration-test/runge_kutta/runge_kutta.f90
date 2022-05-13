@@ -13,8 +13,7 @@ program runge_kutta
   use mod_wait,           only : init_wait
   use mpi_mod,            only : initialise_comm, &
                                  finalise_comm
-  use xios,               only : xios_initialize, &
-                                 xios_finalize
+  use xios,               only : xios_initialize
   use log_mod,            only : log_event,       &
                                  LOG_LEVEL_ERROR, &
                                  LOG_LEVEL_INFO
@@ -155,9 +154,6 @@ program runge_kutta
   endif
 
   call finalise()
-
-  ! Finalise XIOS
-  call xios_finalize()
 
   ! Finalise mpi and release the communicator
   call finalise_comm()

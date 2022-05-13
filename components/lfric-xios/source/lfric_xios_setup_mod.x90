@@ -1,41 +1,34 @@
 !-----------------------------------------------------------------------------
-! (C) Crown copyright 2020 Met Office. All rights reserved.
+! (C) Crown copyright 2022 Met Office. All rights reserved.
 ! The file LICENCE, distributed with this code, contains details of the terms
 ! under which the code may be used.
 !-----------------------------------------------------------------------------
 
-!> @brief    Module for IO subroutines for the LFRic-XIOS interface.
+!> @brief    Module containing subroutines used to set up an XIOS context.
 !>
-module lfric_xios_io_mod
+module lfric_xios_setup_mod
 
   use clock_mod,                     only: clock_type
   use constants_mod,                 only: i_def, i_halo_index, i_native, &
-                                           r_def, r_second, l_def,        &
-                                           radians_to_degrees,            &
-                                           str_def
+                                           r_def, l_def, str_def,         &
+                                           radians_to_degrees
   use lfric_xios_constants_mod,      only: dp_xios
   use coord_transform_mod,           only: xyz2llr
-  use mesh_constructor_helper_functions_mod, &
-                                     only: domain_size_type
+  use extrusion_mod,                 only: TWOD
   use field_mod,                     only: field_type, field_proxy_type
   use finite_element_config_mod,     only: element_order, &
                                            coord_system,  &
                                            coord_system_xyz
-  use lfric_xios_clock_mod,          only: lfric_xios_clock_type
-  use lfric_xios_context_mod,        only: lfric_xios_context_type, &
-                                           filelist_populator
-  use lfric_xios_file_mod,           only: xios_file_type
   use function_space_mod,            only: function_space_type, BASIS
   use function_space_collection_mod, only: function_space_collection
   use fs_continuity_mod,             only: W0, W1, W2, W3, Wtheta, W2H, &
                                            name_from_functionspace
-  use io_context_mod,                only: io_context_type, &
-                                           io_context_initialiser_type
-  use log_mod,                       only: log_event,       &
-                                           log_level_error, &
-                                           log_level_info,  &
-                                           log_scratch_space
+  use lfric_xios_clock_mod,          only: lfric_xios_clock_type
+  use lfric_xios_file_mod,           only: lfric_xios_file_type
   use mesh_mod,                      only: mesh_type
+  use mesh_collection_mod,           only: mesh_collection
+  use mesh_constructor_helper_functions_mod, &
+                                     only: domain_size_type
   use mpi_mod,                       only: get_comm_size, &
                                            get_comm_rank, &
                                            all_gather
@@ -58,191 +51,23 @@ module lfric_xios_io_mod
   implicit none
 
   private
-  public :: initialise_xios
-
-  !> Sets up context with XIOS specifics.
-  !>
-  type, extends(io_context_initialiser_type) :: setup_xios_type
-    private
-    type(mesh_type),   pointer :: mesh => null()
-    type(mesh_type),   pointer :: twod_mesh => null()
-    class(field_type), pointer :: chi(:)   => null()
-    class(field_type), pointer :: panel_id => null()
-    !
-    ! An unused allocatable integer that prevents an intenal compiler error
-    ! with the GNU Fortran compiler. Adding an allocatable forces the compiler
-    ! to accept that the object has a finaliser. It gets confused without it.
-    !
-    !> @todo This is a workaround for GCC bug id 61767 - when this bug is
-    !>       fixed, the integer can be removed.
-    !>
-    integer(kind=i_def), allocatable :: dummy_for_gcc
-  contains
-    private
-    procedure, public :: initialise => initialise_setup_xios
-    procedure, public :: callback   => callback_setup_xios
-  end type setup_xios_type
+  public :: init_xios_dimensions, setup_xios_files
 
 contains
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !> Initialises a setup_xios object.
-  !>
-  !> @param[in] mesh               Primary mesh.
-  !> @param[in] twod_mesh          Primary 2D mesh
-  !> @param[in] chi                Co-ordinate fields.
-  !> @param[in] panel_id           Field with IDs of mesh panels.
-  !> @param[in] populate_filelist  Model procedure to fill file list.
-  !>
-  subroutine initialise_setup_xios( this,      &
-                                    mesh,      &
-                                    twod_mesh, &
-                                    chi,       &
-                                    panel_id )
-
-    implicit none
-
-    class(setup_xios_type), intent(inout)       :: this
-    type(mesh_type),        intent(in), pointer :: mesh
-    type(mesh_type),        intent(in), pointer :: twod_mesh
-    class(field_type),      intent(in), target  :: chi(:)
-    class(field_type),      intent(in), target  :: panel_id
-
-    this%mesh              => mesh
-    this%twod_mesh         => twod_mesh
-    this%chi               => chi
-    this%panel_id          => panel_id
-
-  end subroutine initialise_setup_xios
-
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !> Initialises context.
-  !>
-  !> @param[in] context  Freshly created context object to be initialised.
-  !>
-  subroutine callback_setup_xios( this, context )
-
-    implicit none
-
-    class(setup_xios_type), intent(inout) :: this
-    class(io_context_type), intent(in)    :: context
-
-    type(xios_file_type), allocatable :: file_list(:)
-
-    select type(context)
-      class is (lfric_xios_context_type)
-        call init_xios_dimensions(this%mesh, this%twod_mesh, this%chi, this%panel_id)
-        file_list = context%get_filelist()
-        call setup_xios_files( file_list, context%get_clock() )
-
-      class default
-          write( log_scratch_space, '(A)' ) &
-            "XIOS setup callback was passed the context for something else."
-          call log_event( log_scratch_space, log_level_error )
-    end select
-
-  end subroutine callback_setup_xios
-
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !> @brief Performs XIOS context, dimension and file initialisation.
-  !>
-  !> @param[out]  context            I/O context to be initialised
-  !> @param[in]   identifier         The XIOS context ID
-  !> @param[in]   communicator       MPI communicator used by the XIOS context
-  !> @param[in]   mesh               Mesh
-  !> @param[in]   twod_mesh          2D Mesh
-  !> @param[in]   chi                Coordinate field
-  !> @param[in]   panel_id           Field containing IDs of mesh panels
-  !> @param[in]   start_step         The starting model timestep
-  !> @param[in]   end_step           The final model timestep
-  !> @param[in]   spinup_period      The number of timesteps taken for spin up
-  !> @param[in]   seconds_per_step   Seconds per model timestep
-  !> @param[in]   calendar_start     Origin date of calendar
-  !> @param[in]   calendar_type      Type of calendar (Gregorian, d360, etc.)
-  !> @param[in]   timer_flag         Flag for use of subroutine timers
-  !> @param[in]   populate_filelist  Optional procedure to build file list
-  !>
-  subroutine initialise_xios( context,           &
-                              identifier,        &
-                              communicator,      &
-                              mesh,              &
-                              twod_mesh,         &
-                              chi,               &
-                              panel_id,          &
-                              start_step,        &
-                              end_step,          &
-                              spinup_period,     &
-                              seconds_per_step,  &
-                              calendar_start,    &
-                              calendar_type,     &
-                              timer_flag,        &
-                              populate_filelist )
-
-    implicit none
-
-    class(io_context_type),        intent(out), allocatable :: context
-    character(len=*),              intent(in)               :: identifier
-    integer(kind=i_def),           intent(in)               :: communicator
-    type(mesh_type),               intent(in), pointer      :: mesh
-    type(mesh_type),               intent(in), pointer      :: twod_mesh
-    class(field_type),             intent(in)               :: chi(:)
-    class(field_type),             intent(in)               :: panel_id
-    character(len=*),              intent(in)               :: start_step
-    character(len=*),              intent(in)               :: end_step
-    real(r_second),                intent(in)               :: spinup_period
-    real(r_second),                intent(in)               :: seconds_per_step
-    character(len=*),              intent(in)               :: calendar_start
-    character(len=*),              intent(in)               :: calendar_type
-    logical(kind=l_def), optional, intent(in)               :: timer_flag
-    procedure(filelist_populator), &
-                optional, pointer, intent(in)               :: populate_filelist
-
-    type(setup_xios_type) :: callback
-
-    integer(kind=i_def) :: rc
-
-    call callback%initialise( mesh, twod_mesh, chi, panel_id )
-
-    allocate( lfric_xios_context_type::context, stat=rc )
-    if (rc /= 0) then
-      call log_event( "Unable to allocate XIOS context.", log_level_error )
-    end if
-    select type(context)
-      class is (lfric_xios_context_type)
-        call context%initialise( identifier,        &
-                                 communicator,      &
-                                 callback,          &
-                                 start_step,        &
-                                 end_step,          &
-                                 spinup_period,     &
-                                 seconds_per_step,  &
-                                 calendar_start,    &
-                                 calendar_type,     &
-                                 timer_flag,        &
-                                 populate_filelist )
-      ! No need to default the select as we allocated just above.
-    end select
-
-  end subroutine initialise_xios
-
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> @brief    Performs XIOS domain and axis initialisation.
   !> @details  Calculates the coordinates and bounds for the different kinds
   !!           of XIOS dimensionality (domains, axes, etc) and initialised the
   !!           corresponding XIOS objects.
   !>
-  !> @param[in]  mesh          Mesh
-  !> @param[in]  twod_mesh     2D Mesh
   !> @param[in]  chi           Coordinate field
   !> @param[in]  panel_id      Field with IDs of mesh panels
   !>
-  subroutine init_xios_dimensions(mesh, twod_mesh, chi, panel_id)
+  subroutine init_xios_dimensions(chi, panel_id)
 
     implicit none
 
     ! Arguments
-    type(mesh_type),     intent(in), pointer :: mesh
-    type(mesh_type),     intent(in), pointer :: twod_mesh
     type(field_type),    intent(in)          :: chi(:)
     type(field_type),    intent(in)          :: panel_id
 
@@ -279,15 +104,17 @@ contains
     ! Variables needed to compute output domain coordinates in lat-long
     type( field_type ) :: sample_chi(3)
     type( field_type ) :: coord_output(3)
+
     ! Field proxies (to calculate domain coordinate info)
     type(field_proxy_type), target  :: proxy_coord_output(3)
-
 
     ! Variables for local and global mesh information
     integer(kind=i_def)      :: num_face_local
     integer(kind=i_def)      :: nodes_per_edge
     integer(kind=i_def)      :: nodes_per_face
     integer(kind=i_def)      :: num_edge_local
+    type(mesh_type), pointer :: mesh => null()
+    type(mesh_type), pointer :: twod_mesh => null()
 
     type(function_space_type), pointer :: output_field_fs   => null()
     type(function_space_type), pointer :: w2h_fs   => null()
@@ -300,6 +127,16 @@ contains
     ! Factor to convert coords from radians to degrees if needed
     ! set as 1.0 for planar mesh
     real(kind=r_def) :: r2d
+
+    ! Get mesh from chi
+    mesh => chi(1)%get_mesh()
+    twod_mesh => mesh_collection%get_mesh_variant( mesh, extrusion_id=TWOD )
+
+    if ( mesh%is_geometry_spherical() ) then
+     r2d = radians_to_degrees
+    else
+     r2d = 1.0_r_def
+    endif
 
     ! Set up array to hold number of dofs for local domains
     allocate(local_undf(1))
@@ -421,11 +258,9 @@ contains
     if ( allocated(bnd_faces_lon) ) deallocate(bnd_faces_lon)
     if ( allocated(bnd_faces_lat) ) deallocate(bnd_faces_lat)
 
-    return
-
   end subroutine init_xios_dimensions
 
-  !> @brief  Sets up XIOS file context information from list of file objects
+  !> @brief  Sets up XIOS context file information from list of file objects
   !>
   !> @param[in]  files_list  List of file objects
   !> @param[in]  clock       Clock object
@@ -434,8 +269,8 @@ contains
 
     implicit none
 
-    type(xios_file_type), allocatable, intent(in) :: files_list(:)
-    class(clock_type),                 intent(in) :: clock
+    type(lfric_xios_file_type), allocatable, intent(in) :: files_list(:)
+    class(lfric_xios_clock_type),            intent(in) :: clock
 
     type(xios_file)        :: file_hdl
     type(xios_duration)    :: file_freq
@@ -443,7 +278,7 @@ contains
     character(len=str_def) :: field_group_id, file_mode
     integer(kind=i_def)    :: i
 
-    type(xios_file_type) :: file
+    type(lfric_xios_file_type) :: file
 
     if (size(files_list) == 0) then
       return
@@ -454,8 +289,8 @@ contains
       file = files_list(i)
 
       ! Get file handle from XIOS and set attributes
-      call xios_get_handle( file%get_xios_id(), file_hdl )
-      call xios_set_attr( file_hdl, name=file%get_path() )
+      call xios_get_handle( trim(file%get_xios_id()), file_hdl )
+      call xios_set_attr( file_hdl, name=trim(file%get_path()) )
 
       ! Set XIOS duration object second value equal to file output frequency
       if ( .not. file%get_output_freq() == -999 ) then
@@ -466,16 +301,15 @@ contains
       call xios_set_attr( file_hdl, enabled=.true. )
 
       ! If there is an associated field group, enable it
-      field_group_id = file%get_field_group()
-
-      if ( .not. field_group_id == "unset" ) then
+      field_group_id = trim(file%get_field_group())
+      if ( .not. trim(field_group_id) == "unset" ) then
         call xios_get_handle( field_group_id, field_group_hdl )
         call xios_set_attr( field_group_hdl, enabled=.true. )
       end if
 
       ! If file is not in "read" mode switch time-counter to exclusive
       call xios_get_attr( file_hdl, mode=file_mode )
-      if ( .not. file_mode == "read" ) then
+      if ( .not. trim(file_mode) == "read" ) then
         call xios_set_attr( file_hdl, time_counter="exclusive", &
                                       time_counter_name="time" )
       end if
@@ -486,7 +320,7 @@ contains
 
   !> @brief   Compute the node domain coords for this partition
   !> @details Samples the chi field at nodal points, calculates cartesian coordinates.
-  !!          For spherical geometry, converts to lat-lon in degrees for specified layer
+  !!          For spherical geometry, converts to lat-lon in degrees for specified layer.
   !>
   !> @param[in]     twod_mesh             The 2D partitioned mesh
   !> @param[in]     nodal_coords          Input field
@@ -510,17 +344,16 @@ contains
 
     implicit none
 
-    type(mesh_type),           intent(in), pointer :: twod_mesh
-    type(field_type),          intent(in)          :: nodal_coords(3)
-    type(field_type),          intent(in)          :: chi(:)
-    integer(kind=i_def),       intent(in)          :: nlayers
-    integer(kind=i_def),       intent(in)          :: ncells
-    real(kind=r_def),          intent(out)         :: lon_coords(:)
-    real(kind=r_def),          intent(out)         :: lat_coords(:)
-    real(kind=dp_xios),        intent(inout)       :: face_bnds_lon_coords(:,:)
-    real(kind=dp_xios),        intent(inout)       :: face_bnds_lat_coords(:,:)
-    real(kind=dp_xios),        intent(inout)       :: edge_bnds_lon_coords(:,:)
-    real(kind=dp_xios),        intent(inout)       :: edge_bnds_lat_coords(:,:)
+    type(mesh_type), pointer, intent(in)    :: twod_mesh
+    type(field_type),         intent(in)    :: nodal_coords(3)
+    type(field_type),         intent(in)    :: chi(:)
+    integer(kind=i_def),      intent(in)    :: nlayers
+    integer(kind=i_def),      intent(in)    :: ncells
+    real(kind=r_def),         intent(out)   :: lon_coords(:), lat_coords(:)
+    real(kind=dp_xios),       intent(inout) :: face_bnds_lon_coords(:,:)
+    real(kind=dp_xios),       intent(inout) :: face_bnds_lat_coords(:,:)
+    real(kind=dp_xios),       intent(inout) :: edge_bnds_lon_coords(:,:)
+    real(kind=dp_xios),       intent(inout) :: edge_bnds_lat_coords(:,:)
 
     integer(kind=i_def) :: cell, last_owned_edge
     integer(kind=i_def) :: ndf_chi, ndf_x
@@ -572,17 +405,11 @@ contains
       end do
     end do
 
-    if (chi_p(1)%is_dirty(depth=1)) then
-      call chi_p(1)%halo_exchange(depth=1)
-    end if
-
-    if (chi_p(2)%is_dirty(depth=1)) then
-      call chi_p(2)%halo_exchange(depth=1)
-    end if
-
-    if (chi_p(3)%is_dirty(depth=1)) then
-      call chi_p(3)%halo_exchange(depth=1)
-    end if
+    do i = 1,3
+      if (chi_p(i)%is_dirty(depth=1)) then
+        call chi_p(i)%halo_exchange(depth=1)
+      end if
+    end do
 
     ! Loop over cells
     do cell = 1, ncells
@@ -594,9 +421,9 @@ contains
       do df_x = 1,(ndf_x/2)
         xyz(:) = 0.0_r_def
         do df_chi = 1, (ndf_chi/2)
-          xyz(1) = xyz(1) + chi_p(1)%data(map_chi(df_chi))*basis_chi(1,df_chi,df_x)
-          xyz(2) = xyz(2) + chi_p(2)%data(map_chi(df_chi))*basis_chi(1,df_chi,df_x)
-          xyz(3) = xyz(3) + chi_p(3)%data(map_chi(df_chi))*basis_chi(1,df_chi,df_x)
+          do i = 1,3
+            xyz(i) = xyz(i) + chi_p(i)%data(map_chi(df_chi))*basis_chi(1,df_chi,df_x)
+          end do
         end do
 
         ! Convert to lat-lon in degrees if required
@@ -1074,4 +901,4 @@ contains
 
   end subroutine init_xios_axis
 
-end module lfric_xios_io_mod
+end module lfric_xios_setup_mod

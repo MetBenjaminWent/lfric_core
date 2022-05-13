@@ -20,8 +20,7 @@ program gungho
   use mod_wait,          only : init_wait
   use mpi_mod,           only : initialise_comm, &
                                 finalise_comm
-  use xios,              only : xios_initialize, &
-                                xios_finalize
+  use xios,              only : xios_initialize
 
   implicit none
 
@@ -46,9 +45,6 @@ program gungho
   call run()
 
   call finalise()
-
-  ! Finalise XIOS
-  call xios_finalize()
 
   ! Finalise mpi and release the communicator
   call finalise_comm()

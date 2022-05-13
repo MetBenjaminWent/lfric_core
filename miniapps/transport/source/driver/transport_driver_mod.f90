@@ -15,6 +15,7 @@ module transport_driver_mod
   use constants_mod,                    only: i_def, i_native, r_def
   use convert_to_upper_mod,             only: convert_to_upper
   use driver_fem_mod,                   only: init_fem
+  use driver_io_mod,                    only: init_io, final_io, get_clock
   use driver_mesh_mod,                  only: init_mesh
   use derived_config_mod,               only: set_derived_config
   use diagnostics_io_mod,               only: write_scalar_diagnostic, &
@@ -33,7 +34,6 @@ module transport_driver_mod
                                               use_xios_io,                     &
                                               subroutine_timers,               &
                                               timer_output_path
-  use lfric_xios_io_mod,                only: initialise_xios
   use lfric_xios_clock_mod,             only: lfric_xios_clock_type
   use local_mesh_mod,                   only: local_mesh_type
   use local_mesh_collection_mod,        only: local_mesh_collection, &
@@ -58,7 +58,6 @@ module transport_driver_mod
                                               get_comm_rank
   use mr_indices_mod,                   only: nummr
   use runtime_constants_mod,            only: create_runtime_constants
-  use simple_io_mod,                    only: initialise_simple_io
   use timer_mod,                        only: init_timer, timer, output_timer
   use time_config_mod,                  only: timestep_start, &
                                               timestep_end,   &
@@ -98,8 +97,6 @@ module transport_driver_mod
   type(field_type), target               :: panel_id
   type(field_type), target, dimension(3) :: shifted_chi
   type(field_type), target, dimension(3) :: double_level_chi
-
-  class(io_context_type), allocatable :: io_context
 
   type(mesh_type), pointer :: mesh              => null()
   type(mesh_type), pointer :: twod_mesh         => null()
@@ -254,30 +251,12 @@ contains
     end if
 
     ! I/O initialisation
-    !
-    if (use_xios_io) then
-      call initialise_xios( io_context,         &
-                            xios_ctx,           &
-                            model_communicator, &
-                            mesh,               &
-                            twod_mesh,          &
-                            chi,                &
-                            panel_id,           &
-                            timestep_start,     &
-                            timestep_end,       &
-                            spinup_period,      &
-                            dt,                 &
-                            calendar_start,     &
-                            key_from_calendar_type(calendar_type) )
-    else
-      call initialise_simple_io( io_context,         &
-                                 timestep_start,     &
-                                 timestep_end,       &
-                                 spinup_period,      &
-                                 dt )
-    end if
+    call init_io( xios_ctx,           &
+                  model_communicator, &
+                  chi,                &
+                  panel_id )
 
-    clock => io_context%get_clock()
+    clock => get_clock()
 
     ! Call initial clock step for XIOS before initial conditions output
     select type( clock )
@@ -322,7 +301,7 @@ contains
     write(log_scratch_space, '(I1)') kind(1_i_def)
     call log_event( program_name//':        i_def kind = '//log_scratch_space , LOG_LEVEL_INFO )
 
-    clock => io_context%get_clock()
+    clock => get_clock()
     dt = real(clock%get_seconds_per_step(), r_def)
 
     call mass_conservation( clock%get_step(), density, mr )
@@ -410,7 +389,7 @@ contains
       call output_timer()
     end if
 
-    deallocate( io_context )
+    call final_io()
 
     call transport_runtime_collection_final()
 

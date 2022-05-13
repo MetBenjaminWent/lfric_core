@@ -13,6 +13,8 @@ module multires_coupling_model_mod
   use clock_mod,                  only : clock_type
   use driver_fem_mod,             only : init_fem, final_fem
   use driver_mesh_mod,            only : init_mesh, final_mesh
+  use driver_io_mod,              only : init_io, final_io, get_clock, &
+                                         filelist_populator
   use configuration_mod,          only : final_configuration
   use conservation_algorithm_mod, only : conservation_algorithm
   use constants_mod,              only : i_def, i_native,          &
@@ -44,14 +46,11 @@ module multires_coupling_model_mod
   use init_altitude_mod,          only : init_altitude
   use io_config_mod,              only : subroutine_timers,       &
                                          subroutine_counters,     &
-                                         use_xios_io,             &
                                          write_conservation_diag, &
                                          write_minmax_tseries,    &
                                          timer_output_path,       &
                                          counter_output_suffix
   use io_context_mod,             only : io_context_type
-  use lfric_xios_context_mod,     only : filelist_populator
-  use lfric_xios_io_mod,          only : initialise_xios
   use linked_list_mod,            only : linked_list_type
   use local_mesh_collection_mod,  only : local_mesh_collection, &
                                          local_mesh_collection_type
@@ -85,15 +84,8 @@ module multires_coupling_model_mod
   use section_choice_config_mod,  only : radiation,         &
                                          radiation_socrates,&
                                          surface, surface_jules
-  use simple_io_mod,              only : initialise_simple_io
-  use time_config_mod,            only : timestep_start, &
-                                         timestep_end,   &
-                                         calendar_start, &
-                                         calendar_type,  &
-                                         key_from_calendar_type
   use timer_mod,                  only : timer, output_timer, init_timer
-  use timestepping_config_mod,    only : dt,                   &
-                                         method,               &
+  use timestepping_config_mod,    only : method,               &
                                          method_semi_implicit, &
                                          method_rk,            &
                                          spinup_period
@@ -127,7 +119,6 @@ contains
   !>                             (not XIOS' communicator)
   !> @param [in]    filename The name of the configuration namelist file
   !> @param [in]    program_name An identifier given to the model begin run
-  !> @param [out]    io_context Context in which I/O operations are performed
   !> @param [in,out] mesh         The current 3d mesh
   !> @param [in,out] twod_mesh    The current 2d mesh
   !> @param [in,out] shifted_mesh The vertically shifted 3d mesh
@@ -136,7 +127,6 @@ contains
   subroutine initialise_infrastructure( communicator,         &
                                         filename,             &
                                         program_name,         &
-                                        io_context,           &
                                         mesh,                 &
                                         twod_mesh,            &
                                         shifted_mesh,         &
@@ -156,7 +146,6 @@ contains
     integer(i_native),      intent(in)               :: communicator
     character(*),           intent(in)               :: filename
     character(*),           intent(in)               :: program_name
-    class(io_context_type), intent(out), allocatable :: io_context
     type(mesh_type),        intent(inout), pointer   :: mesh
     type(mesh_type),        intent(inout), pointer   :: twod_mesh
     type(mesh_type),        intent(inout), pointer   :: double_level_mesh
@@ -315,7 +304,7 @@ contains
     dynamics_2D_mesh_name = trim(dynamics_mesh_name)//'_2d'
     dynamics_mesh    => mesh_collection%get_mesh( dynamics_mesh_name )
     dynamics_2D_mesh => mesh_collection%get_mesh( dynamics_2D_mesh_name )
-    ! Find chi for dynamics mesh for XIOS
+    ! Find chi for dynamics mesh
     ! We haven't computed runtime constants yet so have to add this here
     found_dynamics_chi = .false.
     if ( associated( dynamics_mesh, mesh ) ) then
@@ -336,32 +325,14 @@ contains
       call log_event('Unable to find chi for dynamics mesh', LOG_LEVEL_ERROR)
     end if
 
-    if ( use_xios_io ) then
-      files_init_ptr => init_gungho_files
-      call initialise_xios( io_context,                            &
-                            io_context_name,                       &
-                            communicator,                          &
-                            dynamics_mesh,                         &
-                            dynamics_2D_mesh,                      &
-                            dynamics_chi,                          &
-                            dynamics_panel_id,                     &
-                            timestep_start,                        &
-                            timestep_end,                          &
-                            real(spinup_period, r_second),         &
-                            real(dt, r_second),                    &
-                            calendar_start,                        &
-                            key_from_calendar_type(calendar_type), &
-                            populate_filelist=files_init_ptr )
-    else
-      call initialise_simple_io( &
-                            io_context,                    &
-                            timestep_start,                &
-                            timestep_end,                  &
-                            real(spinup_period, r_second), &
-                            real(dt, r_second) )
-    end if
+    files_init_ptr => init_gungho_files
+    call init_io( io_context_name,                 &
+                  communicator,                    &
+                  dynamics_chi,                    &
+                  dynamics_panel_id,               &
+                  populate_filelist=files_init_ptr )
 
-    clock => io_context%get_clock()
+    clock => get_clock()
     dt_model = real(clock%get_seconds_per_step(), r_def)
 
     ! Set up surface altitude field - this will be used to generate orography
@@ -556,6 +527,12 @@ contains
       call halo_calls%counter(program_name)
       call halo_calls%output_counters(counter_output_suffix)
     end if
+
+    !-------------------------------------------------------------------------
+    ! Finalise I/O
+    !-------------------------------------------------------------------------
+
+    call final_io()
 
     !-------------------------------------------------------------------------
     ! Finalise aspects of the grid
