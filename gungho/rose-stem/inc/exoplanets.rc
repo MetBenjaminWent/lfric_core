@@ -4,7 +4,20 @@
 {# https://code.metoffice.gov.uk/trac/lfric/wiki/GungHo/RoseStemCsarFunctionality #}
 
 {%- set exoplanets_groups = {
-		'exo-hs':['run_application( "gungho", "hs",
+        'exo-hs':['run_application( "gungho", "hs",
+                                          resolutions=[("C24",1800)],
+                                          checkkgo=False,
+                                          env={"crun":20, "nrun": {"default":2880,},
+                                              "directives":{"C24":{"mpi_parts":24,
+                                                                       "threads":1,
+                                                                       "wallclock":"01:30:00",},
+                                                           }
+                                             },
+                plotstr="plot_zonal.py $NODAL_DATA_DIR/lfric_averages.nc $PLOT_DIR",
+                publish=True
+                )'
+                      ],
+        'exo-el':['run_application( "gungho", "el",
                                           resolutions=[("C24",1800)],
                                           checkkgo=False,
                                           env={"crun":20, "nrun": {"default":2880,},
