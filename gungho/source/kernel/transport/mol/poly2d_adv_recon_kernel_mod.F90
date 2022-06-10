@@ -168,7 +168,7 @@ subroutine poly2d_adv_recon_code( nlayers,              &
       ijp = (p - 1 + (df-1)*stencil_size)*(nlayers+1) + map_c(1)
       do k = 0, nlayers
         polynomial_tracer(k) = polynomial_tracer(k) &
-                             + tracer( stencil_map(1,p) + k )*coeff( ijp +k)
+                             + tracer( stencil_map(1,p) + k )*coeff( ijp + nlayers )
       end do
     end do
     do k = 0, nlayers

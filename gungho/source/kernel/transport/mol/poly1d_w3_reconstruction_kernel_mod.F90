@@ -182,7 +182,7 @@ subroutine poly1d_w3_reconstruction_code( nlayers,              &
       stencil = map1d(p,df)
       do k = 0, nlayers - 1
         polynomial_tracer(k) = polynomial_tracer(k) &
-                             + tracer( stencil_map(1,stencil) + k )*coeff( ijp + k )
+                             + tracer( stencil_map(1,stencil) + k )*coeff( ijp + nlayers - 1 )
       end do
     end do
     v_dot_n =  dot_product(basis_w2(:,df,df),outward_normals_to_horizontal_faces(:,df))

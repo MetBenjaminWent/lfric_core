@@ -162,7 +162,7 @@ subroutine poly2d_w3_reconstruction_code( nlayers,              &
       ijp = (p - 1 + (df-1)*stencil_size)*nlayers + map_c(1)
       do k = 0, nlayers - 1
         polynomial_tracer(k) = polynomial_tracer(k) &
-                             + tracer( stencil_map(1,p) + k )*coeff( ijp+k )
+                             + tracer( stencil_map(1,p) + k )*coeff( ijp + nlayers - 1 )
       end do
     end do
     do k = 0, nlayers - 1
