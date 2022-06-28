@@ -11,6 +11,12 @@ module jules_physics_init_mod
   ! Other LFRic modules used
   use constants_mod,          only : r_um, i_def, r_def
   use jules_control_init_mod, only : n_sea_ice_tile, n_land_tile
+  use jules_nvegparm_config_mod, only : albsnc_nvg_io, albsnf_nvg_io,          &
+                                     albsnf_nvgl_io, albsnf_nvgu_io,           &
+                                     catch_nvg_io, ch_nvg_io,                  &
+                                     emis_nvg_io, gs_nvg_io,                   &
+                                     infil_nvg_io, vf_nvg_io,                  &
+                                     z0_nvg_io, z0hm_nvg_io
   use jules_surface_config_mod, only :                                         &
                                      cor_mo_iter_in => cor_mo_iter,            &
                                      cor_mo_iter_lim_oblen,                    &
@@ -55,13 +61,10 @@ module jules_physics_init_mod
                                      relayer_opt_original, relayer_opt_inverse,&
                                      rho_snow_fresh_in => rho_snow_fresh,      &
                                      dpsids_dsdz, soil_sat_down,               &
-                                     alb_snocov_nvg, alb_snofree_nvg,          &
-                                     can_cap_nvg, heat_cap_nvg,                &
                                      alb_snocov_max,                           &
                                      alb_leaf_nir, alb_leaf_vis,               &
                                      light_extinct, scat_coef_vis,             &
                                      scat_coef_nir, z0hm_ratio_pft,            &
-                                     z0hm_ratio_nveg,                          &
                                      z0_pft => z0v,                            &
                                      l_10m_neutral => l_10m_neut,              &
                                      high_wind_drag => i_high_wind_drag,       &
@@ -99,10 +102,12 @@ module jules_physics_init_mod
 
   use derived_config_mod,      only: l_esm_couple
 
+  use log_mod,                 only : log_event,         &
+                                      LOG_LEVEL_INFO
   implicit none
 
   ! Decrease in saturated hydraulic conductivity with depth (m-1)
-  ! This is a 2D field in the UM/Jules, but is spatially and temporally
+  ! This is a 2D field in the UM/JULES, but is spatially and temporally
   ! invariant, so we instead declare it as a parameter here
   real(kind=r_um), parameter :: decrease_sath_cond = 1.0_r_um
 
@@ -120,18 +125,18 @@ module jules_physics_init_mod
 
 contains
 
-  !>@brief Initialise Jules physics variables which are either fixed in LFRic
+  !>@brief Initialise JULES physics variables which are either fixed in LFRic
   !>        or derived from LFRic inputs
   !>@details This file sets many parameters and switches which are currently
-  !>          in the Jules namelists. Many of these will never be promoted to
+  !>          in the JULES namelists. Many of these will never be promoted to
   !>          the LFRic namelist as they are legacy options not fit for future
   !>          use. Hence we set them here until such time as we can retire them
-  !>          from the Jules code.
+  !>          from the JULES code.
   !>        Other parameters and switches which are genuinely input variables,
-  !>         via the LFRic namelists, are also set here for the Jules code.
+  !>         via the LFRic namelists, are also set here for the JULES code.
   subroutine jules_physics_init()
 
-    ! Jules modules containing things that need setting
+    ! JULES modules containing things that need setting
     use ancil_info, only: land_pts, nsurft, nmasst
     use bl_option_mod, only: on
     use c_kappai, only: kappai, kappai_snow, kappa_seasurf
@@ -187,7 +192,8 @@ contains
          l_spec_veg_z0, l_limit_canhc, l_crop, l_triffid, l_phenol
     use nvegparm, only:                                                     &
          albsnc_nvg, albsnf_nvgu, albsnf_nvg, albsnf_nvgl, catch_nvg,       &
-         ch_nvg, emis_nvg, gs_nvg, infil_nvg, vf_nvg, z0_nvg
+         ch_nvg, emis_nvg, gs_nvg, infil_nvg, vf_nvg, z0_nvg,               &
+         check_jules_nvegparm
     use pftparm, only:                                                      &
          a_wl, a_ws, albsnc_max, albsnc_min, albsnf_maxu, albsnf_maxl,      &
          alniru, alnir, alnirl, alparu, alpar, alparl, alpha, b_wl, c3,     &
@@ -198,11 +204,14 @@ contains
          omegal, omegau, omnir, omnirl, omniru, orient, q10_leaf, r_grow,   &
          rootd_ft, sigl, tleaf_of, tlow, tupp, vint, vsl, z0v, dust_veg_scj
 
+    use check_compatible_options_mod, only: check_compatible_options
 
     implicit none
 
+    call log_event( 'jules_physics_init', LOG_LEVEL_INFO )
+
     ! ----------------------------------------------------------------
-    ! Jules hydrology settings - contained in module jules_hydrology
+    ! JULES hydrology settings - contained in module jules_hydrology
     ! ----------------------------------------------------------------
     l_hydrology = use_hydrology
     l_top       = .true.
@@ -213,7 +222,7 @@ contains
     call check_jules_hydrology()
 
     ! ----------------------------------------------------------------
-    ! Jules radiation settings - contained in module jules_radiation
+    ! JULES radiation settings - contained in module jules_radiation
     ! ----------------------------------------------------------------
     fixed_sea_albedo = real(fixed_sea_albedo_in, r_um)
     select case (sea_alb_method)
@@ -241,7 +250,7 @@ contains
     call check_jules_radiation()
 
     ! ----------------------------------------------------------------
-    ! Jules sea and sea-ice settings - contained in module jules_sea_seaice
+    ! JULES sea and sea-ice settings - contained in module jules_sea_seaice
     !                                   and c_kappai
     ! ----------------------------------------------------------------
     kappai        = real(therm_cond_sice, r_um)
@@ -305,7 +314,7 @@ contains
     call check_jules_sea_seaice()
 
     ! ----------------------------------------------------------------
-    ! Jules snow settings - contained in module jules_snow
+    ! JULES snow settings - contained in module jules_snow
     ! ----------------------------------------------------------------
     nsmax                  = 3
     a_snow_et              = 2.8e-6_r_um
@@ -348,12 +357,12 @@ contains
     ! Set the LFRic dimension
     snow_lev_tile = nsmax * n_land_tile
 
-    ! Check the contents of the Jules snow parameters module
+    ! Check the contents of the JULES snow parameters module
     ! This module sets some derived parameters
     call check_jules_snow()
 
     ! ----------------------------------------------------------------
-    ! Jules soil settings - contained in modules jules_soil
+    ! JULES soil settings - contained in modules jules_soil
     ! ----------------------------------------------------------------
     ! The number of levels specified here needs to be consistent with
     ! sm_levels from jules_control_init
@@ -367,12 +376,12 @@ contains
     zsmc = 1.0_r_um
     zst = 1.0_r_um
 
-    ! Check the contents of the Jules soil parameters module
+    ! Check the contents of the JULES soil parameters module
     ! This module sets some derived parameters
     call check_jules_soil(sm_levels)
 
     ! ----------------------------------------------------------------
-    ! Jules Biogeochemisty settings - contained in module jules_soil_biogeochem
+    ! JULES Biogeochemisty settings - contained in module jules_soil_biogeochem
     ! ----------------------------------------------------------------
     const_ch4_cs = 5.41e-12_r_um
     diff_n_pft = 100.0_r_um
@@ -393,11 +402,11 @@ contains
     ch4_cpow = 1.0_r_um
     q10_ev_ch4 = 2.2_r_um
 
-    ! Check the contents of the Jules biogeochemistry parameters module
+    ! Check the contents of the JULES biogeochemistry parameters module
     call check_jules_soil_biogeochem()
 
     ! ----------------------------------------------------------------
-    ! Jules surface settings - contained in module jules_surface
+    ! JULES surface settings - contained in module jules_surface
     ! ----------------------------------------------------------------
     beta_cnv_bl     = 0.04_r_um
     select case (cor_mo_iter_in)
@@ -437,11 +446,11 @@ contains
        min_sea_ice_frac = 0.1_r_def
     endif
 
-    ! Check the contents of the Jules surface parameters module
+    ! Check the contents of the JULES surface parameters module
     call check_jules_surface()
 
     ! ----------------------------------------------------------------
-    ! Jules vegatation settings - contained in module jules_vegetation
+    ! JULES vegatation settings - contained in module jules_vegetation
     ! ----------------------------------------------------------------
     select case (canopy_radiation_model)
       case(can_rad_mod_one)
@@ -463,7 +472,7 @@ contains
     call check_jules_vegetation()
 
     ! ----------------------------------------------------------------
-    ! Temporary logicals used to fix bugs in Jules
+    ! Temporary logicals used to fix bugs in JULES
     !  - contained in jules_science_fixes
     ! ----------------------------------------------------------------
     l_accurate_rho      = .true.
@@ -477,13 +486,13 @@ contains
     l_fix_lake_ice_temperatures = .true.
 
     ! The following routine initialises 3D arrays which are used direct
-    ! from modules throughout the Jules code base.
+    ! from modules throughout the JULES code base.
     ! We must initialise them here so that they are always available
     ! But they must be set to appropriate values for the current column
     ! in any kernel whos external code uses the variables
-    ! Ideally the Jules code will be changed so that they are passed in
+    ! Ideally the JULES code will be changed so that they are passed in
     ! through the argument list
-    ! It also must be called after the above Jules namelists are set
+    ! It also must be called after the above JULES namelists are set
     ! as some arrays are conditional upon the switches, but it also
     ! needs calling before the below parameters are set, because
     ! their arrays are allocated in here.
@@ -508,23 +517,24 @@ contains
     call veg3_parm_allocate(land_pts,nsurft,nnpft,npft)
     call veg3_field_allocate(land_pts,nsurft,nnpft,nmasst)
 
-    ! ----------------------------------------------------------------
-    ! Jules non-vegetated tile settings - contained in module nvegparm
-    ! ----------------------------------------------------------------
-    albsnc_nvg = real(alb_snocov_nvg, r_um)
-    albsnf_nvg = real(alb_snofree_nvg, r_um)
-    albsnf_nvgl=(/ 0.05_r_um, 0.06_r_um, 0.03_r_um, 0.75_r_um /)
-    albsnf_nvgu=(/ 0.20_r_um, 0.15_r_um, 0.80_r_um, 0.75_r_um /)
-    catch_nvg = real(can_cap_nvg, r_um)
-    ch_nvg = real(heat_cap_nvg, r_um)
-    emis_nvg=(/ 0.970_r_um, 0.985_r_um, 0.900_r_um, 0.990_r_um /)
-    gs_nvg=(/ 0.0_r_um, 0.0_r_um, 1.0e-2_r_um, 1.0e+6_r_um /)
-    infil_nvg=(/ 0.1_r_um, 0.0_r_um, 0.5_r_um, 0.0_r_um /)
-    vf_nvg=(/ 1.0_r_um, 1.0_r_um, 0.0_r_um, 0.0_r_um /)
-    z0_nvg=(/ 1.0_r_um, 1.0e-4_r_um, 1.0e-3_r_um, 5.0e-4_r_um /)
 
     ! ----------------------------------------------------------------
-    ! Jules vegetation tile settigs - contained in module pftparm
+    ! JULES non-vegetated tile settings - contained in module nvegparm
+    ! ----------------------------------------------------------------
+    albsnc_nvg  = real(albsnc_nvg_io, r_um)
+    albsnf_nvg  = real(albsnf_nvg_io, r_um)
+    albsnf_nvgl = real(albsnf_nvgl_io, r_um)
+    albsnf_nvgu = real(albsnf_nvgu_io, r_um)
+    catch_nvg   = real(catch_nvg_io, r_um)
+    ch_nvg      = real(ch_nvg_io, r_um)
+    emis_nvg    = real(emis_nvg_io, r_um)
+    gs_nvg      = real(gs_nvg_io, r_um)
+    infil_nvg   = real(infil_nvg_io, r_um)
+    vf_nvg      = real(vf_nvg_io, r_um)
+    z0_nvg      = real(z0_nvg_io, r_um)
+
+    ! ----------------------------------------------------------------
+    ! JULES vegetation tile settigs - contained in module pftparm
     ! ----------------------------------------------------------------
     a_wl=(/ 0.65_r_um, 0.65_r_um, 0.005_r_um, 0.005_r_um, 0.10_r_um /)
     a_ws=(/ 10.0_r_um, 10.0_r_um, 1.0_r_um, 1.0_r_um, 10.0_r_um /)
@@ -596,7 +606,11 @@ contains
     ! - contained in module c_z0h_z0m
     ! ----------------------------------------------------------------
     z0h_z0m(1:npft) = real(z0hm_ratio_pft, r_um)
-    z0h_z0m(npft+1:npft+nnvg) = real(z0hm_ratio_nveg, r_um)
+    z0h_z0m(npft+1:npft+nnvg) = real(z0hm_nvg_io, r_um)
+
+    ! This routine checks that the options set are actually compatible
+    call check_jules_nvegparm(nnvg,npft) ! Also checks z0h_z0m(nnvg)
+    call check_compatible_options()
 
   end subroutine jules_physics_init
 
