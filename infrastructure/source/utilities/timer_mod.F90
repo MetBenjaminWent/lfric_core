@@ -178,8 +178,10 @@ contains
    !> @brief write out timer information to file
    subroutine output_timer()
      use mpi_mod,    only: get_comm_rank
-     use log_mod,    only: log_event,         &
-                           LOG_LEVEL_ERROR
+     use log_mod,    only: log_event,       &
+                           LOG_LEVEL_ERROR, &
+                           LOG_LEVEL_INFO,  &
+                           log_scratch_space
      use io_utility_mod, only: claim_io_unit, close_file
 
      implicit none
@@ -188,6 +190,28 @@ contains
      real(r_double)    :: pc_time
 
      integer(i_def)    :: stat
+     real(r_double)    :: time_real_tmp
+
+     ! LOG local times
+     write(log_scratch_space,'(A2,A32,4(A2,A21),A2)')                        &
+     '||','=           Routine            =',                                &
+     '||','=   time(s)     =',                                               &
+     '||','=     No. calls     =',                                           &
+     '||','= time per call(s)  =',                                           &
+     '||'
+     call log_event(log_scratch_space, LOG_LEVEL_INFO)
+     do k = 1, num_tim_in_use
+       time_real_tmp = real(isystem_clock_time(k)/clock_rate, r_double)
+       write(log_scratch_space,                                              &
+            ('(A2,A32,A2,f21.2,A2,i21,A2,f21.4,A2)'))                  &
+            '||', trim(routine_name(k)),                                     &
+            '||', time_real_tmp,                                             &
+            '||', num_calls(k),                                              &
+            '||', time_real_tmp/REAL(num_calls(k),r_double),                 &
+            '||'
+       call log_event(log_scratch_space, LOG_LEVEL_INFO)
+     end do
+
 
      call calculate_timer_stats()
 
@@ -211,7 +235,7 @@ contains
        do k = 1, num_tim_in_use
          pc_time = mean_system_time(k)/mean_system_time(1)*100.0_r_double
          write(timer_file_unit,                                                &
-              ('(A2,A32,A2,3(f21.2,A2),i21,2(A2,f21.2),A2)'))                  &
+              ('(A2,A32,A2,3(f21.2,A2),i21,2(A2,f21.4),A2)'))                  &
               '||', trim(routine_name(k)),                                     &
               '||', min_system_time(k),                                        &
               '||', mean_system_time(k),                                       &
