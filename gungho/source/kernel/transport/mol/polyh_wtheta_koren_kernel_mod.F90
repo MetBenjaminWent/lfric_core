@@ -147,26 +147,23 @@ subroutine polyh_wtheta_koren_code(  nlayers,              &
     v_dot_n(df) = dot_product(basis_w2(:,df,df),outward_normals_to_horizontal_faces(:,df))
   end do
 
-  do k = 1, nlayers - 1
-    do df = 1,nfaces_re_h
+  do df = 1,nfaces_re_h
+    do k = 1, nlayers - 1
       ! Check if this is the upwind cell
       direction = (wind(map_w2(df) + k ) + wind(map_w2(df) + k-1 ))*v_dot_n(df)
       if ( direction > 0.0_r_def ) then
-         x = tracer(stencil_map(1,point(2,df))+k) - tracer(stencil_map(1,point(1,df))+k)
-         y = tracer(stencil_map(1,point(3,df))+k) - tracer(stencil_map(1,point(2,df))+k)
-         r = (y + tiny_eps)/(x + tiny_eps)
-         r1 = 2.0_r_def*r
-         r2 = ( 1.0_r_def + r1 )/ 3.0_r_def
-         phi = max (0.0_r_def, min(r1,r2,2.0_r_def))
-         edge_tracer = tracer(stencil_map(1,point(2,df))+k) + 0.5_r_def*phi*x
-         reconstruction(map_w1(df) + k ) = edge_tracer
+        x = tracer(stencil_map(1,point(2,df))+k) - tracer(stencil_map(1,point(1,df))+k)
+        y = tracer(stencil_map(1,point(3,df))+k) - tracer(stencil_map(1,point(2,df))+k)
+        r = (y + tiny_eps)/(x + tiny_eps)
+        r1 = 2.0_r_def*r
+        r2 = ( 1.0_r_def + r1 )/ 3.0_r_def
+        phi = max (0.0_r_def, min(r1,r2,2.0_r_def))
+        edge_tracer = tracer(stencil_map(1,point(2,df))+k) + 0.5_r_def*phi*x
+        reconstruction(map_w1(df) + k ) = edge_tracer
       end if
     end do
-  end do
-
-  ! Bottom surface
-  k = 0
-  do df = 1,nfaces_re_h
+    ! Bottom surface
+    k = 0
     ! Check if this is the upwind cell
     direction = wind(map_w2(df) + k )*v_dot_n(df)
     if ( direction > 0.0_r_def ) then
@@ -179,22 +176,19 @@ subroutine polyh_wtheta_koren_code(  nlayers,              &
       edge_tracer = tracer(stencil_map(1,point(2,df))+k) + 0.5_r_def*phi*x
       reconstruction(map_w1(df) + k ) = edge_tracer
     end if
-  end do
-
-  ! Top surface
-  k = nlayers - 1
-  do df = 1,nfaces_re_h
+    ! Top surface
+    k = nlayers - 1
     ! Check if this is the upwind cell
     direction = wind(map_w2(df) + k )*v_dot_n(df)
     if ( direction > 0.0_r_def ) then
-       x = tracer(stencil_map(2,point(2,df))+k) - tracer(stencil_map(2,point(1,df))+k)
-       y = tracer(stencil_map(2,point(3,df))+k) - tracer(stencil_map(2,point(2,df))+k)
-       r = (y + tiny_eps)/(x + tiny_eps)
-       r1 = 2.0_r_def*r
-       r2 = ( 1.0_r_def + r1 )/ 3.0_r_def
-       phi = max (0.0_r_def, min(r1,r2,2.0_r_def))
-       edge_tracer = tracer(stencil_map(2,point(2,df))+k) + 0.5_r_def*phi*x
-       reconstruction(map_w1(df) + k + 1 ) = edge_tracer
+      x = tracer(stencil_map(2,point(2,df))+k) - tracer(stencil_map(2,point(1,df))+k)
+      y = tracer(stencil_map(2,point(3,df))+k) - tracer(stencil_map(2,point(2,df))+k)
+      r = (y + tiny_eps)/(x + tiny_eps)
+      r1 = 2.0_r_def*r
+      r2 = ( 1.0_r_def + r1 )/ 3.0_r_def
+      phi = max (0.0_r_def, min(r1,r2,2.0_r_def))
+      edge_tracer = tracer(stencil_map(2,point(2,df))+k) + 0.5_r_def*phi*x
+      reconstruction(map_w1(df) + k + 1 ) = edge_tracer
     end if
   end do
 

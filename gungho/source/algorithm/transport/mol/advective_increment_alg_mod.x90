@@ -63,7 +63,8 @@ contains
       case ( W3 )
         call field_new%initialise( wind%get_function_space() )
         if ( monotonicity == monotone_koren ) then
-          call reconstruct_koren_w3_field_alg(field_new, field, wind, direction, logspace)
+          call reconstruct_koren_w3_field_alg(field_new, field, wind, &
+                                               direction, reversible, logspace)
         else
           call reconstruct_w3_field_alg(field_new, field, wind, direction, reversible, logspace)
         end if
@@ -71,7 +72,8 @@ contains
         call invoke( w3_advective_update_kernel_type( advective_increment, field_new, wind, m3_inv ) )
       case ( Wtheta )
         if ( monotonicity == monotone_koren ) then
-          call wt_advective_update_koren_alg(advective_increment, field, wind, direction, logspace)
+          call wt_advective_update_koren_alg(advective_increment, field, wind,  &
+                                              direction, reversible, logspace)
         else
           call wt_advective_update_alg(advective_increment, field, wind, dt, direction, reversible, &
                                        monotonicity, logspace)

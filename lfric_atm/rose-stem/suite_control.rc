@@ -289,7 +289,7 @@
                     )',
     'run_application("lfric_atm", "grabowski-clark",
                      resolutions=[("BiP180x4-20x20",2.0)],
-                     env={"crun":1, "nrun":300,
+                     env={"crun":1, "nrun":250,
                           "directives":{"default":{"mpi_parts":4,
                                                    "panel_decomp":' + row + ',
                                                    "wallclock":"00:15:00"}}},

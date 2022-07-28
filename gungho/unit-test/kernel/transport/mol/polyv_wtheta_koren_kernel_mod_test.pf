@@ -123,7 +123,7 @@ contains
     real(r_def), dimension(undf_wt) :: adv_inc_answer1, adv_inc_answer2
 
     integer(i_def) :: df, k, p1, p2, p3
-    logical(l_def) :: logspace
+    logical(l_def) :: logspace, reversible
     real(r_def)    :: const, r, val_u, val_d
     real(r_def), dimension(3) :: kw=(/-1.0_r_def,5.0_r_def,2.0_r_def/)/6.0_r_def
 
@@ -166,12 +166,14 @@ contains
 
     ! Test subroutine with logspace = .false.
     logspace = .false.
+    reversible =.false.
     adv_inc = 0.0_r_def
     call polyv_wtheta_koren_code( nlayers,              &
                                   adv_inc,              &
                                   wind,                 &
                                   density,              &
                                   ndata,                &
+                                  reversible,           &
                                   logspace,             &
                                   ndf_wt,               &
                                   undf_wt,              &
@@ -199,6 +201,7 @@ contains
                                   wind,                 &
                                   density,              &
                                   ndata,                &
+                                  reversible,           &
                                   logspace,             &
                                   ndf_wt,               &
                                   undf_wt,              &
@@ -228,6 +231,7 @@ contains
                                   wind,                 &
                                   density,              &
                                   ndata,                &
+                                  reversible,           &
                                   logspace,             &
                                   ndf_wt,               &
                                   undf_wt,              &
@@ -244,6 +248,7 @@ contains
                                   wind,                 &
                                   density,              &
                                   ndata,                &
+                                  reversible,           &
                                   logspace,             &
                                   ndf_wt,               &
                                   undf_wt,              &

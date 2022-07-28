@@ -36,11 +36,12 @@ private
 !> The type declaration for the kernel. Contains the metadata needed by the PSy layer
 type, public, extends(kernel_type) :: polyv_w3_koren_kernel_type
   private
-  type(arg_type) :: meta_args(5) = (/                                        &
+  type(arg_type) :: meta_args(6) = (/                                        &
        arg_type(GH_FIELD,  GH_REAL,    GH_INC,   W2),                        &
        arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W2),                        &
        arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W3),                        &
        arg_type(GH_SCALAR, GH_INTEGER, GH_READ),                             &
+       arg_type(GH_SCALAR, GH_LOGICAL, GH_READ),                             &
        arg_type(GH_SCALAR, GH_LOGICAL, GH_READ)                              &
        /)
   type(func_type) :: meta_funcs(1) = (/                                 &
@@ -65,6 +66,7 @@ contains
 !> @param[in]     wind           Wind field
 !> @param[in]     tracer         Tracer field
 !> @param[in]     ndata          Number of data points per dof location
+!> @param[in]     reversible     Use the reversible scheme
 !> @param[in]     logspace       Perform interpolation in log space;
 !> @param[in]     ndf_w2         Number of degrees of freedom per cell
 !> @param[in]     undf_w2        Number of unique degrees of freedom for the reconstruction &
@@ -80,6 +82,7 @@ subroutine polyv_w3_koren_code( nlayers,                           &
                                 wind,                              &
                                 tracer,                            &
                                 ndata,                             &
+                                reversible,                        &
                                 logspace,                          &
                                 ndf_w2,                            &
                                 undf_w2,                           &
@@ -105,8 +108,8 @@ subroutine polyv_w3_koren_code( nlayers,                           &
   real(kind=r_def), dimension(undf_w2), intent(in)    :: wind
   real(kind=r_def), dimension(undf_w3), intent(in)    :: tracer
   real(kind=r_def), dimension(3,ndf_w2,ndf_w2), intent(in) :: basis_w2
-
-  logical(kind=l_def), intent(in) :: logspace
+  logical(kind=l_def), intent(in)                    :: reversible
+  logical(kind=l_def), intent(in)                    :: logspace
 
   ! Local variables
   integer(kind=i_def)                             :: k, k1, k2, k3
@@ -143,25 +146,34 @@ subroutine polyv_w3_koren_code( nlayers,                           &
       end do
   end if
 
-  do k = 1, nlayers + 1
-     if ( wind_1d(k) > 0.0_r_def ) then
+  if (reversible) then !The reversible is the koren-scheme with phi=r
+    do k = 1, nlayers + 1
+      k3 = k
+      k2 = k3 - 1_i_def
+      x = tracer_1d(k2) + tracer_1d(k3)
+      tracer_edge(k) = 0.5_r_def*x
+    end do
+  else
+    do k = 1, nlayers + 1
+      if ( wind_1d(k) > 0.0_r_def ) then
         k3 = k
         k2 = k3 - 1_i_def
         k1 = k3 - 2_i_def
-     else
+      else
         k3 = k  - 1_i_def
         k2 = k3 + 1_i_def
         k1 = k3 + 2_i_def
-     end if
+      end if
 
-     x = tracer_1d(k2) - tracer_1d(k1)
-     y = tracer_1d(k3) - tracer_1d(k2)
-     r = (y + tiny_eps)/(x + tiny_eps)
-     r1 = 2.0_r_def*r
-     r2 = (1.0_r_def + r1)/3.0_r_def
-     phi = max(0.0_r_def, min(r1,r2,2.0_r_def))
-     tracer_edge(k) = tracer_1d(k2) + 0.5_r_def*phi*x
-  end do
+      x = tracer_1d(k2) - tracer_1d(k1)
+      y = tracer_1d(k3) - tracer_1d(k2)
+      r = (y + tiny_eps)/(x + tiny_eps)
+      r1 = 2.0_r_def*r
+      r2 = (1.0_r_def + r1)/3.0_r_def
+      phi = max(0.0_r_def, min(r1,r2,2.0_r_def))
+      tracer_edge(k) = tracer_1d(k2) + 0.5_r_def*phi*x
+    end do
+  end if
 
   if (logspace) then
       do k=1,nlayers+1

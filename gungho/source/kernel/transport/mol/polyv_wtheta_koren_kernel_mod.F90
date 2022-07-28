@@ -35,11 +35,12 @@ private
 !> The type declaration for the kernel. Contains the metadata needed by the PSy layer
 type, public, extends(kernel_type) :: polyv_wtheta_koren_kernel_type
   private
-  type(arg_type) :: meta_args(5) = (/                                            &
+  type(arg_type) :: meta_args(6) = (/                                            &
        arg_type(GH_FIELD,  GH_REAL,    GH_READWRITE, Wtheta),                    &
        arg_type(GH_FIELD,  GH_REAL,    GH_READ,      W2),                        &
        arg_type(GH_FIELD,  GH_REAL,    GH_READ,      Wtheta),                    &
        arg_type(GH_SCALAR, GH_INTEGER, GH_READ),                                 &
+       arg_type(GH_SCALAR, GH_LOGICAL, GH_READ),                                 &
        arg_type(GH_SCALAR, GH_LOGICAL, GH_READ)                                  &
        /)
   integer :: operates_on = CELL_COLUMN
@@ -74,6 +75,7 @@ subroutine polyv_wtheta_koren_code( nlayers,              &
                                     wind,                 &
                                     tracer,               &
                                     ndata,                &
+                                    reversible,           &
                                     logspace,             &
                                     ndf_wt,               &
                                     undf_wt,              &
@@ -97,6 +99,7 @@ subroutine polyv_wtheta_koren_code( nlayers,              &
   real(kind=r_def), dimension(undf_wt), intent(inout) :: advective
   real(kind=r_def), dimension(undf_w2), intent(in)    :: wind
   real(kind=r_def), dimension(undf_wt), intent(in)    :: tracer
+  logical(kind=l_def),                  intent(in)    :: reversible
   logical(kind=l_def),                  intent(in)    :: logspace
 
   !Internal variables
@@ -131,46 +134,54 @@ subroutine polyv_wtheta_koren_code( nlayers,              &
   ! Apply log to tracer_1d if required
   ! If using the logspace option, the tracer is forced to be positive
   if (logspace) then
-      do k=0,nlayers+2
-         tracer_1d(k) = log(max(EPS,abs(tracer_1d(k))))
-      end do
+    do k=0,nlayers+2
+      tracer_1d(k) = log(max(EPS,abs(tracer_1d(k))))
+    end do
   end if
 
   ! Compute tracers at w3-points (edges of cells centred around theta-points)
-  do k = 1, nlayers
-     if ( wind_w3(k) > 0.0_r_def ) then
+  if (reversible) then !The reversible is the koren-scheme with phi=r
+    do k = 1, nlayers
+      k3 = k + 1_i_def
+      k2 = k3 - 1_i_def
+      x = tracer_1d(k2) + tracer_1d(k3)
+      tracer_w3(k) = 0.5_r_def*x
+    end do
+  else
+    do k = 1, nlayers
+      if ( wind_w3(k) > 0.0_r_def ) then
         k3 = k + 1_i_def
         k2 = k3 - 1_i_def
         k1 = k3 - 2_i_def
-     else
+      else
         k3 = k
         k2 = k3 + 1_i_def
         k1 = k3 + 2_i_def
-     end if
-     x = tracer_1d(k2) - tracer_1d(k1)
-     y = tracer_1d(k3) - tracer_1d(k2)
-     r = (y + tiny_eps)/(x + tiny_eps)
-     r1 = 2.0_r_def*r
-     r2 = (1.0_r_def + r1)/3.0_r_def
-     phi = max(0.0_r_def, min(r1,r2,2.0_r_def))
-     tracer_w3(k) = tracer_1d(k2) + 0.5_r_def*phi*x
-  end do
-
+      end if
+      x = tracer_1d(k2) - tracer_1d(k1)
+      y = tracer_1d(k3) - tracer_1d(k2)
+      r = (y + tiny_eps)/(x + tiny_eps)
+      r1 = 2.0_r_def*r
+      r2 = (1.0_r_def + r1)/3.0_r_def
+      phi = max(0.0_r_def, min(r1,r2,2.0_r_def))
+      tracer_w3(k) = tracer_1d(k2) + 0.5_r_def*phi*x
+    end do
+  end if
   ! Revert from log of tracer_w3 if required
   if (logspace) then
-      do k = 1, nlayers
-         tracer_w3(k) = exp(tracer_w3(k))
-      end do
+    do k = 1, nlayers
+      tracer_w3(k) = exp(tracer_w3(k))
+    end do
   end if
 
   do k = 2, nlayers
-     dtracerdz(k) = tracer_w3(k) - tracer_w3(k-1)
+    dtracerdz(k) = tracer_w3(k) - tracer_w3(k-1)
   end do
 
   do k = 1, nlayers - 1
-     advective(map_wt(1) + k ) = advective(map_wt(1) + k ) &
-                               + wind(map_w2(5) + k )      &
-                               * dtracerdz(k+1)
+    advective(map_wt(1) + k ) = advective(map_wt(1) + k )   &
+                                + wind(map_w2(5) + k )      &
+                                * dtracerdz(k+1)
   end do
 
 end subroutine polyv_wtheta_koren_code

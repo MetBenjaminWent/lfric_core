@@ -647,8 +647,10 @@ contains
   !> @param[in,out] rhs          Advective increment
   !> @param[in]     adv_field    Field to advect
   !> @param[in]     wind         Advecting wind field
+  !> @param[in]     reversible   Use the reversible reconstruction
   !> @param[in]     logspace     Carry out interpolation in log space
-  subroutine wt_advective_update_koren_alg(rhs, adv_field, wind, direction, logspace)
+  subroutine wt_advective_update_koren_alg(rhs, adv_field, wind,  &
+                                           direction, reversible, logspace)
 
     use consistent_wind_kernel_mod,     only: consistent_wind_kernel_type
     use poly1d_vert_adv_kernel_mod,     only: poly1d_vert_adv_kernel_type
@@ -663,6 +665,7 @@ contains
     type(field_type),              intent(in)    :: adv_field, wind
     type(field_type),              intent(inout) :: rhs
     integer(kind=i_def),           intent(in)    :: direction
+    logical(kind=l_def),           intent(in)    :: reversible
     logical(kind=l_def), optional, intent(in)    :: logspace
 
     type(field_type)                       :: u_grad_f
@@ -712,7 +715,7 @@ contains
         ! Horizontal update with the Koren scheme
         w1_fs => function_space_collection%get_fs( mesh, element_order, W1 )
         call h_reconstruction%initialise( w1_fs )
-        call horizontal_wt_reconstruct_koren_alg(h_reconstruction, wind, adv_field)
+        call horizontal_wt_reconstruct_koren_alg(h_reconstruction, wind, adv_field )
         ! Compute horizontal advective update
         call invoke( poly_advective_kernel_type(u_grad_f, wind, h_reconstruction) )
 
@@ -721,7 +724,7 @@ contains
           height => get_height(Wtheta, mesh%get_id())
           chi => get_coordinates(mesh%get_id())
           call u_grad_z%initialise( u_grad_f%get_function_space() )
-          call horizontal_wt_reconstruct_koren_alg(h_reconstruction, wind, height)
+          call horizontal_wt_reconstruct_koren_alg(h_reconstruction, wind, height )
           call invoke( poly_advective_kernel_type(u_grad_z, wind,         &
                                                   h_reconstruction),      &
                        consistent_wind_kernel_type(consistent_wind, wind, &
@@ -738,6 +741,7 @@ contains
                                                      consistent_wind,    &
                                                      adv_field,          &
                                                      ndata_v,            &
+                                                     reversible,         &
                                                      logspace_loc ) )
       end if
 

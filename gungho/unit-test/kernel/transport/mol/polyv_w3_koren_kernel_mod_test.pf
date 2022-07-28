@@ -62,7 +62,7 @@ contains
     real(r_def), dimension(3) :: kw=(/-1.0_r_def,5.0_r_def,2.0_r_def/)/6.0_r_def
 
     integer(i_def) :: df, k, p1, p2, p3
-    logical(l_def) :: logspace
+    logical(l_def) :: logspace, reversible
     real(r_def)    :: constant, r, answerh, answerk
 
     map_w3(1) = 1
@@ -111,12 +111,14 @@ contains
     ! Test subroutine with logspace = .false.
 
     logspace = .false.
+    reversible=.false.
     edge_values(:) = 0.0_r_def
     call polyv_w3_koren_code( nlayers,            &
                               edge_values,        &
                               wind,               &
                               density,            &
                               ndata,              &
+                              reversible,         &
                               logspace,           &
                               ndf_w2,             &
                               undf_w2,            &
@@ -154,6 +156,7 @@ contains
                               wind,               &
                               density,            &
                               ndata,              &
+                              reversible,         &
                               logspace,           &
                               ndf_w2,             &
                               undf_w2,            &
@@ -186,6 +189,7 @@ contains
                               wind,               &
                               density,            &
                               ndata,              &
+                              reversible,         &
                               logspace,           &
                               ndf_w2,             &
                               undf_w2,            &
@@ -203,6 +207,7 @@ contains
                               wind,               &
                               density,            &
                               ndata,              &
+                              reversible,         &
                               logspace,           &
                               ndf_w2,             &
                               undf_w2,            &

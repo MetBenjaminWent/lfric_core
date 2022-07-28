@@ -23,7 +23,7 @@ use argument_mod,      only : arg_type, func_type,         &
                               STENCIL, CROSS, GH_BASIS,    &
                               CELL_COLUMN, GH_EVALUATOR,   &
                               outward_normals_to_horizontal_faces
-use constants_mod,     only : r_def, i_def, tiny_eps
+use constants_mod,     only : r_def, i_def, l_def, tiny_eps
 use fs_continuity_mod, only : W2, W3
 use kernel_mod,        only : kernel_type
 
@@ -137,8 +137,8 @@ subroutine polyh_w3_koren_code( nlayers,              &
     v_dot_n(df) =  dot_product(basis_w2(:,df,df),outward_normals_to_horizontal_faces(:,df))
   end do
 
-  do k = 0, nlayers - 1
-    do df = 1,nfaces_re_h
+  do df = 1,nfaces_re_h
+    do k = 0, nlayers - 1
       ! Check if this is the upwind cell
       direction = wind(map_w2(df) + k )*v_dot_n(df)
       if ( direction > 0.0_r_def ) then

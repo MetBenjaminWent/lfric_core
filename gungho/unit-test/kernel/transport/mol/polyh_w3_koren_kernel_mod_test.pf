@@ -82,7 +82,6 @@ contains
     density(:) = (/ 3.0_r_def, 1.0_r_def, 1.0_r_def, 5.0_r_def, 5.0_r_def /)
 
     edge_values = -1.0_r_def
-
     call polyh_w3_koren_code( nlayers,              &
                               edge_values,          &
                               wind,                 &
