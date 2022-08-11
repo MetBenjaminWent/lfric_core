@@ -64,7 +64,18 @@ module global_mesh_map_mod
     !> @param [out] gid_map[:::] Integer array of target cell global ids which
     !>                           map to the requested cell_ids in the source
     !>                           global mesh object.
-    procedure, public :: get_cell_map
+    procedure, public :: get_selected_cell_map
+
+    !>
+    !> @brief  Gets the full cell map of all source to target ids
+    !> @param [out] gid_map[:::] Integer array of target cell global ids which
+    !>                           map to all cell_ids in the source
+    !>                           global mesh object.
+    procedure, public :: get_full_cell_map
+
+    generic,   public :: get_cell_map => get_selected_cell_map, &
+                                         get_full_cell_map
+
     !>
     !> @brief Forced clear of this object from memory.
     !>        This routine should not need to be called manually except
@@ -143,7 +154,7 @@ contains
 
 
 
-  subroutine get_cell_map(self, cell_ids, gid_map)
+  subroutine get_selected_cell_map(self, cell_ids, gid_map)
 
     implicit none
 
@@ -174,7 +185,20 @@ contains
     end do
 
     return
-  end subroutine get_cell_map
+  end subroutine get_selected_cell_map
+
+
+  subroutine get_full_cell_map(self, cell_map)
+
+    implicit none
+
+    class(global_mesh_map_type), intent(in)  :: self
+    integer(i_def), allocatable, intent(out) :: cell_map(:,:,:)
+
+    if (allocated(cell_map)) deallocate (cell_map)
+    allocate(cell_map, source=self%global_mesh_map)
+
+  end subroutine get_full_cell_map
 
 
   function get_source_id(self) result (source_global_mesh_id)

@@ -112,11 +112,11 @@ contains
                              topology           = test_str(3),       &
                              coord_sys          = test_str(4),       &
                              constructor_inputs = big_test_str,      &
-                             npanels            = test_npanels,      &
                              edge_cells_x       = test_edge_cells_x, &
                              edge_cells_y       = test_edge_cells_y, &
                              nmaps              = test_nmaps )
 
+    test_npanels = csgen%get_number_of_panels()
 
     @assertEqual( mesh_name,   trim(test_str(1)) )
     @assertEqual( 'spherical', trim(test_str(2)) )
@@ -270,11 +270,11 @@ contains
                              topology           = test_str(3),  &
                              coord_sys          = test_str(4),  &
                              constructor_inputs = big_test_str, &
-                             npanels            = test_npanels,      &
                              edge_cells_x       = test_edge_cells_x, &
                              edge_cells_y       = test_edge_cells_y, &
                              nmaps              = test_nmaps )
 
+    test_npanels = csgen%get_number_of_panels()
 
     @assertEqual( mesh_name,   trim(test_str(1)) )
     @assertEqual( 'spherical', trim(test_str(2)) )

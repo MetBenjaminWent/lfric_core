@@ -69,6 +69,7 @@ class global_mesh_mod::global_mesh_type {
 
   +add_global_mesh_map(<<in>>target_global_mesh:global_mesh_type<<pointer>>, <<in>>map:integer[:::])
   +get_global_mesh_map(<<in>>target_global_mesh_id:integer): global_mesh_map<<pointer>>
+  +get_mesh_maps(): global_maps <<global_mesh_map_collection_type, pointer>>
 }
 
 

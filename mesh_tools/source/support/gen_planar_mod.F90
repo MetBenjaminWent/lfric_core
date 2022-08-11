@@ -43,7 +43,7 @@ module gen_planar_mod
   private
 
   public :: set_partition_parameters
-  public :: NON_PERIODIC_ID, NPANELS
+  public :: NON_PERIODIC_ID
 
   ! Mesh Vertex directions: local aliases for reference_element_mod
   ! values
@@ -58,7 +58,8 @@ module gen_planar_mod
 
   integer(i_def), parameter :: NON_PERIODIC_ID = -1
 
-  integer(i_def), parameter :: NPANELS = 1
+  ! For a planar meshes there is only one panel
+  integer(i_def), parameter :: NPANELS  = 1
 
   integer(i_def), parameter :: NBORDERS = 4
 
@@ -88,7 +89,6 @@ module gen_planar_mod
     integer(i_def) :: edge_cells_x, edge_cells_y
     real(r_def)    :: dx, dy
 
-    integer(i_def) :: npanels
     integer(i_def) :: nmaps
 
     integer(i_def) :: n_nodes
@@ -134,6 +134,7 @@ module gen_planar_mod
   contains
 
     procedure :: generate
+    procedure :: get_number_of_panels
     procedure :: get_metadata
     procedure :: get_dimensions
     procedure :: get_coordinates
@@ -307,7 +308,7 @@ function gen_planar_constructor( reference_element,          &
   self%topology     = topology
   self%edge_cells_x = edge_cells_x
   self%edge_cells_y = edge_cells_y
-  self%npanels      = NPANELS
+
   self%nmaps        = 0_i_def
   self%periodic_x   = periodic_x
   self%periodic_y   = periodic_y
@@ -1516,7 +1517,7 @@ subroutine calc_cell_centres(self)
   integer(i_def), parameter :: NVERTS_PER_CELL = 4
   integer(i_def) :: cell_verts(NVERTS_PER_CELL)
 
-  ncells = self%npanels*self%edge_cells_x*self%edge_cells_y
+  ncells = NPANELS*self%edge_cells_x*self%edge_cells_y
 
   ! 1.0 Initialise the face centres
   if ( .not. allocated(self%cell_coords) ) allocate( self%cell_coords(2,ncells) )
@@ -1743,14 +1744,14 @@ subroutine calc_global_mesh_maps(self)
 
   source_id  = 1
   source_cpp = self%edge_cells_x*self%edge_cells_y
-  source_ncells = source_cpp*self%npanels
+  source_ncells = source_cpp*NPANELS
 
   do i=1, size(self%target_mesh_names)
 
     target_edge_cells_x  = self%target_edge_cells_x(i)
     target_edge_cells_y  = self%target_edge_cells_y(i)
     target_cpp           = target_edge_cells_x*target_edge_cells_y
-    target_ncells        = target_cpp*self%npanels
+    target_ncells        = target_cpp*NPANELS
     ntarget_per_source_x = max(1,target_edge_cells_x/self%edge_cells_x)
     ntarget_per_source_y = max(1,target_edge_cells_y/self%edge_cells_y)
     allocate(cell_map(ntarget_per_source_x,ntarget_per_source_y,source_ncells))
@@ -1771,6 +1772,23 @@ subroutine calc_global_mesh_maps(self)
   return
 end subroutine calc_global_mesh_maps
 
+!-----------------------------------------------------------------------------
+!> @brief Returns the number of panels in the mesh topology.
+!> @description Panels are a subset of cells in the mesh domain which may
+!>              exhibit common properties.
+!> @return answer Number of panels resulting from this generation strategy.
+!-----------------------------------------------------------------------------
+function get_number_of_panels( self ) result( answer )
+
+  implicit none
+
+  class(gen_planar_type), intent(in) :: self
+
+  integer(i_def) :: answer
+
+  answer = NPANELS
+
+end function get_number_of_panels
 
 !-----------------------------------------------------------------------------
 !> @brief Returns mesh metadata information.
@@ -1808,7 +1826,6 @@ subroutine get_metadata( self,               &
                          coord_sys,          &
                          periodic_x,         &
                          periodic_y,         &
-                         npanels,            &
                          edge_cells_x,       &
                          edge_cells_y,       &
                          constructor_inputs, &
@@ -1828,7 +1845,6 @@ subroutine get_metadata( self,               &
   logical(l_def),      optional, intent(out) :: periodic_x
   logical(l_def),      optional, intent(out) :: periodic_y
 
-  integer(i_def),      optional, intent(out) :: npanels
   integer(i_def),      optional, intent(out) :: edge_cells_x
   integer(i_def),      optional, intent(out) :: edge_cells_y
   integer(i_def),      optional, intent(out) :: nmaps
@@ -1848,7 +1864,6 @@ subroutine get_metadata( self,               &
   if (present(coord_sys))    coord_sys    = key_from_coord_sys(self%coord_sys)
   if (present(periodic_x))   periodic_x   = self%periodic_x
   if (present(periodic_y))   periodic_y   = self%periodic_y
-  if (present(npanels))      npanels      = self%npanels
   if (present(edge_cells_x)) edge_cells_x = self%edge_cells_x
   if (present(edge_cells_y)) edge_cells_y = self%edge_cells_y
   if (present(nmaps))        nmaps        = self%nmaps
@@ -1956,7 +1971,7 @@ subroutine write_mesh(self)
   write(stdout,'(A)')    "Topology:  "// trim(key_from_topology(self%topology))
   write(stdout,'(A,L1)') "Periodic in x-axis: ", self%periodic_x
   write(stdout,'(A,L1)') "Periodic in y-axis: ", self%periodic_y
-  write(stdout,'(A,I0)') "Panels:    ", self%npanels
+  write(stdout,'(A,I0)') "Panels:    ", NPANELS
   write(stdout,'(A,I0)') "Panel edge cells (x): ", self%edge_cells_x
   write(stdout,'(A,I0)') "Panel edge cells (y): ", self%edge_cells_y
   write(stdout,'(A,I0)') 'Number of nodes: ', self%n_nodes

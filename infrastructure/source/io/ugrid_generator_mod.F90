@@ -26,6 +26,7 @@ type, abstract, public :: ugrid_generator_type
 
 contains
   procedure ( generate_interface         ),     deferred :: generate
+  procedure ( get_npanels_interface      ),     deferred :: get_number_of_panels
   procedure ( get_metadata_interface     ),     deferred :: get_metadata
   procedure ( get_dimensions_interface   ),     deferred :: get_dimensions
   procedure ( get_coordinates_interface  ),     deferred :: get_coordinates
@@ -58,6 +59,24 @@ abstract interface
 
 
   !-----------------------------------------------------------------------------
+  !> @brief Function interface for number of panels in a resulting mesh
+  !>        topology
+  !>
+  !> @return answer  Integer number of panels on mesh
+  !-----------------------------------------------------------------------------
+  function get_npanels_interface (self) result (answer)
+
+    import :: ugrid_generator_type, i_def
+
+    implicit none
+
+    class(ugrid_generator_type), intent(in) :: self
+    integer(i_def) :: answer
+
+  end function get_npanels_interface
+
+
+  !-----------------------------------------------------------------------------
   !> @brief Interface: runs the mesh generator strategy.
   !>
   !> @param[in,out] self  The generator strategy object.
@@ -83,7 +102,6 @@ abstract interface
   !> @param[out, optional]  coord_sys          Co-ordinate sys enumeration key
   !> @param[out, optional]  periodic_x         Periodic in E-W direction.
   !> @param[out, optional]  periodic_y         Periodic in N-S direction.
-  !> @param[out, optional]  npanels            Number of panels use to describe mesh
   !> @param[out, optional]  coord_sys          Coordinate system use to locate nodes.
   !> @param[out, optional]  edge_cells_x       Number of panel edge cells (x-axis).
   !> @param[out, optional]  edge_cells_y       Number of panel edge cells (y-axis).
@@ -97,14 +115,14 @@ abstract interface
   !>                                           target mesh(es) to create map(s) for.
   !> @param[out, optional]  maps_edge_cells_y  Number of panel edge cells (y-axis) of
   !>                                           target mesh(es) to create map(s) for.
-  !> @param[out, optional] north_pole          [Longitude, Latitude] of north pole
+  !> @param[out, optional]  north_pole         [Longitude, Latitude] of north pole
   !>                                           used in for domain orientation (degrees)
-  !> @param[out, optional] null_island         [Longitude, Latitude] of null
+  !> @param[out, optional]  null_island        [Longitude, Latitude] of null
   !>                                           island used for domain orientation (degrees)
   !-----------------------------------------------------------------------------
   subroutine get_metadata_interface ( self, mesh_name,                       &
                                       geometry, topology, coord_sys,         &
-                                      periodic_x, periodic_y, npanels,       &
+                                      periodic_x, periodic_y,                &
                                       edge_cells_x, edge_cells_y,            &
                                       constructor_inputs, nmaps,             &
                                       target_mesh_names,                     &
@@ -133,7 +151,6 @@ abstract interface
     integer(i_def), allocatable, &
                     optional, intent(out) :: maps_edge_cells_y(:)
 
-    integer(i_def), optional, intent(out) :: npanels
     integer(i_def), optional, intent(out) :: nmaps
     integer(i_def), optional, intent(out) :: edge_cells_x
     integer(i_def), optional, intent(out) :: edge_cells_y

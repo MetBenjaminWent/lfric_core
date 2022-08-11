@@ -11,7 +11,7 @@
 
 module ugrid_2d_mod
 
-use constants_mod,  only : i_def, r_def, str_def, str_longlong, l_def
+use constants_mod,  only : i_def, r_def, str_def, str_longlong, l_def, imdi
 use ugrid_file_mod, only : ugrid_file_type
 use global_mesh_map_collection_mod, only: global_mesh_map_collection_type
 
@@ -36,6 +36,8 @@ type, public :: ugrid_2d_type
   character(str_def) :: geometry
   character(str_def) :: topology
   character(str_def) :: coord_sys
+
+  integer(i_def) :: npanels = imdi
 
   logical(l_def) :: periodic_x = .false.   !< Periodic in E-W direction.
   logical(l_def) :: periodic_y = .false.   !< Periodic in N-S direction.
@@ -80,7 +82,7 @@ type, public :: ugrid_2d_type
   integer(i_def),     allocatable :: target_edge_cells_y(:) !< Target meshes panel edge cells in y-axis
 
   ! Global mesh maps
-  type(global_mesh_map_collection_type) :: target_mesh_maps
+  type(global_mesh_map_collection_type), pointer :: target_global_mesh_maps => null()
 
   ! Information about the domain orientation
   real(r_def)    :: north_pole(2)   !< [Longitude, Latitude] of northt pole used
@@ -108,6 +110,13 @@ contains
   procedure :: get_face_edge_connectivity
   procedure :: get_face_face_connectivity
   procedure :: write_coordinates
+
+  procedure :: set_global_mesh_maps
+  generic   :: set_mesh_maps => set_global_mesh_maps
+
+  procedure :: get_global_mesh_maps
+  generic   :: get_mesh_maps => get_global_mesh_maps
+
 
   !> Routine to destroy object
   procedure :: clear
@@ -262,6 +271,10 @@ subroutine allocate_arrays(self, generator_strategy)
   allocate(self%face_face_connectivity(self%num_edges_per_face, self%num_faces))
 
   if (self%nmaps > 0) then
+    if (allocated(self%target_mesh_names))   deallocate (self%target_mesh_names)
+    if (allocated(self%target_edge_cells_x)) deallocate (self%target_edge_cells_x)
+    if (allocated(self%target_edge_cells_y)) deallocate (self%target_edge_cells_y)
+
     allocate(self%target_mesh_names(self%nmaps))
     allocate(self%target_edge_cells_x(self%nmaps))
     allocate(self%target_edge_cells_y(self%nmaps))
@@ -329,7 +342,9 @@ end subroutine allocate_arrays_for_file
 !>  @param[in,out] generator_strategy The generator with which to generate the mesh.
 !---------------------------------------------------------------------------------
 subroutine set_by_generator(self, generator_strategy)
+
   use ugrid_generator_mod, only: ugrid_generator_type
+
   implicit none
 
   class(ugrid_2d_type),        intent(inout) :: self
@@ -349,6 +364,8 @@ subroutine set_by_generator(self, generator_strategy)
         null_island        = self%null_island,        &
         nmaps              = self%nmaps )
 
+  self%npanels = generator_strategy%get_number_of_panels()
+
   call generator_strategy%generate()
 
   call allocate_arrays(self, generator_strategy)
@@ -358,6 +375,9 @@ subroutine set_by_generator(self, generator_strategy)
         ( target_mesh_names = self%target_mesh_names,   &
           maps_edge_cells_x = self%target_edge_cells_x, &
           maps_edge_cells_y = self%target_edge_cells_y )
+
+    nullify(self%target_global_mesh_maps)
+    self%target_global_mesh_maps => generator_strategy%get_global_mesh_maps()
   end if
 
   call generator_strategy%get_coordinates         &
@@ -371,10 +391,6 @@ subroutine set_by_generator(self, generator_strategy)
         edge_node_connectivity = self%edge_node_connectivity, &
         face_edge_connectivity = self%face_edge_connectivity, &
         face_face_connectivity = self%face_face_connectivity )
-
-  if (self%nmaps > 0) then
-    self%target_mesh_maps = generator_strategy%get_global_mesh_maps()
-  end if
 
   return
 end subroutine set_by_generator
@@ -444,6 +460,7 @@ subroutine set_from_file_read(self, mesh_name, filename)
       coord_sys              = self%coord_sys,              &
       periodic_x             = self%periodic_x,             &
       periodic_y             = self%periodic_y,             &
+      npanels                = self%npanels,                &
       max_stencil_depth      = self%max_stencil_depth,      &
       constructor_inputs     = self%constructor_inputs,     &
       node_coordinates       = self%node_coordinates,       &
@@ -492,8 +509,12 @@ subroutine write_to_file(self, filename)
        coord_sys              = self%coord_sys,              &
        periodic_x             = self%periodic_x,             &
        periodic_y             = self%periodic_y,             &
+       npanels                = self%npanels,                &
+       north_pole             = self%north_pole,             &
+       null_island            = self%null_island,            &
        max_stencil_depth      = self%max_stencil_depth,      &
        constructor_inputs     = self%constructor_inputs,     &
+
        num_nodes              = self%num_nodes,              &
        num_edges              = self%num_edges,              &
        num_faces              = self%num_faces,              &
@@ -505,11 +526,13 @@ subroutine write_to_file(self, filename)
        edge_node_connectivity = self%edge_node_connectivity, &
        face_edge_connectivity = self%face_edge_connectivity, &
        face_face_connectivity = self%face_face_connectivity, &
-       num_targets            = self%nmaps,                  &
-       target_mesh_names      = self%target_mesh_names,      &
-       target_mesh_maps       = self%target_mesh_maps,       &
-       north_pole             = self%north_pole,             &
-       null_island            = self%null_island      )
+
+       ! InterGrid Maps
+       num_targets             = self%nmaps,             &
+       target_mesh_names       = self%target_mesh_names, &
+       target_global_mesh_maps = self%target_global_mesh_maps )
+
+
 
   call self%file_handler%file_close()
 
@@ -545,6 +568,9 @@ subroutine append_to_file(self, filename)
        coord_sys              = self%coord_sys,              &
        periodic_x             = self%periodic_x,             &
        periodic_y             = self%periodic_y,             &
+       npanels                = self%npanels,                &
+       north_pole             = self%north_pole,             &
+       null_island            = self%null_island,            &
        max_stencil_depth      = self%max_stencil_depth,      &
        constructor_inputs     = self%constructor_inputs,     &
        num_nodes              = self%num_nodes,              &
@@ -558,11 +584,11 @@ subroutine append_to_file(self, filename)
        edge_node_connectivity = self%edge_node_connectivity, &
        face_edge_connectivity = self%face_edge_connectivity, &
        face_face_connectivity = self%face_face_connectivity, &
-       num_targets            = self%nmaps,                  &
-       target_mesh_names      = self%target_mesh_names,      &
-       target_mesh_maps       = self%target_mesh_maps,       &
-       north_pole             = self%north_pole,             &
-       null_island            = self%null_island  )
+
+       ! InterGrid Maps
+       num_targets             = self%nmaps,             &
+       target_mesh_names       = self%target_mesh_names, &
+       target_global_mesh_maps = self%target_global_mesh_maps )
 
   call self%file_handler%file_close()
 
@@ -577,6 +603,7 @@ end subroutine append_to_file
 !> @param[out] geometry           Domain geometry enumeration key
 !> @param[out] topology           Domain topology enumeration key
 !> @param[out] coord_sys          Co-ordinate sys enumeration key
+!> @param[out] npanels            Number of panels used in mesh topology.
 !> @param[out] periodic_x         Periodic in E-W direction.
 !> @param[out] periodic_y         Periodic in N-S direction.
 !> @param[out] max_stencil_depth
@@ -591,14 +618,14 @@ end subroutine append_to_file
 !> @param[out] null_island        Optional, [Longitude, Latitude] of null
 !>                                island used for domain orientation (degrees)
 !-------------------------------------------------------------------------------
-subroutine get_metadata( self, mesh_name,               &
-                         geometry, topology, coord_sys, &
-                         periodic_x, periodic_y,        &
-                         max_stencil_depth,             &
-                         edge_cells_x, edge_cells_y,    &
-                         constructor_inputs, nmaps,     &
-                         target_mesh_names,             &
-                         north_pole, null_island     )
+subroutine get_metadata( self, mesh_name,                  &
+                         geometry, topology, coord_sys,    &
+                         npanels, periodic_x, periodic_y,  &
+                         max_stencil_depth,                &
+                         edge_cells_x, edge_cells_y,       &
+                         constructor_inputs, nmaps,        &
+                         target_mesh_names,                &
+                         north_pole, null_island )
 
   implicit none
 
@@ -607,6 +634,7 @@ subroutine get_metadata( self, mesh_name,               &
   character(str_def),   optional, intent(out) :: geometry
   character(str_def),   optional, intent(out) :: topology
   character(str_def),   optional, intent(out) :: coord_sys
+  integer(i_def),       optional, intent(out) :: npanels
   logical(l_def),       optional, intent(out) :: periodic_x
   logical(l_def),       optional, intent(out) :: periodic_y
 
@@ -627,6 +655,7 @@ subroutine get_metadata( self, mesh_name,               &
   if (present(geometry))           geometry           = self%geometry
   if (present(topology))           topology           = self%topology
   if (present(coord_sys))          coord_sys          = self%coord_sys
+  if (present(npanels ))           npanels            = self%npanels
   if (present(periodic_x))         periodic_x         = self%periodic_x
   if (present(periodic_y))         periodic_y         = self%periodic_y
   if (present(max_stencil_depth))  max_stencil_depth  = self%max_stencil_depth
@@ -791,6 +820,43 @@ subroutine get_face_face_connectivity(self, face_face_connectivity)
   return
 end subroutine get_face_face_connectivity
 
+!-------------------------------------------------------------------------------
+!> @brief     Assigns a global_mesh_map_collection to the ugrid_2d object
+!> @param[in] global_maps  Global mesh map collection
+!-------------------------------------------------------------------------------
+subroutine set_global_mesh_maps( self, global_maps  )
+
+  implicit none
+
+  class (ugrid_2d_type), intent(inout) :: self
+
+  type(global_mesh_map_collection_type), &
+                         intent(in), target :: global_maps
+
+  nullify(self%target_global_mesh_maps)
+  self%target_global_mesh_maps => global_maps
+
+end subroutine set_global_mesh_maps
+
+!-------------------------------------------------------------------------------
+!> @brief     Retrieves pointer to current global_mesh_map_collection
+!>            assigned to the ugrid_2d object
+!> @param[out] global_maps  Pointer to global mesh map collection in ugrid_2d
+!>                          object
+!-------------------------------------------------------------------------------
+subroutine get_global_mesh_maps( self, global_maps  )
+
+  implicit none
+
+  class (ugrid_2d_type), intent(in), target :: self
+
+  type(global_mesh_map_collection_type), &
+                         intent(out), pointer :: global_maps
+
+  nullify(global_maps)
+  global_maps => self%target_global_mesh_maps
+
+end subroutine get_global_mesh_maps
 
 !-------------------------------------------------------------------------------
 !> @brief   Writes coordinates to a .dat file in the units they are held in

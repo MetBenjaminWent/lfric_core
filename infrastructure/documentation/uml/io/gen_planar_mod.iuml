@@ -9,6 +9,7 @@ class gen_planar_mod::gen_planar_type {
   -geometry: integer
   -topology: integer
   -coord_sys: integer
+
   -coord_units_x: string
   -coord_units_y: string
   -constructor_inputs: string
@@ -54,7 +55,9 @@ class gen_planar_mod::gen_planar_type {
   +is_generated() : logical
   +get_corner_gid( <<in>> corner: integer ): integer
 
+
   +generate( ... )
+  +get_number_of_panels( ... )
   +get_metadata( ... )
   +get_dimensions( ... )
   +get_coordinates( ... )

@@ -86,9 +86,10 @@ subroutine calc_global_cell_map( source_mesh,         &
 
 
   ! Get some information from the source mesh
-  call source_mesh%get_metadata( npanels=npanels,                  &
-                                 edge_cells_x=source_edge_cells_x, &
+  call source_mesh%get_metadata( edge_cells_x=source_edge_cells_x, &
                                  edge_cells_y=source_edge_cells_y  )
+
+  npanels = source_mesh%get_number_of_panels()
 
   ! Set logicals to describe refine/coarsen operations
   refine_x  = ( source_edge_cells_x < target_edge_cells_x )
@@ -152,8 +153,8 @@ subroutine calc_global_cell_map( source_mesh,         &
   edge_factor_x = max(1,fine_x / coarse_x)
   edge_factor_y = max(1,fine_y / coarse_y)
 
-  fine_ncells   = nPanels * fine_cpp
-  coarse_ncells = nPanels * coarse_cpp
+  fine_ncells   = npanels * fine_cpp
+  coarse_ncells = npanels * coarse_cpp
 
   allocate( coarse_ids ( coarse_x, coarse_y ))
   allocate( fine_ids   ( fine_x,   fine_y   ))
@@ -168,7 +169,7 @@ subroutine calc_global_cell_map( source_mesh,         &
 
   ! Now loop over each panel numbering coarse / fine cell ids
   ! and then populating the cell maps
-  do n=1, nPanels
+  do n=1, npanels
 
     ! =======================================================
     ! Get the id of the start/end cells for the panel

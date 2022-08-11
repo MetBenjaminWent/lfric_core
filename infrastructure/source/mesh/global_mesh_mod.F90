@@ -119,6 +119,7 @@ module global_mesh_mod
     procedure, public :: get_global_mesh_map
     procedure, public :: get_target_mesh_names
     procedure, public :: get_nmaps
+    procedure, public :: get_mesh_maps
 
     procedure, public :: is_geometry_spherical
     procedure, public :: is_geometry_planar
@@ -872,7 +873,7 @@ contains
   end function get_nverts
 
   !---------------------------------------------------------------------------
-  !> @brief Retruns the number of intergrid maps that exist for this mesh
+  !> @brief Returns the number of intergrid maps that exist for this mesh
   !>        where this mesh is the source mesh.
   !>
   !> @return Number of intergrid maps present in the UGRID file which use
@@ -889,6 +890,27 @@ contains
   nmaps = self%ntarget_meshes
 
   end function get_nmaps
+
+  !---------------------------------------------------------------------------
+  !> @brief Returns the global mesh map collection assigned to this
+  !>        global mesh, were this mesh is treated as the source
+  !>        mesh in the maps contained.
+  !>
+  !> @return global_maps  Mesh map collection <<pointer>>
+  !>
+  function get_mesh_maps( self) result( global_maps  )
+
+    implicit none
+
+    class (global_mesh_type), intent(in), target :: self
+
+    type(global_mesh_map_collection_type), pointer :: global_maps
+
+    nullify(global_maps)
+    global_maps => self%global_mesh_maps
+
+  end function  get_mesh_maps
+
 
   !---------------------------------------------------------------------------
   !> @brief   Gets the array of names of target meshes.

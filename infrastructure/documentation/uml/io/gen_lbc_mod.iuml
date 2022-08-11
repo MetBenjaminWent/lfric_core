@@ -9,12 +9,14 @@ class gen_lbc_mod::gen_lbc_type {
   -mesh_name: string
   -geometry:  integer
   -topology:  integer
+
   -coord_sys: integer
   -coord_units_x: string
   -coord_units_y: string
   -constructor_inputs: string
   -outer_cells_x: integer
   -outer_cells_y: integer
+
   -nmaps: integer
 
   -n_nodes: integer
@@ -50,7 +52,10 @@ class gen_lbc_mod::gen_lbc_type {
 
   +<<create>>gen_lbc_constructor( <<in>> lam_strategy:gen_planar_type, <<in>> rim_depth: integer ): gen_lbc_type
 
+
+
   +generate( ... )
+  +get_number_of_panels( ... )
   +get_metadata( ... )
   +get_dimensions( ... )
   +get_coordinates( ... )

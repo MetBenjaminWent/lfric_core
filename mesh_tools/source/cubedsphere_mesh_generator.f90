@@ -16,14 +16,16 @@ program cubedsphere_mesh_generator
 
   use cli_mod,           only: get_initial_filename
   use constants_mod,     only: i_def, l_def, r_def, str_def, i_native, &
-                               cmdi, imdi, emdi
+                               cmdi, imdi, emdi, str_max_filename
   use configuration_mod, only: read_configuration, final_configuration
   use gencube_ps_mod,    only: gencube_ps_type,          &
-                               set_partition_parameters, &
-                               NPANELS
+                               set_partition_parameters
   use rotation_mod,      only: get_target_north_pole,    &
                                get_target_null_island
   use global_mesh_mod,   only: global_mesh_type
+  use global_mesh_collection_mod,                      &
+                         only: global_mesh_collection, &
+                               global_mesh_collection_type
 
   use halo_comms_mod,    only: initialise_halo_comms, &
                                finalise_halo_comms
@@ -60,13 +62,16 @@ program cubedsphere_mesh_generator
                                          geometry, geometry_planar,  &
                                          geometry_spherical,         &
                                          key_from_geometry
-  use partitioning_config_mod,     only: max_stencil_depth
+  use partitioning_config_mod,     only: max_stencil_depth, &
+                                         partition_range
   use rotation_config_mod,         only: target_north_pole,           &
                                          target_null_island,          &
                                          rotation_target,             &
                                          ROTATION_TARGET_NULL_ISLAND, &
                                          ROTATION_TARGET_NORTH_POLE
   use coord_transform_mod,         only: rebase_longitude_range
+
+ use generate_op_global_objects_mod, only: generate_op_global_objects
 
   implicit none
 
@@ -105,9 +110,7 @@ program cubedsphere_mesh_generator
   ! Partition variables
   procedure(partitioner_interface), &
                           pointer     :: partitioner_ptr => null()
-  type(global_mesh_type), target      :: global_mesh
   type(global_mesh_type), pointer     :: global_mesh_ptr => null()
-  type(ugrid_mesh_data_type)          :: ugrid_mesh_data
   type(partition_type)                :: partition
   type(local_mesh_type)               :: local_mesh
 
@@ -130,6 +133,10 @@ program cubedsphere_mesh_generator
   ! Counters
   integer(i_def)    :: i, j, k, l, n_voids
   integer(i_native) :: log_level
+
+  character(str_max_filename) :: output_basename
+  character(str_def) :: name, source_name
+  integer(i_def)     :: start_partition, end_partition
 
   !===================================================================
   ! 1.0 Set the logging level for the run, should really be able
@@ -514,7 +521,7 @@ program cubedsphere_mesh_generator
   call log_event( "Generating mesh(es):", log_level )
   do i=1, n_meshes
     cpp(i)    = edge_cells(i)*edge_cells(i)
-    ncells(i) = cpp(i)*NPANELS
+    ncells(i) = cpp(i)*mesh_gen(i)%get_number_of_panels()
 
     write(log_scratch_space,'(2(A,I0),A)')           &
         '  Creating Mesh: '// trim(mesh_names(i)) // &
@@ -609,37 +616,66 @@ program cubedsphere_mesh_generator
       '===================================================================='
   call log_event( trim(log_scratch_space), LOG_LEVEL_INFO )
 
+
+  output_basename = mesh_filename( 1:index(mesh_filename, '.nc',back=.true. )-1)
+
   !=================================================================
-  ! 7.0 Partitioning
+  ! 7.0 Offline Partitioning (OP)
   !=================================================================
   if (n_partitions > 0) then
+    !----------------------------------------------------------------------
+    ! 7.1 Create OP global meshes
+    !----------------------------------------------------------------------
+    allocate( global_mesh_collection, source=global_mesh_collection_type() )
+    call generate_op_global_objects( ugrid_2d, global_mesh_collection )
 
-    ! 7.1 Set partitioning parameters.
-    call set_partition_parameters( xproc, yproc, &
-                                   partitioner_ptr )
+    !----------------------------------------------------------------------
+    ! 7.2 OP checks
+    !----------------------------------------------------------------------
+    start_partition = partition_range(1)
+    end_partition   = partition_range(2)
+    if (end_partition > n_partitions-1) then
+      write(log_scratch_space,'(A,I0)')                   &
+          'Requested partition range does not exist, ' // &
+          'max. partition is ', n_partitions-1
+      call log_event( log_scratch_space, log_level_error )
+    end if
 
+    !----------------------------------------------------------------------
+    ! 7.3 OP partitioning parameters.
+    !----------------------------------------------------------------------
+    call set_partition_parameters( xproc, yproc, partitioner_ptr )
+
+    !----------------------------------------------------------------------
+    ! 7.4 Create OP local meshes
+    !----------------------------------------------------------------------
     do i=1, n_meshes
 
-      ! 7.2 Create global mesh object.
-      call ugrid_mesh_data%set_by_ugrid_2d( ugrid_2d(i) )
-      global_mesh = global_mesh_type( ugrid_mesh_data, NPANELS )
-      call ugrid_mesh_data%clear()
-      global_mesh_ptr => global_mesh
+      source_name     =  mesh_names(i)
+      global_mesh_ptr => global_mesh_collection%get_global_mesh(source_name)
 
-      ! 7.3 Create global mesh partitions
-      do j=0,n_partitions-1
-        partition = partition_type( global_mesh_ptr,  &
+      do j=start_partition, end_partition
+
+        partition = partition_type( global_mesh_ptr,   &
                                     partitioner_ptr,   &
                                     xproc, yproc,      &
                                     max_stencil_depth, &
                                     j, n_partitions )
-        call local_mesh%initialise( global_mesh_ptr, partition )
+
+        write(name,'(A,I0)') trim(source_name)//'_', j
+
+        call local_mesh%initialise( global_mesh_ptr, partition, mesh_name=name )
+
       end do
-
-      global_mesh_ptr => null()
-
     end do
-  end if
+
+    global_mesh_ptr => null()
+
+  end if ! n_partitions > 0
+
+  ! ========================================================
+  ! End of developmental Offline Partioning code
+  ! ========================================================
 
   !===================================================================
   ! 8.0 Write out to ugrid file

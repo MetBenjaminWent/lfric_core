@@ -17,15 +17,17 @@ program planar_mesh_generator
 
   use cli_mod,           only: get_initial_filename
   use constants_mod,     only: i_def, l_def, r_def, str_def, i_native, &
-                               cmdi, imdi, emdi
+                               cmdi, imdi, emdi, str_max_filename
   use configuration_mod, only: read_configuration, final_configuration
   use gen_lbc_mod,       only: gen_lbc_type
   use gen_planar_mod,    only: gen_planar_type,          &
-                               set_partition_parameters, &
-                               NPANELS
+                               set_partition_parameters
   use rotation_mod,      only: get_target_north_pole,    &
                                get_target_null_island
   use global_mesh_mod,   only: global_mesh_type
+  use global_mesh_collection_mod,                      &
+                         only: global_mesh_collection, &
+                               global_mesh_collection_type
   use halo_comms_mod,    only: initialise_halo_comms, &
                                finalise_halo_comms
   use io_utility_mod,    only: open_file, close_file
@@ -63,7 +65,8 @@ program planar_mesh_generator
                                      geometry, geometry_planar,  &
                                      geometry_spherical,         &
                                      key_from_geometry
-  use partitioning_config_mod, only: max_stencil_depth
+  use partitioning_config_mod, only: max_stencil_depth, &
+                                     partition_range
   use planar_mesh_config_mod,  only: edge_cells_x, edge_cells_y, &
                                      periodic_x, periodic_y,     &
                                      domain_x, domain_y,         &
@@ -77,6 +80,8 @@ program planar_mesh_generator
                                      ROTATION_TARGET_NULL_ISLAND, &
                                      ROTATION_TARGET_NORTH_POLE
   use coord_transform_mod,     only: rebase_longitude_range
+
+  use generate_op_global_objects_mod, only: generate_op_global_objects
 
   implicit none
 
@@ -109,9 +114,7 @@ program planar_mesh_generator
   ! Partition variables
   procedure(partitioner_interface),  &
                           pointer     :: partitioner_ptr => null()
-  type(global_mesh_type), target      :: global_mesh
   type(global_mesh_type), pointer     :: global_mesh_ptr => null()
-  type(ugrid_mesh_data_type)          :: ugrid_mesh_data
   type(partition_type)                :: partition
   type(local_mesh_type)               :: local_mesh
 
@@ -130,7 +133,6 @@ program planar_mesh_generator
   real(kind=r_def)   :: set_north_pole(2)
   real(kind=r_def)   :: set_null_island(2)
 
-  character(str_def) :: name
   logical(l_def)     :: lbc_generated
   type(gen_lbc_type) :: lbc_mesh_gen
 
@@ -140,6 +142,11 @@ program planar_mesh_generator
   ! Counters
   integer(i_def)    :: i, j, k, l, n_voids
   integer(i_native) :: log_level
+
+  character(str_max_filename) :: output_basename
+
+  character(str_def) :: name, source_name
+  integer(i_def)     :: start_partition, end_partition
 
   !===================================================================
   ! 1.0 Set the logging level for the run, should really be able
@@ -631,51 +638,90 @@ program planar_mesh_generator
     ! Pass the generation object to the ugrid file writer
     call ugrid_2d(i)%set_by_generator(mesh_gen(i))
 
+    ! Generate the LBC mesh generation strategy.
+    if ( create_lbc_mesh .and. &
+       ( trim(mesh_names(i)) == trim(lbc_parent_mesh) ) ) then
+      lbc_mesh_gen = gen_lbc_type(mesh_gen(i), lbc_rim_depth)
+      call ugrid_2d_lbc%set_by_generator(lbc_mesh_gen)
+    end if
+
     if (allocated(target_mesh_names))   deallocate(target_mesh_names)
     if (allocated(target_edge_cells_x)) deallocate(target_edge_cells_x)
     if (allocated(target_edge_cells_y)) deallocate(target_edge_cells_y)
 
-  end do
+  end do ! n_meshes
 
   call log_event( "...generation complete.", LOG_LEVEL_INFO )
   write(log_scratch_space, '(A)') &
       '===================================================================='
   call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
+  output_basename = mesh_filename( 1:index(mesh_filename, '.nc',back=.true. )-1)
+
   !=================================================================
-  ! 7.0 Partitioning
+  ! 7.0 Offline Partitioning (OP)
   !=================================================================
   if (n_partitions > 0 ) then
+    !----------------------------------------------------------------------
+    ! 7.1 Create OP global meshes
+    !----------------------------------------------------------------------
+    allocate( global_mesh_collection, source = global_mesh_collection_type() )
+    if ( create_lbc_mesh ) then
+      call generate_op_global_objects( ugrid_2d, global_mesh_collection, &
+                                       ugrid_2d_lbc )
+    else
+      call generate_op_global_objects( ugrid_2d, global_mesh_collection )
+    end if
 
-    ! 7.1 Set partitioning parameters.
-    call set_partition_parameters( xproc, yproc, &
-                                   partitioner_ptr )
+    !----------------------------------------------------------------------
+    ! 7.2 OP Checks
+    !----------------------------------------------------------------------
+    start_partition = partition_range(1)
+    end_partition   = partition_range(2)
+    if (end_partition > n_partitions-1) then
+      write(log_scratch_space,'(A,I0)')                   &
+          'Requested partition range does not exist, ' // &
+          'max. partition is ', n_partitions-1
+      call log_event( log_scratch_space, log_level_error )
+    end if
 
+    !----------------------------------------------------------------------
+    ! 7.3 OP partitioning parameters.
+    !----------------------------------------------------------------------
+    call set_partition_parameters( xproc, yproc, partitioner_ptr )
+
+    !----------------------------------------------------------------------
+    ! 7.4 Create OP local meshes
+    !----------------------------------------------------------------------
     do i=1, n_meshes
 
-      ! 7.2 Create global mesh object.
-      call ugrid_mesh_data%set_by_ugrid_2d( ugrid_2d(i) )
-      global_mesh = global_mesh_type( ugrid_mesh_data, NPANELS )
-      call ugrid_mesh_data%clear()
-      global_mesh_ptr => global_mesh
+      source_name     =  mesh_names(i)
+      global_mesh_ptr => global_mesh_collection%get_global_mesh(source_name)
 
-      ! 7.3 Create global mesh partitions
-      do j=0,n_partitions-1
+      ! 7.3 Create local mesh partitions
+      do j=start_partition, end_partition
         partition = partition_type( global_mesh_ptr,   &
                                     partitioner_ptr,   &
                                     xproc, yproc,      &
                                     max_stencil_depth, &
                                     j, n_partitions )
-        call local_mesh%initialise( global_mesh_ptr, partition )
+
+        write(name,'(A,I0)') trim(source_name)//'_', j
+
+        call local_mesh%initialise( global_mesh_ptr, partition, mesh_name=name )
       end do
 
       global_mesh_ptr => null()
 
     end do
-  end if
+
+  end if ! n_partitions > 0
+  ! ========================================================
+  ! End of developmental Offline Partioning code
+  ! ========================================================
 
   !===================================================================
-  ! 8.0 Now the write out mesh to the NetCDF file
+  ! .0 Now the write out mesh to the NetCDF file
   !===================================================================
   do i=1, n_meshes
 

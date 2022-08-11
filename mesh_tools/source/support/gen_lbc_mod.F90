@@ -252,6 +252,7 @@ module gen_lbc_mod
   contains
 
     procedure :: generate
+    procedure :: get_number_of_panels
     procedure :: get_metadata
     procedure :: get_dimensions
     procedure :: get_coordinates
@@ -286,6 +287,9 @@ module gen_lbc_mod
 
   integer(i_def), parameter :: horz_npanels = 2
   integer(i_def), parameter :: vert_npanels = 2
+
+  ! For a lbc meshes there is only one panel
+  integer(i_def), parameter :: NPANELS = 1
 
 contains
 
@@ -712,6 +716,24 @@ subroutine generate(self)
   return
 end subroutine generate
 
+!-----------------------------------------------------------------------------
+!> @brief Returns the number of panels in the mesh topology.
+!> @description Panels are a subset of cells in the mesh domain which may
+!>              exhibit common properties.
+!> @return answer Number of panels resulting from this generation strategy.
+!-----------------------------------------------------------------------------
+function get_number_of_panels( self ) result( answer )
+
+  implicit none
+
+  class(gen_lbc_type), intent(in) :: self
+
+  integer(i_def) :: answer
+
+  answer = NPANELS
+
+end function get_number_of_panels
+
 
 !-----------------------------------------------------------------------------
 !> @brief Returns mesh metadata information.
@@ -723,7 +745,6 @@ end subroutine generate
 !> @param[out] coord_sys           Optional, Coordinate system to position nodes.
 !> @param[out] periodic_x          Optional, Periodic in E-W direction.
 !> @param[out] periodic_y          Optional, Periodic in N-S direction.
-!> @param[out] npanels             Optional, Number of panels use to describe mesh
 !> @param[out] edge_cells_x        Optional, Number of panel edge cells (x-axis).
 !> @param[out] edge_cells_y        Optional, Number of panel edge cells (y-axis).
 !> @param[out] constructor_inputs  Optional, Inputs used to create this mesh from
@@ -748,7 +769,6 @@ subroutine get_metadata( self,               &
                          coord_sys,          &
                          periodic_x,         &
                          periodic_y,         &
-                         npanels,            &
                          edge_cells_x,       &
                          edge_cells_y,       &
                          constructor_inputs, &
@@ -769,7 +789,6 @@ subroutine get_metadata( self,               &
 
   logical(l_def),     optional, intent(out) :: periodic_x
   logical(l_def),     optional, intent(out) :: periodic_y
-  integer(i_def),     optional, intent(out) :: npanels
   integer(i_def),     optional, intent(out) :: edge_cells_x
   integer(i_def),     optional, intent(out) :: edge_cells_y
   integer(i_def),     optional, intent(out) :: nmaps
@@ -790,12 +809,6 @@ subroutine get_metadata( self,               &
 
   if (present(periodic_x)) periodic_x = .false.
   if (present(periodic_y)) periodic_y = .false.
-
-  if (present(npanels)) then
-    npanels = imdi
-    write(log_scratch_space, '(A)') 'LBC mesh has no context of panels.'
-    call log_event(log_scratch_space, LOG_LEVEL_WARNING)
-  end if
 
   if (present(constructor_inputs)) constructor_inputs = self%constructor_inputs
 

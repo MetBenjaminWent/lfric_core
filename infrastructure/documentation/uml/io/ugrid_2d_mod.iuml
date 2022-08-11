@@ -8,6 +8,9 @@ class ugrid_2d_mod::ugrid_2d_type {
   -geometry: string
   -topology: string
   -coord_sys: string
+  -npanels: integer
+  -north_pole: real[2]
+  -null_island: real[2]
   -periodic_x: logical
   -periodic_y: logical
   -constructor_inputs: string
@@ -35,7 +38,7 @@ class ugrid_2d_mod::ugrid_2d_type {
   -target_mesh_names:   string[:] <<allocatable>>
   -target_edge_cells_x: integer[:] <<allocatable>>
   -target_edge_cells_y: integer[:] <<allocatable>>
-  -target_mesh_maps: global_mesh_map_collection_type
+  -target_global_mesh_maps: global_mesh_map_collection_type
 
   -file_handler: ugrid_file_type <<allocatable>>
 
@@ -59,6 +62,11 @@ class ugrid_2d_mod::ugrid_2d_type {
   +get_face_node_connectivity( <<out>> face_node_connectivity: integer[::] )
   +get_face_edge_connectivity( <<out>> face_edge_connectivity: integer[::] )
   +get_face_face_connectivity( <<out>> face_face_connectivity: integer[::] )
+
+  +set_global_mesh_maps(<<in, target>> global_maps:<global_mesh_map_collection_type>)
+  +get_global_mesh_maps(<<out, pointer>> global_maps:<global_mesh_map_collection_type>)
+  +get_global_mesh_maps()
+
 
   +write_coordinates()
 

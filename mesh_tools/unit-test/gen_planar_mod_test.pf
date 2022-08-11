@@ -354,13 +354,14 @@ contains
                                 topology            = test_str(3),             &
                                 coord_sys           = test_str(4),             &
                                 constructor_inputs  = big_test_str,            &
-                                npanels             = test_npanels,            &
                                 edge_cells_x        = test_edge_cells_x,       &
                                 edge_cells_y        = test_edge_cells_y,       &
                                 nmaps               = test_nmaps,              &
                                 target_mesh_names   = test_target_mesh_names,  &
                                 maps_edge_cells_x   = test_maps_edge_cells_x,  &
                                 maps_edge_cells_y   = test_maps_edge_cells_y )
+
+    test_npanels = mesh_gen%get_number_of_panels()
 
     @assertEqual( mesh_name,  trim(test_str(1)) )
     @assertEqual( 'planar',   trim(test_str(2)) )

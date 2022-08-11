@@ -80,7 +80,7 @@ type, extends(ugrid_file_type), public :: ncdf_quad_type
 
   character(nf90_max_name), allocatable :: target_mesh_names(:)
 
-  type(global_mesh_map_collection_type) :: target_mesh_maps
+  type(global_mesh_map_collection_type) :: target_global_mesh_maps
 
   ! Dimension values
   integer(i_def) :: nmesh_nodes       !< Number of nodes
@@ -124,6 +124,9 @@ type, extends(ugrid_file_type), public :: ncdf_quad_type
   real(r_def)    :: null_island(2) = [rmdi, rmdi] !< [Longitude,Latitude] of
                                                   !< null island for domain
                                                   !< orientation (degrees)
+
+  integer(i_def) :: npanels
+
 contains
 
   procedure :: read_mesh
@@ -312,13 +315,13 @@ subroutine define_dimensions(self)
                '_cells_per_'//trim(self%mesh_name)//'_x'
 
 
-    global_mesh_map => self%target_mesh_maps%get_global_mesh_map(source_id,i+1)
+    global_mesh_map => self%target_global_mesh_maps%get_global_mesh_map(source_id,i+1)
 
     ierr = nf90_inq_dimid(self%ncid, trim(dim_name), self%ntargets_per_source_x_dim_id(i))
 
     if (ierr /= nf90_noerr) then
-      ierr = nf90_def_dim( self%ncid, trim(dim_name),                            &
-                           global_mesh_map%get_ntarget_cells_per_source_x(),  &
+      ierr = nf90_def_dim( self%ncid, trim(dim_name),                        &
+                           global_mesh_map%get_ntarget_cells_per_source_x(), &
                            self%ntargets_per_source_x_dim_id(i) )
 
       cmess = 'Defining '//trim(dim_name)
@@ -331,7 +334,7 @@ subroutine define_dimensions(self)
     ierr = nf90_inq_dimid(self%ncid, trim(dim_name), self%ntargets_per_source_y_dim_id(i))
 
     if (ierr /= nf90_noerr) then
-      ierr = nf90_def_dim( self%ncid, trim(dim_name),                            &
+      ierr = nf90_def_dim( self%ncid, trim(dim_name),                         &
                            global_mesh_map%get_ntarget_cells_per_source_y(),  &
                            self%ntargets_per_source_y_dim_id(i) )
 
@@ -1301,6 +1304,11 @@ end subroutine get_dimensions
 !>                                           node locations.
 !>  @param[out]     periodic_x               Periodic in E-W direction.
 !>  @param[out]     periodic_y               Periodic in N-S direction.
+!>  @param[out]     npanels                  Number of panels in this mesh
+!>  @param[out]     north_pole               [Longitude, Latitude] of north pole
+!>                                           for domain orientation (degrees)
+!>  @param[out]     null_island              [Longitude, Latitude] of null
+!>                                           island for domain orientation (degrees)
 !>  @param[out]     max_stencil_depth        The max stencil depth that this
 !>                                           mesh supports.
 !>  @param[out]     constructor_inputs       Inputs to the ugrid_generator to
@@ -1315,21 +1323,19 @@ end subroutine get_dimensions
 !>  @param[out]     face_face_connectivity   Faces adjoining each face (links).
 !>  @param[out]     num_targets              Number of mesh maps from mesh.
 !>  @param[out]     target_mesh_names        Mesh(es) that this mesh has maps for.
-!>  @param[out]     north_pole               [Longitude, Latitude] of north pole
-!>                                           for domain orientation (degrees)
-!>  @param[out]     null_island              [Longitude, Latitude] of null
-!>                                           island for domain orientation (degrees)
 !-------------------------------------------------------------------------------
 
 subroutine read_mesh( self, mesh_name, geometry, topology, coord_sys, &
-                      periodic_x, periodic_y, max_stencil_depth,      &
+                      periodic_x, periodic_y, npanels,                &
+                      north_pole, null_island,                        &
+                      max_stencil_depth,                              &
                       constructor_inputs,                             &
                       node_coordinates, face_coordinates,             &
                       coord_units_x, coord_units_y,                   &
                       face_node_connectivity, edge_node_connectivity, &
                       face_edge_connectivity, face_face_connectivity, &
-                      num_targets, target_mesh_names,                 &
-                      north_pole, null_island )
+                      num_targets, target_mesh_names )
+
   implicit none
 
   ! Arguments
@@ -1341,7 +1347,7 @@ subroutine read_mesh( self, mesh_name, geometry, topology, coord_sys, &
   character(str_def),  intent(out) :: coord_sys
   logical(l_def),      intent(out) :: periodic_x
   logical(l_def),      intent(out) :: periodic_y
-
+  integer(i_def),      intent(out) :: npanels
   integer(i_def),      intent(out) :: max_stencil_depth
 
   character(str_longlong), intent(out) :: constructor_inputs
@@ -1589,6 +1595,10 @@ subroutine read_mesh( self, mesh_name, geometry, topology, coord_sys, &
   deallocate(node_coordinates_ncdf)
   deallocate(face_coordinates_ncdf)
 
+  attname = 'npanels'
+  ierr = nf90_get_att( self%ncid, self%mesh_id, trim(attname), self%npanels  )
+  if (ierr == NF90_NOERR) npanels = self%npanels
+
   return
 end subroutine read_mesh
 
@@ -1748,6 +1758,11 @@ end subroutine read_map
 !>                                           node locations.
 !>  @param[in]      periodic_x               Periodic in E-W direction.
 !>  @param[in]      periodic_y               Periodic in N-S direction.
+!>  @param[in]      npanels                  Number of panels in this mesh
+!>  @param[in]      north_pole               [Longitude, Latitude] of north pole
+!>                                           for domain orientation
+!>  @param[in]      null_island              [Longitude, Latitude] of null
+!>                                           island for domain orientation
 !>  @param[in]      max_stencil_depth        The max stencil depth that this
 !>                                           mesh supports.
 !>  @param[in]      constructor_inputs       Inputs used to create this mesh
@@ -1765,23 +1780,24 @@ end subroutine read_map
 !>  @param[in]      face_face_connectivity   Faces adjoining each face (links).
 !>  @param[in]      num_targets              Number of mesh maps from mesh
 !>  @param[in]      target_mesh_names        Mesh(es) that this mesh has maps for
-!>  @param[in]      target_mesh_maps         Mesh maps from this mesh to target mesh(es)
-!>  @param[in]      north_pole               [Longitude, Latitude] of north pole
-!>                                           for domain orientation
-!>  @param[in]      null_island              [Longitude, Latitude] of null
-!>                                           island for domain orientation
+!>  @param[in]      target_global_mesh_maps  Mesh maps from this mesh to target mesh(es)
+
 !-------------------------------------------------------------------------------
 
-subroutine write_mesh( self, mesh_name, geometry, topology, coord_sys,    &
-                       periodic_x, periodic_y, max_stencil_depth,         &
-                       constructor_inputs,                                &
-                       num_nodes, num_edges, num_faces,                   &
-                       node_coordinates, face_coordinates,                &
-                       coord_units_x, coord_units_y,                      &
-                       face_node_connectivity, edge_node_connectivity,    &
-                       face_edge_connectivity, face_face_connectivity,    &
-                       num_targets, target_mesh_names, target_mesh_maps,  &
-                       north_pole, null_island )
+subroutine write_mesh( self, mesh_name, geometry, topology, coord_sys,      &
+                       periodic_x, periodic_y, npanels,                     &
+                       north_pole, null_island, max_stencil_depth,          &
+                       constructor_inputs,                                  &
+                       num_nodes, num_edges, num_faces,                     &
+                       node_coordinates, face_coordinates,                  &
+                       coord_units_x, coord_units_y,                        &
+                       face_node_connectivity, edge_node_connectivity,      &
+                       face_edge_connectivity, face_face_connectivity,      &
+
+                       ! Intergrid maps
+                       num_targets, target_mesh_names, &
+                       target_global_mesh_maps )
+
   implicit none
 
   ! Arguments
@@ -1794,7 +1810,7 @@ subroutine write_mesh( self, mesh_name, geometry, topology, coord_sys,    &
   character(str_def),  intent(in) :: coord_sys
   logical(l_def),      intent(in) :: periodic_x
   logical(l_def),      intent(in) :: periodic_y
-
+  integer(i_def),      intent(in) :: npanels
   integer(i_def),      intent(in) :: max_stencil_depth
 
   character(str_longlong), intent(in) :: constructor_inputs
@@ -1814,7 +1830,7 @@ subroutine write_mesh( self, mesh_name, geometry, topology, coord_sys,    &
 
   character(str_def),  intent(in), allocatable :: target_mesh_names(:)
   type(global_mesh_map_collection_type), &
-                       intent(in) :: target_mesh_maps
+                       intent(in) :: target_global_mesh_maps
 
   ! Information about the mesh rotation
   real(r_def),         intent(in) :: north_pole(2)
@@ -1859,7 +1875,7 @@ subroutine write_mesh( self, mesh_name, geometry, topology, coord_sys,    &
   self%coord_sys     = coord_sys
   self%periodic_x    = periodic_x
   self%periodic_y    = periodic_y
-
+  self%npanels       = npanels
   self%max_stencil_depth  = max_stencil_depth
   self%constructor_inputs = constructor_inputs
 
@@ -1879,7 +1895,7 @@ subroutine write_mesh( self, mesh_name, geometry, topology, coord_sys,    &
     allocate(self%ntargets_per_source_y_dim_id(self%nmesh_targets))
     allocate(self%mesh_mesh_links_id(self%nmesh_targets))
 
-    self%target_mesh_maps = target_mesh_maps
+    self%target_global_mesh_maps = target_global_mesh_maps
 
     allocate(self%target_mesh_names(self%nmesh_targets))
     do i=1, self%nmesh_targets
@@ -1948,7 +1964,7 @@ subroutine write_mesh( self, mesh_name, geometry, topology, coord_sys,    &
   ! Mesh_Mesh connectivity
   do i=1, num_targets
     nullify(mesh_map)
-    mesh_map => self%target_mesh_maps%get_global_mesh_map(1,i+1)
+    mesh_map => self%target_global_mesh_maps%get_global_mesh_map(1,i+1)
     ratio_x = mesh_map%get_ntarget_cells_per_source_x()
     ratio_y = mesh_map%get_ntarget_cells_per_source_y()
     allocate(cell_map(ratio_x, ratio_y, self%nmesh_faces))
@@ -2023,6 +2039,11 @@ end function is_mesh_present
 !>                                           node locations.
 !>  @param[in]      periodic_x               Periodic in E-W direction.
 !>  @param[in]      periodic_y               Periodic in N-S direction.
+!>  @param[in]      npanels                  Number of panels in this mesh
+!>  @param[in]      north_pole               [Longitude, Latitude] of norht pole
+!>                                           for domain orientation (degrees)
+!>  @param[in]      null_island              [Longitude, Latitude] of null
+!>                                           island for domain orientation (degrees)
 !>  @param[in]      max_stencil_depth        The max stencil depth that this
 !>                                           mesh supports.
 !>  @param[in]      constructor_inputs       Inputs used to create this mesh
@@ -2040,22 +2061,24 @@ end function is_mesh_present
 !>  @param[in]      face_face_connectivity   Faces adjoining each face (links).
 !>  @param[in]      num_targets              Number of mesh maps from mesh
 !>  @param[in]      target_mesh_names        Mesh(es) that this mesh has maps for
-!>  @param[in]      target_mesh_maps         Mesh maps from this mesh to target mesh(es)
-!>  @param[in]      north_pole               [Longitude, Latitude] of norht pole
-!>                                           for domain orientation (degrees)
-!>  @param[in]      null_island              [Longitude, Latitude] of null
-!>                                           island for domain orientation (degrees)
+!>  @param[in]      target_global_mesh_maps  Mesh maps from this mesh to target mesh(es)
+
 !-------------------------------------------------------------------------------
 subroutine append_mesh( self, mesh_name, geometry, topology, coord_sys,    &
-                        periodic_x, periodic_y, max_stencil_depth,         &
+                        periodic_x, periodic_y, npanels,                   &
+                        north_pole, null_island,                           &
+                        max_stencil_depth,                                 &
                         constructor_inputs,                                &
                         num_nodes, num_edges, num_faces,                   &
                         node_coordinates, face_coordinates,                &
                         coord_units_x, coord_units_y,                      &
                         face_node_connectivity, edge_node_connectivity,    &
                         face_edge_connectivity, face_face_connectivity,    &
-                        num_targets, target_mesh_names, target_mesh_maps,  &
-                        north_pole, null_island )
+
+                        ! Intergrid maps
+                        num_targets, target_mesh_names, &
+                        target_global_mesh_maps )
+
   implicit none
 
   ! Arguments
@@ -2067,6 +2090,7 @@ subroutine append_mesh( self, mesh_name, geometry, topology, coord_sys,    &
   character(str_def),      intent(in)  :: coord_sys
   logical(l_def),          intent(in)  :: periodic_x
   logical(l_def),          intent(in)  :: periodic_y
+  integer(i_def),          intent(in)  :: npanels
   integer(i_def),          intent(in)  :: max_stencil_depth
   character(str_longlong), intent(in)  :: constructor_inputs
   integer(i_def),          intent(in)  :: num_nodes
@@ -2085,7 +2109,7 @@ subroutine append_mesh( self, mesh_name, geometry, topology, coord_sys,    &
   character(str_def),      intent(in),    &
                            allocatable :: target_mesh_names(:)
   type(global_mesh_map_collection_type),  &
-                         intent(in)    :: target_mesh_maps
+                           intent(in)  :: target_global_mesh_maps
 
   ! Information about the domain orientation
   real(r_def),         intent(in) :: north_pole(2)
@@ -2110,30 +2134,31 @@ subroutine append_mesh( self, mesh_name, geometry, topology, coord_sys,    &
   ierr = nf90_redef(self%ncid)
   call check_err(ierr, routine, cmess)
 
-  call self%write_mesh(                                &
-      mesh_name  = mesh_name,                          &
-      geometry   = geometry,                           &
-      topology   = topology,                           &
-      coord_sys  = coord_sys,                          &
-      periodic_x = periodic_x,                         &
-      periodic_y = periodic_y,                         &
-      max_stencil_depth = max_stencil_depth,           &
-      constructor_inputs = constructor_inputs,         &
-      num_nodes  = num_nodes,                          &
-      num_edges  = num_edges,                          &
-      num_faces  = num_faces,                          &
-      node_coordinates = node_coordinates,             &
-      face_coordinates = face_coordinates,             &
-      coord_units_x    = coord_units_x,                &
-      coord_units_y    = coord_units_y,                &
-      face_node_connectivity = face_node_connectivity, &
-      edge_node_connectivity = edge_node_connectivity, &
-      face_edge_connectivity = face_edge_connectivity, &
-      face_face_connectivity = face_face_connectivity, &
-      num_targets       = num_targets,                 &
-      target_mesh_names = target_mesh_names,           &
-      target_mesh_maps  = target_mesh_maps,            &
-      north_pole = north_pole,                         &
+  call self%write_mesh(                                  &
+      mesh_name  = mesh_name,                            &
+      geometry   = geometry,                             &
+      topology   = topology,                             &
+      coord_sys  = coord_sys,                            &
+      periodic_x = periodic_x,                           &
+      periodic_y = periodic_y,                           &
+      npanels    = npanels,                              &
+      max_stencil_depth  = max_stencil_depth,            &
+      constructor_inputs = constructor_inputs,           &
+      num_nodes  = num_nodes,                            &
+      num_edges  = num_edges,                            &
+      num_faces  = num_faces,                            &
+      node_coordinates = node_coordinates,               &
+      face_coordinates = face_coordinates,               &
+      coord_units_x    = coord_units_x,                  &
+      coord_units_y    = coord_units_y,                  &
+      face_node_connectivity = face_node_connectivity,   &
+      edge_node_connectivity = edge_node_connectivity,   &
+      face_edge_connectivity = face_edge_connectivity,   &
+      face_face_connectivity = face_face_connectivity,   &
+      num_targets       = num_targets,                   &
+      target_mesh_names = target_mesh_names,             &
+      target_global_mesh_maps = target_global_mesh_maps, &
+      north_pole = north_pole,                           &
       null_island = null_island  )
   return
 end subroutine append_mesh

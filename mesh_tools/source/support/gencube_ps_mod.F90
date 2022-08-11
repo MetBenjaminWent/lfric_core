@@ -54,7 +54,6 @@ module gencube_ps_mod
   private
 
   public :: set_partition_parameters
-  public :: NPANELS
 
 !-----------------------------------------------------------------------------
   ! Mesh Vertex directions: local aliases for reference_element_mod values
@@ -63,6 +62,7 @@ module gencube_ps_mod
   integer(i_def), parameter :: SE = SEB
   integer(i_def), parameter :: SW = SWB
 
+  ! For a cubesphere these panels are the 6 faces of the domain cube
   integer(i_def), parameter :: NPANELS = 6
 
   integer(i_def), parameter :: PANEL_ROTATIONS(NPANELS) = (/ 0, 0, 1, 1, -1, 0 /)
@@ -91,7 +91,7 @@ module gencube_ps_mod
 
     integer(i_def)      :: edge_cells
     integer(i_def)      :: nsmooth
-    integer(i_def)      :: npanels = 6
+
     integer(i_def)      :: nmaps
 
     integer(i_def)      :: max_num_faces_per_node
@@ -117,20 +117,14 @@ module gencube_ps_mod
     real(r_def) :: null_island(2)
 
   contains
-    procedure :: calc_adjacency
-    procedure :: calc_face_to_vert
-    procedure :: calc_edges
-    procedure :: calc_coords
-    procedure :: calc_cell_centres
     procedure :: generate
+    procedure :: get_number_of_panels
     procedure :: get_metadata
     procedure :: get_dimensions
     procedure :: get_coordinates
     procedure :: get_connectivity
     procedure :: get_global_mesh_maps
     procedure :: write_mesh
-    procedure :: orient_lfric
-    procedure :: smooth
 
     procedure :: clear
 
@@ -204,7 +198,7 @@ contains
   self%mesh_name  = trim(mesh_name)
   self%edge_cells = edge_cells
   self%nsmooth    = nsmooth
-  self%npanels    = NPANELS
+
   self%nmaps      = 0
   self%coord_sys  = coord_sys
 
@@ -318,18 +312,19 @@ end function gencube_ps_constructor
 
 !-------------------------------------------------------------------------------
 !> @brief   For each cell, calculates the set of cells to which it is adjacent.
+!>          (Private Routine)
 !> @details Allocates and populates the instance's cell_next(:,:) array
 !>          with the id of each cell to which the index cell is adjacent.
 !>
-!> @param[in]   self       The gencube_ps_type instance reference.
+!> @param[in]   gen_cube   Generator strategy for a cubed-sphere
 !> @param[out]  cell_next  A rank 2 (4,ncells)-sized array containing the
 !>                         adjacency map.
 !-------------------------------------------------------------------------------
-subroutine calc_adjacency(self, cell_next)
+subroutine calc_adjacency(gen_cube, cell_next)
 
   implicit none
 
-  class(gencube_ps_type),      intent(in)  :: self
+  class(gencube_ps_type),      intent(in)  :: gen_cube
   integer(i_def), allocatable, intent(out) :: cell_next(:,:)
 
   integer(i_def) :: edge_cells, ncells, cpp, i
@@ -344,9 +339,9 @@ subroutine calc_adjacency(self, cell_next)
   integer(i_def), allocatable :: panel_edge_cells(:,:,:) ! (cell id, panel edge, panel number )
 
 
-  edge_cells = self%edge_cells
+  edge_cells = gen_cube%edge_cells
   cpp        = edge_cells*edge_cells
-  ncells     = cpp*self%npanels
+  ncells     = cpp*NPANELS
 
 
   allocate(cell_next(4, ncells), stat=astat)
@@ -382,8 +377,8 @@ subroutine calc_adjacency(self, cell_next)
   ! |7|8|9|
   ! +-----+
 
-  allocate(panel_next(4, npanels))
-  allocate(panel_edge_cells (edge_cells,4,npanels))
+  allocate(panel_next(4, NPANELS))
+  allocate(panel_edge_cells (edge_cells,4,NPANELS))
 
   ! Ordering : W,S,E,N
   panel_next(:,1) = [4,6,2,5]
@@ -539,26 +534,27 @@ end subroutine calc_adjacency
 
 !-------------------------------------------------------------------------------
 !> @brief   For each cell, calculates the four vertices which comprise it.
+!>          (Private Routine)
 !> @details Allocates and populates the instance's verts_on_cell(:,:) array with
 !>          the vertices which form each cell.
 !>
-!> @param[in]   self           The gencube_ps_type instance reference.
+!> @param[in]   gen_cube       Generator strategy for a cubed-sphere
 !> @param[out]  verts_on_cell  A rank 2 (4,ncells)-sized integer array of vertices
 !>                             which constitute each cell.
 !-------------------------------------------------------------------------------
-subroutine calc_face_to_vert(self, verts_on_cell)
+subroutine calc_face_to_vert(gen_cube, verts_on_cell)
 
   implicit none
 
-  class(gencube_ps_type),      intent(in)  :: self
+  class(gencube_ps_type),      intent(in)  :: gen_cube
   integer(i_def), allocatable, intent(out) :: verts_on_cell(:,:)
 
   integer(i_def) :: edge_cells, ncells, cpp
   integer(i_def) :: cell, idx, panel, nxf, astat
 
-  edge_cells = self%edge_cells
+  edge_cells = gen_cube%edge_cells
   cpp        = edge_cells*edge_cells
-  ncells     = cpp*self%npanels
+  ncells     = cpp*NPANELS
 
   allocate(verts_on_cell(4, 6*cpp), stat=astat)
 
@@ -579,14 +575,14 @@ subroutine calc_face_to_vert(self, verts_on_cell)
 
   ! Copy NE from E neighbour for every cell panels 1:4
   do cell = 1, 4*cpp
-    verts_on_cell(NE, cell) = verts_on_cell(NW, self%cell_next(E, cell))
+    verts_on_cell(NE, cell) = verts_on_cell(NW, gen_cube%cell_next(E, cell))
   end do
 
   ! Copy from S for non-S-edge rows of panels 1:4
   do panel = 1, 4
     do cell = (panel-1)*cpp+1, panel*cpp-edge_cells
-      verts_on_cell(SW, cell) = verts_on_cell(NW, self%cell_next(S, cell))
-      verts_on_cell(SE, cell) = verts_on_cell(NE, self%cell_next(S, cell))
+      verts_on_cell(SW, cell) = verts_on_cell(NW, gen_cube%cell_next(S, cell))
+      verts_on_cell(SE, cell) = verts_on_cell(NE, gen_cube%cell_next(S, cell))
     end do
   end do
 
@@ -595,10 +591,10 @@ subroutine calc_face_to_vert(self, verts_on_cell)
     do cell = 4*cpp+(idx*edge_cells)+1, 4*cpp+(idx*edge_cells)+edge_cells-1
       verts_on_cell(SE, cell) = nxf
       nxf = nxf+1
-      verts_on_cell(SW, self%cell_next(E, cell)) = verts_on_cell(SE, cell)
-      verts_on_cell(NE, self%cell_next(S, cell)) = verts_on_cell(SE, cell)
+      verts_on_cell(SW, gen_cube%cell_next(E, cell)) = verts_on_cell(SE, cell)
+      verts_on_cell(NE, gen_cube%cell_next(S, cell)) = verts_on_cell(SE, cell)
       ! Transitive is valid here
-      verts_on_cell(NW, self%cell_next(E, self%cell_next(S, cell))) &
+      verts_on_cell(NW, gen_cube%cell_next(E, gen_cube%cell_next(S, cell))) &
                                                  = verts_on_cell(SE, cell)
     end do
   end do
@@ -611,7 +607,7 @@ subroutine calc_face_to_vert(self, verts_on_cell)
 
   ! Copy SW from S neighbour for non-S-edge rows of panel 6
   do cell = 5*cpp+1, 6*cpp-edge_cells
-    verts_on_cell(SW, cell) = verts_on_cell(NW, self%cell_next(S, cell))
+    verts_on_cell(SW, cell) = verts_on_cell(NW, gen_cube%cell_next(S, cell))
   end do
 
   ! SW verts of bottom row, panel 6
@@ -623,71 +619,71 @@ subroutine calc_face_to_vert(self, verts_on_cell)
   ! SW verts of bottom row, panel 3
   do cell = 3*cpp-edge_cells+1, 3*cpp
     verts_on_cell(SW, cell) = nxf
-    verts_on_cell(SE, self%cell_next(W, cell)) = verts_on_cell(SW, cell)
+    verts_on_cell(SE, gen_cube%cell_next(W, cell)) = verts_on_cell(SW, cell)
     nxf = nxf+1
   end do
 
   ! Vert at SE of panel 3
   cell = 3*cpp
   verts_on_cell(SE, cell) = nxf
-  verts_on_cell(SW, self%cell_next(E, cell)) = verts_on_cell(SE, cell)
+  verts_on_cell(SW, gen_cube%cell_next(E, cell)) = verts_on_cell(SE, cell)
 
   ! Panel boundary joins...
 
   ! S=>W join, I=>VI
   do cell = cpp-edge_cells+1, cpp
-    verts_on_cell(SW, cell) = verts_on_cell(SW, self%cell_next(S, cell))
-    verts_on_cell(SE, cell) = verts_on_cell(NW, self%cell_next(S, cell))
+    verts_on_cell(SW, cell) = verts_on_cell(SW, gen_cube%cell_next(S, cell))
+    verts_on_cell(SE, cell) = verts_on_cell(NW, gen_cube%cell_next(S, cell))
   end do
 
   ! N=>W join, I=>V
   do cell = 1, edge_cells
-    verts_on_cell(NW, self%cell_next(N, cell)) = verts_on_cell(NW, cell)
-    verts_on_cell(SW, self%cell_next(N, cell)) = verts_on_cell(NE, cell)
+    verts_on_cell(NW, gen_cube%cell_next(N, cell)) = verts_on_cell(NW, cell)
+    verts_on_cell(SW, gen_cube%cell_next(N, cell)) = verts_on_cell(NE, cell)
   end do
 
   ! N=>E join, III=>V
   do cell = 2*cpp+1, 2*cpp+edge_cells
-    verts_on_cell(SE, self%cell_next(N, cell)) = verts_on_cell(NW, cell)
-    verts_on_cell(NE, self%cell_next(N, cell)) = verts_on_cell(NE, cell)
+    verts_on_cell(SE, gen_cube%cell_next(N, cell)) = verts_on_cell(NW, cell)
+    verts_on_cell(NE, gen_cube%cell_next(N, cell)) = verts_on_cell(NE, cell)
   end do
 
   ! E=>S join, III=>VI
   do cell = 3*cpp-edge_cells+1, 3*cpp
-     verts_on_cell(NE, self%cell_next(S, cell)) = verts_on_cell(SW, cell)
-     verts_on_cell(SE, self%cell_next(S, cell)) = verts_on_cell(SE, cell)
+     verts_on_cell(NE, gen_cube%cell_next(S, cell)) = verts_on_cell(SW, cell)
+     verts_on_cell(SE, gen_cube%cell_next(S, cell)) = verts_on_cell(SE, cell)
   end do
 
   ! N=>N join, IV=>V
   do cell = 3*cpp+1, 3*cpp+edge_cells
-    verts_on_cell(NE, self%cell_next(N, cell)) = verts_on_cell(NW, cell)
-    verts_on_cell(NW, self%cell_next(N, cell)) = verts_on_cell(NE, cell)
+    verts_on_cell(NE, gen_cube%cell_next(N, cell)) = verts_on_cell(NW, cell)
+    verts_on_cell(NW, gen_cube%cell_next(N, cell)) = verts_on_cell(NE, cell)
   end do
 
   ! Copy NE,SE from E neighbour for non-E-edge cells of panel 6
   do idx = 0, edge_cells-1
     do cell = 5*cpp+1+(idx*edge_cells), 5*cpp+1+(idx*edge_cells)+edge_cells-2
-      verts_on_cell(NE, cell) = verts_on_cell(NW, self%cell_next(E, cell))
-      verts_on_cell(SE, cell) = verts_on_cell(SW, self%cell_next(E, cell))
+      verts_on_cell(NE, cell) = verts_on_cell(NW, gen_cube%cell_next(E, cell))
+      verts_on_cell(SE, cell) = verts_on_cell(SW, gen_cube%cell_next(E, cell))
     end do
   end do
 
   ! S=>S join, VI=>IV
   do cell = 6*cpp-edge_cells+1, 6*cpp
-    verts_on_cell(SW, self%cell_next(S, cell)) = verts_on_cell(SE, cell)
-    verts_on_cell(SE, self%cell_next(S, cell)) = verts_on_cell(SW, cell)
+    verts_on_cell(SW, gen_cube%cell_next(S, cell)) = verts_on_cell(SE, cell)
+    verts_on_cell(SE, gen_cube%cell_next(S, cell)) = verts_on_cell(SW, cell)
   end do
 
   ! S=>N join, II=>VI
   do cell = 2*cpp-edge_cells+1, 2*cpp
-    verts_on_cell(SW, cell) = verts_on_cell(NW, self%cell_next(S, cell))
-    verts_on_cell(SE, cell) = verts_on_cell(NE, self%cell_next(S, cell))
+    verts_on_cell(SW, cell) = verts_on_cell(NW, gen_cube%cell_next(S, cell))
+    verts_on_cell(SE, cell) = verts_on_cell(NE, gen_cube%cell_next(S, cell))
   end do
 
   ! N=>S join, II=>V
   do cell = cpp+1, cpp+edge_cells
-    verts_on_cell(SW, self%cell_next(N, cell)) = verts_on_cell(NW, cell)
-    verts_on_cell(SE, self%cell_next(N, cell)) = verts_on_cell(NE, cell)
+    verts_on_cell(SW, gen_cube%cell_next(N, cell)) = verts_on_cell(NW, cell)
+    verts_on_cell(SE, gen_cube%cell_next(N, cell)) = verts_on_cell(NE, cell)
   end do
 
   return
@@ -696,29 +692,30 @@ end subroutine calc_face_to_vert
 !-------------------------------------------------------------------------------
 !> @brief   Calculates the edges which are found on each cell and the
 !>          pair of vertices which are found on each edge.
+!>          (Private Routine)
 !> @details Allocates and populates both the edges_on_cell and
 !>          verts_on_edge arrays for the instance.
 !>
-!> @param[in]   self           The gencube_ps_type instance reference.
+!> @param[in]   gen_cube       Generator strategy for a cubed-sphere
 !> @param[out]  edges_on_cell  A rank-2 (4,ncells)-sized integer array of
 !>                             the edges found on each cell.
 !> @param[out]  verts_on_edge  A rank-2 (2,2*ncells)-sized integer array
 !>                             of the vertices found on each edge.
 !-------------------------------------------------------------------------------
-subroutine calc_edges(self, edges_on_cell, verts_on_edge)
+subroutine calc_edges(gen_cube, edges_on_cell, verts_on_edge)
 
   implicit none
 
-  class(gencube_ps_type),      intent(in)  :: self
+  class(gencube_ps_type),      intent(in)  :: gen_cube
   integer(i_def), allocatable, intent(out) :: edges_on_cell(:,:)
   integer(i_def), allocatable, intent(out) :: verts_on_edge(:,:)
 
   integer(i_def) :: edge_cells, ncells, cpp
   integer(i_def) :: cell, panel, idx, nxf, astat
 
-  edge_cells = self%edge_cells
+  edge_cells = gen_cube%edge_cells
   cpp        = edge_cells*edge_cells
-  ncells     = cpp*self%npanels
+  ncells     = cpp*NPANELS
 
   allocate(edges_on_cell(4, ncells), stat=astat)
 
@@ -743,120 +740,120 @@ subroutine calc_edges(self, edges_on_cell, verts_on_edge)
       edges_on_cell(N, cell) = nxf
       edges_on_cell(W, cell) = nxf+1
       edges_on_cell(S, cell) = nxf+2
-      verts_on_edge(1, nxf) = self%verts_on_cell(NW, cell)
-      verts_on_edge(2, nxf) = self%verts_on_cell(NE, cell)
-      verts_on_edge(1, nxf+1) = self%verts_on_cell(SW, cell)
-      verts_on_edge(2, nxf+1) = self%verts_on_cell(NW, cell)
-      verts_on_edge(1, nxf+2) = self%verts_on_cell(SE, cell)
-      verts_on_edge(2, nxf+2) = self%verts_on_cell(SW, cell)
+      verts_on_edge(1, nxf) = gen_cube%verts_on_cell(NW, cell)
+      verts_on_edge(2, nxf) = gen_cube%verts_on_cell(NE, cell)
+      verts_on_edge(1, nxf+1) = gen_cube%verts_on_cell(SW, cell)
+      verts_on_edge(2, nxf+1) = gen_cube%verts_on_cell(NW, cell)
+      verts_on_edge(1, nxf+2) = gen_cube%verts_on_cell(SE, cell)
+      verts_on_edge(2, nxf+2) = gen_cube%verts_on_cell(SW, cell)
       nxf = nxf + 3
       ! Push W edge to W neighbour
-      edges_on_cell(E, self%cell_next(W, cell)) = edges_on_cell(W, cell)
+      edges_on_cell(E, gen_cube%cell_next(W, cell)) = edges_on_cell(W, cell)
     end do
     ! Remainder of panel
     do cell = (panel-1)*cpp+1+edge_cells, panel*cpp
       edges_on_cell(W, cell) = nxf
       edges_on_cell(S, cell) = nxf+1
-      verts_on_edge(1, nxf) = self%verts_on_cell(SW, cell)
-      verts_on_edge(2, nxf) = self%verts_on_cell(NW, cell)
-      verts_on_edge(1, nxf+1) = self%verts_on_cell(SE, cell)
-      verts_on_edge(2, nxf+1) = self%verts_on_cell(SW, cell)
+      verts_on_edge(1, nxf) = gen_cube%verts_on_cell(SW, cell)
+      verts_on_edge(2, nxf) = gen_cube%verts_on_cell(NW, cell)
+      verts_on_edge(1, nxf+1) = gen_cube%verts_on_cell(SE, cell)
+      verts_on_edge(2, nxf+1) = gen_cube%verts_on_cell(SW, cell)
       nxf = nxf+2
       ! Copy N edge from N cell
-      edges_on_cell(N, cell) = edges_on_cell(S, self%cell_next(N, cell))
+      edges_on_cell(N, cell) = edges_on_cell(S, gen_cube%cell_next(N, cell))
       ! Push W edge to W neighbour
-      edges_on_cell(E, self%cell_next(W, cell)) = edges_on_cell(W, cell)
+      edges_on_cell(E, gen_cube%cell_next(W, cell)) = edges_on_cell(W, cell)
     end do
   end do
 
   ! Panel V non-S-edge rows
   do cell = 4*cpp+1, 5*cpp-edge_cells
     edges_on_cell(S, cell) = nxf
-    verts_on_edge(1, nxf) = self%verts_on_cell(SE, cell)
-    verts_on_edge(2, nxf) = self%verts_on_cell(SW, cell)
+    verts_on_edge(1, nxf) = gen_cube%verts_on_cell(SE, cell)
+    verts_on_edge(2, nxf) = gen_cube%verts_on_cell(SW, cell)
     nxf = nxf + 1
     ! Push S edge to S neighbour
-    edges_on_cell(N, self%cell_next(S, cell)) = edges_on_cell(S, cell)
+    edges_on_cell(N, gen_cube%cell_next(S, cell)) = edges_on_cell(S, cell)
   end do
 
   ! Panel V non-E-edge columns
   do idx = 0, edge_cells-1
     do cell = 4*cpp+1+idx*edge_cells, 4*cpp+(idx+1)*edge_cells-1
       edges_on_cell(E, cell) = nxf
-      verts_on_edge(1, nxf) = self%verts_on_cell(NE, cell)
-      verts_on_edge(2, nxf) = self%verts_on_cell(SE, cell)
+      verts_on_edge(1, nxf) = gen_cube%verts_on_cell(NE, cell)
+      verts_on_edge(2, nxf) = gen_cube%verts_on_cell(SE, cell)
       nxf = nxf + 1
       ! Push E edge to E neighbour
-      edges_on_cell(W, self%cell_next(E, cell)) = edges_on_cell(E, cell)
+      edges_on_cell(W, gen_cube%cell_next(E, cell)) = edges_on_cell(E, cell)
     end do
   end do
 
   ! Panel VI non-S-edge rows
   do cell = 5*cpp+1, 6*cpp-edge_cells
     edges_on_cell(S, cell) = nxf
-    verts_on_edge(1, nxf) = self%verts_on_cell(SE, cell)
-    verts_on_edge(2, nxf) = self%verts_on_cell(SW, cell)
+    verts_on_edge(1, nxf) = gen_cube%verts_on_cell(SE, cell)
+    verts_on_edge(2, nxf) = gen_cube%verts_on_cell(SW, cell)
     nxf = nxf + 1
     ! Copy from N neighbour
-    edges_on_cell(N, cell) = edges_on_cell(S, self%cell_next(N, cell))
+    edges_on_cell(N, cell) = edges_on_cell(S, gen_cube%cell_next(N, cell))
   end do
 
   ! Panel VI non-E-edge columns
   do idx = 0, edge_cells-1
     do cell = 5*cpp+1+idx*edge_cells, 5*cpp+(idx+1)*edge_cells-1
       edges_on_cell(E, cell) = nxf
-      verts_on_edge(1, nxf) = self%verts_on_cell(NE, cell)
-      verts_on_edge(2, nxf) = self%verts_on_cell(SE, cell)
+      verts_on_edge(1, nxf) = gen_cube%verts_on_cell(NE, cell)
+      verts_on_edge(2, nxf) = gen_cube%verts_on_cell(SE, cell)
       nxf = nxf + 1
       ! Push E edge to E neighbour
-      edges_on_cell(W, self%cell_next(E, cell)) = edges_on_cell(E, cell)
+      edges_on_cell(W, gen_cube%cell_next(E, cell)) = edges_on_cell(E, cell)
     end do
   end do
 
   ! Panel VI S-edge row copy in N
   do cell = 6*cpp-edge_cells+1, 6*cpp
-    edges_on_cell(N, cell) = edges_on_cell(S, self%cell_next(N, cell))
+    edges_on_cell(N, cell) = edges_on_cell(S, gen_cube%cell_next(N, cell))
   end do
 
   ! Join edges on panel boundaries...
   ! N=>W join, I=>V
   do cell = 1, edge_cells
-    edges_on_cell(W, self%cell_next(N, cell)) = edges_on_cell(N, cell)
+    edges_on_cell(W, gen_cube%cell_next(N, cell)) = edges_on_cell(N, cell)
   end do
 
   ! S=>W join, I=>VI
   do cell = cpp-edge_cells+1, cpp
-    edges_on_cell(W, self%cell_next(S, cell)) = edges_on_cell(S, cell)
+    edges_on_cell(W, gen_cube%cell_next(S, cell)) = edges_on_cell(S, cell)
   end do
 
   ! N=>E join, III=>V
   do cell = 2*cpp+1, 2*cpp+edge_cells
-    edges_on_cell(E, self%cell_next(N, cell)) = edges_on_cell(N, cell)
+    edges_on_cell(E, gen_cube%cell_next(N, cell)) = edges_on_cell(N, cell)
   end do
 
   ! E=>S join, III=>VI
   do cell = 3*cpp-edge_cells+1, 3*cpp
-    edges_on_cell(E, self%cell_next(S, cell)) = edges_on_cell(S, cell)
+    edges_on_cell(E, gen_cube%cell_next(S, cell)) = edges_on_cell(S, cell)
   end do
 
   ! N=>N join, IV=>V
   do cell = 3*cpp+1, 3*cpp+edge_cells
-    edges_on_cell(N, self%cell_next(N, cell)) = edges_on_cell(N, cell)
+    edges_on_cell(N, gen_cube%cell_next(N, cell)) = edges_on_cell(N, cell)
   end do
 
   ! S=>N join, II=>VI
   do cell = 2*cpp-edge_cells+1, 2*cpp
-    edges_on_cell(N, self%cell_next(S, cell)) = edges_on_cell(S, cell)
+    edges_on_cell(N, gen_cube%cell_next(S, cell)) = edges_on_cell(S, cell)
   end do
 
   ! N=>S join, II=>V
   do cell = cpp+1, cpp+edge_cells
-    edges_on_cell(S, self%cell_next(N, cell)) = edges_on_cell(N, cell)
+    edges_on_cell(S, gen_cube%cell_next(N, cell)) = edges_on_cell(N, cell)
   end do
 
   ! S=>S join, IV=>VI
   do cell = 4*cpp-edge_cells+1, 4*cpp
-    edges_on_cell(S, self%cell_next(S, cell)) = edges_on_cell(S, cell)
+    edges_on_cell(S, gen_cube%cell_next(S, cell)) = edges_on_cell(S, cell)
   end do
 
   return
@@ -867,18 +864,18 @@ end subroutine calc_edges
 !> @details Assigns an (x,y) lat-long coordinate to each mesh
 !>          vertex according to its Cartesian position in the mesh.
 !>
-!> @param[in]   self           The gencube_ps_type instance reference.
+!> @param[in]   gen_cube       Generator strategy for a cubed-sphere
 !> @param[out]  vert_coords    A rank 2 (2,ncells)-sized real array of long and
 !>                             lat coordinates (degrees) respectively for
 !>                             each vertex.
 !> @param[out]  coord_units_x  Units of x-coordinate.
 !> @param[out]  coord_units_y  Units of y-coordinate.
 !-------------------------------------------------------------------------------
-subroutine calc_coords(self, vert_coords, coord_units_x, coord_units_y)
+subroutine calc_coords(gen_cube, vert_coords, coord_units_x, coord_units_y)
 
   implicit none
 
-  class(gencube_ps_type),   intent(in)  :: self
+  class(gencube_ps_type),   intent(in)  :: gen_cube
   real(r_def), allocatable, intent(out) :: vert_coords(:,:)
   character(str_def), intent(out) :: coord_units_x
   character(str_def), intent(out) :: coord_units_y
@@ -895,9 +892,9 @@ subroutine calc_coords(self, vert_coords, coord_units_x, coord_units_y)
 
   real(r_def), parameter :: pio4 = PI/4.0_r_def
 
-  edge_cells = self%edge_cells
+  edge_cells = gen_cube%edge_cells
   cpp        = edge_cells*edge_cells
-  ncells     = cpp*self%npanels
+  ncells     = cpp*NPANELS
   nverts     = ncells+2
 
   allocate(vert_coords(2, nverts), stat=astat)
@@ -977,7 +974,7 @@ subroutine calc_coords(self, vert_coords, coord_units_x, coord_units_y)
       ys = xs*t1
       zs = xs*t2
       ! Lookup vert with x offset
-      vert0 = self%verts_on_cell(SE, cell+x)
+      vert0 = gen_cube%verts_on_cell(SE, cell+x)
 
       x0 = -ys
       y0 =  zs
@@ -1005,7 +1002,7 @@ subroutine calc_coords(self, vert_coords, coord_units_x, coord_units_y)
       ys = xs*t1
       zs = xs*t2
       ! Lookup vert
-      vert0 = self%verts_on_cell(NW, cell)
+      vert0 = gen_cube%verts_on_cell(NW, cell)
 
       x0 = -ys
       y0 = -zs
@@ -1033,7 +1030,7 @@ subroutine calc_coords(self, vert_coords, coord_units_x, coord_units_y)
     ys = xs*t1
     zs = xs*t2
 
-    vert0 = self%verts_on_cell(SW, cell)
+    vert0 = gen_cube%verts_on_cell(SW, cell)
 
     x0 = -ys
     y0 = -zs
@@ -1060,7 +1057,7 @@ subroutine calc_coords(self, vert_coords, coord_units_x, coord_units_y)
     ys = xs*t1
     zs = xs*t2
 
-    vert0 = self%verts_on_cell(NE, cell)
+    vert0 = gen_cube%verts_on_cell(NE, cell)
 
     x0 = -ys
     y0 = -zs
@@ -1106,33 +1103,34 @@ end subroutine calc_coords
 !> @details Attracts points to the north (<1) or south (>1) pole according
 !>          to the value in self%stretch_factor. This gives a variable
 !>          resolution mesh. Negative values are invalid.
-!> @param[in]   self         The gencube_ps_type instance reference.
+!>          (PRIVATE ROUTINE)
+!>
+!> @param[in,out] gen_cube  Generator strategy for a cubed-sphere
 !-------------------------------------------------------------------------------
-
-subroutine stretch_mesh(self)
+subroutine stretch_mesh(gen_cube)
 
   implicit none
 
-  class(gencube_ps_type), intent(inout)  :: self
+  class(gencube_ps_type), intent(inout)  :: gen_cube
 
   real(r_def) :: stretching ! Holding variable for stretch function
   real(r_def) :: lat
 
   integer(i_def) :: nverts, vert
 
-  nverts = size(self%vert_coords, dim=2)
+  nverts = size(gen_cube%vert_coords, dim=2)
 
   ! Apply Schmidt stretching transformation
-  if ( self%stretch_factor > 0.0_r_def ) then
+  if ( gen_cube%stretch_factor > 0.0_r_def ) then
 
-    stretching = (1.0_r_def - self%stretch_factor**2) &
-                /(1.0_r_def + self%stretch_factor**2)
+    stretching = (1.0_r_def - gen_cube%stretch_factor**2) &
+                /(1.0_r_def + gen_cube%stretch_factor**2)
 
     do vert = 1,nverts
 
-      lat = self%vert_coords(2, vert)
-      self%vert_coords(2, vert) = asin( (stretching + sin(lat)) &
-                                     /(1.0_r_def + stretching*sin(lat)) )
+      lat = gen_cube%vert_coords(2, vert)
+      gen_cube%vert_coords(2, vert) = asin( (stretching + sin(lat)) &
+                                           /(1.0_r_def + stretching*sin(lat)) )
 
     end do
 
@@ -1174,7 +1172,7 @@ subroutine get_dimensions(self, num_nodes, num_edges, num_faces,           &
 
   edge_cells = self%edge_cells
   cpp        = edge_cells*edge_cells
-  ncells     = cpp*self%npanels
+  ncells     = cpp*NPANELS
 
   num_faces = ncells
   num_nodes = ncells + 2
@@ -1194,11 +1192,10 @@ end subroutine get_dimensions
 !>          the mesh's vertices.
 !> @details Exposes the instance's vert_coords array to the caller.
 !>
-!> @param[in]   self              The gencube_ps_type instance reference.
 !> @param[out]  node_coordinates  The argument to receive the vert_coords data.
 !> @param[out]  cell_coordinates  Cell centre coordinates
-!> @param[out]  coord_units_x  Units of x-coordinate.
-!> @param[out]  coord_units_y  Units of y-coordinate.
+!> @param[out]  coord_units_x     Units of x-coordinate.
+!> @param[out]  coord_units_y     Units of y-coordinate.
 !-------------------------------------------------------------------------------
 subroutine get_coordinates(self, node_coordinates, &
                                  cell_coordinates, &
@@ -1233,9 +1230,9 @@ end subroutine get_coordinates
 !>  @param[out]  face_edge_connectivity  Face-edge connectivity.
 !>  @param[out]  face_face_connectivity  Face-face connectivity.
 !-------------------------------------------------------------------------------
-subroutine get_connectivity(self, face_node_connectivity,   &
-                                  edge_node_connectivity,   &
-                                  face_edge_connectivity,   &
+subroutine get_connectivity(self, face_node_connectivity, &
+                                  edge_node_connectivity, &
+                                  face_edge_connectivity, &
                                   face_face_connectivity)
   implicit none
 
@@ -1335,7 +1332,9 @@ end subroutine generate
 !>          mesh objects mesh details, and those of the requested target
 !>          meshes using calc_global_cell_map.
 !>
-!> @param[in,out]  self  The gencube_ps_type instance reference.
+!> @param[in,out]  self                  The gencube_ps_type instance reference.
+!> @param[in]      panel_rotation_array  Cyclic rotations to apply to mesh
+!>                                       connectivities
 !-------------------------------------------------------------------------------
 subroutine calc_global_mesh_maps(self, panel_rotation_array)
 
@@ -1355,13 +1354,13 @@ subroutine calc_global_mesh_maps(self, panel_rotation_array)
 
   source_id  = 1
   source_cpp = self%edge_cells*self%edge_cells
-  source_ncells = source_cpp*self%npanels
+  source_ncells = source_cpp*NPANELS
 
   do i=1, size(self%target_mesh_names)
 
     target_edge_cells    = self%target_edge_cells(i)
     target_cpp           = target_edge_cells*target_edge_cells
-    target_ncells        = target_cpp*self%npanels
+    target_ncells        = target_cpp*NPANELS
     ntarget_per_source_x = max(1,target_edge_cells/self%edge_cells)
     ntarget_per_source_y = max(1,target_edge_cells/self%edge_cells)
     allocate(cell_map(ntarget_per_source_x,ntarget_per_source_y,source_ncells))
@@ -1406,13 +1405,13 @@ subroutine write_mesh(self)
 
   character(str_long) :: tmp_str
 
-  ncells = self%npanels*self%edge_cells*self%edge_cells
+  ncells = NPANELS*self%edge_cells*self%edge_cells
 
   write(stdout,'(A)')    "====DEBUG INFO===="
   write(stdout,'(A)')    "Mesh name: "// trim(self%mesh_name)
   write(stdout,'(A)')    "Geometry:  "// trim(key_from_geometry(self%geometry))
   write(stdout,'(A)')    "Topology:  "// trim(key_from_topology(self%topology))
-  write(stdout,'(A,I0)') "Panels:    ", self%npanels
+  write(stdout,'(A,I0)') "Panels:    ", NPANELS
   write(stdout,'(A,I0)') "Panel edge cells: ", self%edge_cells
   write(stdout,'(A)')    "Coord_sys:  "// trim(key_from_coord_sys(self%coord_sys))
   write(stdout,'(A)')    "Co-ord (x) units: "// trim(self%coord_units_x)
@@ -1464,7 +1463,7 @@ subroutine write_mesh(self)
   write(stdout,'(A)') '================================='
   do edge=1, size(self%verts_on_edge, 2)
     tmp_str=''
-    write(tmp_str,'(I07,A,I07,A,I07)') &
+    write(tmp_str,'(I07,A,I07,A,I07)')           &
         edge,' => ', self%verts_on_edge(1,edge), &
         ' -- ', self%verts_on_edge(2,edge)
     write(stdout,('(A)')) trim(tmp_str)
@@ -1477,7 +1476,7 @@ subroutine write_mesh(self)
   write(stdout,'(A)') '================================='
   do vert=1, ncells+2
     tmp_str=''
-    write(tmp_str,'(I07,A,F8.4,A,F8.4,A)')     &
+    write(tmp_str,'(I07,A,F8.4,A,F8.4,A)')       &
         vert,' => ( ', self%vert_coords(1,vert), &
         ',  ', self%vert_coords(2,vert), ' )'
     write(stdout,('(A)')) trim(tmp_str)
@@ -1530,20 +1529,23 @@ end subroutine write_mesh
 !-------------------------------------------------------------------------------
 !> @brief   Reorients the cubed-sphere to be compatible with
 !>          the orientation assumed by the LFRic infrastructure.
-!> @details Performs circular shifts on appropriate panels.
+!>          (Private Routine)
+!> @details Performs circular shifts on appropriate panels
 !>
-!> @param[in,out]  self  The gencube_ps_type instance reference.
+!> @param[in,out] gen_cube             Generator strategy for a cubed-sphere
+!> @param[in]     panel_rotation_array Specifies the amount of rotation for
+!>                                     each panel
 !-------------------------------------------------------------------------------
-subroutine orient_lfric(self, panel_rotation_array)
+subroutine orient_lfric(gen_cube, panel_rotation_array)
 
   implicit none
 
-  class(gencube_ps_type), intent(inout) :: self
+  class(gencube_ps_type), intent(inout) :: gen_cube
   integer(i_def),         intent(in)    :: panel_rotation_array(:)
 
   integer(i_def) :: cpp, p0, p1, i
 
-  cpp = self%edge_cells*self%edge_cells
+  cpp = gen_cube%edge_cells*gen_cube%edge_cells
 
   ! Loop through panels
   do i = 1, SIZE(panel_rotation_array)
@@ -1555,20 +1557,20 @@ subroutine orient_lfric(self, panel_rotation_array)
     ! Rotate left if panel rotation is 1
     if (panel_rotation_array(i) == 1_i_def) then
       ! verts
-      self%verts_on_cell(:, p0:p1) = cshift(self%verts_on_cell(:, p0:p1), 1, 1)
+      gen_cube%verts_on_cell(:, p0:p1) = cshift(gen_cube%verts_on_cell(:, p0:p1), 1, 1)
       ! adj
-      self%cell_next(:, p0:p1) = cshift(self%cell_next(:, p0:p1), 1, 1)
+      gen_cube%cell_next(:, p0:p1) = cshift(gen_cube%cell_next(:, p0:p1), 1, 1)
       ! edges
-      self%edges_on_cell(:, p0:p1) = cshift(self%edges_on_cell(:, p0:p1), 1, 1)
+      gen_cube%edges_on_cell(:, p0:p1) = cshift(gen_cube%edges_on_cell(:, p0:p1), 1, 1)
 
       ! Rotate right if panel rotation is -1
     else if (panel_rotation_array(i) == -1_i_def) then
       ! verts
-      self%verts_on_cell(:, p0:p1) = cshift(self%verts_on_cell(:, p0:p1), -1, 1)
+      gen_cube%verts_on_cell(:, p0:p1) = cshift(gen_cube%verts_on_cell(:, p0:p1), -1, 1)
       ! adj
-      self%cell_next(:, p0:p1) = cshift(self%cell_next(:, p0:p1), -1, 1)
+      gen_cube%cell_next(:, p0:p1) = cshift(gen_cube%cell_next(:, p0:p1), -1, 1)
       ! edges
-      self%edges_on_cell(:, p0:p1) = cshift(self%edges_on_cell(:, p0:p1), -1, 1)
+      gen_cube%edges_on_cell(:, p0:p1) = cshift(gen_cube%edges_on_cell(:, p0:p1), -1, 1)
 
     end if
 
@@ -1578,18 +1580,18 @@ subroutine orient_lfric(self, panel_rotation_array)
 end subroutine orient_lfric
 
 !-------------------------------------------------------------------------------
-!> @brief   Smooth the cube grid
+!> @brief   Smooth the cube grid (Private Routine)
 !> @details Smooth the grid by iteratively computing the face centres as
 !>          barycentres of the surrounding vertices and then the vertices
 !>          as barycentres of the surrounding faces
 !>
-!> @param[in,out]  self     The gencube_ps_type instance reference.
+!> @param[in,out] gen_cube  Generator strategy for a cubed-sphere
 !-------------------------------------------------------------------------------
-subroutine smooth(self)
+subroutine smooth( gen_cube )
 
   implicit none
 
-  class(gencube_ps_type), intent(inout) :: self
+  class(gencube_ps_type), intent(inout) :: gen_cube
 
   integer(i_def) :: ncells
   integer(i_def) :: nverts
@@ -1607,7 +1609,7 @@ subroutine smooth(self)
   ! Counters
   integer(i_def) :: i, j, smooth_pass, cell, vert
 
-  ncells = self%npanels*self%edge_cells*self%edge_cells
+  ncells = NPANELS*gen_cube%edge_cells*gen_cube%edge_cells
   nverts = ncells + 2
 
   allocate( cell_on_vert(4,nverts) )
@@ -1620,7 +1622,7 @@ subroutine smooth(self)
 
   do cell=1, ncells
     do i=1, 4
-      vert_id = self%verts_on_cell(i,cell)
+      vert_id = gen_cube%verts_on_cell(i,cell)
       do j=1, 4
         if (cell_on_vert(j,vert_id) == -1_i_def ) then
           cell_on_vert(j,vert_id) = cell
@@ -1632,18 +1634,18 @@ subroutine smooth(self)
   end do
 
   ! Preliminary - Compute cell centre coordinates
-  call self%calc_cell_centres()
+  call calc_cell_centres( gen_cube )
 
   do cell=1, ncells
-    call ll2xyz( self%cell_coords(1,cell), &
-                 self%cell_coords(2,cell), &
-                 cell_coords(1,cell),      &
-                 cell_coords(2,cell),      &
+    call ll2xyz( gen_cube%cell_coords(1,cell), &
+                 gen_cube%cell_coords(2,cell), &
+                 cell_coords(1,cell),          &
+                 cell_coords(2,cell),          &
                  cell_coords(3,cell) )
 
   end do
 
-  do smooth_pass=1, self%nsmooth
+  do smooth_pass=1, gen_cube%nsmooth
 
     ! Compute vertices of barycentres of surrounding faces
     do vert=1, nverts
@@ -1653,16 +1655,16 @@ subroutine smooth(self)
       end do
       radius_ratio = 1.0_r_def/sqrt( xc(1)**2 + xc(2)**2 + xc(3)**2)
       x0(:) =  xc(:)*radius_ratio
-      call xyz2ll( x0(1), x0(2), x0(3),      &
-                   self%vert_coords(1,vert), &
-                   self%vert_coords(2,vert) )
+      call xyz2ll( x0(1), x0(2), x0(3),          &
+                   gen_cube%vert_coords(1,vert), &
+                   gen_cube%vert_coords(2,vert) )
     end do
 
     ! Compute faces as barycentres of surrounding vertices
     do cell=1, ncells
       xc(:) = 0.0_r_def
       do vert=1, 4
-        ll = self%vert_coords(:,self%verts_on_cell(vert,cell))
+        ll = gen_cube%vert_coords(:,gen_cube%verts_on_cell(vert,cell))
         call ll2xyz(ll(1),ll(2),x0(1),x0(2),x0(3))
         xc(:) = xc(:) + x0(:)
       end do
@@ -1676,18 +1678,18 @@ subroutine smooth(self)
 end subroutine smooth
 
 !-------------------------------------------------------------------------------
-!> @brief   Calculates the mesh cell centres.
+!> @brief   Calculates the mesh cell centres. (Private Routine)
 !> @details The face centres for the mesh are calculated based on the current
 !>          node coordinates. The node_cordinates are assumed to be in [lon, lat].
 !>          Resulting face centre coordinates are in [lon, lat].
 !>
-!> @param[in,out]  self  The gencube_ps_type instance reference.
+!> @param[in,out] gen_cube  Generator strategy for a cubed-sphere
 !-------------------------------------------------------------------------------
-subroutine calc_cell_centres(self)
+subroutine calc_cell_centres( gen_cube )
 
   implicit none
 
-  class(gencube_ps_type), intent(inout) :: self
+  class(gencube_ps_type), intent(inout) :: gen_cube
 
   integer(i_def) :: ncells
 
@@ -1705,26 +1707,26 @@ subroutine calc_cell_centres(self)
   ! Counters
   integer(i_def) :: cell, vert
 
-  ncells = self%npanels*self%edge_cells*self%edge_cells
+  ncells = NPANELS*gen_cube%edge_cells*gen_cube%edge_cells
 
   allocate( verts_on_cell(nverts_per_cell) )
   allocate( cell_vert_coords_xyz(3,nverts_per_cell) )
   allocate( cell_vert_coords_ll(2,nverts_per_cell) )
   allocate( cell_centre_xyz(3) )
 
-  if (.not. allocated(self%cell_coords)) allocate( self%cell_coords(2,ncells) )
+  if (.not. allocated(gen_cube%cell_coords)) allocate( gen_cube%cell_coords(2,ncells) )
 
-  self%cell_coords(:,:) = 0.0_r_def
+  gen_cube%cell_coords(:,:) = 0.0_r_def
 
   do cell=1, ncells
     cell_centre_xyz(:) = 0.0_r_def
 
     ! Get the vertex ids on the cell
-    verts_on_cell(:) = self%verts_on_cell(:,cell)
+    verts_on_cell(:) = gen_cube%verts_on_cell(:,cell)
 
     do vert=1, nverts_per_cell
       ! Get the vertex coords (in radians)
-      cell_vert_coords_ll(:,vert) = self%vert_coords(:,verts_on_cell(vert))
+      cell_vert_coords_ll(:,vert) = gen_cube%vert_coords(:,verts_on_cell(vert))
 
       ! Get vertex coords as cartesian (x,y,z)
       call ll2xyz( cell_vert_coords_ll(1,vert),  &
@@ -1744,14 +1746,33 @@ subroutine calc_cell_centres(self)
     cell_centre_xyz(:) = cell_centre_xyz(:) * radius_ratio
 
     ! Convert cell centre back to lat long
-    call xyz2ll( cell_centre_xyz(1),   & ! x
-                 cell_centre_xyz(2),   & ! y
-                 cell_centre_xyz(3),   & ! z
-                 self%cell_coords(1,cell),  & ! longitude
-                 self%cell_coords(2,cell) )   ! latititude
+    call xyz2ll( cell_centre_xyz(1),           & ! x
+                 cell_centre_xyz(2),           & ! y
+                 cell_centre_xyz(3),           & ! z
+                 gen_cube%cell_coords(1,cell), & ! longitude
+                 gen_cube%cell_coords(2,cell) )  ! latititude
   end do
 
 end subroutine calc_cell_centres
+
+!-----------------------------------------------------------------------------
+!> @brief Returns the number of panels in the mesh topology.
+!> @description Panels are a subset of cells in the mesh domain which may
+!>              exhibit common properties.
+!> @return answer Number of panels resulting from this generation strategy.
+!-----------------------------------------------------------------------------
+function get_number_of_panels( self ) result( answer )
+
+  implicit none
+
+  class(gencube_ps_type), intent(in) :: self
+
+  integer(i_def) :: answer
+
+  answer = NPANELS
+
+end function get_number_of_panels
+
 
 !-----------------------------------------------------------------------------
 !> @brief Returns mesh metadata information.
@@ -1759,7 +1780,6 @@ end subroutine calc_cell_centres
 !> @param[out]  mesh_name          Optional, Name of mesh instance to generate
 !> @param[out]  geometry           Optional, Mesh domain surface type.
 !> @param[out]  topology           Optional, Mesh boundary/connectivity type
-!> @param[out]  npanels            Optional, Number of panels use to describe mesh
 !> @param[out]  coord_sys          Optional, Coordinate system to position nodes.
 !> @param[out]  edge_cells_x       Optional, Number of panel edge cells (x-axis).
 !> @param[out]  edge_cells_y       Optional, Number of panel edge cells (y-axis).
@@ -1785,7 +1805,6 @@ subroutine get_metadata( self,               &
                          coord_sys,          &
                          periodic_x,         &
                          periodic_y,         &
-                         npanels,            &
                          edge_cells_x,       &
                          edge_cells_y,       &
                          constructor_inputs, &
@@ -1794,7 +1813,7 @@ subroutine get_metadata( self,               &
                          maps_edge_cells_x,  &
                          maps_edge_cells_y,  &
                          north_pole,         &
-                         null_island     )
+                         null_island )
 
   implicit none
 
@@ -1807,8 +1826,6 @@ subroutine get_metadata( self,               &
 
   logical(l_def), optional, intent(out) :: periodic_x
   logical(l_def), optional, intent(out) :: periodic_y
-
-  integer(i_def), optional, intent(out) :: npanels
 
   integer(i_def), optional, intent(out) :: edge_cells_x
   integer(i_def), optional, intent(out) :: edge_cells_y
@@ -1827,7 +1844,6 @@ subroutine get_metadata( self,               &
   if (present(geometry))  geometry  = key_from_geometry(self%geometry)
   if (present(topology))  topology  = key_from_topology(self%topology)
   if (present(coord_sys)) coord_sys = key_from_coord_sys(self%coord_sys)
-  if (present(npanels))   npanels   = self%npanels
 
   if (present(edge_cells_x)) edge_cells_x = self%edge_cells
   if (present(edge_cells_y)) edge_cells_y = self%edge_cells
@@ -1895,13 +1911,13 @@ subroutine get_panel_edge_cell_ids( edge_cells, panel_edge_cells )
 !
 
   integer(i_def), intent(in)  :: edge_cells
-  integer(i_def), intent(out) :: panel_edge_cells(edge_cells,4,npanels)
+  integer(i_def), intent(out) :: panel_edge_cells(edge_cells,4,NPANELS)
 
   integer(i_def) :: i, cpp, panel
 
   cpp = edge_cells*edge_cells
 
-  do panel=1, npanels
+  do panel=1, NPANELS
     ! Panel edge ordering W,S,E,N
     do i=1, edge_cells
       panel_edge_cells(i,W,panel) = (panel-1)*cpp + edge_cells*(i-1) + 1
@@ -1961,7 +1977,7 @@ subroutine set_partition_parameters( xproc, yproc, &
     partitioner_ptr => partitioner_cubedsphere_serial
     xproc           = 1
     yproc           = 1
-    call log_event( "Using serial cubed sphere partitioner",    &
+    call log_event( "Using serial cubed sphere partitioner", &
                     LOG_LEVEL_INFO )
   else if( mod(n_partitions, NPANELS) == 0 )then
     ! Use the parallel cubed-sphere partitioner

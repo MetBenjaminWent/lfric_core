@@ -164,6 +164,13 @@ abstract interface
   !> @param[out]    coord_sys              Co-ordinate sys enumeration key
   !> @param[out]    periodic_x             Periodic in E-W direction.
   !> @param[out]    periodic_y             Periodic in N-S direction.
+  !> @param[out]    npanels                Number of panels in this mesh
+  !> @param[out]    north_pole             [Longitude, Latitude] of north pole
+  !>                                       used for domain orientation (degrees)
+  !> @param[out]    null_island            [Longitude, Latitude] of null
+  !>                                       island used for domain orientation (degrees)
+  !> @param[out]    max_stencil_depth      The max stencil depth that this
+  !>                                       mesh supports.
   !> @param[out]    constructor_inputs     Inputs to the ugrid_generator used to
   !>                                       create the mesh
   !> @param[out]    node_coordinates       Node coordinates
@@ -176,26 +183,23 @@ abstract interface
   !> @param[out]    face_face_connectivity Faces adjacent to each face.
   !> @param[out]    num_targets            Number of mesh maps from mesh
   !> @param[out]    target_mesh_names      Mesh(es) that this mesh has maps for
-  !> @param[out]    north_pole             [Longitude, Latitude] of north pole
-  !>                                       used for domain orientation (degrees)
-  !> @param[out]    null_island            [Longitude, Latitude] of null
-  !>                                       island used for domain orientation (degrees)
   !-----------------------------------------------------------------------------
 
-  subroutine read_mesh_interface( self, mesh_name,                &
-                                  geometry, topology, coord_sys,  &
-                                  periodic_x, periodic_y,         &
-                                  max_stencil_depth,              &
-                                  constructor_inputs,             &
-                                  node_coordinates,               &
-                                  face_coordinates,               &
-                                  coord_units_x, coord_units_y,   &
-                                  face_node_connectivity,         &
-                                  edge_node_connectivity,         &
-                                  face_edge_connectivity,         &
-                                  face_face_connectivity,         &
-                                  num_targets, target_mesh_names, &
-                                  north_pole, null_island  )
+  subroutine read_mesh_interface( self, mesh_name,                  &
+                                  geometry, topology, coord_sys,    &
+                                  periodic_x, periodic_y, npanels,  &
+                                  north_pole, null_island,          &
+                                  max_stencil_depth,                &
+                                  constructor_inputs,               &
+                                  node_coordinates,                 &
+                                  face_coordinates,                 &
+                                  coord_units_x, coord_units_y,     &
+                                  face_node_connectivity,           &
+                                  edge_node_connectivity,           &
+                                  face_edge_connectivity,           &
+                                  face_face_connectivity,           &
+                                  num_targets, target_mesh_names )
+
 
     import :: ugrid_file_type, i_def, r_def, str_def, str_longlong, &
               l_def
@@ -212,6 +216,7 @@ abstract interface
     character(str_def), intent(out) :: coord_sys
     logical(l_def),     intent(out) :: periodic_x
     logical(l_def),     intent(out) :: periodic_y
+    integer(i_def),     intent(out) :: npanels
     integer(i_def),     intent(out) :: max_stencil_depth
 
     character(str_longlong), intent(out) :: constructor_inputs
@@ -241,6 +246,13 @@ abstract interface
   !> @param[in]      coord_sys               Co-ordinate sys enumeration key
   !> @param[in]      periodic_x              Periodic in E-W direction.
   !> @param[in]      periodic_y              Periodic in N-S direction.
+  !> @param[in]      npanels                 Number of panels in this mesh
+  !> @param[in]      north_pole              [Longitude, Latitude] of north pole
+  !>                                         used for domain orientation (degrees)
+  !> @param[in]      null_island             [Longitude, Latitude] of null
+  !>                                         island used for domain orientation (degrees)
+  !> @param[in]      max_stencil_depth       The max stencil depth that this
+  !>                                         mesh supports.
   !> @param[in]      constructor_inputs      Inputs used to generate mesh
   !> @param[in]      num_nodes               Number of nodes
   !> @param[in]      num_edges               Number of edges
@@ -256,14 +268,13 @@ abstract interface
   !> @param[in]      num_targets             Number of mesh maps from mesh
   !> @param[in]      target_mesh_names       Mesh(es) that this mesh has maps for
   !> @param[in]      target_mesh_maps        Mesh maps from this mesh to target mesh(es)
-  !> @param[in]      north_pole              [Longitude, Latitude] of north pole
-  !>                                         used for domain orientation (degrees)
-  !> @param[in]      null_island             [Longitude, Latitude] of null
-  !>                                         island used for domain orientation (degrees)
+
   !-----------------------------------------------------------------------------
 
   subroutine write_mesh_interface( self, mesh_name, geometry, topology, coord_sys, &
-                                   periodic_x, periodic_y, max_stencil_depth,      &
+                                   periodic_x, periodic_y, npanels,                &
+                                   north_pole, null_island,                        &
+                                   max_stencil_depth,                              &
                                    constructor_inputs,                             &
                                    num_nodes, num_edges, num_faces,                &
                                    node_coordinates, face_coordinates,             &
@@ -272,11 +283,10 @@ abstract interface
                                    edge_node_connectivity,                         &
                                    face_edge_connectivity,                         &
                                    face_face_connectivity,                         &
-                                   num_targets,                                    &
-                                   target_mesh_names,                              &
-                                   target_mesh_maps,                               &
-                                   north_pole,                                     &
-                                   null_island )
+
+                                   ! Intergrid maps
+                                   num_targets, target_mesh_names, &
+                                   target_global_mesh_maps )
 
     import :: ugrid_file_type, i_def, r_def, str_def, str_longlong, l_def, &
               global_mesh_map_collection_type
@@ -293,7 +303,9 @@ abstract interface
     character(str_def), intent(in) :: coord_sys
     logical(l_def),     intent(in) :: periodic_x
     logical(l_def),     intent(in) :: periodic_y
-
+    integer(i_def),     intent(in) :: npanels
+    real(r_def),        intent(in) :: north_pole(2)
+    real(r_def),        intent(in) :: null_island(2)
     integer(i_def),     intent(in) :: max_stencil_depth
 
     character(str_longlong), intent(in) :: constructor_inputs
@@ -309,13 +321,12 @@ abstract interface
     integer(i_def),     intent(in) :: edge_node_connectivity(:,:)
     integer(i_def),     intent(in) :: face_edge_connectivity(:,:)
     integer(i_def),     intent(in) :: face_face_connectivity(:,:)
+
     integer(i_def),     intent(in) :: num_targets
     character(str_def), intent(in), allocatable :: target_mesh_names(:)
     type(global_mesh_map_collection_type), &
-                        intent(in) :: target_mesh_maps
+                        intent(in) :: target_global_mesh_maps
 
-    real(r_def),        intent(in) :: north_pole(2)
-    real(r_def),        intent(in) :: null_island(2)
 
   end subroutine write_mesh_interface
 

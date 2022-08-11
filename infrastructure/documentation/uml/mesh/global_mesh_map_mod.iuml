@@ -16,6 +16,8 @@ class global_mesh_map_mod::global_mesh_map_type {
   +get_ntarget_cells_per_source_cell(): integer
   +get_ntarget_cells_per_source_x(): integer
   +get_ntarget_cells_per_source_y(): integer
-  +get_cell_map( <<in>>cell_ids:<<integer[:]>>, <<out>>gid_map:<<integer[:::]>> )
+  +get_selected_cell_map( <<in>>cell_ids:<<integer[:]>>, <<out>>gid_map:<<integer[:::]>> )
+  +get_full_cell_map( <<out>>cell_map:<<integer[:::] )
+  +get_cell_map() <<generic>>: get_selected_cell_map(...), get_full_cell_map(...)
 
 }
