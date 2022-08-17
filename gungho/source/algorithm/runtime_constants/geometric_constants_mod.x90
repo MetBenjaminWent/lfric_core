@@ -108,9 +108,6 @@ contains
     integer(kind=i_def),    intent(in) :: label_list(:)
 
     ! Internal variables
-    type(function_space_type), pointer :: w2_fs     => null()
-    type(function_space_type), pointer :: w3_fs     => null()
-    type(function_space_type), pointer :: wtheta_fs => null()
     type(function_space_type), pointer :: wth_k0_fs => null() ! lowest order wth fs
     type(function_space_type), pointer :: w1_k0_fs  => null() ! lowest order w1 fs
     type(function_space_type), pointer :: w2_k0_fs  => null() ! lowest order w2 fs
@@ -155,9 +152,6 @@ contains
 
       ! Don't need most function spaces for 2D meshes
       if ( mesh%get_id() /= twod_mesh_label) then
-        w2_fs     => function_space_collection%get_fs( mesh, element_order, W2 )
-        w3_fs     => function_space_collection%get_fs( mesh, element_order, W3 )
-        wtheta_fs => function_space_collection%get_fs( mesh, element_order, Wtheta )
         w1_k0_fs  => function_space_collection%get_fs( mesh,             0, W1 )
         w2_k0_fs  => function_space_collection%get_fs( mesh,             0, W2 )
         wth_k0_fs => function_space_collection%get_fs( mesh,             0, Wtheta )
@@ -179,12 +173,12 @@ contains
            ( label_list(i) == primary_mesh_label .or. &
              label_list(i) == shifted_mesh_label ) ) then
 
-        call temp_w2_field%initialise( vector_space = w2_fs )
-        call cell_orientation_list(i)%initialise( vector_space = w3_fs )
-        call invoke( setval_c(temp_w2_field,    0.0_r_def), &
-                     setval_c(cell_orientation_list(i), 0.0_r_def) )
         if ( element_order == 0 ) then
           ! Currently this isn't set up to work with high order dynamics
+          call temp_w2_field%initialise( vector_space = w2_k0_fs )
+          call cell_orientation_list(i)%initialise( vector_space = w3_k0_fs )
+          call invoke( setval_c(temp_w2_field,    0.0_r_def), &
+                       setval_c(cell_orientation_list(i), 0.0_r_def) )
           call invoke_mpi_calc_cell_orientation( temp_w2_field, &
                                                  cell_orientation_list(i) )
         else
@@ -248,9 +242,10 @@ contains
 
       !================ Create dA values at W2 dof locations ==================!
 
-      if ( label_list(i) /= twod_mesh_label .and. &
-           label_list(i) /= multigrid_mesh_label) then
-        call dA_at_w2_list(i)%initialise( vector_space = w2_fs )
+      if ( label_list(i) /= twod_mesh_label .and.      &
+           label_list(i) /= multigrid_mesh_label .and. &
+           element_order == 0 ) then
+        call dA_at_w2_list(i)%initialise( vector_space = w2_k0_fs )
         call invoke( setval_c(dA_at_w2_list(i), 0.0_r_def),&
                      calc_dA_at_w2_kernel_type(dA_at_w2_list(i), &
                                                chi_in(:,i),      &
@@ -261,9 +256,6 @@ contains
 
     end do
 
-    nullify( w2_fs  )
-    nullify( w3_fs  )
-    nullify( wtheta_fs )
     nullify( wth_k0_fs )
     nullify( w3_k0_fs  )
     nullify( w2_k0_fs  )

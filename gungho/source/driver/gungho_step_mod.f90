@@ -143,7 +143,6 @@ module gungho_step_mod
     u => prognostic_fields%get_field('u')
     rho => prognostic_fields%get_field('rho')
     exner => prognostic_fields%get_field('exner')
-    dA => get_da_at_w2(mesh%get_id())
 
     ! Get timestep parameters from clock
     dt = real(clock%get_seconds_per_step(), r_def)
@@ -221,11 +220,14 @@ module gungho_step_mod
         call moisture_conservation_alg( rho,              &
                                         mr,               &
                                         'After timestep' )
-        if ( use_physics ) call moisture_fluxes_alg( microphysics_fields, &
-                                                     convection_fields,   &
-                                                     turbulence_fields,   &
-                                                     dA,                  &
-                                                     dt )
+        if ( use_physics ) then
+          dA => get_dA_at_w2(mesh%get_id())
+          call moisture_fluxes_alg( microphysics_fields, &
+                                    convection_fields,   &
+                                    turbulence_fields,   &
+                                    dA,                  &
+                                    dt )
+        end if
       end if
 
       if (write_minmax_tseries) call minmax_tseries(u, 'u', mesh)

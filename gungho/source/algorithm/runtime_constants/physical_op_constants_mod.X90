@@ -251,13 +251,15 @@ contains
 
       if ( label_list(i) == primary_mesh_label ) then
 
-        field_name = trim("dx_at_w2_") // adjustl(mesh_number)
-        call dx_at_w2%initialise( vector_space = w2_k0_fs, name = field_name )
-        detj_at_w2 => get_detj_at_w2(mesh%get_id())
-        dA_at_w2 => get_dA_at_w2(mesh%get_id())
-        call invoke(X_divideby_Y(dx_at_w2, detj_at_w2, dA_at_w2))
-        call dx_at_w2_collection%add_field( dx_at_w2 )
-        nullify( detj_at_w2 )
+        if ( element_order == 0 ) then
+          field_name = trim("dx_at_w2_") // adjustl(mesh_number)
+          call dx_at_w2%initialise( vector_space = w2_k0_fs, name = field_name )
+          detj_at_w2 => get_detj_at_w2(mesh%get_id())
+          dA_at_w2 => get_dA_at_w2(mesh%get_id())
+          call invoke(X_divideby_Y(dx_at_w2, detj_at_w2, dA_at_w2))
+          call dx_at_w2_collection%add_field( dx_at_w2 )
+          nullify( detj_at_w2 )
+        end if
 
         if ( use_physics ) then
 
