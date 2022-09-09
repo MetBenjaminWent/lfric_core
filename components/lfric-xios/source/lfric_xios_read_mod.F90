@@ -547,7 +547,10 @@ subroutine read_field_time_var(xios_field_name, field_proxy, time_indices, time_
   call field_proxy%set_dirty()
 
   ! Halo exchange necessary to ensure annexed dofs contain safe initial data
-  call field_proxy%halo_exchange(depth=1)
+  ! This is only needed for horizontally continuous fields
+  if (fs_id == W2H) then
+    call field_proxy%halo_exchange(depth=1)
+  end if
 
   deallocate( recv_field )
   deallocate( ndata_slice )

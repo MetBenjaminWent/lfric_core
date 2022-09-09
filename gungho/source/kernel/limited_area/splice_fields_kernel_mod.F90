@@ -11,7 +11,7 @@ module splice_fields_kernel_mod
   use argument_mod,              only : arg_type, func_type, &
                                         mesh_data_type,      &
                                         GH_SCALAR, GH_FIELD, &
-                                        GH_READ, GH_INC,     &
+                                        GH_READ, GH_WRITE,   &
                                         GH_REAL, GH_BASIS,   &
                                         CELL_COLUMN,         &
                                         ANY_SPACE_1
@@ -30,7 +30,7 @@ module splice_fields_kernel_mod
   type, public, extends(kernel_type) :: splice_fields_kernel_type
     private
     type(arg_type) :: meta_args(4) = (/                       &
-         arg_type(GH_FIELD,   GH_REAL, GH_INC,  ANY_SPACE_1), & ! field_A
+         arg_type(GH_FIELD,   GH_REAL, GH_WRITE, ANY_SPACE_1),& ! field_A
          arg_type(GH_FIELD,   GH_REAL, GH_READ, ANY_SPACE_1), & ! field_B
          arg_type(GH_FIELD,   GH_REAL, GH_READ, W3),          & ! onion_layers
          arg_type(GH_SCALAR,  GH_REAL, GH_READ)               & ! threshold

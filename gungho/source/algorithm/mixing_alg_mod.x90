@@ -37,7 +37,7 @@ contains
     use mixing_config_mod,             only: viscosity, smagorinsky, viscosity_mu
     use smagorinsky_alg_mod,           only: smagorinsky_alg
     use tracer_viscosity_kernel_mod,   only: tracer_viscosity_kernel_type
-    use psykal_lite_mod,               only: invoke_momentum_viscosity_kernel_type
+    use momentum_viscosity_kernel_mod, only: momentum_viscosity_kernel_type
     use physical_op_constants_mod,     only: get_dx_at_w2
     use physics_config_mod,            only: smagorinsky_placement, &
                                              smagorinsky_placement_end
@@ -93,10 +93,10 @@ contains
       dx_at_w2 => get_dx_at_w2(mesh%get_id())
       call invoke( setval_c(du, 0.0_r_def),                                   &
                    tracer_viscosity_kernel_type( dtheta, theta, 1, dx_at_w2,  &
-                                                 viscosity_mu ))
-      call invoke_momentum_viscosity_kernel_type( du, u, dx_at_w2,            &
-                                                   viscosity_mu )
-      call invoke( inc_X_plus_bY( theta, dt, dtheta ),                        &
+                                                 viscosity_mu ),              &
+                   momentum_viscosity_kernel_type( du, u, 1, dx_at_w2, 1,     &
+                                                   viscosity_mu ),            &
+                   inc_X_plus_bY( theta, dt, dtheta ),                        &
                    inc_X_plus_bY( u,     dt, du ) )
       nullify( mesh )
     end if

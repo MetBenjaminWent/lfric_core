@@ -8,7 +8,7 @@
 module wind_transport_alg_mod
 
   use constants_mod,                  only: i_def, r_def
-  use convert_hdiv_field_kernel_mod,  only: convert_hdiv_field_kernel_type
+  use dg_convert_hdiv_field_kernel_mod, only: dg_convert_hdiv_field_kernel_type
   use enforce_bc_kernel_mod,          only: enforce_bc_kernel_type
   use fem_constants_mod,              only: get_project_xdot_to_w2, &
                                             get_project_ydot_to_w2, &
@@ -117,7 +117,7 @@ contains
         call invoke( setval_c(u_w3_n(1), 0.0_r_def), &
                      setval_c(u_w3_n(2), 0.0_r_def), &
                      setval_c(u_w3_n(3), 0.0_r_def), &
-                     convert_hdiv_field_kernel_type(u_w3_n, wind_n, &
+                     dg_convert_hdiv_field_kernel_type(u_w3_n, wind_n, &
                                                     chi, panel_id) )
         call u_w3_n(1)%log_minmax(LOG_LEVEL_INFO, 'xdot')
         call u_w3_n(2)%log_minmax(LOG_LEVEL_INFO, 'ydot')

@@ -13,7 +13,7 @@ module sample_w2_to_sh_w2_kernel_mod
 
   use argument_mod,          only : arg_type,                  &
                                     GH_FIELD, GH_REAL,         &
-                                    GH_READ, GH_INC,           &
+                                    GH_READ, GH_WRITE,         &
                                     ANY_SPACE_2, ANY_SPACE_5,  &
                                     ANY_DISCONTINUOUS_SPACE_7, &
                                     CELL_COLUMN
@@ -35,7 +35,7 @@ module sample_w2_to_sh_w2_kernel_mod
   type, public, extends(kernel_type) :: sample_w2_to_sh_w2_kernel_type
     private
     type(arg_type) :: meta_args(7) = (/                                   &
-         arg_type(GH_FIELD, GH_REAL, GH_INC,  ANY_SPACE_2),               & ! field_w2_sh
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE,  ANY_SPACE_2),             & ! field_w2_sh
          arg_type(GH_FIELD, GH_REAL, GH_READ, W2),                        & ! field_w2
          arg_type(GH_FIELD, GH_REAL, GH_READ, ANY_SPACE_2),               & ! area_w2_sh
          arg_type(GH_FIELD, GH_REAL, GH_READ, W2),                        & ! area_w2

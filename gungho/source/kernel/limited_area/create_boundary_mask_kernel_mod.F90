@@ -12,7 +12,7 @@ module create_boundary_mask_kernel_mod
 
   use argument_mod,              only : arg_type,            &
                                         GH_SCALAR, GH_FIELD, &
-                                        GH_READ, GH_INC,     &
+                                        GH_READ, GH_WRITE,   &
                                         GH_REAL,             &
                                         CELL_COLUMN,         &
                                         STENCIL, CROSS
@@ -32,7 +32,7 @@ module create_boundary_mask_kernel_mod
   type, public, extends(kernel_type) :: create_boundary_mask_kernel_type
     private
     type(arg_type) :: meta_args(3) = (/                              &
-         arg_type(GH_FIELD,   GH_REAL, GH_INC, W2),                  & ! mask
+         arg_type(GH_FIELD,   GH_REAL, GH_WRITE, W2),                & ! mask
          arg_type(GH_FIELD,   GH_REAL, GH_READ, W3, STENCIL(CROSS)), & ! onion_layers
          arg_type(GH_SCALAR,  GH_REAL, GH_READ)                      & ! boundary_inner_layer
          /)

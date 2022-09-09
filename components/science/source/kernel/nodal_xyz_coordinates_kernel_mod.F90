@@ -11,7 +11,7 @@
 module nodal_xyz_coordinates_kernel_mod
 use kernel_mod,              only : kernel_type
 use argument_mod,            only : arg_type, func_type,       &
-                                    GH_FIELD, GH_INC,          &
+                                    GH_FIELD, GH_WRITE,        &
                                     GH_READ, GH_REAL,          &
                                     ANY_SPACE_9, ANY_SPACE_1,  &
                                     ANY_DISCONTINUOUS_SPACE_3, &
@@ -29,7 +29,7 @@ implicit none
 type, public, extends(kernel_type) :: nodal_xyz_coordinates_kernel_type
   private
   type(arg_type) :: meta_args(3) = (/                                    &
-       arg_type(GH_FIELD*3, GH_REAL, GH_INC,  ANY_SPACE_1),              &
+       arg_type(GH_FIELD*3, GH_REAL, GH_WRITE, ANY_SPACE_1),             &
        arg_type(GH_FIELD*3, GH_REAL, GH_READ, ANY_SPACE_9),              &
        arg_type(GH_FIELD,   GH_REAL, GH_READ, ANY_DISCONTINUOUS_SPACE_3) &
        /)

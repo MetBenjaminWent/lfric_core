@@ -14,7 +14,7 @@ module extract_uv_kernel_mod
 use kernel_mod,               only: kernel_type
 use argument_mod,             only: arg_type,          &
                                     GH_FIELD, GH_REAL, &
-                                    GH_READ, GH_INC,   &
+                                    GH_READ, GH_WRITE, &
                                     CELL_COLUMN
 use constants_mod,            only: r_def, i_def
 use fs_continuity_mod,        only: W2, W2H
@@ -31,7 +31,7 @@ private
 type, public, extends(kernel_type) :: extract_uv_kernel_type
   private
   type(arg_type) :: meta_args(2) = (/             &
-       arg_type(GH_FIELD, GH_REAL, GH_INC,  W2H), &
+       arg_type(GH_FIELD, GH_REAL, GH_WRITE, W2H),&
        arg_type(GH_FIELD, GH_REAL, GH_READ, W2)   &
        /)
   integer :: operates_on = CELL_COLUMN

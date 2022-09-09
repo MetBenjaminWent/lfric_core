@@ -204,7 +204,7 @@ contains
     use hydrostatic_coriolis_kernel_mod,   only : hydrostatic_coriolis_kernel_type
     use moist_dyn_mod,                     only : num_moist_factors
     use matrix_vector_kernel_mod,          only : matrix_vector_kernel_type
-    use convert_hdiv_field_kernel_mod,     only : convert_hdiv_field_kernel_type
+    use dg_convert_hdiv_field_kernel_mod,  only : dg_convert_hdiv_field_kernel_type
     use nodal_xyz_coordinates_kernel_mod,  only : nodal_xyz_coordinates_kernel_type
     use psykal_builtin_light_mod,          only : invoke_convert_cart2sphere_vector
     use mass_matrix_solver_alg_mod,        only : mass_matrix_solver_alg
@@ -256,7 +256,13 @@ contains
       call mass_matrix_solver_alg(coriolis_term, r_c)
 
       ! Convert Coriolis term to 3 components (XYZ) in physical space.
-      call invoke( convert_hdiv_field_kernel_type( c_terms, coriolis_term, &
+      ! N.B. although c_terms is a W2 field, and thus has horizontally
+      ! continuous DoFs, hydrostatic_coriolis_kernel only requires the
+      ! vertical DoFs, which are horizontally discontinuous. Hence it is
+      ! safe to use the discontinuous version of this kernel to avoid
+      ! an unnecessary halo exchange, however if the horizontal DoFs are
+      ! ever wanted, it should be changed for the continuous version.
+      call invoke( dg_convert_hdiv_field_kernel_type( c_terms, coriolis_term, &
                                                    chi, panel_id ) )
 
       do i = 1,3

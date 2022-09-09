@@ -17,7 +17,7 @@ module create_w2mask_blend_kernel_mod
   use argument_mod,              only : arg_type, func_type, &
                                         GH_SCALAR, GH_FIELD, &
                                         GH_REAL, GH_INTEGER, &
-                                        GH_READ, GH_INC,     &
+                                        GH_READ, GH_WRITE,   &
                                         GH_BASIS,            &
                                         CELL_COLUMN, GH_EVALUATOR
   use constants_mod,             only : r_def, i_def, l_def
@@ -53,7 +53,7 @@ module create_w2mask_blend_kernel_mod
          arg_type(GH_SCALAR,  GH_REAL,    GH_READ),       &
          arg_type(GH_SCALAR,  GH_INTEGER, GH_READ),       &
          arg_type(GH_SCALAR,  GH_INTEGER, GH_READ),       &
-         arg_type(GH_FIELD,   GH_REAL,    GH_INC,   W2),  &
+         arg_type(GH_FIELD,   GH_REAL,    GH_WRITE, W2),  &
          arg_type(GH_FIELD*3, GH_REAL,    GH_READ,  Wchi) &
          /)
     type(func_type) :: meta_funcs(1) = (/                 &

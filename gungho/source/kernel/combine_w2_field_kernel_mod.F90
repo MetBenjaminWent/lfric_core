@@ -9,7 +9,7 @@ module combine_w2_field_kernel_mod
 
   use argument_mod,      only : arg_type,          &
                                 GH_FIELD, GH_REAL, &
-                                GH_INC, GH_READ,   &
+                                GH_WRITE, GH_READ, &
                                 CELL_COLUMN
   use constants_mod,     only : r_double, r_single, i_def
   use fs_continuity_mod, only : W2, W2h, W2v
@@ -28,7 +28,7 @@ module combine_w2_field_kernel_mod
   type, public, extends(kernel_type) :: combine_w2_field_kernel_type
     private
     type(arg_type) :: meta_args(3) = (/             &
-         arg_type(GH_FIELD, GH_REAL, GH_INC,  W2),  &
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE, W2), &
          arg_type(GH_FIELD, GH_REAL, GH_READ, W2h), &
          arg_type(GH_FIELD, GH_REAL, GH_READ, W2v)  &
          /)

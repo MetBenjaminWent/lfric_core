@@ -74,7 +74,7 @@ contains
 
     use bl_exp_kernel_mod, only: bl_exp_kernel_type
     use interp_bl_kernel_mod, only: interp_bl_kernel_type
-    use psykal_lite_phys_mod, only: invoke_bl_exp_du_kernel_type
+    use bl_exp_du_kernel_mod, only: bl_exp_du_kernel_type
     use planet_constants_mod, only: lcrcp, lsrcp
 
     implicit none
@@ -525,9 +525,9 @@ contains
     end if
 
     ! Calculate explicit momentum diffusion on cell faces
-    call invoke_bl_exp_du_kernel_type(tau_w2, tau_land_w2, tau_ssi_w2,         &
+    call invoke(bl_exp_du_kernel_type(tau_w2, tau_land_w2, tau_ssi_w2,         &
                                       rhokm_w2, rdz, u_physics,                &
-                                      surf_interp_w2, ngstress_w2, fd_tau_w2)
+                                      surf_interp_w2, ngstress_w2, fd_tau_w2) )
 
     if ( subroutine_timers ) call timer('bl_exp_alg')
 

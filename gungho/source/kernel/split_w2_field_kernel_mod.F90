@@ -9,7 +9,7 @@ module split_w2_field_kernel_mod
 
   use argument_mod,      only : arg_type,             &
                                 GH_FIELD, GH_REAL,    &
-                                GH_INC, GH_READWRITE, &
+                                GH_WRITE,             &
                                 GH_READ, ANY_SPACE_1, &
                                 CELL_COLUMN
   use constants_mod,     only : r_double, r_single, i_def
@@ -29,8 +29,8 @@ module split_w2_field_kernel_mod
   type, public, extends(kernel_type) :: split_w2_field_kernel_type
     private
     type(arg_type) :: meta_args(3) = (/                  &
-         arg_type(GH_FIELD, GH_REAL, GH_INC,       W2h), &
-         arg_type(GH_FIELD, GH_REAL, GH_READWRITE, W2v), &
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE,     W2h), &
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE,     W2v), &
          arg_type(GH_FIELD, GH_REAL, GH_READ,      W2)   &
          /)
     integer :: operates_on = CELL_COLUMN

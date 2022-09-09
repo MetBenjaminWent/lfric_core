@@ -51,7 +51,7 @@ module rk_alg_timestep_mod
   use vorticity_advection_kernel_mod,     only: vorticity_advection_kernel_type
   use w2_vorticity_advection_kernel_mod,  only: w2_vorticity_advection_kernel_type
   use tracer_viscosity_kernel_mod,        only: tracer_viscosity_kernel_type
-  use psykal_lite_mod,                    only: invoke_momentum_viscosity_kernel_type
+  use momentum_viscosity_kernel_mod,      only: momentum_viscosity_kernel_type
 
   ! Derived Types
   use field_mod,                          only: field_type
@@ -318,10 +318,10 @@ contains
       dx_at_w2 => get_dx_at_w2(mesh_id)
       call invoke(setval_c(inc(igh_u), 0.0_r_def),                             &
                   tracer_viscosity_kernel_type(   inc(igh_t), state(igh_t), 1, &
-                                                  dx_at_w2, viscosity_mu ))
-      call invoke_momentum_viscosity_kernel_type( inc(igh_u), state(igh_u),    &
-                                                  dx_at_w2, viscosity_mu )
-      call invoke(setval_c(inc(igh_d), 0.0_r_def) )
+                                                  dx_at_w2, viscosity_mu ),    &
+                  momentum_viscosity_kernel_type( inc(igh_u), state(igh_u), 1, &
+                                                  dx_at_w2, 1, viscosity_mu ), &
+                  setval_c(inc(igh_d), 0.0_r_def) )
       call bundle_axpy(dt, inc, state, state, bundle_size)
     end if
 
