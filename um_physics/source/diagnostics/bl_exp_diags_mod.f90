@@ -94,6 +94,7 @@ contains
   !> @param[in] soil_respiration  Soil respiration  (kg m-2 s-1)
   !> @param[in] ustar             surface friction velocity
   !> @param[in] z0m_eff           Gridbox mean effective roughness length for momentum
+  !> @param[in] bl_weight_1dbl    Blending weight to 1D BL scheme in the BL
   !> @param[in] dust_flux         Flux of mineral dust by division
   subroutine output_diags_for_bl_exp(ntml, cumulus, bl_type_ind, wvar, dsldzm, &
                                      gradrinr, rhokh_bl, tke_bl, dtrdz_tq_bl,  &
@@ -104,7 +105,7 @@ contains
                                      tile_fraction, z0m_tile, z0m,             &
                                      gross_prim_prod, net_prim_prod, gc_tile,  &
                                      soil_respiration, ustar, z0m_eff,         &
-                                     dust_flux)
+                                     bl_weight_1dbl, dust_flux)
 
     implicit none
 
@@ -115,7 +116,7 @@ contains
                                          zht, z0h_eff,                         &
                                          ent_we_lim, ent_t_frac, ent_zrzi,     &
                                          ent_we_lim_dsc, ent_t_frac_dsc,       &
-                                         ent_zrzi_dsc, oblen
+                                         ent_zrzi_dsc, oblen, bl_weight_1dbl
     type(integer_field_type), intent(in) :: level_ent, level_ent_dsc, ntml,    &
                                             cumulus, bl_type_ind
     type( field_type ), intent(in)    :: tile_fraction, z0m_tile, z0m,         &
@@ -147,6 +148,7 @@ contains
     call ent_we_lim_dsc%write_field('turbulence__ent_we_lim_dsc')
     call ent_t_frac_dsc%write_field('turbulence__ent_t_frac_dsc')
     call ent_zrzi_dsc%write_field('turbulence__ent_zrzi_dsc')
+    call bl_weight_1dbl%write_field('turbulence__bl_weight_1dbl')
     ! Prognostic fields from surface collection
     call tile_fraction%write_field('surface__tile_fraction')
     call z0m_tile%write_field('surface__z0m_tile')

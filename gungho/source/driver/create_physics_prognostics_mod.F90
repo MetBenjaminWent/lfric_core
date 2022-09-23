@@ -697,6 +697,9 @@ contains
     call add_physics_field( turbulence_fields, depository, prognostic_fields,  &
       adv_fields_last_outer, &
       'zhsc', twod_space, twod=.true. )
+    call add_physics_field( turbulence_fields, depository, prognostic_fields,  &
+      adv_fields_last_outer, &
+      'bl_weight_1dbl',  twod_space, twod=.true. )
     call add_integer_field( turbulence_fields, depository, prognostic_fields,  &
       adv_fields_last_outer, &
       'level_ent', twod_space, twod=.true. )

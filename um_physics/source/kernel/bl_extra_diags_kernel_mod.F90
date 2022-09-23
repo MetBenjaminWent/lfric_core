@@ -25,7 +25,7 @@ module bl_extra_diags_kernel_mod
   !>
   type, public, extends(kernel_type) :: bl_extra_diags_kernel_type
     private
-    type(arg_type) :: meta_args(26) = (/                                  &
+    type(arg_type) :: meta_args(30) = (/                                  &
          arg_type(GH_FIELD, GH_REAL, GH_READ, W3),                        & ! rho_in_w3
          arg_type(GH_FIELD, GH_REAL, GH_READ, W3),                        & ! wetrho_in_w3
          arg_type(GH_FIELD, GH_REAL, GH_READ, W3),                        & ! heat_flux_bl
@@ -41,14 +41,18 @@ module bl_extra_diags_kernel_mod
          arg_type(GH_FIELD, GH_REAL, GH_READ, ANY_DISCONTINUOUS_SPACE_1), & ! qcl1p5m
          arg_type(GH_FIELD, GH_REAL, GH_READ, ANY_DISCONTINUOUS_SPACE_1), & ! wspd10m
          arg_type(GH_FIELD, GH_REAL, GH_READ, ANY_DISCONTINUOUS_SPACE_1), & ! z0m_eff
+         arg_type(GH_FIELD, GH_REAL, GH_READ, ANY_DISCONTINUOUS_SPACE_1), & ! bl_weight_1dbl
          arg_type(GH_FIELD, GH_REAL, GH_READ, ANY_DISCONTINUOUS_SPACE_1), & ! ls_rain_2d
          arg_type(GH_FIELD, GH_REAL, GH_READ, ANY_DISCONTINUOUS_SPACE_1), & ! ls_snow_2d
          arg_type(GH_FIELD, GH_REAL, GH_READ, ANY_DISCONTINUOUS_SPACE_1), & ! lsca_2d
          arg_type(GH_FIELD, GH_REAL, GH_READ, ANY_DISCONTINUOUS_SPACE_1), & ! conv_rain_2d
          arg_type(GH_FIELD, GH_REAL, GH_READ, ANY_DISCONTINUOUS_SPACE_1), & ! conv_snow_2d
          arg_type(GH_FIELD, GH_REAL, GH_READ, ANY_DISCONTINUOUS_SPACE_1), & ! cca_2d_in
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1), & ! ustar_implicit
          arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1), & ! wind_gust
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1), & ! scale_dep_wind_gust
          arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1), & ! fog_fraction
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1), & ! vis_prob_5km
          arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1), & ! dew_point
          arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1), & ! visibility_with_precip
          arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1)  & ! visibility_no_precip
@@ -81,14 +85,18 @@ contains
   !> @param[in]     qcl1p5m                Diagnostic: 1.5m specific cloud water content
   !> @param[in]     wspd10m                Windspeed at 10m
   !> @param[in]     z0m_eff                Effective roughness length
+  !> @param[in]     bl_weight_1dbl         Blending weight to 1D BL scheme in the BL
   !> @param[in]     ls_rain_2d             Surface large-scale  rainfall rate
   !> @param[in]     ls_snow_2d             Surface large-scale snowfall rate
   !> @param[in]     lsca_2d                2D large scale precip fraction
   !> @param[in]     conv_rain_2d           Surface convective rainfall rate
   !> @param[in]     conv_snow_2d           Surface convective snowfall rate
   !> @param[in]     cca_2d_in              2D convective cloud fraction
+  !> @param[in,out] ustar_implicit         Implicit friction velocity
   !> @param[in,out] wind_gust              Wind gust
+  !> @param[in,out] scale_dep_wind_gust    Scale dependent wind gust
   !> @param[in,out] fog_fraction           Fog_fraction
+  !> @param[in,out] vis_prob_5km           vis_prob_5km
   !> @param[in,out] dew_point              Dew point temperature
   !> @param[in,out] visibility_with_precip Visibility with precip included
   !> @param[in,out] visibility_no_precip   Visibility without including precip
@@ -113,13 +121,15 @@ contains
                                   zh,                       &
                                   t1p5m, q1p5m, qcl1p5m,    &
                                   wspd10m,                  &
-                                  z0m_eff,                  &
+                                  z0m_eff, bl_weight_1dbl,  &
                                   ls_rain_2d, ls_snow_2d,   &
                                   lsca_2d,                  &
                                   conv_rain_2d,             &
                                   conv_snow_2d, cca_2d_in,  &
-                                  wind_gust,                &
-                                  fog_fraction, dew_point,  &
+                                  ustar_implicit, wind_gust,&
+                                  scale_dep_wind_gust,      &
+                                  fog_fraction,             &
+                                  vis_prob_5km, dew_point,  &
                                   visibility_with_precip,   &
                                   visibility_no_precip,     &
                                   ndf_w3,                   &
@@ -168,6 +178,7 @@ contains
     real(kind=r_def), intent(in), dimension(undf_wth)   :: mci
     real(kind=r_def), intent(in), dimension(undf_wth)   :: mr
     real(kind=r_def), intent(in), dimension(undf_2d)    :: zh
+    real(kind=r_def), intent(in), dimension(undf_2d)    :: bl_weight_1dbl
     real(kind=r_def), intent(in), dimension(undf_2d)    :: ls_rain_2d
     real(kind=r_def), intent(in), dimension(undf_2d)    :: ls_snow_2d
     real(kind=r_def), intent(in), dimension(undf_2d)    :: lsca_2d
@@ -176,8 +187,10 @@ contains
     real(kind=r_def), intent(in), dimension(undf_2d)    :: cca_2d_in
     real(kind=r_def), intent(in),    pointer :: t1p5m(:), q1p5m(:), qcl1p5m(:)
     real(kind=r_def), intent(in),    pointer :: wspd10m(:), z0m_eff(:)
-    real(kind=r_def), intent(inout), pointer :: wind_gust(:)
-    real(kind=r_def), intent(inout), pointer :: fog_fraction(:), dew_point(:)
+    real(kind=r_def), intent(inout), pointer :: ustar_implicit(:)
+    real(kind=r_def), intent(inout), pointer :: wind_gust(:), scale_dep_wind_gust(:)
+    real(kind=r_def), intent(inout), pointer :: fog_fraction(:), vis_prob_5km(:)
+    real(kind=r_def), intent(inout), pointer :: dew_point(:)
     real(kind=r_def), intent(inout), pointer :: visibility_with_precip(:)
     real(kind=r_def), intent(inout), pointer :: visibility_no_precip(:)
 
@@ -195,6 +208,7 @@ contains
     logical(l_def),      parameter :: pct = .false.  ! Cloud amounts are in %
     logical(l_def),      parameter :: avg = .true.   ! Precip=local*prob
     integer(kind=i_def), parameter :: fog_thres=1
+    integer(kind=i_def), parameter :: vis5km_thres=2
     real(kind=r_def),    parameter :: calc_prob_of_vis = 0.5_r_def
 
     ! single level real fields input
@@ -213,37 +227,57 @@ contains
 
     ! Local scalars
     real(kind=r_def) :: ftl_surf, fqw_surf, taux_surf, tauy_surf,            &
-                        wstar3_imp, ustar_imp, std_dev, gust_contribution
+                        wstar3_imp, std_dev, gust_contribution
 
     integer(kind=i_def) :: k, icode
 
-    if (.not. associated(wind_gust, empty_real_data) ) then
+    if ( .not. associated(ustar_implicit, empty_real_data) .or.              &
+         .not. associated(wind_gust, empty_real_data)      .or.              &
+         .not. associated(scale_dep_wind_gust, empty_real_data) ) then
+      taux_surf = taux(map_w3(1)) / wetrho_in_w3(map_w3(1))
+      tauy_surf = tauy(map_w3(1)) / wetrho_in_w3(map_w3(1))
+      ustar_implicit(map_2d(1)) = ( taux_surf*taux_surf +                    &
+                                    tauy_surf*tauy_surf )**one_quarter
+    end if
+
+    if ( .not. associated(wind_gust, empty_real_data) .or.                   &
+         .not. associated(scale_dep_wind_gust, empty_real_data) ) then
       ftl_surf = heat_flux_bl(map_w3(1)) / cp
       fqw_surf = moist_flux_bl(map_w3(1))
       wstar3_imp = zh(map_2d(1)) * gravity * ( ftl_surf/t1p5m(map_2d(1)) +   &
                                                fqw_surf*c_virtual ) /        &
                                              rho_in_w3(map_w3(1))
-      taux_surf = taux(map_w3(1)) / wetrho_in_w3(map_w3(1))
-      tauy_surf = tauy(map_w3(1)) / wetrho_in_w3(map_w3(1))
-      ustar_imp = (taux_surf*taux_surf+tauy_surf*tauy_surf)**one_quarter
       if ( wstar3_imp > 0.0_r_def ) then
         ! Include the stability dependence
-        std_dev = gust_const * ( ustar_imp**3.0_r_def +                      &
+        std_dev = gust_const * ( ustar_implicit(map_2d(1))**3.0_r_def +      &
                                  vkman * c_ws * wstar3_imp )**one_third
       else
-        std_dev = gust_const * ustar_imp
+        std_dev = gust_const * ustar_implicit(map_2d(1))
       end if
-      ! Add the gust contribution to the mean wind speed
       gust_contribution = std_dev * (1.0_r_def/vkman) *                      &
               LOG( (5.0_r_def * EXP(vkman * c_ugn) + z0m_eff(map_2d(1)) ) /  &
                    (5.0_r_def + z0m_eff(map_2d(1)) ) )
-      wind_gust(map_2d(1)) = wspd10m(map_2d(1)) + gust_contribution
+
+      if ( .not. associated(wind_gust, empty_real_data) ) then
+        ! Original scale-independent gust diagnostic
+        ! Add the whole gust contribution to the mean wind speed
+        wind_gust(map_2d(1)) = wspd10m(map_2d(1)) + gust_contribution
+      end if
+
+      if ( .not. associated(scale_dep_wind_gust, empty_real_data) ) then
+        ! Scale-dependent gust diagnostic
+        ! Note that bl_weight_1dbl is weight_1dbl from the bottom grid level
+        scale_dep_wind_gust(map_2d(1)) = wspd10m(map_2d(1)) +                &
+                                  bl_weight_1dbl(map_2d(1))*gust_contribution
+      end if
+
     end if
 
     ! map main input fields
     if (.not. associated(visibility_no_precip, empty_real_data)   .or.       &
         .not. associated(visibility_with_precip, empty_real_data) .or.       &
         .not. associated(fog_fraction, empty_real_data)           .or.       &
+        .not. associated(vis_prob_5km, empty_real_data)           .or.       &
         .not. associated(dew_point, empty_real_data) ) then
       ! surface pressure
       p_star(1,1)    = p_zero*(exner_in_wth(map_wth(1) + 0))**(1.0_r_def/kappa)
@@ -305,7 +339,8 @@ contains
     end if ! any vis
 
     ! fog fraction
-    if ( .not. associated(fog_fraction, empty_real_data) ) then
+    if ( .not. associated(fog_fraction, empty_real_data) .or.                  &
+         .not. associated(vis_prob_5km, empty_real_data) ) then
       do k = 1, n_vis_thresh
         vis_threshold(1,1,1,k)=vis_thresh(k)
       end do
@@ -313,7 +348,10 @@ contains
                    t1p5m_loc, aerosol1, l_murk_vis_dummy,                      &
                    q1p5m_loc, qcl1p5m_loc,                                     &
                    vis_threshold, pvis, n_vis_thresh )
-      fog_fraction(map_2d(1)) = pvis(1,1,fog_thres)
+      if ( .not. associated(fog_fraction, empty_real_data) )                   &
+                fog_fraction(map_2d(1)) = pvis(1,1,fog_thres)
+      if ( .not. associated(vis_prob_5km, empty_real_data) )                   &
+                vis_prob_5km(map_2d(1)) = pvis(1,1,vis5km_thres)
     end if
 
     ! dew point

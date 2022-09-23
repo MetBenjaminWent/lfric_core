@@ -55,7 +55,7 @@ module bl_exp_kernel_mod
   !>
   type, public, extends(kernel_type) :: bl_exp_kernel_type
     private
-    type(arg_type) :: meta_args(142) = (/                                      &
+    type(arg_type) :: meta_args(143) = (/                                      &
          arg_type(GH_FIELD, GH_REAL,  GH_READ,      WTHETA),                   &! theta_in_wth
          arg_type(GH_FIELD, GH_REAL,  GH_READ,      W3),                       &! rho_in_w3
          arg_type(GH_FIELD, GH_REAL,  GH_READ,      WTHETA),                   &! wetrho_in_wth
@@ -180,6 +180,7 @@ module bl_exp_kernel_mod
          arg_type(GH_FIELD, GH_REAL,  GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! thv_flux
          arg_type(GH_FIELD, GH_REAL,  GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! parcel_buoyancy
          arg_type(GH_FIELD, GH_REAL,  GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! qsat_at_lcl
+         arg_type(GH_FIELD, GH_REAL,  GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1),&! bl_weight_1dbl
          arg_type(GH_FIELD, GH_INTEGER,  GH_WRITE,  ANY_DISCONTINUOUS_SPACE_9),&! bl_type_ind
          arg_type(GH_FIELD, GH_REAL,  GH_WRITE,     ANY_DISCONTINUOUS_SPACE_3),&! snow_unload_rate
          arg_type(GH_FIELD, GH_REAL,  GH_READ,      ANY_DISCONTINUOUS_SPACE_10),&! albedo_obs_scaling
@@ -338,6 +339,7 @@ contains
   !> @param[in,out] thv_flux               Surface flux of theta_v
   !> @param[in,out] parcel_buoyancy        Integral of parcel buoyancy
   !> @param[in,out] qsat_at_lcl            Saturation specific hum at LCL
+  !> @param[in,out] bl_weight_1dbl         Blending weight to 1D BL scheme in the BL
   !> @param[in,out] bl_type_ind            Diagnosed BL types
   !> @param[in,out] snow_unload_rate       Unloading of snow from PFTs by wind
   !> @param[in]     albedo_obs_scaling     Scaling factor to adjust albedos by
@@ -527,6 +529,7 @@ contains
                          thv_flux,                              &
                          parcel_buoyancy,                       &
                          qsat_at_lcl,                           &
+                         bl_weight_1dbl,                        &
                          bl_type_ind,                           &
                          snow_unload_rate,                      &
                          albedo_obs_scaling,                    &
@@ -775,7 +778,8 @@ contains
                                                            wstar_2d,           &
                                                            thv_flux,           &
                                                            parcel_buoyancy,    &
-                                                           qsat_at_lcl
+                                                           qsat_at_lcl,        &
+                                                           bl_weight_1dbl
 
     real(kind=r_def), intent(in) :: tile_fraction(undf_tile)
     real(kind=r_def), intent(inout) :: tile_temperature(undf_tile)
@@ -1596,8 +1600,9 @@ contains
     ! needed to ensure z0h_eff is saved if wanted
     sf_diag%l_z0h_eff_gb = .not. associated(z0h_eff, empty_real_data)
     ! needed to ensure zht is saved if wanted
-    bl_diag%l_zht     = .not. associated(zht, empty_real_data)
-    bl_diag%l_oblen   = .not. associated(oblen, empty_real_data)
+    bl_diag%l_zht      = .not. associated(zht, empty_real_data)
+    bl_diag%l_oblen    = .not. associated(oblen, empty_real_data)
+    bl_diag%l_weight1d = .true.
     !-----------------------------------------------------------------------
     ! Things saved from other parametrization schemes on this timestep
     !-----------------------------------------------------------------------
@@ -1949,7 +1954,8 @@ contains
       if (BL_diag%l_tke)                                                       &
          tke_bl(map_wth(1) + k-1) = BL_diag%tke(1,1,k)
     end do
-
+    ! take BL weight from level 2 (first level above the surface)
+    bl_weight_1dbl(map_2d(1)) = BL_diag%weight1d(1,1,2)
     do i = 1, n_land_tile
       alpha1_tile(map_tile(1)+i-1) = alpha1(1, i)
       ashtf_prime_tile(map_tile(1)+i-1) = ashtf_prime_surft(1, i)

@@ -118,6 +118,7 @@ contains
     type( field_type ), pointer :: z_lcl           => null()
     type( field_type ), pointer :: inv_depth       => null()
     type( field_type ), pointer :: qcl_at_inv_top  => null()
+    type( field_type ), pointer :: bl_weight_1dbl  => null()
     type( field_type ), pointer :: rhokh_bl        => null()
     type( field_type ), pointer :: tke_bl          => null()
     type( field_type ), pointer :: bq_bl           => null()
@@ -278,6 +279,7 @@ contains
     z_lcl           => turbulence_fields%get_field('z_lcl')
     inv_depth       => turbulence_fields%get_field('inv_depth')
     qcl_at_inv_top  => turbulence_fields%get_field('qcl_at_inv_top')
+    bl_weight_1dbl  => turbulence_fields%get_field('bl_weight_1dbl')
     bl_type_ind     => turbulence_fields%get_integer_field('bl_type_ind')
     rhokh_bl        => turbulence_fields%get_field('rhokh_bl')
     tke_bl          => turbulence_fields%get_field('tke_bl')
@@ -494,8 +496,8 @@ contains
                            qcl_at_inv_top, shallow_flag,                       &
                            uw0_flux, vw0_flux, lcl_height, parcel_top,         &
                            level_parcel_top, wstar, thv_flux,                  &
-                           parcel_buoyancy, qsat_at_lcl, bl_type_ind,          &
-                           snow_unload_rate, albedo_obs_scaling,               &
+                           parcel_buoyancy, qsat_at_lcl, bl_weight_1dbl,       &
+                           bl_type_ind, snow_unload_rate, albedo_obs_scaling,  &
                            level_ent, level_ent_dsc,                           &
                            ent_we_lim, ent_t_frac, ent_zrzi,                   &
                            ent_we_lim_dsc, ent_t_frac_dsc, ent_zrzi_dsc,       &
@@ -543,7 +545,7 @@ contains
                                    tile_fraction, z0m_tile, z0m,             &
                                    gross_prim_prod, net_prim_prod, gc_tile,  &
                                    soil_respiration, ustar, z0m_eff,         &
-                                   dust_flux)
+                                   bl_weight_1dbl, dust_flux)
 
     end if
 

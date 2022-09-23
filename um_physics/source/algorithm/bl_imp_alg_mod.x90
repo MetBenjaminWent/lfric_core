@@ -115,6 +115,7 @@ contains
     type( integer_field_type ), pointer :: cumulus => null()
     type( integer_field_type ), pointer :: blend_height_tq => null()
     type( field_type ), pointer :: zh_nonloc      => null()
+    type( field_type ), pointer :: bl_weight_1dbl => null()
     type( integer_field_type ), pointer :: bl_type_ind => null()
     type( field_type ), pointer :: z_lcl          => null()
     type( field_type ), pointer :: inv_depth      => null()
@@ -221,9 +222,10 @@ contains
     type( field_type ) :: wind10m_w2, u10m, v10m, w10m, u10m2, v10m2
     type( field_type ) :: wind10m_neut_w2, pseudotau_w2
     type( field_type ) :: wspd10m_neut, u10m_neut, v10m_neut, w10m_neut
-    type( field_type ) :: taux, tauy, tauz_ssi, wind_gust
+    type( field_type ) :: taux, tauy, tauz_ssi, ustar_implicit
+    type( field_type ) :: wind_gust, scale_dep_wind_gust
     type( field_type ) :: visibility_with_precip, visibility_no_precip
-    type( field_type ) :: fog_fraction, dew_point
+    type( field_type ) :: fog_fraction, vis_prob_5km, dew_point
     type( field_type ) :: pseudotaux, pseudotauy
     type( field_type ) :: dmv_bl, dmcl_bl, dmci_bl, dbcf_bl
     type( field_type ) :: dacf_bl, dcfl_bl, dcff_bl
@@ -258,6 +260,7 @@ contains
     cumulus         => turbulence_fields%get_integer_field('cumulus')
     blend_height_tq => turbulence_fields%get_integer_field('blend_height_tq')
     zh_nonloc       => turbulence_fields%get_field('zh_nonloc')
+    bl_weight_1dbl  => turbulence_fields%get_field('bl_weight_1dbl')
     bl_type_ind     => turbulence_fields%get_integer_field('bl_type_ind')
     z_lcl           => turbulence_fields%get_field('z_lcl')
     inv_depth       => turbulence_fields%get_field('inv_depth')
@@ -386,7 +389,9 @@ contains
                                      dcfl_bl, dcff_bl,                         &
                                      t1p5m_surft, q1p5m_surft,                 &
                                      t1p5m, q1p5m, qcl1p5m, rh1p5m, u10m, v10m,&
-                                     wind_gust, wspd10m_neut, u10m_neut,       &
+                                     ustar_implicit,                           &
+                                     wind_gust, scale_dep_wind_gust,           &
+                                     wspd10m_neut, u10m_neut,                  &
                                      v10m_neut, taux, tauy,                    &
                                      pseudotaux, pseudotauy,                   &
                                      latent_heat, grid_latent_heat,            &
@@ -396,7 +401,7 @@ contains
                                      surf_sw_net, surf_radnet,                 &
                                      surf_lw_up, surf_lw_down,                 &
                                      grid_surface_temperature,                 &
-                                     fog_fraction, dew_point,                  &
+                                     fog_fraction, vis_prob_5km, dew_point,    &
                                      visibility_with_precip,                   &
                                      visibility_no_precip)
 
@@ -522,7 +527,8 @@ contains
                                    tile_moisture_flux, tile_temperature,       &
                                    grid_surface_temperature,                   &
                                    snowice_sublimation, canopy_evap,           &
-                                   wspd10m, u10m, v10m, wind_gust,             &
+                                   wspd10m, u10m, v10m, ustar_implicit,        &
+                                   wind_gust, scale_dep_wind_gust,             &
                                    wspd10m_neut, u10m_neut, v10m_neut,         &
                                    taux, tauy, tau_w2, taux_ssi, tauy_ssi,     &
                                    pseudotaux, pseudotauy, pseudotau_w2,       &
@@ -541,11 +547,11 @@ contains
                                    surf_radnet, surf_lw_up,                    &
                                    surf_lw_down,                               &
                                    heat_flux_bl, moist_flux_bl,                &
-                                   ls_rain, ls_snow, lsca_2d,                  &
+                                   bl_weight_1dbl, ls_rain, ls_snow, lsca_2d,  &
                                    conv_rain, conv_snow, cca_2d,               &
                                    dmv_bl, dmcl_bl, dmci_bl, dbcf_bl,          &
                                    dacf_bl, dcfl_bl, dcff_bl,                  &
-                                   fog_fraction, dew_point,                    &
+                                   fog_fraction, vis_prob_5km, dew_point,      &
                                    visibility_with_precip,                     &
                                    visibility_no_precip )
       end if

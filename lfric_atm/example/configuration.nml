@@ -237,9 +237,9 @@ split_w=.true.,
 /
 &mixing
 leonard_term=.false.,
-smagorinsky=.false.,
-viscosity=.false.,
-viscosity_mu=0.0,
+method='blending'
+mix_factor=0.2
+smagorinsky=.true.
 /
 &esm_couple
 l_esm_couple_test=.false.,
