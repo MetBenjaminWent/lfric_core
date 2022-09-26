@@ -371,7 +371,7 @@ contains
   !> @param[in]     transport_metadata  Contains transport configuration options
   subroutine hori_wt_update_alg(u_grad_f, wind, field, transport_metadata)
 
-    use sample_field_kernel_mod, only: sample_field_kernel_type
+    use integer_field_mod,       only: integer_field_type
 
     implicit none
 
@@ -391,6 +391,8 @@ contains
     integer(kind=i_def), pointer :: adv_2d_stencil_size => null()
     integer(kind=i_def), pointer :: ndata_h => null()
 
+    type( integer_field_type ) :: reconstruction_done
+
     mesh => wind%get_mesh()
     mesh_index = find_mesh_index(mesh%get_id())
     adv_stencil_extent => adv_stencil_extent_list(mesh_index)
@@ -400,14 +402,12 @@ contains
     w1_rmultiplicity => get_rmultiplicity(W1, mesh%get_id())
 
     ! Set default value (for h_reconstruction)
-    ! to be average of the field at W1 points and then update where the wind
-    ! is non-zero using an upwind reconstruction
+    ! to be 0 and then update using an upwind reconstruction
     w1_fs => function_space_collection%get_fs( mesh, element_order, W1 )
     call h_reconstruction%initialise( w1_fs )
-    call invoke( setval_c(h_reconstruction, 0.0_r_def),           &
-                 sample_field_kernel_type(h_reconstruction,       &
-                                          w1_rmultiplicity,       &
-                                          field)                  )
+    call reconstruction_done%initialise( w1_fs )
+    call invoke( setval_c(h_reconstruction, 0.0_r_def), &
+                 int_setval_c(reconstruction_done, 0_i_def) )
 
     if ( transport_metadata%get_horizontal_monotone() == horizontal_monotone_koren ) then
       call invoke( polyh_wtheta_koren_kernel_type(                &
@@ -420,33 +420,36 @@ contains
                                             u_grad_f,             &
                                             wind,                 &
                                             h_reconstruction) )
-
-    else if ( oned_reconstruction ) then
-      ! Use 1d reconstruction
-      call invoke( poly1d_adv_recon_kernel_type(                  &
-                                            h_reconstruction,     &
-                                            wind, field,          &
-                                            adv_stencil_extent,   &
-                                            adv_coeffs,           &
-                                            ndata_h,              &
-                                            fv_horizontal_order), &
-                   poly_advective_kernel_type(                    &
-                                            u_grad_f,             &
-                                            wind,                 &
-                                            h_reconstruction) )
     else
-      ! Use 2d reconstruction
-      call invoke( poly2d_adv_recon_kernel_type(                  &
-                                            h_reconstruction,     &
-                                            wind, field,          &
-                                            adv_stencil_extent,   &
-                                            adv_coeffs,           &
-                                            ndata_h,              &
-                                            adv_2d_stencil_size), &
-                   poly_advective_kernel_type(                    &
-                                            u_grad_f,             &
-                                            wind,                 &
-                                            h_reconstruction) )
+      if ( oned_reconstruction ) then
+        ! Use 1d reconstruction
+        call invoke( poly1d_adv_recon_kernel_type(                  &
+                                              h_reconstruction,     &
+                                              reconstruction_done,  &
+                                              wind, field,          &
+                                              adv_stencil_extent,   &
+                                              adv_coeffs,           &
+                                              ndata_h,              &
+                                              fv_horizontal_order), &
+                     poly_advective_kernel_type(                    &
+                                              u_grad_f,             &
+                                              wind,                 &
+                                              h_reconstruction) )
+      else
+        ! Use 2d reconstruction
+        call invoke( poly2d_adv_recon_kernel_type(                  &
+                                              h_reconstruction,     &
+                                              reconstruction_done,  &
+                                              wind, field,          &
+                                              adv_stencil_extent,   &
+                                              adv_coeffs,           &
+                                              ndata_h,              &
+                                              adv_2d_stencil_size), &
+                     poly_advective_kernel_type(                    &
+                                              u_grad_f,             &
+                                              wind,                 &
+                                              h_reconstruction) )
+      end if
     end if
 
     nullify( adv_coeffs, w1_fs,           &

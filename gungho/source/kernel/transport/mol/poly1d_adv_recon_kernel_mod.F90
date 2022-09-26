@@ -39,8 +39,9 @@ private
 !> The type declaration for the kernel. Contains the metadata needed by the PSy layer
 type, public, extends(kernel_type) :: poly1d_adv_recon_kernel_type
   private
-  type(arg_type) :: meta_args(6) = (/                                        &
+  type(arg_type) :: meta_args(7) = (/                                        &
        arg_type(GH_FIELD,  GH_REAL,    GH_INC,   W1),                        &
+       arg_type(GH_FIELD,  GH_INTEGER, GH_INC,   W1),                        &
        arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W2),                        &
        arg_type(GH_FIELD,  GH_REAL,    GH_READ,  Wtheta, STENCIL(CROSS)),    &
        arg_type(GH_FIELD,  GH_REAL,    GH_READ,  ANY_DISCONTINUOUS_SPACE_1), &
@@ -69,6 +70,8 @@ contains
 !> @brief Computes the horizontal polynomial interpolation of a tracer.
 !> @param[in]  nlayers Number of layers
 !> @param[in,out] reconstruction Reconstructed tracer field to compute
+!> @param[in,out] reconstruction_done Flag to show if the reconstruction has
+!!                                    already been computed for this point
 !> @param[in]  wind Wind field
 !> @param[in]  tracer Pointwise tracer field to reconstruct
 !> @param[in]  stencil_size Size of the stencil (number of cells)
@@ -96,6 +99,7 @@ contains
 !!                                                 "outward faces"
 subroutine poly1d_adv_recon_code( nlayers,              &
                                   reconstruction,       &
+                                  reconstruction_done,  &
                                   wind,                 &
                                   tracer,               &
                                   stencil_size,         &
@@ -140,10 +144,11 @@ subroutine poly1d_adv_recon_code( nlayers,              &
   integer(kind=i_def), intent(in)                    :: stencil_size
   integer(kind=i_def), intent(in)                    :: nfaces_re_h
 
-  real(kind=r_def), dimension(undf_w1), intent(inout) :: reconstruction
-  real(kind=r_def), dimension(undf_w2), intent(in)    :: wind
-  real(kind=r_def), dimension(undf_wt), intent(in)    :: tracer
-  real(kind=r_def), dimension(undf_c),  intent(in)    :: coeff
+  real(kind=r_def),    dimension(undf_w1), intent(inout) :: reconstruction
+  integer(kind=i_def), dimension(undf_w1), intent(inout) :: reconstruction_done
+  real(kind=r_def),    dimension(undf_w2), intent(in)    :: wind
+  real(kind=r_def),    dimension(undf_wt), intent(in)    :: tracer
+  real(kind=r_def),    dimension(undf_c),  intent(in)    :: coeff
 
   real(kind=r_def), dimension(3,ndf_w2,ndf_w1), intent(in) :: basis_w2
 
@@ -155,7 +160,7 @@ subroutine poly1d_adv_recon_code( nlayers,              &
   integer(kind=i_def)                      :: k, df, p, face, stencil,        &
                                               stencil_depth, depth, face_mod, &
                                               ijp, kp, km
-  real(kind=r_def)                         :: direction, v_dot_n
+  real(kind=r_def)                         :: direction, v_dot_n, u_dot_n
   real(kind=r_def), dimension(0:nlayers)   :: polynomial_tracer
 
   integer(kind=i_def), dimension(order+1,nfaces_re_h) :: map1d
@@ -197,8 +202,13 @@ subroutine poly1d_adv_recon_code( nlayers,              &
     do k = 0, nlayers
       km = max(0,k-1)
       kp = min(k,nlayers-1)
-      direction = (wind(map_w2(df) + kp ) + wind(map_w2(df) + km ))*v_dot_n
-      if ( direction >  0.0_r_def ) reconstruction(map_w1(df) + k ) = polynomial_tracer(k)
+      u_dot_n = (wind(map_w2(df) + kp) + wind(map_w2(df) + km))*v_dot_n
+      direction = 0.5_r_def*(1.0_r_def + sign(1.0_r_def,u_dot_n))
+      if ( reconstruction_done(map_w1(df) + k) == 0_i_def .and. &
+           direction > 0.0_r_def ) then
+        reconstruction(map_w1(df) + k) = polynomial_tracer(k)
+        reconstruction_done(map_w1(df) + k) = 1_i_def
+      end if
     end do
   end do
 

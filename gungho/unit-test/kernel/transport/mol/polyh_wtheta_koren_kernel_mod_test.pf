@@ -98,6 +98,7 @@ contains
       tracer(stencil_map(1,2)+i) = 290.0_r_def
       tracer(stencil_map(1,4)+i) = 310.0_r_def
    end do
+   reconstruction = 0.0_r_def
 
     call polyh_wtheta_koren_code( nlayers,              &
                                   reconstruction,       &
