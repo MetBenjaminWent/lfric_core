@@ -12,13 +12,14 @@
 
 module fs_continuity_mod
 
-  use constants_mod, only : i_native, str_short
+  use constants_mod, only : i_native, l_native, str_short
   use log_mod, only : log_event, log_scratch_space, log_level_error
 
   implicit none
 
   private
-  public :: name_from_functionspace, functionspace_from_name
+  public :: name_from_functionspace, functionspace_from_name, &
+            is_fs_horizontally_continuous, is_fs_vertically_continuous
 
   character(*), private, parameter :: module_name = 'fs_continuity_mod'
 
@@ -38,32 +39,40 @@ module fs_continuity_mod
   integer(i_native), public, parameter :: Wtheta    = 274
   integer(i_native), public, parameter :: Wchi      = 869
 
-  integer(i_native), public, parameter :: fs_enumerator(12) = [ W0,       &
-                                                                W1,       &
-                                                                W2,       &
-                                                                W2V,      &
-                                                                W2H,      &
-                                                                W2broken, &
-                                                                W2trace,  &
-                                                                W2Vtrace, &
-                                                                W2Htrace, &
-                                                                W3,       &
-                                                                Wtheta,   &
-                                                                Wchi ]
+  integer(i_native), private, parameter :: num_fs   = 12
 
-  character(str_short), public, parameter :: fs_name(12) = &
-                                      [character(str_short) :: 'W0',        &
-                                                               'W1',        &
-                                                               'W2',        &
-                                                               'W2V',       &
-                                                               'W2H',       &
-                                                               'W2broken',  &
-                                                               'W2trace',   &
-                                                               'W2Htrace',  &
-                                                               'W2Vtrace',  &
-                                                               'W3',        &
-                                                               'Wtheta',    &
-                                                               'Wchi' ]
+  integer(i_native), private, parameter :: fs_enumerator(num_fs, 3) = &
+         transpose(reshape( [                                         &
+!             enumerator    horizontally    vertically
+!                           continuous      continuous
+              W0,           1,              1, &
+              W1,           1,              1, &
+              W2,           1,              1, &
+              W2V,          0,              1, &
+              W2H,          1,              0, &
+              W2broken,     0,              0, &
+              W2trace,      1,              1, &
+              W2Vtrace,     0,              1, &
+              W2Htrace,     1,              0, &
+              W3,           0,              0, &
+              Wtheta,       0,              1, &
+              Wchi,         0,              0  &
+                            ], [3, num_fs] ) )
+
+  character(str_short), private, parameter :: fs_name(num_fs) = &
+         [character(str_short) ::                               &
+             'W0',        &
+             'W1',        &
+             'W2',        &
+             'W2V',       &
+             'W2H',       &
+             'W2broken',  &
+             'W2trace',   &
+             'W2Htrace',  &
+             'W2Vtrace',  &
+             'W3',        &
+             'Wtheta',    &
+             'Wchi' ]
 
 contains
 
@@ -85,12 +94,12 @@ contains
 
     fs_index = 1
     do
-      if (fs_enumerator(fs_index) == fs) then
+      if (fs_enumerator(fs_index, 1) == fs) then
         name_from_functionspace = fs_name(fs_index)
         return
       end if
       fs_index = fs_index + 1
-      if (fs_index > ubound(fs_enumerator, 1)) then
+      if (fs_index > num_fs) then
         write(log_scratch_space, &
         '(A, ": Unrecognised function space: ",I0)') module_name, fs
         call log_event(log_scratch_space, log_level_error)
@@ -116,16 +125,80 @@ contains
     fs_index = 1
     do
       if (fs_name(fs_index) == name) then
-        functionspace_from_name = fs_enumerator(fs_index)
+        functionspace_from_name = fs_enumerator(fs_index, 1)
         return
       end if
 
       fs_index = fs_index + 1
-      if (fs_index > ubound(fs_name, 1)) then
+      if (fs_index > num_fs) then
         call log_event("Unknown function space " // name, log_level_error)
       end if
     end do
 
   end function functionspace_from_name
+
+  !> Returns whether the given function space is horizontally continuous.
+  !>
+  !> @param[in] fs One of the function space enumerations.
+  !>
+  !> @return True=horizontally continuous, False=horizontally discontinuous
+  !>
+  function is_fs_horizontally_continuous(fs) result (continuous)
+
+    implicit none
+
+    integer(i_native), intent(in) :: fs
+    logical(l_native) :: continuous
+
+    integer(i_native) :: fs_index
+
+    continuous = .false.
+    fs_index = 1
+    do
+      if ( fs_enumerator(fs_index, 1) == fs ) then
+        if ( fs_enumerator(fs_index, 2) == 1 ) continuous = .true.
+        exit
+      end if
+      fs_index = fs_index + 1
+      if (fs_index > num_fs) then
+        write(log_scratch_space, &
+        '(A, ": Unrecognised function space: ",I0)') module_name, fs
+        call log_event(log_scratch_space, log_level_error)
+      end if
+    end do
+
+  end function is_fs_horizontally_continuous
+
+  !> Returns whether the given function space is vertically continuous.
+  !>
+  !> @param[in] fs One of the function space enumerations.
+  !>
+  !> @return True=vertically continuous, False=vertically discontinuous
+  !>
+  function is_fs_vertically_continuous(fs) result (continuous)
+
+    implicit none
+
+    integer(i_native), intent(in) :: fs
+    logical(l_native) :: continuous
+
+    integer(i_native) :: fs_index
+
+    continuous = .false.
+    fs_index = 1
+    do
+      if ( fs_enumerator(fs_index, 1) == fs ) then
+        if ( fs_enumerator(fs_index, 3) == 1 ) continuous = .true.
+        exit
+      end if
+      fs_index = fs_index + 1
+      if (fs_index > num_fs) then
+        write(log_scratch_space, &
+        '(A, ": Unrecognised function space: ",I0)') module_name, fs
+        call log_event(log_scratch_space, log_level_error)
+      end if
+    end do
+
+  end function is_fs_vertically_continuous
 
 end module fs_continuity_mod

@@ -22,7 +22,8 @@ module lfric_xios_read_mod
   use field_collection_mod,     only: field_collection_type
   use field_parent_mod,         only: field_parent_type, &
                                       field_parent_proxy_type
-  use fs_continuity_mod,        only: W3, WTheta, W2H, W2
+  use fs_continuity_mod,        only: W3, WTheta, W2H, W2, &
+                                      is_fs_horizontally_continuous
   use integer_field_mod,        only: integer_field_type, &
                                       integer_field_proxy_type
   use io_mod,                   only: ts_fname
@@ -87,7 +88,7 @@ subroutine checkpoint_read_xios(xios_field_name, file_name, field_proxy)
       call field_proxy%set_dirty()
       ! Ensure annexed dofs for continuous fields are initialised
       fs_id = field_proxy%vspace%which()
-      if (fs_id == W2) then
+      if (is_fs_horizontally_continuous(fs_id)) then
         call field_proxy%halo_exchange(depth=1)
       end if
 

@@ -9,22 +9,16 @@
 module fs_continuity_mod_test
 
   use constants_mod,       only: i_native, str_def
-  use fs_continuity_mod,   only: functionspace_from_name, name_from_functionspace, &
-                                fs_enumerator, fs_name, W0, Wchi
+  use fs_continuity_mod,   only: functionspace_from_name,       &
+                                 name_from_functionspace,       &
+                                 is_fs_horizontally_continuous, &
+                                 is_fs_vertically_continuous,   &
+                                 W0, Wchi
   use pFUnit_Mod
 
   implicit none
 
 contains
-
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  @test
-  subroutine test_name_and_enum_length_match()
-    implicit none
-
-    @assertEqual( size(fs_enumerator), size(fs_name) )
-
-  end subroutine test_name_and_enum_length_match
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   @test
@@ -57,5 +51,29 @@ contains
     @assertEqual(Wchi, functionspace_from_name(test_name))
 
   end subroutine test_functionspace_from_name
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  @test
+  subroutine test_is_fs_horizontally_continuous()
+
+    implicit none
+
+    @assertTrue(is_fs_horizontally_continuous(W0))
+
+    @assertFalse(is_fs_horizontally_continuous(Wchi))
+
+  end subroutine test_is_fs_horizontally_continuous
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  @test
+  subroutine test_is_fs_vertically_continuous()
+
+    implicit none
+
+    @assertTrue(is_fs_vertically_continuous(W0))
+
+    @assertFalse(is_fs_vertically_continuous(Wchi))
+
+  end subroutine test_is_fs_vertically_continuous
 
 end module fs_continuity_mod_test

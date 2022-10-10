@@ -14,9 +14,9 @@
 !
 module function_space_collection_mod
 
-  use constants_mod,      only : i_def
+  use constants_mod,      only : i_def, str_short
   use function_space_mod, only : function_space_type
-  use fs_continuity_mod,  only : fs_enumerator, fs_name, name_from_functionspace
+  use fs_continuity_mod,  only : name_from_functionspace
   use log_mod,            only : log_event, log_scratch_space,    &
                                  LOG_LEVEL_ERROR, LOG_LEVEL_TRACE
   use mesh_mod,           only : mesh_type
@@ -102,8 +102,9 @@ contains
 
     type(function_space_type), pointer :: fs
 
-    integer(i_def) :: ndata_sz, i_fs_name
+    integer(i_def) :: ndata_sz
     integer(i_def) :: mesh_id
+    character(str_short) :: name
 
     nullify(fs)
 
@@ -113,13 +114,9 @@ contains
       ndata_sz = 1
     end if
 
-    if (.not.(any(fs_enumerator == lfric_fs))) then
-      write(log_scratch_space, "(A,I0,3A,*(A,:,', '))")                 &
-      "Function space type (", lfric_fs, ") is not defined in LFRic.",  &
-      new_line("A"), "Available function space types are: ",            &
-      (trim(fs_name(i_fs_name)), i_fs_name = 1, size(fs_name))
-      call log_event(log_scratch_space, LOG_LEVEL_ERROR)
-    end if
+    ! Check if the provided fs enumerator has an associated name
+    ! (this will produce an error if a match is not found)
+    name = name_from_functionspace(lfric_fs)
 
     if (element_order < 0) then
       write(log_scratch_space, '(A,I0)') &
@@ -143,9 +140,8 @@ contains
                                     lfric_fs,      &
                                     ndata_sz) )
 
-      write(log_scratch_space, '(A,I0,A)')              &
-      'Generated order-', element_order,                &
-      ' ' // trim(name_from_functionspace(lfric_fs)) // &
+      write(log_scratch_space, '(A,I0,A)')                   &
+      'Generated order-', element_order,' ' // trim(name) // &
       '-function space singleton'
       call log_event(log_scratch_space, LOG_LEVEL_TRACE)
 
