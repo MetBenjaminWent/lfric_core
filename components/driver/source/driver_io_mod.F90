@@ -15,7 +15,7 @@ module driver_io_mod
   use field_mod,               only: field_type
   use file_mod,                only: file_type
   use io_context_mod,          only: io_context_type
-  use io_config_mod,           only: use_xios_io
+  use io_config_mod,           only: use_xios_io, subroutine_timers
   use log_mod,                 only: log_event, log_level_error
   use time_config_mod,         only: timestep_end, timestep_start,  &
                                      calendar_start, calendar_type, &
@@ -56,12 +56,12 @@ contains
   !!                              vertex
   !> @param[in] populate_filelist Optional procedure for creating a list of
   !!                              file descriptions used by the model I/O
-  !> @param[in] alt_coords        Optional array of coordinate fields 
+  !> @param[in] alt_coords        Optional array of coordinate fields
   !!                              for alternative meshes
   !> @param[in] alt_panel_ids     Optional panel ID fields for alternative meshes
   subroutine init_io( id, communicator, &
                       chi, panel_id,    &
-                      populate_filelist,& 
+                      populate_filelist,&
                       alt_coords,       &
                       alt_panel_ids )
 
@@ -87,6 +87,12 @@ contains
         call log_event( "Unable to allocate LFRic-XIOS context object", &
                         log_level_error )
       end if
+
+      ! Set subroutine timer switch
+      select type(context)
+      type is (lfric_xios_context_type)
+        call context%set_timer_flag(subroutine_timers)
+      end select
 #endif
 
     else

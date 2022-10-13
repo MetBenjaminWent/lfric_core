@@ -47,12 +47,14 @@ module lfric_xios_context_mod
     type(xios_context)                        :: handle
     class(lfric_xios_clock_type), allocatable :: clock
     type(lfric_xios_file_type),   allocatable :: filelist(:)
+    logical                                   :: uses_timers = .false.
 
   contains
     private
     procedure, public :: initialise
     procedure, public :: get_clock
     procedure, public :: get_filelist
+    procedure, public :: set_timer_flag
     final :: finalise
   end type lfric_xios_context_type
 
@@ -102,7 +104,6 @@ contains
     type(field_type),     optional, intent(in)    :: alt_coords(:,:)
     type(field_type),     optional, intent(in)    :: alt_panel_ids(:)
 
-
     type(step_calendar_type), allocatable :: calendar
     integer(i_native)                     :: rc
     type(xios_date)                       :: calendar_start_xios
@@ -126,7 +127,8 @@ contains
               source=lfric_xios_clock_type( calendar,                &
                                             start_time, finish_time, &
                                             seconds_per_step,        &
-                                            spinup_period ),         &
+                                            spinup_period,           &
+                                            this%uses_timers ),      &
               stat=rc )
     if (rc /= 0) then
       call log_event( "Unable to allocate clock", log_level_error )
@@ -208,5 +210,21 @@ contains
     filelist => this%filelist
 
   end function get_filelist
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !> Tells I/O context whether to use subroutine timers
+  !>
+  !> @param[in] timer_flag
+  !>
+  subroutine set_timer_flag( this, timer_flag )
+
+    implicit none
+
+    class(lfric_xios_context_type), target, intent(inout) :: this
+    logical,                                intent(in)    :: timer_flag
+
+    this%uses_timers = timer_flag
+
+  end subroutine set_timer_flag
 
 end module lfric_xios_context_mod
