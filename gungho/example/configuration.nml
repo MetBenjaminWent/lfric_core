@@ -252,6 +252,8 @@ stretching_method='linear',
   ffsl_advective_splitting='full'
   ffsl_flux_splitting='full'
   use_density_predictor=.true.
+  transport_ageofair=.false.
+  ageofair_reset_level=10
 /
 
 &partitioning

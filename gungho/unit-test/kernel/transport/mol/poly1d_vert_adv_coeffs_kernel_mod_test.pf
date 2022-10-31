@@ -75,7 +75,9 @@ contains
                                  enforce_min_value = (/.false./),                          &
                                  min_value = (/0.0_r_def/),                                &
                                  max_vert_cfl_calc = max_vert_cfl_calc_uniform,            &
-                                 reversible = (/.false./)                                  &
+                                 reversible = (/.false./),                                 &
+                                 transport_ageofair=.false.,                               &
+                                 ageofair_reset_level = 10                                 &
                                  )
     call feign_base_mesh_config( filename='foo',                      &
                                  prime_mesh_name='unit_test',         &

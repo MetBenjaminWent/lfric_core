@@ -63,6 +63,7 @@
 	<field id="checkpoint_u" name="u" long_name="U" unit="m s-1" domain_ref="checkpoint_W2" />
 	<field id="checkpoint_m_v" name="m_v" long_name="m_v" unit="kg kg-1" domain_ref="checkpoint_Wtheta" />
 	<field id="checkpoint_m_cl" name="m_cl" long_name="m_cl" unit="kg kg-1" domain_ref="checkpoint_Wtheta" />
+	<field id="checkpoint_ageofair" name="ageofair" long_name="ageofair" unit="kg kg-1" domain_ref="checkpoint_W3" />
 	<field id="checkpoint_m_r" name="m_r" long_name="m_r" unit="kg kg-1" domain_ref="checkpoint_Wtheta" />
 	<field id="checkpoint_m_ci" name="m_ci" long_name="m_ci" unit="kg kg-1" domain_ref="checkpoint_Wtheta" />
 	<field id="checkpoint_m_s" name="m_s" long_name="m_s" unit="kg kg-1" domain_ref="checkpoint_Wtheta" />
@@ -287,6 +288,7 @@
 	<field id="theta_in_w3" name="theta_in_w3" long_name="air_potential_temperature_at_cell_centres" unit="K" grid_ref="half_level_face_grid" />
 	<field id="m_v" name="m_v" long_name="vapour_mixing_ratio" unit="kg kg-1" grid_ref="full_level_face_grid" />
 	<field id="m_cl" name="m_cl" long_name="cloud_liquid_mixing_ratio" unit="kg kg-1" grid_ref="full_level_face_grid" />
+	<field id="ageofair" name="ageofair" long_name="ageofair" unit="kg kg-1" grid_ref="half_level_face_grid" />
 	<field id="m_r" name="m_r" long_name="rain_mixing_ratio" unit="kg kg-1" grid_ref="full_level_face_grid" />
 	<field id="m_ci" name="m_ci" long_name="cloud_ice_mixing_ratio" unit="kg kg-1" grid_ref="full_level_face_grid" />
 	<field id="m_s" name="m_s" long_name="snow_mixing_ratio"  unit="kg kg-1" grid_ref="full_level_face_grid" />
@@ -823,6 +825,7 @@
 	<field id="init_theta" name="theta" long_name="air_potential_temperature" standard_name="air_potential_temperature" unit="K" grid_ref="full_level_face_grid" />
 	<field id="init_m_v" name="m_v" long_name="vapour_mixing_ratio" unit="kg kg-1" grid_ref="full_level_face_grid" />
 	<field id="init_m_cl" name="m_cl" long_name="cloud_liquid_mixing_ratio" unit="kg kg-1" grid_ref="full_level_face_grid" />
+	<field id="init_ageofair" name="ageofair" long_name="ageofair" unit="kg kg-1" grid_ref="half_level_face_grid" />
 	<field id="init_m_r" name="m_r" long_name="rain_mixing_ratio" unit="kg kg-1" grid_ref="full_level_face_grid" />
 	<field id="init_m_ci" name="m_ci" long_name="cloud_ice_mixing_ratio" unit="kg kg-1" grid_ref="full_level_face_grid" />
 	<field id="init_m_s" name="m_s" long_name="snow_mixing_ratio"  unit="kg kg-1" grid_ref="full_level_face_grid" />
@@ -862,6 +865,7 @@
 	<field id="restart_u" name="u" long_name="U" unit="m s-1" operation="instant" domain_ref="checkpoint_W2" />
 	<field id="restart_m_v" name="m_v" long_name="m_v" unit="kg kg-1" operation="instant" domain_ref="checkpoint_Wtheta" />
 	<field id="restart_m_cl" name="m_cl" long_name="m_cl" unit="kg kg-1" operation="instant" domain_ref="checkpoint_Wtheta" />
+	<field id="restart_ageofair" name="ageofair" long_name="ageofair" unit="kg kg-1" operation="instant" domain_ref="checkpoint_W3" />
 	<field id="restart_m_r" name="m_r" long_name="m_r" unit="kg kg-1" operation="instant" domain_ref="checkpoint_Wtheta" />
 	<field id="restart_m_ci" name="m_ci" long_name="m_ci" unit="kg kg-1" operation="instant" domain_ref="checkpoint_Wtheta" />
 	<field id="restart_m_s" name="m_s" long_name="m_s" unit="kg kg-1" operation="instant" domain_ref="checkpoint_Wtheta" />
@@ -1084,6 +1088,7 @@
 	<field field_ref="theta" />
 	<field field_ref="m_v" />
 	<field field_ref="m_cl" />
+	<field field_ref="ageofair"/>
 	<field field_ref="m_ci" />
 	<field field_ref="m_r" />
 	<field field_ref="exner_in_wth" />

@@ -80,6 +80,7 @@
         <field id="checkpoint_oh" name="oh" long_name="mass_fraction_of_hydroxyl_radical_in_air" unit="1" grid_ref="full_level_face_grid" />
         <field id="checkpoint_ho2" name="ho2" long_name="mass_fraction_of_hydroperoxyl_radical_in_air" unit="1" grid_ref="full_level_face_grid" />
         <field id="checkpoint_h2o2_limit" name="h2o2_limit" long_name="Upper_limit_for_mass_fraction_of_hydrogen_peroxide_in_air" unit="1" grid_ref="full_level_face_grid" />
+	<field id="checkpoint_ageofair" name="ageofair" long_name="ageofair" unit="s" domain_ref="checkpoint_W3" />
 	<!-- aerosol fields -->
         <field id="checkpoint_emiss_bc_biofuel" name="emiss_bc_biofuel" long_name="tendency_of_atmosphere_mass_content_of_black_carbon_dry_aerosol_due_to_emission_from_biofuel_burning" unit="kg m-2 s-1" domain_ref="face" />
         <field id="checkpoint_emiss_bc_fossil" name="emiss_bc_fossil" long_name="tendency_of_atmosphere_mass_content_of_black_carbon_dry_aerosol_due_to_emission_from_fossil_fuel_burning" unit="kg m-2 s-1" domain_ref="face" />
@@ -328,6 +329,7 @@
 	<field id="chemistry__dmso" name="dmso" long_name="dimethyl_sulfoxide_mmr" unit="kg kg-1" grid_ref="full_level_face_grid" />
 	<field id="chemistry__monoterpene" name="monoterpene" long_name="monoterpene_mmr" unit="kg kg-1" grid_ref="full_level_face_grid" />
 	<field id="chemistry__secondary_organic" name="secondary_organic" long_name="secondary_organic_mmr" unit="kg kg-1" grid_ref="full_level_face_grid" />
+	<field id="ageofair" name="ageofair" long_name="ageofair" unit="s" grid_ref="half_level_face_grid" />
 	<!-- aerosol diagnostics -->
         <field id="aerosol__dust_flux" name="dust_flux" long_name="dust_emissions_flux_in_size_bins" unit="kg m-2 s-1" domain_ref="face" axis_ref="dust_divisions" />
         <field id="aerosol__n_nuc_sol" name="n_nuc_sol" long_name="nucleation_soluble_mode_number" unit="1" grid_ref="full_level_face_grid" />
@@ -891,6 +893,7 @@
         <field id="restart_oh" name="oh" long_name="mass_fraction_of_hydroxyl_radical_in_air" unit="1" operation="instant" grid_ref="full_level_face_grid" />
         <field id="restart_ho2" name="ho2" long_name="mass_fraction_of_hydroperoxyl_radical_in_air" unit="1" operation="instant" grid_ref="full_level_face_grid" />
         <field id="restart_h2o2_limit" name="h2o2_limit" long_name="Upper_limit_for_mass_fraction_of_hydrogen_peroxide_in_air" unit="1" operation="instant" grid_ref="full_level_face_grid" />
+        <field id="restart_ageofair" name="ageofair" long_name="ageofair" unit="s" operation="instant" domain_ref="checkpoint_W3" />
 	<!-- aerosol fields -->
         <field id="restart_emiss_bc_biofuel" name="emiss_bc_biofuel" long_name="tendency_of_atmosphere_mass_content_of_black_carbon_dry_aerosol_due_to_emission_from_biofuel_burning" unit="kg m-2 s-1" operation="instant" domain_ref="face" />
         <field id="restart_emiss_bc_fossil" name="emiss_bc_fossil" long_name="tendency_of_atmosphere_mass_content_of_black_carbon_dry_aerosol_due_to_emission_from_fossil_fuel_burning" unit="kg m-2 s-1" operation="instant" domain_ref="face" />
@@ -1161,6 +1164,7 @@
 	<field field_ref="aerosol__cor_ins_du" />
 	<field field_ref="aerosol__cloud_drop_no_conc" />
 	<field field_ref="stochastic__fp_spt"/>
+	<field field_ref="ageofair"/>
       </file>
 
       <file id="lfric_averages" name="lfric_averages" output_freq="12h" convention="UGRID" enabled=".TRUE.">

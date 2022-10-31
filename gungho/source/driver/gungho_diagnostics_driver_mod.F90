@@ -46,7 +46,7 @@ module gungho_diagnostics_driver_mod
   use geometric_constants_mod,   only : get_panel_id, get_height
   use io_config_mod,             only: subroutine_timers, use_xios_io, write_fluxes
   use timer_mod,                 only: timer
-
+  use transport_config_mod,      only: transport_ageofair
 
 #ifdef UM_PHYSICS
   use pmsl_alg_mod,              only : pmsl_alg
@@ -82,6 +82,7 @@ contains
 
     type( field_collection_type ), pointer :: prognostic_fields => null()
     type( field_collection_type ), pointer :: diagnostic_fields => null()
+    type( field_collection_type ), pointer :: adv_fields_last_outer => null()
     type( field_collection_type ), pointer :: lbc_fields => null()
     type( field_type ),            pointer :: mr(:) => null()
     type( field_type ),            pointer :: moist_dyn(:) => null()
@@ -105,6 +106,7 @@ contains
     type( field_type), pointer :: u_in_w2h => null()
     type( field_type), pointer :: v_in_w2h => null()
     type( field_type), pointer :: w_in_wth => null()
+    type( field_type), pointer :: ageofair => null()
 
 #ifdef UM_PHYSICS
     type( field_type), pointer :: theta_in_w3 => null()
@@ -141,6 +143,7 @@ contains
     panel_id => get_panel_id(mesh%get_id())
     height_w3 => get_height(W3, mesh%get_id())
     height_wth => get_height(Wtheta, mesh%get_id())
+    adv_fields_last_outer =>  model_data%adv_fields_last_outer
 
     ! Can't just iterate through the prognostic/diagnostic collections as
     ! some fields are scalars and some fields are vectors, so explicitly
@@ -161,6 +164,12 @@ contains
                                  clock, mesh, nodal_output_on_w3)
     call write_scalar_diagnostic('height_wth', height_wth, &
                                  clock, mesh, nodal_output_on_w3)
+
+    if (transport_ageofair) then
+      call adv_fields_last_outer%get_field('ageofair',ageofair)
+      call write_scalar_diagnostic('ageofair', ageofair, &
+                                   clock, mesh, nodal_output_on_w3)
+    end if
 
     ! Vector fields
     if (use_physics .and. use_xios_io .and. .not. write_fluxes) then

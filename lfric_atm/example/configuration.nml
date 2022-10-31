@@ -393,6 +393,8 @@ splitting=5*1,
 use_density_predictor=.true.,
 vertical_method=5*1,
 vertical_sl_order='cubic',
+transport_ageofair=.false.,
+ageofair_reset_level=10,
 /
 &well_mixed_gases
 cfc113_mix_ratio=4.826e-10,

@@ -52,6 +52,8 @@ contains
     class(vertical_sl_rho_test_type), intent(inout) :: this
 
     call feign_transport_config( operators = operators_fv,                                 &
+                                 transport_ageofair=.false.,                               &
+                                 ageofair_reset_level = 10,                                &
                                  runge_kutta_method = runge_kutta_method_ssp2,             &
                                  fv_vertical_order = 2,                                    &
                                  fv_horizontal_order = 2,                                  &

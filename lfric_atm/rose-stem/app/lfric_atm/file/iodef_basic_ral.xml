@@ -83,6 +83,7 @@
 	<field id="checkpoint_m_ci" name="m_ci" long_name="m_ci" unit="kg kg-1" domain_ref="checkpoint_Wtheta" />
 	<field id="checkpoint_m_s" name="m_s" long_name="m_s" unit="kg kg-1" domain_ref="checkpoint_Wtheta" />
 	<field id="checkpoint_m_g" name="m_g" long_name="m_g" unit="kg kg-1" domain_ref="checkpoint_Wtheta" />
+	<field id="checkpoint_ageofair" name="ageofair" long_name="ageofair" unit="s" domain_ref="checkpoint_W3" />
         <!-- LBC fields-->
 	<field id="checkpoint_lbc_theta" name="lbc_theta" long_name="lbc_air_potential_temperature" standard_name="lbc_air_potential_temperature" unit="K" domain_ref="checkpoint_Wtheta" />
 	<field id="checkpoint_lbc_rho" name="lbc_rho" long_name="lbc_air_density" standard_name="lbc_air_density" unit="kg m-3" domain_ref="checkpoint_W3" />
@@ -345,6 +346,7 @@
 	<field id="w_in_w3_star" name="w_in_w3_star" long_name="physics_predictor_upward_air_velocity_at_cell_centres" unit="ms-1" grid_ref="half_level_face_grid" />
 	<field id="height_w3" name="height_w3" long_name="height_of_cell_centres_above_earth_radius" unit="m" grid_ref="half_level_face_grid" />
 	<field id="height_wth" name="height_wth" long_name="height_of_cell_interfaces_above_earth_radius" unit="m" grid_ref="full_level_face_grid" />
+	<field id="ageofair" name="ageofair" long_name="ageofair" unit="s" grid_ref="half_level_face_grid" />
 	<!-- chemistry diagnostics -->
 	<field id="chemistry__h2o2" name="h2o2" long_name="hydrogen_peroxide_mmr" unit="kg kg-1" grid_ref="full_level_face_grid" />
 	<field id="chemistry__dms" name="dms" long_name="dimethyl_sulfide_mmr" unit="kg kg-1" grid_ref="full_level_face_grid" />
@@ -875,6 +877,7 @@
 	<field id="init_exner" name="exner" long_name="exner_pressure" unit="1" grid_ref="half_level_face_grid" />
 	<field id="init_height_w3" name="height_w3" long_name="height_of_cell_centres_above_earth_radius" unit="m" grid_ref="half_level_face_grid" />
 	<field id="init_height_wth" name="height_wth" long_name="height_of_cell_interfaces_above_earth_radius" unit="m" grid_ref="full_level_face_grid" />
+	<field id="init_ageofair" name="ageofair" long_name="ageofair" unit="s" grid_ref="half_level_face_grid" />
       </field_group>
      <field_group id="lbc_diags" freq_op="1ts" operation="instant" enabled=".TRUE." >
 	<field id="lbc_u1" name="lbc_u1" long_name="eastward_wind" standard_name="eastward_wind" unit="m s-1" grid_ref="half_level_edge_grid" />
@@ -955,6 +958,7 @@
 	<field id="restart_m_ci" name="m_ci" long_name="m_ci" unit="kg kg-1" operation="instant" domain_ref="checkpoint_Wtheta" />
 	<field id="restart_m_s" name="m_s" long_name="m_s" unit="kg kg-1" operation="instant" domain_ref="checkpoint_Wtheta" />
 	<field id="restart_m_g" name="m_g" long_name="m_g" unit="kg kg-1" operation="instant" domain_ref="checkpoint_Wtheta" />
+	<field id="restart_ageofair" name="ageofair" long_name="ageofair" unit="s" operation="instant" domain_ref="checkpoint_W3" />
         <!-- LBC fields -->
 	<field id="restart_lbc_theta" name="lbc_theta" long_name="lbc_air_potential_temperature" standard_name="lbc_air_potential_temperature" unit="K" operation="instant" domain_ref="checkpoint_Wtheta" />
 	<field id="restart_lbc_exner" name="lbc_exner" long_name="lbc_exner_pressure" unit="1" operation="instant" domain_ref="checkpoint_W3" />
@@ -1192,6 +1196,7 @@
 	<field field_ref="v_in_w3" />
 	<field field_ref="w_in_wth" />
 	<field field_ref="divergence" />
+	<field field_ref="ageofair"/>
 	<field field_ref="cloud__cloud_amount_maxrnd" />
 	<field field_ref="cloud__combined_cloud_amount" />
 	<field field_ref="microphysics__ls_prec" />

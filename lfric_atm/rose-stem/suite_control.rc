@@ -372,7 +372,7 @@
                           "directives":{
                                         "C48_MG":{"mpi_parts":216,
                                                "threads":1,
-                                               "wallclock":"0:30:00"},
+                                               "wallclock":"0:40:00"},
 					       },
                          },
                      plotstr="plot_map.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR"

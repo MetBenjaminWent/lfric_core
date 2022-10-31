@@ -52,6 +52,7 @@
        <field id="checkpoint_m_ci" name="m_ci" long_name="m_ci" unit="kg/kg" domain_ref="checkpoint_Wtheta" />
        <field id="checkpoint_m_s" name="m_s" long_name="m_s" unit="kg/kg" domain_ref="checkpoint_Wtheta" />
        <field id="checkpoint_m_g" name="m_g" long_name="m_g" unit="kg/kg" domain_ref="checkpoint_Wtheta" />
+       <field id="checkpoint_ageofair" name="ageofair" long_name="ageofair" unit="s" domain_ref="checkpoint_W3" />
        </field_group>
 
      <!-- derived fields group -->
@@ -93,6 +94,7 @@
        <field id="exner" name="exner" long_name="exner_pressure" unit="1" grid_ref="half_level_face_grid" />
        <field id="height_w3" name="height_w3" long_name="height_of_cell_centres_above_earth_radius" unit="m" grid_ref="half_level_face_grid" />
        <field id="height_wth" name="height_wth" long_name="height_of_cell_interfaces_above_earth_radius" unit="m" grid_ref="full_level_face_grid" />
+       <field id="ageofair" name="ageofair" long_name="ageofair" standard_name="ageofair" unit="s" grid_ref="half_level_face_grid" />
        <!-- advection diagnostics -->
        <field id="advection__dtheta_adv" name="dtheta_adv" long_name="potential_temperature_increment_from_advection" unit="K" grid_ref="full_level_face_grid" />
        <field id="advection__du_adv" name="du_adv" long_name="eastward_wind_increment_from_advection" unit="m s-1" grid_ref="half_level_face_grid" />
@@ -152,6 +154,7 @@
        <field id="init_exner" name="exner" long_name="exner_pressure" unit="1" grid_ref="half_level_face_grid" />
        <field id="init_height_w3" name="height_w3" long_name="height_of_cell_centres_above_earth_radius" unit="m" grid_ref="half_level_face_grid" />
        <field id="init_height_wth" name="height_wth" long_name="height_of_cell_interfaces_above_earth_radius" unit="m" grid_ref="full_level_face_grid" />
+       <field id="init_ageofair" name="ageofair" long_name="ageofair" unit="s" grid_ref="half_level_face_grid" />
      </field_group>
 
      <!-- FD fields group -->
@@ -188,6 +191,7 @@
         <field field_ref="checkpoint_m_ci"/>
         <field field_ref="checkpoint_m_s"/>
         <field field_ref="checkpoint_m_g"/>
+        <field field_ref="checkpoint_ageofair"/>
       </file>
 
        <!-- file definition for checkpoint read -->
@@ -202,6 +206,7 @@
        <field id="restart_m_ci" name="m_ci" long_name="m_ci" unit="kg/kg" operation="instant" domain_ref="checkpoint_Wtheta" />
        <field id="restart_m_s" name="m_s" long_name="m_s" unit="kg/kg" operation="instant" domain_ref="checkpoint_Wtheta" />
        <field id="restart_m_g" name="m_g" long_name="m_g" unit="kg/kg" operation="instant" domain_ref="checkpoint_Wtheta" />
+       <field id="restart_ageofair" name="ageofair" long_name="ageofair" unit="s" operation="instant" domain_ref="checkpoint_W3" />
        </file>
 
       <file id="lfric_diag" name="lfric_diag" output_freq="6h" convention="UGRID" enabled=".TRUE.">
@@ -227,6 +232,7 @@
         <field field_ref="processed__tot_col_int_energy" />
         <field field_ref="processed__tot_col_pot_energy" />
         <field field_ref="processed__wbig" />
+        <field field_ref="ageofair"/>
       </file>
 
       <file id="lfric_averages" name="lfric_averages" output_freq="12h" convention="UGRID" enabled=".TRUE.">
@@ -256,6 +262,7 @@
         <field field_ref="init_w_in_wth"/>
         <field field_ref="init_divergence"/>
         <field field_ref="init_exner"/>
+        <field field_ref="init_ageofair"/>
       </file>
 
      <!-- File definition for writing an FD dump -->

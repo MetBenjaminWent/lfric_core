@@ -67,6 +67,7 @@
 	<field id="checkpoint_m_ci" name="m_ci" long_name="m_ci" unit="kg kg-1" domain_ref="checkpoint_Wtheta" />
 	<field id="checkpoint_m_s" name="m_s" long_name="m_s" unit="kg kg-1" domain_ref="checkpoint_Wtheta" />
 	<field id="checkpoint_m_g" name="m_g" long_name="m_g" unit="kg kg-1" domain_ref="checkpoint_Wtheta" />
+	<field id="checkpoint_ageofair" name="ageofair" long_name="ageofair" unit="s" domain_ref="checkpoint_W3" />
 	<!-- chemistry fields -->
 	<field id="checkpoint_h2o2" name="h2o2" long_name="hydrogen_peroxide_mmr" unit="kg kg-1" grid_ref="full_level_face_grid" />
 	<field id="checkpoint_dms" name="dms" long_name="dimethyl_sulfide_mmr" unit="kg kg-1" grid_ref="full_level_face_grid" />
@@ -320,6 +321,7 @@
 	<field id="height_wth" name="height_wth" long_name="height_of_cell_interfaces_above_earth_radius" unit="m" grid_ref="full_level_face_grid" />
 	<field id="temp_correction_field" name="temp_correction_field" long_name="temperature_rate_for_energy_correction" unit="K s-1" domain_ref="face" />
 	<field id="accumulated_fluxes" name="accumulated_fluxes" long_name="accumulated_energy_fluxes" unit="W m-2" domain_ref="face" />
+	<field id="ageofair" name="ageofair" long_name="ageofair" unit="s" grid_ref="half_level_face_grid" />
 	<!-- chemistry diagnostics -->
 	<field id="chemistry__h2o2" name="h2o2" long_name="hydrogen_peroxide_mmr" unit="kg kg-1" grid_ref="full_level_face_grid" />
 	<field id="chemistry__dms" name="dms" long_name="dimethyl_sulfide_mmr" unit="kg kg-1" grid_ref="full_level_face_grid" />
@@ -850,6 +852,7 @@
 	<field id="init_exner" name="exner" long_name="exner_pressure" unit="1" grid_ref="half_level_face_grid" />
 	<field id="init_height_w3" name="height_w3" long_name="height_of_cell_centres_above_earth_radius" unit="m" grid_ref="half_level_face_grid" />
 	<field id="init_height_wth" name="height_wth" long_name="height_of_cell_interfaces_above_earth_radius" unit="m" grid_ref="full_level_face_grid" />
+	<field id="init_ageofair" name="ageofair" long_name="ageofair" unit="s" grid_ref="half_level_face_grid" />
       </field_group>
 
     </field_definition>
@@ -878,6 +881,7 @@
 	<field id="restart_m_ci" name="m_ci" long_name="m_ci" unit="kg kg-1" operation="instant" domain_ref="checkpoint_Wtheta" />
 	<field id="restart_m_s" name="m_s" long_name="m_s" unit="kg kg-1" operation="instant" domain_ref="checkpoint_Wtheta" />
 	<field id="restart_m_g" name="m_g" long_name="m_g" unit="kg kg-1" operation="instant" domain_ref="checkpoint_Wtheta" />
+	<field id="restart_ageofair" name="ageofair" long_name="ageofair" unit="s" operation="instant" domain_ref="checkpoint_W3" />
 	<!-- chemistry fields -->
 	<field id="restart_h2o2" name="h2o2" long_name="hydrogen_peroxide_mmr" unit="kg kg-1" operation="instant" grid_ref="full_level_face_grid" />
 	<field id="restart_dms" name="dms" long_name="dimethyl_sulfide_mmr" unit="kg kg-1" operation="instant" grid_ref="full_level_face_grid" />
@@ -1133,6 +1137,7 @@
         <field field_ref="processed__tot_col_pot_energy" />
 	<field field_ref="processed__trop_level" />
 	<field field_ref="processed__total_prec" />
+	<field field_ref="ageofair"/>
 	<field field_ref="chemistry__h2o2" />
 	<field field_ref="chemistry__dms" />
 	<field field_ref="chemistry__so2" />

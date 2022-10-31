@@ -41,6 +41,7 @@ module create_gungho_prognostics_mod
                                              checkpoint_read, &
                                              checkpoint_write
   use derived_config_mod,             only : l_esm_couple
+  use transport_config_mod,           only : transport_ageofair
   implicit none
 
   private
@@ -90,6 +91,7 @@ contains
 
     ! Temp fields to create prognostics
     type( field_type )                         :: u, rho, theta, exner
+    type( field_type )                         :: ageofair
 
     logical                                    :: create_depository
 
@@ -146,6 +148,12 @@ contains
       function_space_collection%get_fs(mesh, element_order, theta%which_function_space()) )
     end do
 
+    if (transport_ageofair) then
+      call ageofair%initialise( vector_space = &
+                          function_space_collection%get_fs(mesh, element_order, W3), &
+                          name= "ageofair" )
+    end if
+
     ! Set I/O behaviours for diagnostic output
 
     if (write_diag .and. use_xios_io) then
@@ -184,6 +192,10 @@ contains
        do imr = 1,nummr
          call mr(imr)%set_write_behaviour(tmp_write_ptr)
        end do
+
+       if (transport_ageofair) then
+         call ageofair%set_write_behaviour(tmp_write_ptr)
+       end if
 
     end if
 
@@ -224,6 +236,11 @@ contains
         call mr(imr)%set_checkpoint_read_behaviour(tmp_checkpoint_read_ptr)
       end do
 
+      if (transport_ageofair) then
+        call ageofair%set_checkpoint_write_behaviour(tmp_checkpoint_write_ptr)
+        call ageofair%set_checkpoint_read_behaviour(tmp_checkpoint_read_ptr)
+      end if
+
     end if
 
     ! Populate the depository
@@ -251,6 +268,16 @@ contains
       tmp_ptr => mr(imr)
       call prognostic_fields%add_reference_to_field(tmp_ptr)
     end do
+
+    if (transport_ageofair) then
+      call depository%add_field( ageofair )
+      ! Populate the prognostic field collection
+      call depository%get_field('ageofair', field_ptr)
+      tmp_ptr => field_ptr
+
+      call adv_fields_last_outer%add_reference_to_field(tmp_ptr)
+      call prognostic_fields%add_reference_to_field(tmp_ptr)
+    end if
 
     nullify( tmp_write_ptr, tmp_checkpoint_write_ptr, tmp_checkpoint_read_ptr )
 

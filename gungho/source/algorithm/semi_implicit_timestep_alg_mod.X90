@@ -131,6 +131,8 @@ module semi_implicit_timestep_alg_mod
 
   use log_mod,                    only: LOG_LEVEL_ERROR
   use timer_mod,                  only: timer
+  use ageofair_alg_mod,           only: ageofair_update
+  use transport_config_mod,       only: transport_ageofair
 
   implicit none
 
@@ -351,6 +353,9 @@ contains
     type(mesh_type), intent(in), pointer :: twod_mesh
 
     real(kind=r_def) :: dt
+
+
+    type(field_type), pointer :: ageofair  => null()
 
     ! Quadrature object
     type( quadrature_xyoz_type ), pointer :: qr => null()
@@ -652,6 +657,11 @@ contains
     !--------------------------------------------------------------------
     ! End of Outer (advection) loop
     !--------------------------------------------------------------------
+
+    if (transport_ageofair) then
+      call adv_fields_last_outer%get_field('ageofair', ageofair)
+      call ageofair_update(ageofair, clock)
+    end if
 
     !--------------------------------------------------------------------
     ! Apply mixing

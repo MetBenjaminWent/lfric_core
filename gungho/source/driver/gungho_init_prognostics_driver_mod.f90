@@ -16,6 +16,7 @@ module gungho_init_prognostics_driver_mod
                                               init_exner_field,  &
                                               init_rho_field,    &
                                               init_mr_fields
+  use ageofair_alg_mod,                 only: init_ageofair
   use init_saturated_profile_alg_mod,   only: init_saturated_profile_alg
   use init_unsaturated_profile_alg_mod, only: init_unsaturated_profile_alg
   use init_thermo_profile_alg_mod,      only: init_thermo_profile_alg
@@ -29,6 +30,7 @@ module gungho_init_prognostics_driver_mod
   use mr_indices_mod,                   only: nummr, imr_v
   use moist_dyn_mod,                    only: num_moist_factors
   use moist_dyn_factors_alg_mod,        only: moist_dyn_factors_alg
+  use transport_config_mod,             only: transport_ageofair
 
   implicit none
 
@@ -41,7 +43,8 @@ contains
   !> @param[in,out] prognostic_fields the collection of prognostics
   !> @param[in,out] mr Field bundle containing the moisture mixing ratios
   !> @param[in,out] moist_dyn Auxilliary fields for moist dynamics
-  subroutine init_gungho_prognostics(prognostic_fields, mr, moist_dyn)
+  !> @param[in,out] adv_fields_last_outer Fields to transport on final solver iteration only
+  subroutine init_gungho_prognostics(prognostic_fields, mr, moist_dyn,adv_fields_last_outer)
 
     implicit none
 
@@ -49,12 +52,14 @@ contains
     type( field_collection_type ), intent(inout) :: prognostic_fields
     type( field_type ),            intent(inout) :: mr(nummr), &
                                                     moist_dyn(num_moist_factors)
+    type( field_collection_type ), intent(inout) :: adv_fields_last_outer
 
     ! Pointers to fields
     type( field_type ), pointer   :: u => null()
     type( field_type ), pointer   :: rho => null()
     type( field_type ), pointer   :: theta => null()
     type( field_type ), pointer   :: exner => null()
+    type( field_type ), pointer   :: ageofair => null()
 
     real(kind=r_def)     :: initial_time
 
@@ -62,6 +67,10 @@ contains
     call prognostic_fields%get_field('u', u)
     call prognostic_fields%get_field('rho', rho)
     call prognostic_fields%get_field('exner', exner)
+
+    if (transport_ageofair) then
+      call adv_fields_last_outer%get_field('ageofair',ageofair)
+    end if
 
     !=== Initialise global prognostic fields ==================================!
 
@@ -92,6 +101,10 @@ contains
       call init_unsaturated_profile_alg( theta, mr, exner, rho, moist_dyn )
     else if (test /= test_bryan_fritsch .and. test /= test_specified_profiles) then
       call init_mr_fields( mr, theta, exner, rho, moist_dyn )
+    end if
+
+    if (transport_ageofair) then
+      call init_ageofair( ageofair )
     end if
 
     call log_event( "Gungho: Initialised prognostic fields", LOG_LEVEL_INFO )

@@ -348,7 +348,8 @@ contains
 
         call init_gungho_prognostics( model_data%prognostic_fields, &
                                       model_data%mr,                &
-                                      model_data%moist_dyn )
+                                      model_data%moist_dyn,         &
+                                      model_data%adv_fields_last_outer )
 
       case ( init_option_checkpoint_dump )
 
