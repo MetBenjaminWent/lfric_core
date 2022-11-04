@@ -148,6 +148,7 @@ contains
       case (direction_v)
         ! Vertical PPM routine requires a flux output to be ready for #2997
         call flux_z%initialise( vector_space=dep_pts_z%get_function_space() )
+        call invoke( setval_c(flux_z, 0.0_r_def) )
         call ffsl_1d_flux_vert( field_n, dep_pts_z, detj_at_w2, outer_order, &
                                 step_dt, flux_z, increment )
 
@@ -180,6 +181,7 @@ contains
       ! in this algorithm
       w2_fs => function_space_collection%get_fs( mesh, element_order, W2 )
       call flux%initialise( w2_fs )
+      call invoke( setval_c(flux, 0.0_r_def) )
       call transport_runtime%set_dry_fields(field_n, field_np1, flux)
       nullify(w2_fs)
     end if

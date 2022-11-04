@@ -140,6 +140,11 @@ contains
     call flux_y%initialise( vector_space = dep_fs )
     call flux_z%initialise( vector_space = dep_fs )
 
+    ! Set fluxes to zero
+    call invoke( setval_c( flux_x, 0.0_r_def ), &
+                 setval_c( flux_y, 0.0_r_def ), &
+                 setval_c( flux_z, 0.0_r_def ) )
+
     ! Set constants
     half_dt = 0.5_r_def * dt
     third_dt = 1.0_r_def / 3.0_r_def * dt
@@ -381,6 +386,10 @@ contains
     call field_y%initialise( vector_space = field_fs )
     call flux_x%initialise( vector_space = dep_fs )
     call flux_y%initialise( vector_space = dep_fs )
+
+    ! Set fluxes to zero
+    call invoke( setval_c( flux_x, 0.0_r_def ), &
+                 setval_c( flux_y, 0.0_r_def ) )
 
     ! Set constants
     half_dt = 0.5_r_def * dt
