@@ -362,6 +362,14 @@ echo $RELATIVE_LOG_ROOT > $DESTINATION_DIRECTORY/compile.log.path
             RDEF_PRECISION        = {{precision}}
 
             {{directives(PRIMARY_TARGET, 'build')}}
+
+        [[[job]]]
+            # Apply a single retry only to allow a successful compile.
+            # This is to address intermittent compile failures.
+            # The cause of the failures is unknown, though suspected
+            # to be connected with the file system.
+            execution retry delays = PT5S
+
 {%-       endif %}
 
 {%-       if 'publish_' + label + '_compile' in scheduledTasks %}
@@ -440,6 +448,13 @@ echo $RELATIVE_LOG_ROOT > $DESTINATION_DIRECTORY/compile.log.path
             LFRIC_TARGET_PLATFORM = {{TARGET_OPT}}
             MAKE_THREADS          = 4
             RDEF_PRECISION        = {{mesh_rdef}}
+
+        [[[job]]]
+            # Apply a single retry only to allow a successful compile.
+            # This is to address intermittent compile failures.
+            # The cause of the failures is unknown, though suspected
+            # to be connected with the file system.
+            execution retry delays = PT5S
 
       {{directives(PRIMARY_TARGET, 'build')}}
 {%- endif %}   {# Compile mesh tools #}
