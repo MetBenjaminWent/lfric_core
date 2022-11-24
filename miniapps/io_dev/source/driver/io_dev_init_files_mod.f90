@@ -117,10 +117,10 @@ module io_dev_init_files_mod
                                 trim(start_dump_filename)
 
         call files_list%insert_item( &
-          lfric_xios_file_type( dump_fname,               &
-                                xios_id="io_dev_dump_in", &
-                                io_mode=FILE_MODE_READ,   &
-                                operation=OPERATION_ONCE, &
+          lfric_xios_file_type( dump_fname,                     &
+                                xios_id="io_dev_dump_in",       &
+                                io_mode=FILE_MODE_READ, freq=1, &
+                                operation=OPERATION_ONCE,       &
                                 fields_in_file=io_dev_data%dump_fields ) )
       end if
 
@@ -148,7 +148,7 @@ module io_dev_init_files_mod
         call files_list%insert_item( &
           lfric_xios_file_type( checkpoint_read_fname,            &
                                 xios_id="io_dev_checkpoint_read", &
-                                io_mode=FILE_MODE_READ,           &
+                                io_mode=FILE_MODE_READ, freq=1,   &
                                 operation=OPERATION_ONCE,         &
                                 fields_in_file=io_dev_data%core_fields ) )
       end if
@@ -169,9 +169,10 @@ module io_dev_init_files_mod
                                  trim(time_data_path)
 
         call files_list%insert_item( &
-          lfric_xios_file_type( input_fname,            &
-                                xios_id="io_dev_times", &
-                                io_mode=FILE_MODE_READ ) )
+          lfric_xios_file_type( input_fname,                    &
+                                xios_id="io_dev_times",         &
+                                io_mode=FILE_MODE_READ, freq=1, &
+                                operation=OPERATION_ONCE ) )
 
       end if
 

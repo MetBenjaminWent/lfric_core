@@ -102,6 +102,8 @@ contains
 
       select type(context)
       type is (lfric_xios_context_type)
+        ! Set subroutine timer switch
+        call context%set_timer_flag(subroutine_timers)
         ! Initialise I/O context
         call context%initialise( id, communicator,                      &
                                  chi, panel_id,                         &
@@ -112,8 +114,6 @@ contains
                                  key_from_calendar_type(calendar_type), &
                                  alt_coords=alt_coords,                 &
                                  alt_panel_ids=alt_panel_ids )
-        ! Set subroutine timer switch
-        call context%set_timer_flag(subroutine_timers)
       end select
 #else
       call log_event( "Cannot use XIOS I/O: application has not been " // &

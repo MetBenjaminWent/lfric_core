@@ -254,11 +254,8 @@ subroutine register_with_context(self)
   call xios_get_timestep(timestep_duration)
   if (.not. self%freq_ts == -999) then
     self%frequency = self%freq_ts * timestep_duration
-  else
-    self%frequency = timestep_duration
+    call xios_set_attr( self%handle, output_freq=self%frequency )
   end if
-
-  call xios_set_attr( self%handle, output_freq=self%frequency )
 
   call xios_get_start_date(start_date)
   self%next_operation = start_date + self%frequency
