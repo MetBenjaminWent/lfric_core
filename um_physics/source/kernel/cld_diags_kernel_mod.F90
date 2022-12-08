@@ -26,19 +26,20 @@ module cld_diags_kernel_mod
   !>
   type, public, extends(kernel_type) :: cld_diags_kernel_type
     private
-    type(arg_type) :: meta_args(19) = (/                                       &
+    type(arg_type) :: meta_args(20) = (/                                       &
          arg_type(GH_FIELD, GH_REAL, GH_READ, WTHETA),                         & ! combined_cld_amount_wth
-         arg_type(GH_FIELD, GH_REAL, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1), & ! cld_amount_max
-         arg_type(GH_FIELD, GH_REAL, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1), & ! cld_amount_rnd
-         arg_type(GH_FIELD, GH_REAL, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1), & ! cld_amount_maxrnd
-         arg_type(GH_FIELD, GH_REAL, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1), & ! ceil_cld_amount_maxrnd
-         arg_type(GH_FIELD, GH_REAL, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1), & ! cld_base_altitude
-         arg_type(GH_FIELD, GH_REAL, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1), & ! low_cld_base_altitude
-         arg_type(GH_FIELD, GH_REAL, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1), & ! very_low_cld_amount
-         arg_type(GH_FIELD, GH_REAL, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1), & ! low_cld_amount
-         arg_type(GH_FIELD, GH_REAL, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1), & ! medium_cld_amount
-         arg_type(GH_FIELD, GH_REAL, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1), & ! high_cld_amount
-         arg_type(GH_FIELD, GH_REAL, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1), & ! very_high_cld_amount
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1),     & ! cld_amount_max
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1),     & ! cld_amount_rnd
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1),     & ! cld_amount_maxrnd
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1),     & ! ceil_cld_amount_maxrnd
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1),     & ! cld_base_altitude
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1),     & ! low_cld_base_altitude
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1),     & ! very_low_cld_amount
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1),     & ! low_cld_amount
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1),     & ! medium_cld_amount
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1),     & ! high_cld_amount
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1),     & ! very_high_cld_amount
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE, ANY_DISCONTINUOUS_SPACE_1),     & ! cloud_fraction_below_1000feet_asl
          arg_type(GH_FIELD, GH_REAL, GH_READ, WTHETA),                         & ! mi_wth
          arg_type(GH_FIELD, GH_REAL, GH_READ, WTHETA),                         & ! cf_frozen
          arg_type(GH_FIELD, GH_REAL, GH_READ, WTHETA),                         & ! height_wth
@@ -72,6 +73,7 @@ contains
   !> @param[in,out] medium_cld_amount          Maximum cloud amount between 1949 and 5574m above sea level
   !> @param[in,out] high_cld_amount            Maximum cloud amount between 5574 and 13608m above sea level
   !> @param[in,out] very_high_cld_amount       Maximum cloud amount above 13608m above sea level
+  !> @param[in,out] cloud_fraction_below_1000feet_asl Cloud fraction below 1000 feet above sea level
   !> @param[in]     mi_wth                     Ice water content
   !> @param[in]     cf_frozen                  Frozen fraction
   !> @param[in]     height_wth                 Height above sea level in wtheta
@@ -106,6 +108,7 @@ contains
                              medium_cld_amount,       &
                              high_cld_amount,         &
                              very_high_cld_amount,    &
+                             cloud_fraction_below_1000feet_asl, &
                              mi_wth,                  &
                              cf_frozen,               &
                              height_wth,              &
@@ -148,7 +151,7 @@ contains
     real(kind=r_def), pointer, intent(inout)            :: medium_cld_amount(:)
     real(kind=r_def), pointer, intent(inout)            :: high_cld_amount(:)
     real(kind=r_def), pointer, intent(inout)            :: very_high_cld_amount(:)
-
+    real(kind=r_def), pointer, intent(inout)            :: cloud_fraction_below_1000feet_asl(:)
     real(kind=r_def), intent(in), dimension(undf_wth)   :: combined_cld_amount_wth
     real(kind=r_def), intent(in), dimension(undf_wth)   :: mi_wth
     real(kind=r_def), intent(in), dimension(undf_wth)   :: cf_frozen
@@ -190,20 +193,20 @@ contains
     ! Max range of ceilometers used to ignore any cloud beyond range.
     real(kind=r_def), parameter :: ceilometer_range = 6.0e3_r_def
     ! If no model levels are found in a certain height range category, set the
-    ! cloud fraction it to missing data but don't use rmdi=-huge as that will
+    ! cloud fraction to missing data but don't use rmdi=-huge as that will
     ! make it hard to do quickviews as the dynamic range of the data will get
     ! compressed. Instead use unphysical value of the same order of magnitude.
     real(kind=r_def), parameter :: cld_mdi = -0.999_r_def
 
-    ! Tolerance of cloud fraction for resetting of cloud
+    ! Small number: Tolerance of cloud fraction for resetting of cloud
+    !               or minimum total thickness of layers to divide by.
     real(kind=r_def), parameter :: cld_tol = 0.001_r_def
 
     ! Scalar field for working out calculations
-    real(kind=r_def) :: work_scalar
+    real(kind=r_def) :: work_scalar, work_counter, dz, top
 
     ! Scalars for optical depth filtering
     real(kind=r_def) :: sigma, tau, filtered_cloud, ice_fraction
-
 
     do k = 1, nlayers
       combined_cld_amount(k) = combined_cld_amount_wth(map_wth(1) + k)
@@ -308,9 +311,11 @@ contains
         .not. associated(low_cld_amount, empty_real_data)        .or. &
         .not. associated(medium_cld_amount, empty_real_data)     .or. &
         .not. associated(high_cld_amount, empty_real_data)       .or. &
-        .not. associated(very_high_cld_amount, empty_real_data) ) then
-      z_asl_base_of_levels(1)   = 0.0_r_def
+        .not. associated(very_high_cld_amount, empty_real_data)  .or. &
+        .not. associated(cloud_fraction_below_1000feet_asl, empty_real_data) ) then
+      z_asl_base_of_levels(1)   = height_wth(map_wth(1) + 0 )
       z_asl_centre_of_levels(1) = height_wth(map_wth(1) + 1 )
+
       do k = 2, nlayers
         ! NB: these height are above sea level (asl) not above ground level.
         z_asl_base_of_levels(k)   = height_w3(map_w3(1)   + k-1 )
@@ -469,6 +474,40 @@ contains
         end if
       end do
       very_high_cld_amount(map_2d(1)) = maxval(combined_cld_amount(k_bot:nlayers))
+    end if
+
+    !  cloud_fraction_below_1000feet_asl
+    if (.not. associated(cloud_fraction_below_1000feet_asl, empty_real_data) ) then
+
+      if ( z_asl_base_of_levels(1) * m_to_kfeet <= 1.0_r_def ) then
+        ! Bottom of lowest layer is below 1000 feet.
+        work_scalar  = 0.0_r_def
+        work_counter = 0.0_r_def
+
+        do k = 1, nlayers-1
+          ! Find top of this layer, or the height threshold, whichever is lower.
+          top = min(z_asl_base_of_levels(k+1) * m_to_kfeet, 1.0_r_def)
+
+          ! Hence find thickness of the region being added to running sum.
+          dz = top - (z_asl_base_of_levels(k) * m_to_kfeet)
+          ! If layer is entirely above height of interest, dz will be negative.
+          if (dz <= 0.0_r_def) exit
+
+          ! Calculate a running sum of the cloud fraction and the layers depths.
+          work_scalar  = work_scalar  + ( dz * combined_cld_amount(k) )
+          work_counter = work_counter +   dz
+
+        end do
+
+        ! Find a mean cloud fraction up to that height.
+        cloud_fraction_below_1000feet_asl(map_2d(1)) = work_scalar / work_counter
+
+      else
+        ! Orography at this location is high enough that no levels are below
+        ! 1000 feet ASL. So set to missing data
+        cloud_fraction_below_1000feet_asl(map_2d(1)) = cld_mdi
+      end if
+
     end if
 
   end subroutine cld_diags_code

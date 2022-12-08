@@ -132,6 +132,7 @@ contains
     type( field_type ) :: combined_cld_amount
     type( field_type ) :: icing_sfip_li_bcf
     type( field_type ) :: icing_sfip_lir_com
+    type( field_type ) :: cloud_fraction_below_1000feet_asl
 
     type( mesh_type ), pointer :: mesh => null()
     integer(i_def) :: i_mr, ncells
@@ -165,6 +166,7 @@ contains
                                    combined_cld_amount,                        &
                                    icing_sfip_li_bcf,                          &
                                    icing_sfip_lir_com,                         &
+                                   cloud_fraction_below_1000feet_asl,          &
                                    cf_area, zh )
 
     if (scheme == scheme_smith) then
@@ -275,6 +277,7 @@ contains
                                  combined_cld_amount,    &
                                  icing_sfip_li_bcf,      &
                                  icing_sfip_lir_com,     &
+                                 cloud_fraction_below_1000feet_asl, &
                                  !
                                  cloud_fields,           & ! Variables they're
                                  convection_fields,      & ! calculated from.

@@ -42,7 +42,8 @@ module cld_diags_mod
                       very_high_cld_amount_flag,                               &
                       combined_cld_amount_flag,                                &
                       icing_sfip_li_bcf_flag,                                  &
-                      icing_sfip_lir_com_flag
+                      icing_sfip_lir_com_flag,                                 &
+                      cloud_fraction_below_1000feet_asl_flag
 
   public :: initialise_diags_for_cld
   public :: output_diags_for_cld
@@ -64,6 +65,7 @@ contains
                                        combined_cld_amount,                    &
                                        icing_sfip_li_bcf,                      &
                                        icing_sfip_lir_com,                     &
+                                       cloud_fraction_below_1000feet_asl,      &
                                        cf_area, zh )
 
     implicit none
@@ -82,7 +84,8 @@ contains
                                          very_high_cld_amount,                 &
                                          combined_cld_amount,                  &
                                          icing_sfip_li_bcf,                    &
-                                         icing_sfip_lir_com
+                                         icing_sfip_lir_com,                   &
+                                         cloud_fraction_below_1000feet_asl
 
     ! Fields passed in to copy properties from
     type( field_type ), intent(in)    :: cf_area ! 3d field on wth
@@ -124,6 +127,9 @@ contains
     very_high_cld_amount_flag = .true.
     call zh%copy_field_properties(very_high_cld_amount)
 
+    cloud_fraction_below_1000feet_asl_flag = .true.
+    call zh%copy_field_properties(cloud_fraction_below_1000feet_asl)
+
     ! 3D fields
     combined_cld_amount_flag = .true.
     call cf_area%copy_field_properties(combined_cld_amount)
@@ -153,6 +159,7 @@ contains
                                    combined_cld_amount,    &
                                    icing_sfip_li_bcf,      &
                                    icing_sfip_lir_com,     &
+                                   cloud_fraction_below_1000feet_asl, &
                                    !
                                    cloud_fields,           & ! Variables they're
                                    convection_fields,      & ! calculated from.
@@ -178,7 +185,8 @@ contains
                                                  very_high_cld_amount,         &
                                                  combined_cld_amount,          &
                                                  icing_sfip_li_bcf,            &
-                                                 icing_sfip_lir_com
+                                                 icing_sfip_lir_com,           &
+                                                 cloud_fraction_below_1000feet_asl
 
     ! Variables the diagnostics are calculated from
     type( field_collection_type ), intent(in) :: cloud_fields,                 &
@@ -227,7 +235,8 @@ contains
         very_high_cld_amount_flag   .or. &
         combined_cld_amount_flag    .or. &
         icing_sfip_li_bcf_flag      .or. &
-        icing_sfip_lir_com_flag ) then
+        icing_sfip_lir_com_flag     .or. &
+        cloud_fraction_below_1000feet_asl_flag ) then
 
         ! Calculate combined_cld_amount from cca and cf_area in a way that
         ! means it cannot total more than 1.0, i.e.
@@ -253,7 +262,8 @@ contains
           low_cld_amount_flag         .or. &
           medium_cld_amount_flag      .or. &
           high_cld_amount_flag        .or. &
-          very_high_cld_amount_flag ) then
+          very_high_cld_amount_flag   .or. &
+          cloud_fraction_below_1000feet_asl_flag ) then
 
         mesh       => combined_cld_amount%get_mesh()
         height_w3  => get_height(W3, mesh%get_id())
@@ -274,6 +284,7 @@ contains
                                             medium_cld_amount,                 &
                                             high_cld_amount,                   &
                                             very_high_cld_amount,              &
+                                            cloud_fraction_below_1000feet_asl, &
                                             mr(imr_ci),                        &
                                             cf_frozen,                         &
                                             height_wth,                        &
@@ -286,7 +297,7 @@ contains
     if ( icing_sfip_li_bcf_flag .or. icing_sfip_lir_com_flag ) then
       ! Get fields for all aviation in-flight icing diagnostics
 
-       call derived_fields%get_field('w_in_wth', w_wind)
+      call derived_fields%get_field('w_in_wth', w_wind)
 
       call theta%copy_field(theta_updated)
       call theta%copy_field_properties(icing_condensate)
@@ -365,10 +376,8 @@ contains
         ceil_cld_amount_maxrnd%write_field('cloud__ceilometer_cloud_amount_maxrnd')
     if (cld_base_altitude_flag) call &
         cld_base_altitude%write_field('cloud__cloud_base_altitude')
-
     if (low_cld_base_altitude_flag) call &
         low_cld_base_altitude%write_field('cloud__low_cloud_base_altitude')
-
     if (very_low_cld_amount_flag) call &
         very_low_cld_amount%write_field('cloud__very_low_type_cloud_amount')
     if (low_cld_amount_flag) call &
@@ -385,6 +394,8 @@ contains
         icing_sfip_li_bcf%write_field('cloud__icing_sfip_li_bcf')
     if (icing_sfip_lir_com_flag) call &
         icing_sfip_lir_com%write_field('cloud__icing_sfip_lir_com')
+    if (cloud_fraction_below_1000feet_asl_flag) call &
+       cloud_fraction_below_1000feet_asl%write_field('cloud__cloud_fraction_below_1000feet_asl')
 
     if ( subroutine_timers ) call timer("cld_diags")
 

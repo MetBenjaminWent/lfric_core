@@ -454,6 +454,7 @@
         <field id="cloud__icing_sfip_li_bcf" name="icing_sfip_li_bcf" long_name="simplified_icing_potential_using_liquid_and_ice_condensate_and_bulk_cloud_fraction" unit="1" grid_ref="full_level_face_grid" />
         <field id="cloud__icing_sfip_lir_com" name="icing_sfip_lir_com" long_name="simplified_icing_potential_using_liquid_ice_and_rain_and_combined_cloud_amount" unit="1" grid_ref="full_level_face_grid" />
         <field id="cloud__low_cloud_base_altitude" name="low_cloud_base_altitude" long_name="cloud_base_altitude_asl_combined_cloud_amount_greater_than_5percent" unit="feet" domain_ref="face" />
+        <field id="cloud__cloud_fraction_below_1000feet_asl" name="cloud_fraction_below_1000feet_asl" long_name="cloud_fraction_below_1000feet_asl" unit="1" domain_ref="face" />
 	<!-- convection diagnostics -->
 	<field id="convection__dth_conv_noshal" name="dth_conv_noshal" long_name="potential_temperature_increment_from_convection_excluding_shallow_convection" unit="K" grid_ref="full_level_face_grid" />
 	<field id="convection__dt_conv" name="dt_conv" long_name="temperature_increment_from_convection" unit="K" grid_ref="full_level_face_grid" />
@@ -1125,6 +1126,7 @@
         <field field_ref="accumulated_fluxes" />
 	<field field_ref="cloud__cloud_amount_maxrnd" />
 	<field field_ref="cloud__combined_cloud_amount" />
+	<field field_ref="cloud__cloud_fraction_below_1000feet_asl" />
         <field field_ref="convection__dt_conv" />
         <field field_ref="convection__dmv_conv" />
         <field field_ref="convection__massflux_up" />
