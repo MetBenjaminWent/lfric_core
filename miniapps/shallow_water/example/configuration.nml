@@ -1,11 +1,11 @@
 ! Configuration for running the Gaussian test with shallow water miniapp
 
 &base_mesh
-filename             = 'PUSM_res32.nc'
+file_prefix          = 'PUSM_res32'
         ! Mesh Name
-        ! 'mesh_Cxx.nc' for spherical test cases (C12, C24, C48, C96)
-        ! 'PUSM_resxx.nc' for periodic unit square test cases (128, 64, 32, 16)
-        ! 'PSM_Lxxkm_resxx.nc' for unit square test cases
+        ! 'mesh_Cxx' for spherical test cases (C12, C24, C48, C96)
+        ! 'PUSM_resxx' for periodic unit square test cases (128, 64, 32, 16)
+        ! 'PSM_Lxxkm_resxx' for unit square test cases
 prime_mesh_name      = 'dynamics'
 geometry             = 'planar'
         ! Geometry either 'planar' or 'spherical'

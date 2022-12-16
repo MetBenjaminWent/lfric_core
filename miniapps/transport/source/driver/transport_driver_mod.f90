@@ -153,7 +153,7 @@ contains
                     multigrid_mesh_ids=multigrid_mesh_ids,           &
                     multigrid_2d_mesh_ids=multigrid_2d_mesh_ids,     &
                     use_multigrid=l_multigrid,                       &
-                    input_stencil_depth=get_required_stencil_depth() )
+                    required_stencil_depth=get_required_stencil_depth() )
 
     ! FEM initialisation
     call init_fem( mesh, chi, panel_id,                         &

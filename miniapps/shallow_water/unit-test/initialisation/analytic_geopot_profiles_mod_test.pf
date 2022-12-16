@@ -55,7 +55,7 @@ contains
                               scaling_factor=1.0_r_def )
 
     call feign_base_mesh_config(                    &
-               filename='foo',                      &
+               file_prefix='foo',                   &
                prime_mesh_name='unit_test',         &
                geometry=geometry_spherical,         &
                offline_partitioning=.false.,        &

@@ -359,19 +359,16 @@ contains
       call global_mesh%get_cell_next( cell_gid, self%cell_next(:,cell_lid) )
 
       ! Convert the cell_next GIDs into LIDs.
-!print*, '(local_mesh_gid)', self%cell_next(:,cell_lid)
       do edge = 1, self%nedges_per_cell
         if (self%get_lid_from_gid(self%cell_next(edge,cell_lid)) > 0) then
           self%cell_next(edge,cell_lid) = &
                  self%get_lid_from_gid(self%cell_next(edge,cell_lid))
         else
-!print*,'initialising cell oustide domain '
           ! If lid is zero (or -ve) cell next is outside domain - so set to zero.
           self%cell_next(edge,cell_lid) = global_mesh%get_void_cell() !0__i_def
         end if
       end do
 
-!      print*, 'local lam cell_next ', self%cell_next(:,cell_lid)
     end do
 
     ! Vertices on a cell
@@ -2455,9 +2452,10 @@ contains
 
 
   !-------------------------------------------------------------------------------
-  !> @brief  Queries the mesh names that this local mesh has inter-grid maps to.
-  !> @return target_mesh_names  Names of target meshes that this mesh (source)
-  !>                            has maps to.
+  !> @brief      Queries the mesh names that this local mesh has
+  !>             inter-grid maps to.
+  !> @param[out] target_mesh_names  Names of target meshes that this
+  !>                                mesh (source) has maps to.
   !>
   subroutine get_target_mesh_names(self, target_mesh_names)
 

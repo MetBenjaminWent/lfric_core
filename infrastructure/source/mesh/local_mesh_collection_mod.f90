@@ -32,6 +32,9 @@ module local_mesh_collection_mod
     procedure, public  :: get_mesh_by_id
     generic,   public  :: get_local_mesh => get_mesh_by_id, &
                                             get_mesh_by_name
+    procedure, public  :: get_mesh_names
+    procedure, public  :: check_for
+
     procedure, public  :: clear
     final              :: local_mesh_collection_destructor
   end type local_mesh_collection_type
@@ -101,6 +104,66 @@ contains
     local_mesh_id = local_mesh_to_add%get_id()
 
   end function add_new_local_mesh
+
+
+  !===========================================================================
+  !> @brief Returns mesh tag names of mesh objects in the collection.
+  !>
+  !> @return mesh_names  String array <<allocatable>> of mesh names in
+  !>                     collection.
+  !>
+  function get_mesh_names( self ) result( mesh_names )
+
+    implicit none
+
+    class(local_mesh_collection_type) :: self
+    character(str_def), allocatable :: mesh_names(:)
+
+    integer(i_def) :: n_meshes, i
+
+    type(local_mesh_type), pointer :: local_mesh
+
+    ! Pointer to linked list - used for looping through the list
+    type(linked_list_item_type), pointer :: loop => null()
+
+    n_meshes = self%local_mesh_list%get_length()
+
+    if (n_meshes > 0) then
+
+      allocate(mesh_names(n_meshes))
+      local_mesh => null()
+
+      ! Start at the head of the collection's
+      ! linked-list
+      loop => self%local_mesh_list%get_head()
+
+      do i=1, n_meshes
+        ! If list is empty or we're at the end of list
+        ! and we didn't find a mesh, return an
+        ! unallocated array.
+        if ( .not. associated(loop) ) then
+          nullify(local_mesh)
+          exit
+        end if
+
+        ! 'cast' to local_mesh_type
+        select type(m => loop%payload)
+          type is (local_mesh_type)
+            local_mesh => m
+            mesh_names(i) = local_mesh%get_mesh_name()
+        end select
+
+        loop => loop%next
+      end do
+
+      nullify(loop)
+      nullify(local_mesh)
+
+    end if
+
+    return
+  end function get_mesh_names
+
 
   !===========================================================================
   !> @brief   Requests a local mesh object with the specified name
@@ -210,6 +273,35 @@ contains
     nullify(loop)
 
   end function get_mesh_by_id
+
+
+  !===========================================================================
+  !> @brief Check whether a particular named mesh is present in the
+  !>        mesh collection.
+  !>
+  !> @param[in] mesh_name  Mesh name of object to check for.
+  !> @return    answer     .true. if global mesh object present
+  !>                       in collection.
+  !>
+  function check_for(self, mesh_name) result(answer)
+
+    implicit none
+
+    class(local_mesh_collection_type), intent(in) :: self
+    character(str_def),                intent(in) :: mesh_name
+
+    type(local_mesh_type), pointer :: mesh => null()
+
+    logical :: answer
+
+    answer = .false.
+    mesh => self%get_mesh_by_name(mesh_name)
+    if ( associated(mesh) ) answer = .true.
+    nullify(mesh)
+
+    return
+  end function check_for
+
 
   !===========================================================================
   !> @brief Forced clear of all the local mesh objects in the collection.

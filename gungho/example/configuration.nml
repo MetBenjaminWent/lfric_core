@@ -5,7 +5,7 @@
 /
 
 &base_mesh
-  filename        = 'mesh_C16_MG.nc'
+  file_prefix     = 'mesh_C16_MG'
   prime_mesh_name = 'C16'
   geometry        = 'spherical'
   offline_partitioning = .false.

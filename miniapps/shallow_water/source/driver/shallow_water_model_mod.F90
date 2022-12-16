@@ -141,7 +141,7 @@ module shallow_water_model_mod
     ! TODO Stencil depth needs to be taken from configuration options
     ! Create the mesh
     call init_mesh( get_comm_rank(),  get_comm_size(), mesh, twod_mesh, &
-                    input_stencil_depth = 2_i_def )
+                    required_stencil_depth=2_i_def )
 
     ! Create FEM specifics (function spaces and chi field)
     call init_fem(mesh, chi, panel_id)

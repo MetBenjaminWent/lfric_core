@@ -60,7 +60,7 @@ contains
     class(compute_geopotential_kernel_test_type), intent(inout) :: this
 
     ! Base mesh config is needed to ensure spherical geometry is used
-    call feign_base_mesh_config( filename='foo',                   &
+    call feign_base_mesh_config( file_prefix='foo',                &
                                  prime_mesh_name='dynamics',       &
                                  geometry=geometry_spherical,      &
                                  offline_partitioning=.false.,     &

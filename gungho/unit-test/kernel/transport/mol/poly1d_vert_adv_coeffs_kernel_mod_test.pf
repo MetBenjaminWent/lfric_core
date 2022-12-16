@@ -80,7 +80,7 @@ contains
                                  transport_ageofair=.false.,                               &
                                  ageofair_reset_level = 10                                 &
                                  )
-    call feign_base_mesh_config( filename='foo',                      &
+    call feign_base_mesh_config( file_prefix='foo',                   &
                                  prime_mesh_name='unit_test',         &
                                  geometry=geometry_planar,            &
                                  offline_partitioning=.false.,        &

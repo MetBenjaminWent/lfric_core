@@ -87,7 +87,8 @@ contains
     dt_model = real(model_clock%get_seconds_per_step(), r_def)
 
     ! Create the mesh
-    call init_mesh( get_comm_rank(), get_comm_size(), mesh, twod_mesh = twod_mesh )
+    call init_mesh( get_comm_rank(), get_comm_size(), &
+                    mesh, twod_mesh=twod_mesh )
 
     ! Create FEM specifics (function spaces and chi field)
     call init_fem( mesh, chi, panel_id )

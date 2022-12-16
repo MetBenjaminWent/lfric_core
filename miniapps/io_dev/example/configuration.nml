@@ -45,7 +45,7 @@
 /
 
 &base_mesh
-  filename        = 'mesh_io_dev.nc'
+  file_prefix     = 'mesh_io_dev'
   prime_mesh_name = 'C3'
   geometry        = 'spherical'
   offline_partitioning = .false.

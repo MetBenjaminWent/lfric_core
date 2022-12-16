@@ -34,11 +34,11 @@ module dcmip200_orography_spherical_mod_test
     procedure     :: test_dcmip200_orography_spherical
   end type dcmip200_orography_spherical_test_type
 
-  character(str_def), parameter   :: mesh_name  = 'unit_test'
-  character(len=str_max_filename) :: filename   = "data/mesh_C16.nc"
-  real(r_def),        parameter   :: domain_top = 10000.0_r_def
-  integer(i_def),     parameter   :: npanels    = 6_i_def
-  integer(i_def),     parameter   :: nlayers    = 1_i_def
+  character(str_def), parameter   :: mesh_name   = 'unit_test'
+  character(len=str_max_filename) :: file_prefix = "data/mesh_C16"
+  real(r_def),        parameter   :: domain_top  = 10000.0_r_def
+  integer(i_def),     parameter   :: npanels     = 6_i_def
+  integer(i_def),     parameter   :: nlayers     = 1_i_def
   integer(i_def),     parameter   :: element_order = 0_i_def
   integer(i_def),     parameter   :: total_ranks   = 1_i_def
   integer(i_def),     parameter   :: local_rank    = 0_i_def
@@ -81,7 +81,7 @@ contains
 
     ! Set mesh configuration
     call feign_base_mesh_config(                                    &
-                         filename        = filename,                &
+                         file_prefix     = file_prefix,             &
                          prime_mesh_name = mesh_name,               &
                          geometry        = geometry_spherical,      &
                          offline_partitioning = .false.,            &
@@ -163,7 +163,7 @@ contains
     integer(i_def)         :: itest
 
     ! Create global mesh
-    call ugrid_mesh_data%read_from_file(trim(filename), mesh_name)
+    call ugrid_mesh_data%read_from_file(trim(file_prefix)//'.nc', mesh_name)
     global_mesh = global_mesh_type( ugrid_mesh_data, npanels )
     call ugrid_mesh_data%clear()
     global_mesh_ptr => global_mesh

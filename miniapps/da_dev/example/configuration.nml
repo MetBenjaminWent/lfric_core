@@ -6,7 +6,7 @@ test_field='rho'
 
 &base_mesh
 f_lat_deg=45.0,
-filename='mesh_C3.nc',
+file_prefix='mesh_C3',
 fplane=.false.,
 geometry='spherical',
 offline_partitioning=.false.,

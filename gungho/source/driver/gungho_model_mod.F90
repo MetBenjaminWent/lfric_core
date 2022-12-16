@@ -227,15 +227,15 @@ contains
     allocate( extrusion, source=create_extrusion() )
 
     ! Create the mesh
-    call init_mesh( get_comm_rank(), get_comm_size(), mesh,               &
-                    twod_mesh             = twod_mesh,                    &
-                    shifted_mesh          = shifted_mesh,                 &
-                    double_level_mesh     = double_level_mesh,            &
-                    multigrid_mesh_ids    = multigrid_mesh_ids,           &
-                    multigrid_2D_mesh_ids = multigrid_2D_mesh_ids,        &
-                    use_multigrid         = l_multigrid,                  &
-                    input_stencil_depth   = get_required_stencil_depth(), &
-                    input_extrusion       = extrusion )
+    call init_mesh( get_comm_rank(), get_comm_size(), mesh,                &
+                    twod_mesh              = twod_mesh,                    &
+                    shifted_mesh           = shifted_mesh,                 &
+                    double_level_mesh      = double_level_mesh,            &
+                    multigrid_mesh_ids     = multigrid_mesh_ids,           &
+                    multigrid_2D_mesh_ids  = multigrid_2D_mesh_ids,        &
+                    use_multigrid          = l_multigrid,                  &
+                    required_stencil_depth = get_required_stencil_depth(), &
+                    input_extrusion        = extrusion )
 
     call init_fem( mesh, chi, panel_id,                           &
                    shifted_mesh          = shifted_mesh,          &

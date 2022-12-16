@@ -1,6 +1,6 @@
 &base_mesh
 f_lat_deg=45.0,
-filename='mesh_C24.nc',
+file_prefix='mesh_C24',
 fplane=.false.,
 geometry='planar',
 offline_partitioning=.false.

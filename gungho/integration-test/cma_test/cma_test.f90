@@ -233,7 +233,7 @@ program cma_test
   call log_event( 'Initialising harness', LOG_LEVEL_INFO )
 
   call init_mesh( local_rank, total_ranks, mesh, &
-                  input_stencil_depth=get_required_stencil_depth() )
+                  required_stencil_depth=get_required_stencil_depth() )
 
   ! Work out grid spacing, which should be of order 1
   ncells_2d_local = mesh%get_ncells_2d()

@@ -65,7 +65,7 @@ contains
 
     class(initial_swe_u_test_type), intent(inout) :: this
 
-    call feign_base_mesh_config( filename='foo',                      &
+    call feign_base_mesh_config( file_prefix='foo',                   &
                                  prime_mesh_name='unit_test',         &
                                  geometry=geometry_planar,            &
                                  topology=topology_fully_periodic,    &

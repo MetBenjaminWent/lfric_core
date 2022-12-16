@@ -97,12 +97,12 @@ contains
     ! Initialise aspects of the grid
     !-------------------------------------------------------------------------
     ! Create the mesh
-    call init_mesh( get_comm_rank(), get_comm_size(), mesh,        &
-                    twod_mesh             = twod_mesh,             &
-                    multigrid_mesh_ids    = multigrid_mesh_ids,    &
-                    multigrid_2D_mesh_ids = multigrid_2D_mesh_ids, &
-                    use_multigrid         = l_multigrid,           &
-                    input_stencil_depth   = get_required_stencil_depth() )
+    call init_mesh( get_comm_rank(), get_comm_size(), mesh,         &
+                    twod_mesh              = twod_mesh,             &
+                    multigrid_mesh_ids     = multigrid_mesh_ids,    &
+                    multigrid_2D_mesh_ids  = multigrid_2D_mesh_ids, &
+                    use_multigrid          = l_multigrid,           &
+                    required_stencil_depth = get_required_stencil_depth() )
 
     ! Create FEM specifics (function spaces and chi field)
     call init_fem( mesh, chi, panel_id,                           &

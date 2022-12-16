@@ -67,7 +67,7 @@ contains
     class(sample_eos_pressure_test_type), intent(inout) :: this
 
     call feign_base_mesh_config                     &
-             ( filename='foo',                      &
+             ( file_prefix='foo',                   &
                prime_mesh_name='unit_test',         &
                geometry=geometry_planar,            &
                offline_partitioning=.false.,        &

@@ -225,7 +225,7 @@ contains
                     multires_coupling_2D_mesh_ids = multires_coupling_2D_mesh_ids, &
                     multires_coupling_mesh_tags   = multires_coupling_mesh_tags,   &
                     use_multires_coupling         = use_multires_coupling,         &
-                    input_stencil_depth = get_required_stencil_depth() )
+                    required_stencil_depth        = get_required_stencil_depth() )
 
     call init_fem( mesh, chi, panel_id,                                           &
                    shifted_mesh                  = shifted_mesh,                  &

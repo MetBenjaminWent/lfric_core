@@ -35,7 +35,7 @@ module agnesi_orography_cartesian_mod_test
   end type agnesi_orography_cartesian_test_type
 
   character(str_def), parameter   :: mesh_name        = 'unit_test'
-  character(len=str_max_filename) :: filename         = "data/mesh_BiP40x40-5x5.nc"
+  character(len=str_max_filename) :: file_prefix      = "data/mesh_BiP40x40-5x5"
   real(r_def),        parameter   :: domain_bottom    = 0.0_r_def
   real(r_def),        parameter   :: domain_top       = 1000.0_r_def
   real(r_def),        parameter   :: surface_pressure = 1000.0e2_r_def
@@ -74,7 +74,7 @@ contains
 
     ! Set mesh configuration
     call feign_base_mesh_config(                                    &
-                         filename        = filename,                &
+                         file_prefix     = file_prefix,             &
                          prime_mesh_name = mesh_name,               &
                          geometry        = geometry_planar,         &
                          offline_partitioning = .false.,            &
@@ -165,7 +165,7 @@ contains
     integer(i_def)         :: itest
 
     ! Create global mesh
-    call ugrid_mesh_data%read_from_file(trim(filename), mesh_name)
+    call ugrid_mesh_data%read_from_file(trim(file_prefix)//'.nc', mesh_name)
     global_mesh = global_mesh_type( ugrid_mesh_data, npanels )
     call ugrid_mesh_data%clear()
     global_mesh_ptr => global_mesh

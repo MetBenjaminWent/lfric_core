@@ -72,7 +72,7 @@ contains
     class(extrusion_type), allocatable :: unit_under_test
 
     call feign_base_mesh_config(               &
-             filename='/foo.nc',               &
+             file_prefix='/foo.nc',            &
              prime_mesh_name='unit_test',      &
              geometry=geometry_planar,         &
              offline_partitioning=.false.,     &
@@ -120,7 +120,7 @@ contains
     class(extrusion_type), allocatable :: unit_under_test
 
     call feign_base_mesh_config(               &
-             filename='/foo.nc',               &
+             file_prefix='/foo.nc',            &
              prime_mesh_name='prime',          &
              geometry=geometry_spherical,      &
              offline_partitioning=.false.,     &
