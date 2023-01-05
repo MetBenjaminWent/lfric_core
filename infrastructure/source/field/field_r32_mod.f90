@@ -22,7 +22,6 @@ module field_r32_mod
                                 write_interface, read_interface, &
                                 checkpoint_write_interface, &
                                 checkpoint_read_interface
-  use fs_continuity_mod,  only: WCHI
   use function_space_mod, only: function_space_type
   use halo_routing_collection_mod, &
                           only: halo_routing_collection_type, &
@@ -38,7 +37,6 @@ module field_r32_mod
                                 log_level, &
                                 LOG_LEVEL_INFO, &
                                 LOG_LEVEL_ERROR
-  use mesh_mod,           only: mesh_type
   use scalar_r32_mod,     only: scalar_r32_type
 
   use pure_abstract_field_mod, &

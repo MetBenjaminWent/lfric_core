@@ -11,10 +11,8 @@ module gungho_driver_mod
 
   use cli_mod,                    only : get_initial_filename
   use clock_mod,                  only : clock_type
-  use constants_mod,              only : i_def, i_native, imdi
   use derived_config_mod,         only : l_esm_couple
   use driver_io_mod,              only : get_io_context
-  use field_mod,                  only : field_type
   use gungho_mod,                 only : program_name
   use gungho_diagnostics_driver_mod, &
                                   only : gungho_diagnostics_driver
