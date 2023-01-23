@@ -1,7 +1,7 @@
 !-----------------------------------------------------------------------------
-! Copyright (c) 2017,  Met Office, on behalf of HMSO and Queen's Printer
-! For further details please refer to the file LICENCE.original which you
-! should have received as part of this distribution.
+! (c) Crown copyright 2023 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
 !-----------------------------------------------------------------------------
 !> @brief Compute the projection operator from the potential temperature space
 !!        to the velocity space weighted by the pressure gradient.
@@ -14,18 +14,19 @@
 !!          \left< \nabla.v,\Pi\gamma\right> + \left< v,\Pi\nabla\gamma\right>
 !!          \f]
 !>
-module weighted_proj_2theta_kernel_mod
+module weighted_proj_2thetav_kernel_mod
 
-  use argument_mod,      only: arg_type, func_type,     &
-                               GH_OPERATOR, GH_FIELD,   &
-                               GH_SCALAR, GH_REAL,      &
-                               GH_READ, GH_WRITE,       &
-                               ANY_SPACE_9,             &
-                               GH_BASIS, GH_DIFF_BASIS, &
-                               CELL_COLUMN, GH_QUADRATURE_XYoZ
-  use constants_mod,     only: r_def, i_def, r_solver
-  use fs_continuity_mod, only: W2, W3
-  use kernel_mod,        only: kernel_type
+  use argument_mod,          only: arg_type, func_type,     &
+                                   GH_OPERATOR, GH_FIELD,   &
+                                   GH_SCALAR, GH_REAL,      &
+                                   GH_READ, GH_WRITE,       &
+                                   ANY_SPACE_9,             &
+                                   GH_BASIS, GH_DIFF_BASIS, &
+                                   CELL_COLUMN, GH_QUADRATURE_XYoZ
+  use constants_mod,         only: r_def, i_def, r_solver
+  use fs_continuity_mod,     only: W2, W3
+  use kernel_mod,            only: kernel_type
+  use reference_element_mod, only: B,T
 
   implicit none
 
@@ -35,7 +36,7 @@ module weighted_proj_2theta_kernel_mod
   ! Public types
   !---------------------------------------------------------------------------
 
-  type, public, extends(kernel_type) :: weighted_proj_2theta_kernel_type
+  type, public, extends(kernel_type) :: weighted_proj_2thetav_kernel_type
     private
     type(arg_type) :: meta_args(3) = (/                             &
          arg_type(GH_OPERATOR, GH_REAL, GH_WRITE, W2, ANY_SPACE_9), &
@@ -50,13 +51,13 @@ module weighted_proj_2theta_kernel_mod
     integer :: operates_on = CELL_COLUMN
     integer :: gh_shape = GH_QUADRATURE_XYoZ
   contains
-    procedure, nopass :: weighted_proj_2theta_code
+    procedure, nopass :: weighted_proj_2thetav_code
   end type
 
   !---------------------------------------------------------------------------
   ! Contained functions/subroutines
   !---------------------------------------------------------------------------
-  public :: weighted_proj_2theta_code
+  public :: weighted_proj_2thetav_code
 
 contains
 
@@ -83,7 +84,7 @@ contains
 !! @param[in] nqp_v Number of vertical quadrature points
 !! @param[in] wqp_h Horizontal quadrature weights
 !! @param[in] wqp_v Vertical quadrature weights
-subroutine weighted_proj_2theta_code(cell, nlayers, ncell_3d,             &
+subroutine weighted_proj_2thetav_code(cell, nlayers, ncell_3d,             &
                                      projection,                          &
                                      exner,                               &
                                      scalar,                              &
@@ -152,7 +153,7 @@ subroutine weighted_proj_2theta_code(cell, nlayers, ncell_3d,             &
         wt = real(wqp_h(qp1)*wqp_v(qp2), r_solver)
         integrand = scalar*exner_quad*wt
         do df0 = 1, ndf_wtheta
-          do df2 = 1, ndf_w2
+          do df2 = B, T
             div_gamma_v = rsol_diff_basis_w2(1,df2,qp1,qp2)*rsol_basis_wtheta(1,df0,qp1,qp2) &
                         + dot_product(rsol_basis_w2(:,df2,qp1,qp2), &
                                       rsol_diff_basis_wtheta(:,df0,qp1,qp2))
@@ -163,6 +164,6 @@ subroutine weighted_proj_2theta_code(cell, nlayers, ncell_3d,             &
       end do
     end do
   end do
-end subroutine weighted_proj_2theta_code
+end subroutine weighted_proj_2thetav_code
 
-end module weighted_proj_2theta_kernel_mod
+end module weighted_proj_2thetav_kernel_mod

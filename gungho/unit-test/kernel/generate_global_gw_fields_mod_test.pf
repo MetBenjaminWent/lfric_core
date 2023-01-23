@@ -106,6 +106,7 @@ contains
                                   moisture_formulation_dry,                 &
                                   shallow=.true., use_physics=.false.,      &
                                   use_wavedynamics=.true.,                  &
+                                  p2theta_vert=.true.,                      &
                                   use_multires_coupling=.false.,            &
                                   dry_static_adjust=.false.,                &
                                   exner_from_eos=.false.,                   &

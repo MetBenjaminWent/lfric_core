@@ -245,6 +245,7 @@ contains
                                   rotating=.false.,                         &
                                   moisture_formulation =                    &
                                   moisture_formulation_dry,                 &
+                                  p2theta_vert=.true.,                      &
                                   shallow=.true., use_physics=.false.,      &
                                   use_wavedynamics=.true.,                  &
                                   use_multires_coupling=.false.,            &
@@ -315,6 +316,7 @@ contains
                                   l_multigrid=.false.,                       &
                                   moisture_formulation =                     &
                                   moisture_formulation_dry,                  &
+                                  p2theta_vert=.true.,                       &
                                   shallow=.true., use_physics=.false.,       &
                                   use_wavedynamics=.true.,                   &
                                   use_multires_coupling=.false.,             &

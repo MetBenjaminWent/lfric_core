@@ -67,6 +67,7 @@ contains
                                    rotating              = .true.,               &
                                    moisture_formulation  =                       &
                                    moisture_formulation_dry,                     &
+                                   p2theta_vert          = .true.,               &
                                    use_physics           = .false.,              &
                                    shallow               = .false.,              &
                                    use_wavedynamics      = .true.,               &

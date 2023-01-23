@@ -1,12 +1,13 @@
 !-----------------------------------------------------------------------------
-! Copyright (c) 2017,  Met Office, on behalf of HMSO and Queen's Printer
-! For further details please refer to the file LICENCE.original which you
-! should have received as part of this distribution.
+! (c) Crown copyright 2023 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
 !-----------------------------------------------------------------------------
 
-!> Test the theta weighted divergence operator computation
+!> Test the projection operator from the velocity space to
+!! the potential temperature space weighted by the potential temperature gradient.
 !>
-module weighted_proj_2theta_kernel_mod_test
+module weighted_proj_theta2_kernel_mod_test
 
   use constants_mod, only: i_def, r_def, r_solver
   use pFUnit_Mod
@@ -17,13 +18,13 @@ module weighted_proj_2theta_kernel_mod_test
   public :: test_all
 
   @TestCase
-  type, extends(TestCase), public :: weighted_proj_2theta_test_type
+  type, extends(TestCase), public :: weighted_proj_theta2_test_type
     private
   contains
     procedure setUp
     procedure tearDown
     procedure test_all
-  end type weighted_proj_2theta_test_type
+  end type weighted_proj_theta2_test_type
 
 contains
 
@@ -32,7 +33,7 @@ contains
 
     implicit none
 
-    class(weighted_proj_2theta_test_type), intent(inout) :: this
+    class(weighted_proj_theta2_test_type), intent(inout) :: this
 
   end subroutine setUp
 
@@ -41,7 +42,7 @@ contains
 
     implicit none
 
-    class(weighted_proj_2theta_test_type), intent(inout) :: this
+    class(weighted_proj_theta2_test_type), intent(inout) :: this
 
   end subroutine tearDown
 
@@ -49,18 +50,16 @@ contains
   @test
   subroutine test_all( this )
 
-    use weighted_proj_2theta_kernel_mod, only : weighted_proj_2theta_code
+    use weighted_proj_theta2_kernel_mod, only : weighted_proj_theta2_code
 
-    use get_unit_test_m3x3_dofmap_mod,       only: get_w3_m3x3_dofmap
+    use get_unit_test_m3x3_dofmap_mod,       only: get_wtheta_m3x3_dofmap
 
-    use get_unit_test_m3x3_q3x3x3_sizes_mod, only: get_w0_m3x3_q3x3x3_size, &
-                                                   get_w2_m3x3_q3x3x3_size, &
-                                                   get_w3_m3x3_q3x3x3_size
+    use get_unit_test_m3x3_q3x3x3_sizes_mod, only: get_wtheta_m3x3_q3x3x3_size, &
+                                                   get_w2_m3x3_q3x3x3_size
 
-    use get_unit_test_q3x3x3_basis_mod, only: get_w0_q3x3x3_basis,      &
+    use get_unit_test_q3x3x3_basis_mod, only: get_wtheta_q3x3x3_basis,      &
                                               get_w2_q3x3x3_basis,      &
-                                              get_w3_q3x3x3_basis,      &
-                                              get_w0_q3x3x3_diff_basis, &
+                                              get_wtheta_q3x3x3_diff_basis, &
                                               get_w2_q3x3x3_diff_basis
 
     use get_unit_test_q3x3x3_quadrature_mod, only:     &
@@ -69,32 +68,30 @@ contains
 
     implicit none
 
-    class(weighted_proj_2theta_test_type), intent(inout) :: this
+    class(weighted_proj_theta2_test_type), intent(inout) :: this
 
     real(kind=r_solver), parameter :: tol = 1.0e-6_r_solver
 
     integer :: cell
 
-    real(kind=r_solver), dimension(6,8) :: answer
+    real(kind=r_solver), dimension(2,6) :: answer
 
-    real(r_solver), allocatable :: exner_data(:)
+    real(r_solver), allocatable :: theta_data(:)
     real(r_solver), allocatable :: local_stencil(:,:,:)
 
     integer(i_def) :: nlayers, ncells, ncells_3d
     integer(i_def) :: dim_space, dim_space_diff
-    integer(i_def) :: ndf_w0, undf_w0
+    integer(i_def) :: ndf_wt, undf_wt
     integer(i_def) :: ndf_w2, undf_w2
-    integer(i_def) :: ndf_w3, undf_w3
     integer(i_def) :: nqp_h, nqp_v
 
-    integer(i_def), allocatable :: map_w3(:,:)
+    integer(i_def), allocatable :: map_wt(:,:)
 
     real(r_def), allocatable :: wh(:)
     real(r_def), allocatable :: wv(:)
-    real(r_def), allocatable :: basis_w0(:,:,:,:)
+    real(r_def), allocatable :: basis_wt(:,:,:,:)
     real(r_def), allocatable :: basis_w2(:,:,:,:)
-    real(r_def), allocatable :: basis_w3(:,:,:,:)
-    real(r_def), allocatable :: diff_basis_w0(:,:,:,:)
+    real(r_def), allocatable :: diff_basis_wt(:,:,:,:)
     real(r_def), allocatable :: diff_basis_w2(:,:,:,:)
 
     !=====================================
@@ -103,25 +100,21 @@ contains
     nlayers = 3
 
     ! Get sizes
-    call get_w0_m3x3_q3x3x3_size( ndf_w0, undf_w0, ncells,   &
-                                  dim_space, dim_space_diff, &
-                                  nqp_h, nqp_v, nlayers )
     call get_w2_m3x3_q3x3x3_size( ndf_w2, undf_w2, ncells,   &
                                   dim_space, dim_space_diff, &
                                   nqp_h, nqp_v, nlayers )
-    call get_w3_m3x3_q3x3x3_size( ndf_w3, undf_w3, ncells,   &
+    call get_wtheta_m3x3_q3x3x3_size( ndf_wt, undf_wt, ncells,   &
                                   dim_space, dim_space_diff, &
                                   nqp_h, nqp_v, nlayers )
 
     ! Get maps
-    call get_w3_m3x3_dofmap( map_w3 )
+    call get_wtheta_m3x3_dofmap( map_wt )
 
     ! Get basis functions
-    call get_w0_q3x3x3_basis( basis_w0 )
+    call get_wtheta_q3x3x3_basis( basis_wt )
     call get_w2_q3x3x3_basis( basis_w2 )
-    call get_w3_q3x3x3_basis( basis_w3 )
 
-    call get_w0_q3x3x3_diff_basis( diff_basis_w0 )
+    call get_wtheta_q3x3x3_diff_basis( diff_basis_wt )
     call get_w2_q3x3x3_diff_basis( diff_basis_w2 )
 
     ! Get weights
@@ -133,32 +126,30 @@ contains
     !=====================================
     ! Assign data for testing
     !=====================================
-    allocate(exner_data(undf_w3))
-    exner_data = 1.0_r_solver
+    allocate(theta_data(undf_wt))
+    theta_data = 1.0_r_solver
 
-    allocate( local_stencil(ndf_w2, ndf_w0, ncells_3d) )
+    allocate( local_stencil(ndf_wt, ndf_w2, ncells_3d) )
     local_stencil(:,:,:) = 0.0_r_solver
 
     !=====================================
     ! Apply test on interior cell 1
     !=====================================
     cell = 1
-    call weighted_proj_2theta_code( cell,            &
+    call weighted_proj_theta2_code( cell,            &
                                     nlayers,         &
                                     ncells_3d,       &
                                     local_stencil,   &
-                                    exner_data,      &
+                                    theta_data,      &
                                     1.0_r_solver,    &
+                                    ndf_wt,          &
+                                    undf_wt,         &
+                                    map_wt(:,cell),  &
+                                    basis_wt,        &
+                                    diff_basis_wt,   &
                                     ndf_w2,          &
                                     basis_w2,        &
                                     diff_basis_w2,   &
-                                    ndf_w0,          &
-                                    basis_w0,        &
-                                    diff_basis_w0,   &
-                                    ndf_w3,          &
-                                    undf_w3,         &
-                                    map_w3(:,cell),  &
-                                    basis_w3,        &
                                     nqp_h,           &
                                     nqp_v,           &
                                     wh,              &
@@ -168,16 +159,15 @@ contains
     call proj_operator(answer)
     @assertEqual(answer, local_stencil(:, :, 1 ), tol)
 
-    deallocate( exner_data )
+    deallocate( theta_data )
     deallocate( local_stencil )
 
-    deallocate( map_w3 )
+    deallocate( map_wt )
     deallocate( wh )
     deallocate( wv )
-    deallocate( basis_w0 )
     deallocate( basis_w2 )
-    deallocate( basis_w3 )
-    deallocate( diff_basis_w0 )
+    deallocate( basis_wt )
+    deallocate( diff_basis_wt )
     deallocate( diff_basis_w2 )
 
   end subroutine test_all
@@ -188,20 +178,15 @@ contains
 
     implicit none
 
-    real(kind=r_solver), dimension(6,8), intent(inout) :: proj
+    real(kind=r_solver), dimension(2,6), intent(inout) :: proj
 
-    proj = 0.25_r_solver*real(reshape( [             &
-                             -1,  1,  0,  0, -1,  0, &
-                              0,  1,  1,  0, -1,  0, &
-                              0,  0,  1, -1, -1,  0, &
-                             -1,  0,  0, -1, -1,  0, &
-                             -1,  1,  0,  0,  0,  1, &
-                              0,  1,  1,  0,  0,  1, &
-                              0,  0,  1, -1,  0,  1, &
-                             -1,  0,  0, -1,  0,  1  &
+    proj = 0.5_r_solver*real(reshape( [       &
+                             1,  1,  -1,  -1, &
+                             -1,  -1,  1,  1, &
+                             2,  0,  0, -2    &
                              ], shape(proj) ),r_solver)
 
     return
   end subroutine proj_operator
 
-end module weighted_proj_2theta_kernel_mod_test
+end module weighted_proj_theta2_kernel_mod_test

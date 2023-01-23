@@ -1,15 +1,16 @@
 !-----------------------------------------------------------------------------
-! Copyright (c) 2017,  Met Office, on behalf of HMSO and Queen's Printer
-! For further details please refer to the file LICENCE.original which you
-! should have received as part of this distribution.
+! (c) Crown copyright 2023 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
 !-----------------------------------------------------------------------------
 !
 !-------------------------------------------------------------------------------
 !> @brief Compute the projection operator from the velocity space to
-!!        the potential temperature space weighted by the potential temperature gradient
+!!        the potential temperature space weighted by the potential temperature gradient.
+!!        This kernel only uses the vertical part of W2.
 !> @details Compute the projection operator \f[<\gamma,\nabla(\theta*)v>\f]
 !!          where v is in W2 and gamma is in the potential temperature space
-module weighted_proj_theta2_kernel_mod
+module weighted_proj_theta2v_kernel_mod
 
 use argument_mod,            only : arg_type, func_type,     &
                                     GH_OPERATOR, GH_FIELD,   &
@@ -20,6 +21,7 @@ use argument_mod,            only : arg_type, func_type,     &
 use constants_mod,           only : r_def, i_def, r_solver
 use fs_continuity_mod,       only : W2, Wtheta
 use kernel_mod,              only : kernel_type
+use reference_element_mod,   only : B,T
 
 implicit none
 
@@ -29,7 +31,7 @@ private
 ! Public types
 !-------------------------------------------------------------------------------
 !> The type declaration for the kernel. Contains the metadata needed by the Psy layer
-type, public, extends(kernel_type) :: weighted_proj_theta2_kernel_type
+type, public, extends(kernel_type) :: weighted_proj_theta2v_kernel_type
   private
   type(arg_type) :: meta_args(3) = (/                        &
        arg_type(GH_OPERATOR, GH_REAL, GH_WRITE, Wtheta, W2), &
@@ -43,13 +45,13 @@ type, public, extends(kernel_type) :: weighted_proj_theta2_kernel_type
   integer :: operates_on = CELL_COLUMN
   integer :: gh_shape = GH_QUADRATURE_XYoZ
 contains
-  procedure, nopass :: weighted_proj_theta2_code
+  procedure, nopass :: weighted_proj_theta2v_code
 end type
 
 !-------------------------------------------------------------------------------
 ! Contained functions/subroutines
 !-------------------------------------------------------------------------------
-public :: weighted_proj_theta2_code
+public :: weighted_proj_theta2v_code
 
 contains
 
@@ -74,7 +76,7 @@ contains
 !! @param[in] nqp_v Number of vertical quadrature points
 !! @param[in] wqp_h Weights of the horizontal quadrature points
 !! @param[in] wqp_v Weights of the vertical quadrature points
-subroutine weighted_proj_theta2_code(cell, nlayers, ncell_3d,         &
+subroutine weighted_proj_theta2v_code(cell, nlayers, ncell_3d,         &
                                      projection,                      &
                                      theta,                           &
                                      scalar,                          &
@@ -135,7 +137,7 @@ subroutine weighted_proj_theta2_code(cell, nlayers, ncell_3d,         &
         end do
         wgt = real(wqp_h(qp1)*wqp_v(qp2), r_solver)
         i1 = scalar*theta_at_quad*wgt
-        do df2 = 1,ndf_w2
+        do df2 = B, T
           do dft = 1,ndf_wt
             div_gamma_v = rsol_wt_basis(1,dft,qp1,qp2)*rsol_w2_diff_basis(1,df2,qp1,qp2) &
                         + dot_product(rsol_wt_diff_basis(:,dft,qp1,qp2),rsol_w2_basis(:,df2,qp1,qp2))
@@ -146,6 +148,6 @@ subroutine weighted_proj_theta2_code(cell, nlayers, ncell_3d,         &
     end do
   end do
 
-end subroutine weighted_proj_theta2_code
+end subroutine weighted_proj_theta2v_code
 
-end module weighted_proj_theta2_kernel_mod
+end module weighted_proj_theta2v_kernel_mod

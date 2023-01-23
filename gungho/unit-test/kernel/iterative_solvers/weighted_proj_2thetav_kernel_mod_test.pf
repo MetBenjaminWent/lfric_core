@@ -1,12 +1,12 @@
 !-----------------------------------------------------------------------------
-! Copyright (c) 2017,  Met Office, on behalf of HMSO and Queen's Printer
-! For further details please refer to the file LICENCE.original which you
-! should have received as part of this distribution.
+! (c) Crown copyright 2023 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
 !-----------------------------------------------------------------------------
 
 !> Test the theta weighted divergence operator computation
 !>
-module weighted_proj_2theta_kernel_mod_test
+module weighted_proj_2thetav_kernel_mod_test
 
   use constants_mod, only: i_def, r_def, r_solver
   use pFUnit_Mod
@@ -17,13 +17,13 @@ module weighted_proj_2theta_kernel_mod_test
   public :: test_all
 
   @TestCase
-  type, extends(TestCase), public :: weighted_proj_2theta_test_type
+  type, extends(TestCase), public :: weighted_proj_2thetav_test_type
     private
   contains
     procedure setUp
     procedure tearDown
     procedure test_all
-  end type weighted_proj_2theta_test_type
+  end type weighted_proj_2thetav_test_type
 
 contains
 
@@ -32,7 +32,7 @@ contains
 
     implicit none
 
-    class(weighted_proj_2theta_test_type), intent(inout) :: this
+    class(weighted_proj_2thetav_test_type), intent(inout) :: this
 
   end subroutine setUp
 
@@ -41,7 +41,7 @@ contains
 
     implicit none
 
-    class(weighted_proj_2theta_test_type), intent(inout) :: this
+    class(weighted_proj_2thetav_test_type), intent(inout) :: this
 
   end subroutine tearDown
 
@@ -49,7 +49,7 @@ contains
   @test
   subroutine test_all( this )
 
-    use weighted_proj_2theta_kernel_mod, only : weighted_proj_2theta_code
+    use weighted_proj_2thetav_kernel_mod, only : weighted_proj_2thetav_code
 
     use get_unit_test_m3x3_dofmap_mod,       only: get_w3_m3x3_dofmap
 
@@ -69,7 +69,7 @@ contains
 
     implicit none
 
-    class(weighted_proj_2theta_test_type), intent(inout) :: this
+    class(weighted_proj_2thetav_test_type), intent(inout) :: this
 
     real(kind=r_solver), parameter :: tol = 1.0e-6_r_solver
 
@@ -143,27 +143,27 @@ contains
     ! Apply test on interior cell 1
     !=====================================
     cell = 1
-    call weighted_proj_2theta_code( cell,            &
-                                    nlayers,         &
-                                    ncells_3d,       &
-                                    local_stencil,   &
-                                    exner_data,      &
-                                    1.0_r_solver,    &
-                                    ndf_w2,          &
-                                    basis_w2,        &
-                                    diff_basis_w2,   &
-                                    ndf_w0,          &
-                                    basis_w0,        &
-                                    diff_basis_w0,   &
-                                    ndf_w3,          &
-                                    undf_w3,         &
-                                    map_w3(:,cell),  &
-                                    basis_w3,        &
-                                    nqp_h,           &
-                                    nqp_v,           &
-                                    wh,              &
-                                    wv               &
-                                   )
+    call weighted_proj_2thetav_code( cell,            &
+                                     nlayers,         &
+                                     ncells_3d,       &
+                                     local_stencil,   &
+                                     exner_data,      &
+                                     1.0_r_solver,    &
+                                     ndf_w2,          &
+                                     basis_w2,        &
+                                     diff_basis_w2,   &
+                                     ndf_w0,          &
+                                     basis_w0,        &
+                                     diff_basis_w0,   &
+                                     ndf_w3,          &
+                                     undf_w3,         &
+                                     map_w3(:,cell),  &
+                                     basis_w3,        &
+                                     nqp_h,           &
+                                     nqp_v,           &
+                                     wh,              &
+                                     wv               &
+                                     )
 
     call proj_operator(answer)
     @assertEqual(answer, local_stencil(:, :, 1 ), tol)
@@ -191,17 +191,17 @@ contains
     real(kind=r_solver), dimension(6,8), intent(inout) :: proj
 
     proj = 0.25_r_solver*real(reshape( [             &
-                             -1,  1,  0,  0, -1,  0, &
-                              0,  1,  1,  0, -1,  0, &
-                              0,  0,  1, -1, -1,  0, &
-                             -1,  0,  0, -1, -1,  0, &
-                             -1,  1,  0,  0,  0,  1, &
-                              0,  1,  1,  0,  0,  1, &
-                              0,  0,  1, -1,  0,  1, &
-                             -1,  0,  0, -1,  0,  1  &
-                             ], shape(proj) ),r_solver)
+                              0,  0,  0,  0, -1,  0, &
+                              0,  0,  0,  0, -1,  0, &
+                              0,  0,  0,  0, -1,  0, &
+                              0,  0,  0,  0, -1,  0, &
+                              0,  0,  0,  0,  0,  1, &
+                              0,  0,  0,  0,  0,  1, &
+                              0,  0,  0,  0,  0,  1, &
+                              0,  0,  0,  0,  0,  1  &
+                              ], shape(proj) ),r_solver)
 
     return
   end subroutine proj_operator
 
-end module weighted_proj_2theta_kernel_mod_test
+end module weighted_proj_2thetav_kernel_mod_test

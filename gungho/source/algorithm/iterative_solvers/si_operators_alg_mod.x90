@@ -34,7 +34,8 @@ module si_operators_alg_mod
   use formulation_config_mod,    only: l_multigrid,          &
                                        eos_method,           &
                                        eos_method_sampled,   &
-                                       eos_method_projected
+                                       eos_method_projected, &
+                                       p2theta_vert
   use multigrid_config_mod,      only: multigrid_chain_nitems
   use mixed_solver_config_mod,   only: eliminate_variables, &
                                        eliminate_variables_analytic
@@ -355,6 +356,8 @@ contains
     use weighted_div_kernel_mod,              only: weighted_div_kernel_type
     use weighted_proj_2theta_kernel_mod,      only: weighted_proj_2theta_kernel_type
     use weighted_proj_theta2_kernel_mod,      only: weighted_proj_theta2_kernel_type
+    use weighted_proj_2thetav_kernel_mod,     only: weighted_proj_2thetav_kernel_type
+    use weighted_proj_theta2v_kernel_mod,     only: weighted_proj_theta2v_kernel_type
     use weighted_proj_theta2_vert_kernel_mod, only: weighted_proj_theta2_vert_kernel_type
     use weighted_div_bd_kernel_mod,           only: weighted_div_bd_kernel_type
     use weighted_proj_2theta_bd_kernel_mod,   only: weighted_proj_2theta_bd_kernel_type
@@ -554,7 +557,22 @@ contains
        const3 = real(tau_r*dt, r_solver)
        m3_inv => get_inverse_w3_mass_matrix_r_solver(mesh%get_id())
        div    => get_div_r_solver(mesh%get_id())
-       call invoke( name = "cell_and_boundary_kernels",                                 &
+       if ( p2theta_vert ) then
+         ! The projection operators are restricted to use the vertical only
+         call invoke( name = "cell_and_boundary_kernels_vert",                          &
+            weighted_div_kernel_type(div_star(level), theta, const1, qr),               &
+            weighted_proj_2thetav_kernel_type(p2theta(level), exner, const1, qr),       &
+            weighted_proj_theta2_vert_kernel_type(ptheta2v(level), theta, const2, qr),  &
+            weighted_proj_theta2v_kernel_type(ptheta2(level), theta, const2, qr),       &
+            ! Boundary kernels
+            weighted_div_bd_kernel_type(div_star(level), theta, 1, const1, qrf),        &
+            ! Compound operators
+            compound_operator_kernel_type( compound_div(level), m3_rho_star(level),     &
+                                           m3_inv, div, rho_at_u(level), const3),       &
+            operator_setval_x_kernel_type( eliminated_q32(level), compound_div(level) ) )
+       else
+         ! The projection operators use horizonal and vertical
+         call invoke( name = "cell_and_boundary_kernels",                                 &
             weighted_div_kernel_type(div_star(level), theta, const1, qr),               &
             weighted_proj_2theta_kernel_type(p2theta(level), exner, const1, qr),        &
             weighted_proj_theta2_vert_kernel_type(ptheta2v(level), theta, const2, qr),  &
@@ -567,6 +585,7 @@ contains
             compound_operator_kernel_type( compound_div(level), m3_rho_star(level),     &
                                            m3_inv, div, rho_at_u(level), const3),       &
             operator_setval_x_kernel_type( eliminated_q32(level), compound_div(level) ) )
+       end if
 
        if ( level == 1 .and. eliminate_variables == eliminate_variables_analytic ) then
          call invoke( eliminated_theta_q2t_kernel_type(eliminated_q2t, u_normalisation, &

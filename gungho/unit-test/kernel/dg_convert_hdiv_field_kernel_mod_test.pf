@@ -67,6 +67,7 @@ contains
                                    use_multires_coupling = .false.,              &
                                    shallow               = .false.,              &
                                    use_wavedynamics      = .true.,               &
+                                   p2theta_vert          = .true.,               &
                                    dry_static_adjust     = .false.,              &
                                    exner_from_eos        = .false.,              &
                                    eos_method            = eos_method_sampled,   &
