@@ -28,6 +28,8 @@ module lfric_xios_read_mod
                                       integer_field_proxy_type
   use io_mod,                   only: ts_fname
   use lfric_xios_utils_mod,     only: prime_io_mesh_is
+  use lfric_xios_format_mod,    only: inverse_format_field
+
   use mesh_mod,                 only: mesh_type
   use log_mod,                  only: log_event,         &
                                       log_scratch_space, &
@@ -51,6 +53,7 @@ module lfric_xios_read_mod
 
   private
   public :: checkpoint_read_xios,    &
+            read_field_generic,      &
             read_field_node,         &
             read_field_edge,         &
             read_field_face,         &
@@ -101,6 +104,67 @@ subroutine checkpoint_read_xios(xios_field_name, file_name, field_proxy)
 
 end subroutine checkpoint_read_xios
 
+!>  @brief    Post-processing after reading field data
+!>  @details  Performs a halo swap if necessary
+!>
+!>  @param[in, out] field_proxy        A field proxy to be written
+!>
+subroutine post_read(field_proxy)
+
+  implicit none
+
+  class(field_parent_proxy_type), intent(inout) :: field_proxy
+
+  call field_proxy%set_dirty()
+
+  if (is_fs_horizontally_continuous(field_proxy%vspace%which())) then
+    ! set the annexed dofs on continuous fields
+    call field_proxy%halo_exchange(depth=1)
+  end if
+
+end subroutine post_read
+
+!>  @brief   Read field data from UGRIDs via XIOS
+!>  @param[in]     field_name       Field name (for error reporting only)
+!>  @param[in]     field_proxy      A field proxy to be written
+!>
+subroutine read_field_generic(xios_field_name, field_proxy)
+
+  implicit none
+
+  character(len=*),               intent(in)    :: xios_field_name
+  class(field_parent_proxy_type), intent(inout) :: field_proxy
+
+  integer(i_def) :: undf
+  integer(i_def) :: hdim          ! horizontal dimension, domain size
+  integer(i_def) :: vdim          ! vertical dimension
+  real(dp_xios), allocatable :: xios_data(:)
+
+  undf = field_proxy%vspace%get_last_dof_owned() ! total dimension
+
+  vdim = field_proxy%vspace%get_ndata() * size(field_proxy%vspace%get_levels())
+
+  hdim = undf/vdim
+
+  ! sanity check
+  if (.not. (hdim*vdim == undf)) then
+    call log_event('assertion failed for field ' // xios_field_name                &
+      // ': hdim*vdim must equal undf', log_level_error)
+  end if
+
+  allocate(xios_data(undf))
+
+  ! receive the field data from XIOS
+  call xios_recv_field(xios_field_name, xios_data)
+  ! inverse of xios formatting
+  call inverse_format_field(xios_data, xios_field_name, field_proxy, vdim, hdim)
+  ! deal with halo data
+  call post_read(field_proxy)
+
+  deallocate(xios_data)
+
+end subroutine read_field_generic
+
 !>  @brief  Read node UGRID data on to a W0 field via XIOS
 !>
 !>  @param[in]     xios_field_name  XIOS identifier for the field
@@ -113,68 +177,7 @@ subroutine read_field_node(xios_field_name, field_proxy)
   character(len=*),               intent(in)    :: xios_field_name
   class(field_parent_proxy_type), intent(inout) :: field_proxy
 
-  integer(i_def) :: i, undf
-  integer(i_def) :: domain_size, axis_size
-  character(str_def) :: domain_id
-  real(dp_xios), allocatable :: recv_field(:)
-  type(mesh_type), pointer   :: mesh => null()
-
-  ! Get domain ID from mesh
-  mesh => field_proxy%vspace%get_mesh()
-  if ( prime_io_mesh_is(mesh) ) then
-    domain_id = "node"
-  else
-    domain_id = trim(mesh%get_mesh_name())//"_node"
-  end if
-
-  undf = field_proxy%vspace%get_last_dof_owned()
-
-  ! Get the expected horizontal and vertical axis size
-  call xios_get_domain_attr(trim(domain_id), ni=domain_size)
-  call xios_get_axis_attr("vert_axis_full_levels", n_glo=axis_size)
-
-  ! Size the arrays to be what is expected
-  allocate(recv_field(domain_size*axis_size))
-
-  ! Read the data from XIOS to a temporary 1D array
-  call xios_recv_field(xios_field_name, recv_field)
-
-  ! Reshape the data to what we require for the LFRic field
-  ! Note the conversion from dp_xios to real32, real64 or i_def
-  ! Note the halo swap to ensure annexed dofs are suitably initialised
-  select type(field_proxy)
-
-    type is (field_r32_proxy_type)
-    do i = 0, axis_size-1
-      field_proxy%data( i+1 : undf : axis_size )  = &
-                  real(recv_field( i*(domain_size)+1 : (i+1)*domain_size ), real32)
-    end do
-    call field_proxy%set_dirty()
-    call field_proxy%halo_exchange(depth=1)
-
-    type is (field_r64_proxy_type)
-    do i = 0, axis_size-1
-      field_proxy%data( i+1 : undf : axis_size )  = &
-                  real(recv_field( i*(domain_size)+1 : (i+1)*domain_size ), real64)
-    end do
-    call field_proxy%set_dirty()
-    call field_proxy%halo_exchange(depth=1)
-
-
-    type is (integer_field_proxy_type)
-    do i = 0, axis_size-1
-      field_proxy%data( i+1 : undf : axis_size )  = &
-                  int(recv_field( i*(domain_size)+1 : (i+1)*domain_size ), i_def)
-    end do
-    call field_proxy%set_dirty()
-    call field_proxy%halo_exchange(depth=1)
-
-    class default
-      call log_event( "Invalid type for input field proxy", LOG_LEVEL_ERROR )
-
-  end select
-
-  deallocate(recv_field)
+  call read_field_generic(xios_field_name, field_proxy)
 
 end subroutine read_field_node
 
@@ -190,67 +193,7 @@ subroutine read_field_edge(xios_field_name, field_proxy)
   character(len=*),               intent(in)    :: xios_field_name
   class(field_parent_proxy_type), intent(inout) :: field_proxy
 
-  integer(i_def) :: i, undf
-  integer(i_def) :: domain_size, axis_size
-  character(str_def) :: domain_id
-  real(dp_xios), allocatable :: recv_field(:)
-  type(mesh_type), pointer   :: mesh => null()
-
-  ! Get domain ID from mesh
-  mesh => field_proxy%vspace%get_mesh()
-  if ( prime_io_mesh_is(mesh) ) then
-    domain_id = "edge"
-  else
-    domain_id = trim(mesh%get_mesh_name())//"_edge"
-  end if
-
-  undf = field_proxy%vspace%get_last_dof_owned()
-
-  ! Get the expected horizontal and vertical axis size
-  call xios_get_domain_attr(trim(domain_id), ni=domain_size)
-  call xios_get_axis_attr("vert_axis_half_levels", n_glo=axis_size)
-
-  ! Size the arrays to be what is expected
-  allocate(recv_field(domain_size*axis_size))
-
-  ! Read the data from XIOS to a temporary 1D array
-  call xios_recv_field(xios_field_name, recv_field)
-
-  ! Reshape the data to what we require for the LFRic field
-  ! Note the conversion from dp_xios to real32, real64 or i_def
-  ! Note the halo swap to ensure annexed dofs are suitably initialised
-  select type(field_proxy)
-
-    type is (field_r32_proxy_type)
-    do i = 0, axis_size-1
-      field_proxy%data( i+1 : undf : axis_size )  = &
-                  real(recv_field( i*(domain_size)+1 : (i+1)*domain_size ), real32)
-    end do
-    call field_proxy%set_dirty()
-    call field_proxy%halo_exchange(depth=1)
-
-    type is (field_r64_proxy_type)
-    do i = 0, axis_size-1
-      field_proxy%data( i+1 : undf : axis_size )  = &
-                  real(recv_field( i*(domain_size)+1 : (i+1)*domain_size ), real64)
-    end do
-    call field_proxy%set_dirty()
-    call field_proxy%halo_exchange(depth=1)
-
-    type is (integer_field_proxy_type)
-    do i = 0, axis_size-1
-      field_proxy%data( i+1 : undf : axis_size )  = &
-                  int( recv_field( i*(domain_size)+1 : (i+1)*domain_size ), i_def)
-    end do
-    call field_proxy%set_dirty()
-    call field_proxy%halo_exchange(depth=1)
-
-    class default
-      call log_event( "Invalid type for input field proxy", LOG_LEVEL_ERROR )
-
-  end select
-
-  deallocate(recv_field)
+  call read_field_generic(xios_field_name, field_proxy)
 
 end subroutine read_field_edge
 
@@ -266,74 +209,7 @@ subroutine read_field_face(xios_field_name, field_proxy)
   character(len=*),               intent(in)    :: xios_field_name
   class(field_parent_proxy_type), intent(inout) :: field_proxy
 
-  integer(i_def) :: i, undf, ndata
-  integer(i_def) :: fs_id
-  integer(i_def) :: domain_size, axis_size
-  character(str_def) :: domain_id
-  real(dp_xios), allocatable :: recv_field(:)
-  type(mesh_type), pointer   :: mesh => null()
-
-  ! Get domain ID from mesh
-  mesh => field_proxy%vspace%get_mesh()
-  if ( prime_io_mesh_is(mesh) ) then
-    domain_id = "face"
-  else
-    domain_id = trim(mesh%get_mesh_name())//"_face"
-  end if
-
-  ! Get the size of undf as we only read in up to last owned
-  undf = field_proxy%vspace%get_last_dof_owned()
-  ndata = field_proxy%vspace%get_ndata()
-  fs_id = field_proxy%vspace%which()
-
-  ! get the horizontal / vertical domain sizes
-  if ( fs_id == W3 ) then
-    call xios_get_domain_attr(trim(domain_id), ni=domain_size)
-    call xios_get_axis_attr("vert_axis_half_levels", n_glo=axis_size)
-  else
-    call xios_get_domain_attr(trim(domain_id), ni=domain_size)
-    call xios_get_axis_attr("vert_axis_full_levels", n_glo=axis_size)
-  end if
-
-  ! Size the array to be what is expected
-  allocate(recv_field(domain_size*axis_size*ndata))
-
-  ! Read the data into a temporary array - this should be in the correct order
-  ! as long as we set up the horizontal domain using the global index
-  call xios_recv_field(xios_field_name, recv_field)
-
-  ! Different field kinds are selected to access data, which is arranged to get the
-  ! correct data layout for the LFRic field - the reverse of what is done for writing
-  ! Note the conversion from dp_xios to real32, real64 or i_def
-  select type(field_proxy)
-
-    type is (field_r32_proxy_type)
-    do i = 0, axis_size-1
-      field_proxy%data(i+1:undf:axis_size) = &
-             real(recv_field(i*(domain_size*ndata)+1:(i*(domain_size*ndata)) + domain_size*ndata), real32)
-    end do
-    call field_proxy%set_dirty()
-
-    type is (field_r64_proxy_type)
-    do i = 0, axis_size-1
-      field_proxy%data(i+1:undf:axis_size) = &
-             real(recv_field(i*(domain_size*ndata)+1:(i*(domain_size*ndata)) + domain_size*ndata), real64)
-    end do
-    call field_proxy%set_dirty()
-
-    type is (integer_field_proxy_type)
-    do i = 0, axis_size-1
-      field_proxy%data(i+1:undf:axis_size) = &
-             int( recv_field(i*(domain_size*ndata)+1:(i*(domain_size*ndata)) + domain_size*ndata), i_def)
-    end do
-    call field_proxy%set_dirty()
-
-    class default
-      call log_event( "Invalid type for input field proxy", LOG_LEVEL_ERROR )
-
-  end select
-
-  deallocate(recv_field)
+  call read_field_generic(xios_field_name, field_proxy)
 
 end subroutine read_field_face
 
@@ -349,75 +225,7 @@ subroutine read_field_single_face(xios_field_name, field_proxy)
   character(len=*),               intent(in)    :: xios_field_name
   class(field_parent_proxy_type), intent(inout) :: field_proxy
 
-  integer(i_def) :: i, undf, ndata
-  integer(i_def) :: domain_size
-  character(str_def) :: domain_id
-  real(dp_xios), allocatable :: recv_field(:)
-  type(mesh_type), pointer   :: mesh => null()
-
-  ! Get domain ID from mesh
-  mesh => field_proxy%vspace%get_mesh()
-  if ( prime_io_mesh_is(mesh) ) then
-    domain_id = "face"
-  else
-    domain_id = trim(mesh%get_mesh_name())//"_face"
-  end if
-
-  ! Get the size of undf as we only read in up to last owned
-  undf = field_proxy%vspace%get_last_dof_owned()
-  ndata = field_proxy%vspace%get_ndata()
-
-  ! Get the expected horizontal size
-  ! all 2D fields are nominally in W3, hence half levels
-  call xios_get_domain_attr(trim(domain_id), ni=domain_size)
-
-  ! Size the array to be what is expected
-  allocate(recv_field(domain_size*ndata))
-
-  ! If the fields do not have the same size, then exit with error
-  if ( size(recv_field) /= undf ) then
-    call log_event( "Global size of model field /= size of field from file", &
-                    LOG_LEVEL_ERROR )
-  end if
-
-  ! Read the data into a temporary array - this should be in the correct order
-  ! as long as we set up the horizontal domain using the global index
-  call xios_recv_field(xios_field_name, recv_field)
-
-  ! We need to reshape the incoming data to get the correct data layout for the LFRic
-  ! multi-data field
-  ! We need to cast to the field kind to access the data
-  select type(field_proxy)
-
-    ! Pass the correct data from the recieved field to the field proxy data
-    ! Note the conversion from dp_xios to real32, real64 or i_def
-    type is (field_r32_proxy_type)
-    do i = 0, ndata-1
-      field_proxy%data(i+1:(ndata*domain_size)+i:ndata) = &
-              real(recv_field(i*(domain_size)+1:(i*(domain_size)) + domain_size), real32)
-    end do
-    call field_proxy%set_dirty()
-
-    type is (field_r64_proxy_type)
-    do i = 0, ndata-1
-      field_proxy%data(i+1:(ndata*domain_size)+i:ndata) = &
-              real(recv_field(i*(domain_size)+1:(i*(domain_size)) + domain_size), real64)
-    end do
-    call field_proxy%set_dirty()
-
-    type is (integer_field_proxy_type)
-    do i = 0, ndata-1
-      field_proxy%data(i+1:(ndata*domain_size)+i:ndata) = &
-              int( recv_field(i*(domain_size)+1:(i*(domain_size)) + domain_size), i_def)
-    end do
-    call field_proxy%set_dirty()
-
-    class default
-      call log_event( "Invalid type for input field proxy", LOG_LEVEL_ERROR )
-
-  end select
-
-  deallocate(recv_field)
+  call read_field_generic(xios_field_name, field_proxy)
 
 end subroutine read_field_single_face
 

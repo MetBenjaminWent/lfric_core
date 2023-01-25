@@ -26,7 +26,7 @@ planar_domain_max_y =  0.5
 /
 
 &io
-use_xios_io               = .ftrue.
+use_xios_io               = .false.
 write_diag                = .true.
 write_dump                = .false.
 file_convention           = 'UGRID'

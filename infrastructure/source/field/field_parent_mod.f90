@@ -115,6 +115,8 @@ module field_parent_mod
     !> Returns if the ordering of data is multi-data quickest
     !> @return True if the data is ordered multi-data quickest
     procedure, public :: is_ndata_first
+    !> Perform a blocking halo exchange operation on the field
+    procedure(halo_exchange_interface), deferred :: halo_exchange
   end type field_parent_proxy_type
 
 !______end of type declarations_______________________________________________
@@ -148,6 +150,19 @@ module field_parent_mod
       character(len=*),                intent(in)    :: file_name
       class(field_parent_proxy_type ), intent(inout) :: field_proxy
     end subroutine checkpoint_read_interface
+
+  end interface
+
+  abstract interface
+
+    subroutine halo_exchange_interface( self, depth )
+      use constants_mod, only: i_def
+      import field_parent_proxy_type
+      implicit none
+
+      class( field_parent_proxy_type), target, intent(inout) :: self
+      integer(i_def), intent(in) :: depth
+    end subroutine halo_exchange_interface
 
   end interface
 

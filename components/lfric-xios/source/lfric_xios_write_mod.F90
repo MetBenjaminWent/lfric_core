@@ -76,12 +76,8 @@ subroutine write_field_generic(field_name, field_proxy)
 
   undf = field_proxy%vspace%get_last_dof_owned() ! total dimension
 
-  ! number of rows = number of levels, length of contiguous vertical columns
-  if (field_proxy%vspace%get_nlayers() == 1) then
-    vdim = field_proxy%vspace%get_ndata()
-  else
-    vdim = size(field_proxy%vspace%get_levels())
-  end if
+  vdim = field_proxy%vspace%get_ndata() * size(field_proxy%vspace%get_levels())
+
   hdim = undf/vdim
 
   ! sanity check
