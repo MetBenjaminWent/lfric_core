@@ -85,11 +85,11 @@ module jules_extra_kernel_mod
          arg_type(GH_FIELD, GH_REAL, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1), & ! soil_sat_frac
          arg_type(GH_FIELD, GH_REAL, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1), & ! water_table
          arg_type(GH_FIELD, GH_REAL, GH_READWRITE, ANY_DISCONTINUOUS_SPACE_1), & ! wetness_under_soil
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1), & ! surface_runoff
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1), & ! sub_surface_runoff
          arg_type(GH_FIELD, GH_REAL, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1), & ! soil_moisture_content
          arg_type(GH_FIELD, GH_REAL, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1), & ! grid_snow_mass
-         arg_type(GH_FIELD, GH_REAL, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_2), & ! throughfall
-         arg_type(GH_FIELD, GH_REAL, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1), & ! surface_runoff
-         arg_type(GH_FIELD, GH_REAL, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_1)  & ! sub_surface_runoff
+         arg_type(GH_FIELD, GH_REAL, GH_WRITE,     ANY_DISCONTINUOUS_SPACE_2)  & ! throughfall
         /)
     integer :: operates_on = DOMAIN
   contains
@@ -159,11 +159,11 @@ contains
   !> @param[in,out] soil_sat_frac          Soil saturated fraction
   !> @param[in,out] water_table            Water table depth (m)
   !> @param[in,out] wetness_under_soil     Soil wetness below soil column
+  !> @param[in,out] surface_runoff         Runoff from surface
+  !> @param[in,out] sub_surface_runoff     Runoff from sub-surface
   !> @param[in,out] soil_moisture_content  Soil moisture content of soil column
   !> @param[in,out] grid_snow_mass         Gridbox total snow mass (canopy + under canopy)
   !> @param[in,out] throughfall            Throughfall from land tiles
-  !> @param[in,out] surface_runoff         Runoff from surface
-  !> @param[in,out] sub_surface_runoff     Runoff from sub-surface
   !> @param[in]     ndf_2d                 Total DOFs per cell for 2D fields
   !> @param[in]     undf_2d                Unique DOFs per cell for 2D fields
   !> @param[in]     map_2d                 DOFmap for cells for 2D fields
@@ -233,11 +233,11 @@ contains
                soil_sat_frac,              &
                water_table,                &
                wetness_under_soil,         &
+               surface_runoff,             &
+               sub_surface_runoff,         &
                soil_moisture_content,      &
                grid_snow_mass,             &
                throughfall,                &
-               surface_runoff,             &
-               sub_surface_runoff,         &
                ndf_2d,                     &
                undf_2d,                    &
                map_2d,                     &
@@ -427,12 +427,12 @@ contains
     real(kind=r_def), intent(inout) :: soil_sat_frac(undf_2d)
     real(kind=r_def), intent(inout) :: water_table(undf_2d)
     real(kind=r_def), intent(inout) :: wetness_under_soil(undf_2d)
+    real(kind=r_def), intent(inout) :: surface_runoff(undf_2d)
+    real(kind=r_def), intent(inout) :: sub_surface_runoff(undf_2d)
 
     real(kind=r_def), pointer, intent(inout) :: soil_moisture_content(:)
     real(kind=r_def), pointer, intent(inout) :: grid_snow_mass(:)
     real(kind=r_def), pointer, intent(inout) :: throughfall(:)
-    real(kind=r_def), pointer, intent(inout) :: surface_runoff(:)
-    real(kind=r_def), pointer, intent(inout) :: sub_surface_runoff(:)
 
     ! Local variables for the kernel
     integer(kind=i_def) :: i, j, n, i_snow, m, l
@@ -639,7 +639,7 @@ contains
                       fluxes_data)
     call fluxes_assoc(fluxes, fluxes_data)
 
-    call jules_rivers_alloc(land_pts, rivers_data)
+    call jules_rivers_alloc(land_pts,rivers_data)
     call rivers_assoc(rivers,rivers_data)
 
     ! Chemvars for Dry deposition
@@ -689,7 +689,7 @@ contains
 
     ! Logical flags controlling diagnostic calculations
     smlt = .false.
-    stf_sub_surf_roff = .false.
+    stf_sub_surf_roff = .true.
 
     ! Set type_pts and type_index
     call tilepts(land_pts, ainfo%frac_surft, surft_pts, ainfo%surft_index, &
@@ -905,7 +905,7 @@ contains
     !IN
     land_pts, seg_len, 1, river_row_length, river_rows,                       &
     ls_graup_ij, cca_2d_ij, nsurft, surft_pts,                                &
-    lice_pts, soil_pts, stf_sub_surf_roff,fexp_soilt,                         &
+    lice_pts, soil_pts, stf_sub_surf_roff, fexp_soilt,                        &
     gamtot_soilt, ti_mean_soilt, ti_sig_soilt, flash_rate_ancil,              &
     pop_den_ancil, wealth_index_ancil, a_fsat_soilt, c_fsat_soilt,            &
     a_fwet_soilt, c_fwet_soilt, ntype, delta_lambda, delta_phi,               &
@@ -1013,6 +1013,9 @@ contains
       water_table(map_2d(1,ainfo%land_index(l))) = real(zw_soilt(l,1), r_def)
       ! Wetness below soil column
       wetness_under_soil(map_2d(1,ainfo%land_index(l))) = real(sthzw_soilt(l,1), r_def)
+      ! River runoffs
+      surface_runoff(map_2d(1,ainfo%land_index(l))) = real(fluxes%surf_roff_gb(l), r_def)
+      sub_surface_runoff(map_2d(1,ainfo%land_index(l))) = real(fluxes%sub_surf_roff_gb(l), r_def)
     end do
 
     if (.not. associated(soil_moisture_content, empty_real_data) ) then
@@ -1032,18 +1035,6 @@ contains
         do l = 1, land_pts
           throughfall(map_tile(1,ainfo%land_index(l))+n-1) = fluxes%tot_tfall_surft(l,n)
         end do
-      end do
-    end if
-
-    if (.not. associated(surface_runoff, empty_real_data) ) then
-      do l = 1, land_pts
-        surface_runoff(map_2d(1,ainfo%land_index(l))) = fluxes%surf_roff_gb(l)
-      end do
-    end if
-
-    if (.not. associated(sub_surface_runoff, empty_real_data) ) then
-      do l = 1, land_pts
-        sub_surface_runoff(map_2d(1,ainfo%land_index(l))) = fluxes%sub_surf_roff_gb(l)
       end do
     end if
 

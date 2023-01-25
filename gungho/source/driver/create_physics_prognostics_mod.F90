@@ -1313,6 +1313,13 @@ contains
     call add_physics_field( soil_fields, depository, prognostic_fields,       &
       adv_fields_last_outer, &
       'clapp_horn_b', twod_space, checkpoint_flag=checkpoint_flag, twod=.true. )
+    call add_physics_field( soil_fields, depository, prognostic_fields,       &
+      adv_fields_last_outer, &
+      'surface_runoff', twod_space, twod=.true. )
+    call add_physics_field( soil_fields, depository, prognostic_fields,       &
+      adv_fields_last_outer, &
+      'sub_surface_runoff', twod_space, twod=.true. )
+
 
     ! Fields on soil levels
     call add_physics_field( soil_fields, depository, prognostic_fields,       &

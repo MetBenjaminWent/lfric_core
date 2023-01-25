@@ -62,6 +62,8 @@ contains
     type( field_type ), pointer :: soil_sat_frac          => null()
     type( field_type ), pointer :: water_table            => null()
     type( field_type ), pointer :: wetness_under_soil     => null()
+    type( field_type ), pointer :: surface_runoff         => null()
+    type( field_type ), pointer :: sub_surface_runoff     => null()
 
     call soil_fields%get_field('soil_albedo', soil_albedo)
     call soil_fields%get_field('soil_moist_wilt', soil_moist_wilt)
@@ -86,6 +88,8 @@ contains
     call soil_fields%get_field('soil_sat_frac', soil_sat_frac)
     call soil_fields%get_field('water_table', water_table)
     call soil_fields%get_field('wetness_under_soil', wetness_under_soil)
+    call soil_fields%get_field('surface_runoff', surface_runoff)
+    call soil_fields%get_field('sub_surface_runoff', sub_surface_runoff)
 
     ! Set volumetric soil moisture at saturation to zero below the ice tile
     ! or a sensible value elsewhere, since this is what Jules expects
@@ -113,6 +117,8 @@ contains
                  setval_c(c_sat_frac, 1.0_r_def),                           &
                  setval_c(a_wet_frac, 1.0_r_def),                           &
                  setval_c(c_wet_frac, 1.0_r_def),                           &
+                 setval_c(surface_runoff, 0.0_r_def),                       &
+                 setval_c(sub_surface_runoff, 0.0_r_def),                   &
                  ! Set soil prognostics to fixed values for use in SCM
                  ! testing or when no values are provided by um2lfric
                  setval_c(soil_sat_frac, 1.0_r_def),                        &

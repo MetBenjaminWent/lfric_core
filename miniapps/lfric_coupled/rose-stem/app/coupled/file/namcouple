@@ -22,7 +22,7 @@
 # NFIELDS : total number of fields being exchanged.
 #
  $NFIELDS
-         66
+         69
  $END
 #
 ###############################################################################
@@ -659,6 +659,37 @@ T
 ##
  rmp_tor1_to_lfric_CONSERVE_FRACAREA.nc
 #
+######################################################
+################## ATMOS TO RIVER ####################
+######################################################
+# Surface runoff (lfric) => rivers
+ lf_rsurf surf_roff_rp 466 3600 1 atmos_restart.nc   EXPOUT
+ 13824 1 28804 1 lfric rivt SEQ=+3
+ P  0  P  2
+#
+ MAPPING
+##
+ rmp_lfric_to_rivt_nomask_CONSERVE_DSTAREA.nc
+#######################################################
+# Sub-surface runoff (lfric) => rivers
+ lf_rsub sub_surf_roff_rp 466 3600 1 atmos_restart.nc   EXPOUT
+ 13824 1 28804 1 lfric rivt SEQ=+3
+ P  0  P  2
+#
+ MAPPING
+##
+ rmp_lfric_to_rivt_nomask_CONSERVE_DSTAREA.nc
+######################################################
+############### RIVER TO OCEAN #######################
+######################################################
+# River runoff
+ rflow_outflow ORunff1D 466 3600 1 atmos_restart.nc  EXPOUT 
+ 1676 1 1676 1 riv3 riv3 SEQ=+4
+ R  0  R  0 
+# 
+ BLASOLD 
+## 
+ 1.0 0 
 ############################################################################# 
 ############################################################################# 
 #

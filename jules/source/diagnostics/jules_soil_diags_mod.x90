@@ -22,8 +22,6 @@ module jules_soil_diags_mod
   logical( l_def ) :: grid_canopy_water_flag
   logical( l_def ) :: throughfall_flag
   logical( l_def ) :: grid_throughfall_flag
-  logical( l_def ) :: surface_runoff_flag
-  logical( l_def ) :: sub_surface_runoff_flag
 
   public :: initialise_diags_for_jules_soil
   public :: output_diags_for_jules_soil
@@ -37,17 +35,13 @@ contains
   !> @param[in,out] grid_canopy_water     Grid canopy water
   !> @param[in,out] throughfall           Throughfall on tiles
   !> @param[in,out] grid_throughfall      Grid throughfall
-  !> @param[in,out] surface_runoff        Surface runoff
-  !> @param[in,out] sub_surface_runoff    Sub-surface runoff
 
   subroutine initialise_diags_for_jules_soil(soil_moist_sat,             &
                                          tile_fraction,                  &
                                          soil_moisture_content,          &
                                          grid_canopy_water,              &
                                          throughfall,                    &
-                                         grid_throughfall,               &
-                                         surface_runoff,                 &
-                                         sub_surface_runoff)
+                                         grid_throughfall)
 
     implicit none
 
@@ -60,8 +54,6 @@ contains
     type( field_type ), intent(inout) :: grid_canopy_water
     type( field_type ), intent(inout) :: throughfall
     type( field_type ), intent(inout) :: grid_throughfall
-    type( field_type ), intent(inout) :: surface_runoff
-    type( field_type ), intent(inout) :: sub_surface_runoff
 
     if ( subroutine_timers ) call timer("jules_soil_diags")
 
@@ -75,14 +67,6 @@ contains
 
     grid_throughfall_flag = .true.
     call soil_moist_sat%copy_field_properties(grid_throughfall)
-
-    surface_runoff_flag = .true.
-    call soil_moist_sat%copy_field_properties(surface_runoff)
-    call invoke(setval_c(surface_runoff, 0.0_r_def))
-
-    sub_surface_runoff_flag = .true.
-    call soil_moist_sat%copy_field_properties(sub_surface_runoff)
-    call invoke(setval_c(sub_surface_runoff, 0.0_r_def))
 
     ! surface tiled fields
     throughfall_flag = .true.
@@ -104,8 +88,8 @@ contains
   !> @param[in]     frozen_soil_moisture   Fraction of frozen soil moisture as fraction of saturation
   !> @param[in]     throughfall            Throughfall on tiles
   !> @param[in]     surface_runoff         Surface runoff
-  !> @param[in]     water_table            Depth of water table
   !> @param[in]     sub_surface_runoff     Sub-surface runoff
+  !> @param[in]     water_table            Depth of water table
   !> @param[in,out] grid_canopy_water      Grid canopy water
   !> @param[in,out] grid_throughfall       Grid throughfall
 
@@ -164,8 +148,8 @@ contains
     ! Diagnostics computed within the kernel
     if (throughfall_flag) call throughfall%write_field('surface__throughfall')
     if (soil_moisture_content_flag) call soil_moisture_content%write_field('soil__soil_moisture_content')
-    if (surface_runoff_flag) call surface_runoff%write_field('soil__surface_runoff')
-    if (sub_surface_runoff_flag) call sub_surface_runoff%write_field('soil__sub_surface_runoff')
+    call surface_runoff%write_field('soil__surface_runoff')
+    call sub_surface_runoff%write_field('soil__sub_surface_runoff')
 
     if ( subroutine_timers ) call timer("jules_soil_diags")
 

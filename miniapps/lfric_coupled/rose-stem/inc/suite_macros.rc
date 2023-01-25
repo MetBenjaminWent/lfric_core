@@ -160,6 +160,7 @@
             export_source => compile_{{projectName}}_with_{{label}}
 
              fcm_make2_ocean => run_{{appName_res_label}}_{{label}} 
+             fcm_make_river  => run_{{appName_res_label}}_{{label}}
 
 {%-           if publish %}
             compile_{{projectName}}_with_{{label}}:finish => publish_{{label}}_compile

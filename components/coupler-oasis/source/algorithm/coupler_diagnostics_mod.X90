@@ -268,7 +268,6 @@ module coupler_diagnostics_mod
                ! time averaging process
                inc_X_plus_Y( fld, cpl_field2 ))
             fld_ptr1 => null()
-
          case ("lf_topmelt")
             call depository%get_field("snowice_melt", fld_ptr1)
 
@@ -296,7 +295,6 @@ module coupler_diagnostics_mod
                ! time averaging process
                inc_X_plus_Y( fld, cpl_field3_si ))
             fld_ptr1 => null()
-
          case ("lf_iceheatflux")
             call depository%get_field("surf_ht_flux", fld_ptr1)
 
@@ -317,7 +315,6 @@ module coupler_diagnostics_mod
                ! time averaging process
                inc_X_plus_Y( fld, cpl_field2_si ))
             fld_ptr1 => null()
-
          case ("lf_sublimation")
             call depository%get_field("snowice_sublimation", fld_ptr1)
 
@@ -338,9 +335,8 @@ module coupler_diagnostics_mod
                ! time averaging process
                inc_X_plus_Y( fld, cpl_field2_si ))
             fld_ptr1 => null()
-
          case ("lf_iceskint")
-            call depository%get_field('tile_temperature', fld_ptr1)
+            call depository%get_field("tile_temperature", fld_ptr1)
 
             ! Extract the sea ice skin temperature from the tile temperature
             call invoke( multi_extract_kernel_type(cpl_field1_si, fld_ptr1,    &
@@ -355,7 +351,16 @@ module coupler_diagnostics_mod
                ! time averaging process
                inc_X_plus_Y( fld, cpl_field2_si ))
             fld_ptr1 => null()
-
+         case ("lf_rsurf")
+            !surface river runoff
+            call depository%get_field("surface_runoff", fld_ptr1)
+            call invoke(inc_X_plus_Y( fld, fld_ptr1 ))
+            fld_ptr1 => null()
+         case ("lf_rsub")
+            !sub-surface river runoff
+            call depository%get_field("sub_surface_runoff", fld_ptr1)
+            call invoke(inc_X_plus_Y( fld, fld_ptr1 ))
+            fld_ptr1 => null()
          case default
             lfail = .true.
             write(log_scratch_space, '(3A)' )                                  &

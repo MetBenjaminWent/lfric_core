@@ -742,7 +742,7 @@ module coupler_mod
    !coupling fields
    !sending-depository
 
-   ! these need to be in restart file to pass to the ocean model!
+   ! these need to be in restart file to pass to the ocean or river model!
    checkpoint_restart_flag = .true.
    call add_cpl_field(depository, prognostic_fields, &
         'lf_taux',   vector_space, checkpoint_restart_flag, twod=.true.)
@@ -765,10 +765,14 @@ module coupler_mod
    call add_cpl_field(depository, prognostic_fields, &
         'lf_w10',   vector_space, checkpoint_restart_flag, twod=.true.)
 
+   call add_cpl_field(depository, prognostic_fields, &
+        'lf_rsurf',   vector_space, checkpoint_restart_flag, twod=.true.)
+
+   call add_cpl_field(depository, prognostic_fields, &
+        'lf_rsub',   vector_space, checkpoint_restart_flag, twod=.true.)
+
    ! The following fields are taken care of elsewhere (theoretically)
    ! but we might need duplicates for coupling restarts.
-   checkpoint_restart_flag = .true.
-
    call add_cpl_field(depository, prognostic_fields, &
         'lf_evap',   vector_space, checkpoint_restart_flag, twod=.true.)
 
@@ -859,7 +863,6 @@ module coupler_mod
   !>                         component
   !> @param [in]    depository field collection - all fields
   !> @param [in]    model_clock Time within the model.
-  !> @param [in]    istep model timestep
   !
   subroutine cpl_snd(dcpl_snd, depository, model_clock)
 

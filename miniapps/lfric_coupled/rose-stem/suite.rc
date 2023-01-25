@@ -375,6 +375,24 @@
             NEMO_ICEBERGS_START={{TARGET_BIG_DATA_DIR}}/start_dumps/basic-gc/Tamaraw/19790101/cd986o_icebergs_19781201_restart.nc
             SI3_START={{TARGET_BIG_DATA_DIR}}/start_dumps/basic-gc/Tamaraw/19790101/cf652o_19790101_restart_ice.nc
 
+  {% set RPPN = PPN %}
+  {% set RHYPERTHREADS = 1 %}
+  {% set RMPTHR_RIV = 1 %}
+
+    [[RIVER_RESOURCE]]
+         [[[environment]]]
+            {% set RIVER_NPROC = 1 %}
+            {% set RIVER_NODES = 1 %}
+            ROSE_LAUNCHER_PREOPTS_RIVER =
+            ROSE_LAUNCHER = background
+
+    [[RIVER]]
+        inherit = RIVER_RESOURCE
+        [[[environment]]]
+            RIVER_NPROC={{RIVER_NPROC}}
+            # River restart is not implemented in the code yet
+            RIVER_START=
+
 ##############################################################################
 # COMPILE {{projectName|upper}} PROJECT
 ##############################################################################
@@ -402,6 +420,24 @@
            -q = shared
            -l ncpus = 6
            -l mem = 4GB
+
+   [[fcm_make_river]]
+       pre-script = """
+                   {{'\n                     '|
+                      command_list( TARGET_BASE_SETUP,
+                                    compiler_setup[compiler],
+                                    TARGET_BUILD_SETUP,
+                                    TARGET_REVEAL_SETUP)}}
+       """
+       inherit = TARGET
+       [[[environment]]]
+            ROSE_TASK_APP = fcm_make_river
+       [[[job]]]
+            execution time limit = PT15M
+       [[[directives]]]
+            -q = shared
+            -l mem  = 1Gb
+            -l ncpus = 4
 {%- endif -%}
 {%-   for precision in rdef_build_precisions %}
 {%-     set compiler_label = compiler|lower + '_' + precision + '-bit' %}
@@ -741,7 +777,7 @@
 ##############################################################################
 
     [[run_{{configuration_label_res}}]]
-        inherit = {{appLabel|upper}}_{{label|upper}}, NEMO, TARGET
+        inherit = {{appLabel|upper}}_{{label|upper}}, NEMO, RIVER, TARGET
         pre-script = """
                      {{'\n                     '|
                        command_list( TARGET_BASE_SETUP,
@@ -849,6 +885,11 @@
             OMP_NUM_THREADS   = $(echo ${threads:-1})
             TOTAL_RANKS       = $(echo ${mpi_parts:-1})
 
+            GSWP2_INSTALL_DIR={{GSWP2_INSTALL_DIR}}
+            RIV_NUMBER_ANCILLARY={{RIV_NUMBER_ANCILLARY}}
+            RIVERS_ONLY_DRIVE_TASK={{RIVERS_ONLY_DRIVE_TASK}}
+            RIVERS_ONLY_INSTALL_DIR={{RIVERS_ONLY_INSTALL_DIR}}
+
 {#-----------------------------------------------------------------#}
 {#    Note: As this is an enumeration it must end up having single #}
 {#          quotes so that the resultant fortran namelist reads it #}
@@ -891,6 +932,7 @@
             RESOLUTION    = {{res_value|replace("_MG","")}}
             CONFIG_NL_PATH_LFRIC      = 'configuration.nml'
             OCEAN_EXEC=$CYLC_SUITE_SHARE_DIR/fcm_make_ocean/build-ocean/bin/nemo-si3.exe
+            RIVER_EXEC=$CYLC_SUITE_SHARE_DIR/fcm_make_river/build/bin/river.exe
             LFRIC_LINK=${APP_NAME}
             LFRIC_EXEC=${BIN_DIR}/${APP_NAME}
             LFRIC_NPROC=${TOTAL_RANKS}
@@ -908,6 +950,8 @@
                  {% set XIOS_PPNU = (XIOS_NPROC/XIOS_NODES/2)|round(0,'ceil')|int %}
                  ROSE_LAUNCHER_PREOPTS_XIOS  = -n {{XIOS_NPROC}} -N {{2*XIOS_PPNU}} -S {{XIOS_PPNU}} -d 1 -j 1 env OMP_NUM_THREADS=1 env HYPERTHREADS=1
             {% endif %}
+            {% set RIVER_NODES = 1 %}
+            ROSE_LAUNCHER_PREOPTS_RIVER = -n 1 -N 1 -S 1 -d 1 -j 1
             ROSE_LAUNCHER_PREOPTS_LFRIC = -n $TOTAL_RANKS
             DIAG_MEAN_PERIOD = '1M'
             UM_ANCIL_TRIP_SEQ_DIR=/dummy
@@ -915,7 +959,7 @@
             UM_ANCIL_TRIP_NUMBER=river_number_um
             NEMO_ANCIL_TRIP_NUMBER=river_number_nemo.nc
         [[[directives]]]
-            -l select = {{LFRIC_NODES + OCEAN_NODES + (XIOS_NODES if XIOS_NODES is defined else 0) }}
+            -l select = {{LFRIC_NODES + OCEAN_NODES + RIVER_NODES + (XIOS_NODES if XIOS_NODES is defined else 0) }}
             -l walltime=00:45:00
             -q=normal
 {%-                 endif %} {# 'run_' + configuration_label_res #}
