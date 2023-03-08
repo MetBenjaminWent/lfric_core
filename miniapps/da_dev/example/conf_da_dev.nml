@@ -17,6 +17,7 @@ topology='fully_periodic',
 domain_top=1000.0,
 method='uniform',
 number_of_layers=70,
+stretching_method='linear',
 /
 
 &finite_element

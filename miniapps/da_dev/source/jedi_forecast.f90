@@ -15,10 +15,10 @@
 program jedi_forecast
 
   !
-  use constants_mod,          only : i_def
+  use constants_mod,         only : i_def
   ! temp data types and methods to get/store configurations for geometry, state and model
   use jedi_state_config_mod, only : jedi_state_config_type
-  use cli_mod,               only: get_initial_filename
+  use cli_mod,               only : get_initial_filename
 
   ! Mock jedi objects
   use jedi_run_mod,          only : jedi_run_type
@@ -42,6 +42,8 @@ program jedi_forecast
   integer( kind=i_def )        :: date_time_duration_dt
   character(:), allocatable    :: filename
 
+  character(*), parameter      :: program_name = "jedi_forecast"
+
   ! Configs for for the mock jedi objects
   ! LFRic config
   call get_initial_filename( filename )
@@ -55,7 +57,7 @@ program jedi_forecast
 
   ! Run object
   ! handles initialization and finalization of required infrastructure
-  call jedi_run%initialise( filename )
+  call jedi_run%initialise( program_name, filename )
 
   ! Geometry
   ! possibly pass in a comm?
@@ -71,6 +73,6 @@ program jedi_forecast
   call jedi_model%forecast( jedi_state, date_time_duration )
 
   ! to provide KGO
-  call finalise_model(jedi_state%model_data)
+  call finalise_model( program_name, jedi_state%model_data )
 
 end program jedi_forecast

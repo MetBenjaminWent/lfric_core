@@ -37,26 +37,26 @@
     <field_definition prec="8" >
 
       <field_group id="read_fields" freq_op="1ts" enabled=".TRUE." operation="instant" freq_offset="1ts">
-        <field id="read_theta" name="theta" unit="1" grid_ref="full_level_face_grid" />
-        <field id="read_rho" name="rho" unit="1" grid_ref="half_level_face_grid" />
-        <field id="read_u10m" name="u10m" unit="1" domain_ref="face" />
+        <field id="read_theta" name="theta" long_name="air_potential_temperature" standard_name="air_potential_temperature" unit="K" grid_ref="full_level_face_grid" />
+        <field id="read_rho" name="rho" long_name="air_density" standard_name="air_density" unit="kg m-3" grid_ref="half_level_face_grid" />
+        <field id="read_u10m" name="u10m" long_name="eastward_wind_at_10m" unit="m s-1" domain_ref="face" />
       </field_group>
 
       <field_group id="write_fields" freq_op="1ts" enabled=".TRUE." operation="instant" freq_offset="0ts">
-        <field id="write_theta" name="theta" unit="1" grid_ref="full_level_face_grid" />
-        <field id="write_rho" name="rho" unit="1" grid_ref="half_level_face_grid" />
-        <field id="write_u10m" name="u10m" unit="1" domain_ref="face" />
+        <field id="write_theta" name="theta" long_name="air_potential_temperature" standard_name="air_potential_temperature" unit="K" grid_ref="full_level_face_grid" />
+        <field id="write_rho" name="rho" long_name="air_density" standard_name="air_density" unit="kg m-3" grid_ref="half_level_face_grid" />
+        <field id="write_u10m" name="u10m" long_name="eastward_wind_at_10m" unit="m s-1" domain_ref="face" />
       </field_group>
 
     </field_definition>
 
     <file_definition type="one_file" par_access="collective" time_counter="none">
 
-      <file id="read_da_dev" name="read_da_dev" output_freq="1ts" convention="UGRID" enabled=".FALSE." mode="read">
+      <file id="read_model_data" name="read_model_data" output_freq="1ts" convention="UGRID" enabled=".FALSE." mode="read">
         <field_group id="read_fields"/>
       </file>
 
-      <file id="write_da_dev" name="write_da_dev" output_freq="1ts" convention="UGRID" enabled=".FALSE." timeseries="both">
+      <file id="write_model_data" name="write_model_data" output_freq="1ts" convention="UGRID" enabled=".FALSE." timeseries="both">
         <field_group id="write_fields"/>
       </file>
 

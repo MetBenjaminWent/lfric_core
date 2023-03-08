@@ -52,8 +52,6 @@ module da_dev_driver_mod
   ! To run local LFRic mini-app
   public run, initialise_model, finalise_model
 
-  character(*), parameter :: program_name = "da_dev"
-
   type(model_clock_type), allocatable, public :: model_clock
 
   ! Coordinate field
@@ -68,10 +66,11 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> Sets up communicators before LFRic is initialised.
   !>
-  subroutine initialise_lfric_comm( model_communicator, world_communicator )
+  subroutine initialise_lfric_comm( program_name, model_communicator, world_communicator )
 
     implicit none
 
+    character(len=*), intent(in)            :: program_name
     integer(i_native), intent(out)          :: model_communicator
     integer(i_native), optional, intent(in) :: world_communicator
 
@@ -91,10 +90,11 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> Sets up required state in preparation for run.
   !>
-  subroutine initialise_lfric( model_communicator, filename )
+  subroutine initialise_lfric( program_name, model_communicator, filename )
 
     implicit none
 
+    character(len=*), intent(in)              :: program_name
     integer(i_native),          intent(in)    :: model_communicator
     character(len=*), optional, intent(in)    :: filename
 
@@ -149,10 +149,11 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> initialise the model data (create and read/initialise).
   !>
-  subroutine initialise_model( model_communicator, model_data )
+  subroutine initialise_model( program_name, model_communicator, model_data )
 
     implicit none
 
+    character(len=*), intent(in)         :: program_name
     integer(i_native),     intent(in)    :: model_communicator
     type(model_data_type), intent(inout) :: model_data
 
@@ -170,10 +171,11 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> Performs time steps.
   !>
-  subroutine run( model_data )
+  subroutine run( program_name, model_data )
 
     implicit none
 
+    character(len=*), intent(in)         :: program_name
     type(model_data_type), intent(inout) :: model_data
 
     call log_event(program_name//": Run begins", LOG_LEVEL_INFO)
@@ -189,7 +191,7 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> Performs a single time step.
   !>
-  subroutine step_lfric( model_data  )
+  subroutine step_lfric( model_data )
 
     implicit none
     type(model_data_type), intent(inout) :: model_data
@@ -213,10 +215,11 @@ contains
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> Finalise the model data after a run.
-  subroutine finalise_model( model_data )
+  subroutine finalise_model( program_name, model_data )
 
     implicit none
 
+    character(len=*), intent(in)         :: program_name
     type(model_data_type), intent(inout) :: model_data
 
     type(field_type), pointer :: working_field => null()
@@ -236,9 +239,10 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> Tidies up after a run.
   !>
-  subroutine finalise_lfric()
+  subroutine finalise_lfric( program_name )
 
     implicit none
+    character(len=*), intent(in) :: program_name
 
     !-------------------------------------------------------------------------
     ! Driver layer finalise

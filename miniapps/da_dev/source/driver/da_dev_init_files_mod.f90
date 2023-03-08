@@ -38,8 +38,8 @@ contains
     if ( write_data ) then
       call files_list%insert_item(      &
         lfric_xios_file_type(           &
-          file_name="write_da_dev",     &
-          xios_id="write_da_dev",       &
+          file_name="write_model_data", &
+          xios_id="write_model_data",       &
           io_mode=FILE_MODE_WRITE,      &
           freq=1,                       &
           field_group_id="write_fields" &
@@ -49,8 +49,8 @@ contains
 
     call files_list%insert_item(      &
       lfric_xios_file_type(           &
-        file_name="read_da_dev",      &
-        xios_id="read_da_dev",        &
+        file_name="read_model_data",      &
+        xios_id="read_model_data",        &
         io_mode=FILE_MODE_READ,       &
         freq=1,                       &
         field_group_id="read_fields"  &

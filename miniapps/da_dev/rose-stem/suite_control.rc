@@ -68,7 +68,9 @@
 {#========================================================================#}
 
 
-{%- set application_configurations = { 'da_dev' : ['default', 'pseudomodel', 'model'] } %}
+{%- set application_configurations = { 'da_dev' : ['default', 'model', 'pseudomodel'],
+                                       'jedi_forecast' : ['default', 'model'],
+                                       'jedi_forecast_pseudo' : ['default', 'pseudomodel']} %}
 
 {%- set canned_configurations = ['da_dev', 'jedi_forecast', 'jedi_forecast_pseudo'] %}
 
@@ -79,20 +81,34 @@
     'check_style_graph()',
     'api_documentation_graph(publish=True)',
     'run_application("da_dev", "default", resolutions=[("C12",)],
-                     env={"nrun":5})',
+                        env={"nrun":5})',
     'run_application("da_dev", "model", resolutions=[("C12",)],
-                     env={"nrun":5})',
+                        env={"nrun":5})',
     'run_application("da_dev", "pseudomodel", resolutions=[("C12",)],
-                     env={"nrun":5})',
+                        env={"nrun":5})',
     'check_compilers("da_dev", "default", "fast-debug", resolution=("C12",))',
     'check_compilers("da_dev", "default", "full-debug", resolution=("C12",))',
     'canned_test("da_dev")',
+    'validate_rose_meta_graph("jedi_forecast",appName="jedi_forecast")',
+    'run_application("jedi_forecast", "default", resolutions=[("C12",)],
+                        env={"nrun":5})',
+    'run_application("jedi_forecast", "model", resolutions=[("C12",)],
+                        env={"nrun":5})',
+    'check_compilers("jedi_forecast", "default", "fast-debug", resolution=("C12",))',
+    'check_compilers("jedi_forecast", "default", "full-debug", resolution=("C12",))',
     'canned_test("jedi_forecast")',
+    'validate_rose_meta_graph("jedi_forecast_pseudo",appName="jedi_forecast_pseudo")',
+    'run_application("jedi_forecast_pseudo", "default", resolutions=[("C12",)],
+                        env={"nrun":5})',
+    'run_application("jedi_forecast_pseudo", "pseudomodel", resolutions=[("C12",)],
+                        env={"nrun":5})',
+    'check_compilers("jedi_forecast_pseudo", "default", "fast-debug", resolution=("C12",))',
+    'check_compilers("jedi_forecast_pseudo", "default", "full-debug", resolution=("C12",))',
     'canned_test("jedi_forecast_pseudo")' ],
 'nightly': [
     'null_task_graph()' ]
- } %}
-
+    } %}
+    
 #########################################################################################
 
 {# Include any local miniapp include files here #}

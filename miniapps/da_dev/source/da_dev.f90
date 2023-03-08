@@ -23,16 +23,18 @@ program da_dev
   type(model_data_type) :: model_data
   integer(i_native)     :: model_communicator
 
-  call initialise_lfric_comm(model_communicator)
+  character(*), parameter :: program_name = "da_dev"
 
-  call initialise_lfric(model_communicator)
+  call initialise_lfric_comm(program_name, model_communicator)
 
-  call initialise_model(model_communicator, model_data)
+  call initialise_lfric(program_name, model_communicator)
 
-  call run(model_data)
+  call initialise_model(program_name, model_communicator, model_data)
 
-  call finalise_model(model_data)
+  call run(program_name, model_data)
 
-  call finalise_lfric()
+  call finalise_model(program_name, model_data)
+
+  call finalise_lfric(program_name)
 
 end program da_dev
