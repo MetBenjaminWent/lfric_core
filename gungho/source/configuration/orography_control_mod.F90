@@ -92,6 +92,8 @@ contains
           ! Read parameters for bell-shaped mountain in Cartesian
           ! coordinates and initialise the corresponding type
           call set_orography_bell_cartesian()
+        else
+          call set_orography_bell_spherical()
         end if
       ! No orography (default)
       case default
@@ -293,6 +295,40 @@ contains
 
     return
   end subroutine set_orography_bell_cartesian
+
+  !=============================================================================
+  !> @brief Initialises analytic orography type for two bell-shaped mountains in
+  !>        Spherical coordinates using corresponding namelist parameters.
+  !=============================================================================
+  subroutine set_orography_bell_spherical()
+
+    use bell_orography_spherical_mod,        only : bell_spherical_type
+    use orography_bell_spherical_config_mod, only : mountain_height,&
+                                                    radius_lon,     &
+                                                    radius_lat,     &
+                                                    lambda_centre1, &
+                                                    lambda_centre2, &
+                                                    phi_centre1,    &
+                                                    phi_centre2
+
+    implicit none
+
+    ! ----------- Initialise bell-shaped Spherical orography type ---------!
+    allocate( orography_profile,                             &
+              source = bell_spherical_type( mountain_height, &
+                                            radius_lon,      &
+                                            radius_lat,      &
+                                            lambda_centre1,  &
+                                            lambda_centre2,  &
+                                            phi_centre1,     &
+                                            phi_centre2) )
+
+    write(log_scratch_space,'(A,A)') "set_orography_bell_spherical: "// &
+          "Set analytic orography type to Spherical bell-shaped mountain."
+    call log_event(log_scratch_space, LOG_LEVEL_INFO)
+
+    return
+  end subroutine set_orography_bell_spherical
 
 
 end module orography_control_mod

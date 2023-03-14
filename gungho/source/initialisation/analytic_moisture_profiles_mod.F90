@@ -13,9 +13,16 @@ use constants_mod,                only : r_def, i_def, pi
 use log_mod,                      only : log_event,                &
                                          log_scratch_space,        &
                                          LOG_LEVEL_ERROR
-use idealised_config_mod,         only : test_grabowski_clark
+use idealised_config_mod,         only : test_grabowski_clark,     &
+                                         test_deep_baroclinic_wave
 use physics_common_mod,           only : qsaturation
-use planet_config_mod,            only : recip_epsilon
+use planet_config_mod,            only : recip_epsilon, scaled_radius
+use coord_transform_mod,          only : xyz2llr, central_angle
+use base_mesh_config_mod,         only : geometry, &
+                                         geometry_spherical
+use initial_density_config_mod,   only : r1, x1, y1, z1, r2, x2, y2, z2
+use deep_baroclinic_wave_mod, &
+                                  only : deep_baroclinic_wave
 
 implicit none
 
@@ -42,12 +49,29 @@ function analytic_moisture(chi, temperature, pressure, choice) result(moisture)
   real(kind=r_def)                :: r, r1, r2, xc, zc  ! Spatial distances
   real(kind=r_def)                :: h0, rel_hum        ! Relative humidities
   real(kind=r_def)                :: mr_sat             ! Saturation value
+  real(kind=r_def)                :: long, lat, radius, l1, l2
+  real(kind=r_def)                :: theta, rho, exner, u, v, w ! Dummy fields
 
   ! We'll always need mr_sat so find it right away. Pressure is needed in mbar
   mr_sat = qsaturation(temperature, 0.01_r_def*pressure)
 
+  if ( geometry == geometry_spherical ) then
+    call xyz2llr(chi(1), chi(2), chi(3), long, lat, radius)
+    call central_angle(long, lat, x1, y1, l1)
+    call central_angle(long, lat, x2, y2, l2)
+  else
+    long = chi(1)
+    lat  = chi(2)
+    l1 = sqrt((long-x1)**2 + (lat-y1)**2)
+    l2 = sqrt((long-x2)**2 + (lat-y2)**2)
+  end if
+
   select case( choice )
 
+  case( test_deep_baroclinic_wave )
+    call deep_baroclinic_wave(long, lat, radius-scaled_radius, &
+                              exner, theta, rho,               &
+                              u, v, w, moisture)
   ! Test from Grabowski and Clark (1991)
   ! Returns the relative humidity field
   case( test_grabowski_clark )

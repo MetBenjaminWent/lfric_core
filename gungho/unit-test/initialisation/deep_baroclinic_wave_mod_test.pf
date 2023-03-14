@@ -131,7 +131,7 @@ contains
     class(deep_baroclinic_wave_test_type), intent(inout) :: this
 
     real(kind=r_def) :: llr(3)
-    real(r_def)      :: exner, theta, rho
+    real(r_def)      :: exner, theta, rho, mr
     real(r_def)      :: analytic_exner, analytic_theta, analytic_rho
     real(r_def)      :: wind(3), analytic_wind(3)
     real(r_def)      :: psi, analytic_psi
@@ -142,7 +142,7 @@ contains
     llr = (/ pi/9.0_r_def, 2.0*pi/9.0_r_def, scaled_radius/)
     call deep_baroclinic_wave(llr(1), llr(2), 0.0_r_def, &
                               exner, theta, rho, &
-                              wind(1), wind(2), wind(3))
+                              wind(1), wind(2), wind(3), mr)
 
     analytic_wind(:) = 0.0_r_def
     @assertEqual(analytic_wind, wind, tol)

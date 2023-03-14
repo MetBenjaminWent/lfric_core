@@ -31,7 +31,7 @@ except ValueError:
     from matplotlib.colors import ListedColormap
     from magma import magma_data
     magma = ListedColormap(magma_data, name='magma')
-    plt.register_cmap(name='magma', cmap=magma)
+    plt.register_cmap(name='magma', cmap=cmap)
 
 # Size of regular grid
 ny, nx = 360, 720
@@ -40,7 +40,7 @@ plot_lon = 360
 plot_lat = 280
 
 
-def make_figures(filein, plotpath, fields, vertical_spacing):
+def make_figures(filein, plotpath, fields, vertical_spacing, formulation):
 
     # Compute the vertical grid
     lid = 30.
@@ -99,16 +99,29 @@ def make_figures(filein, plotpath, fields, vertical_spacing):
                 if cfield == 'air_potential_temperature' or cfield == 'theta':
                     levels = np.linspace(220, 330, 12)
                 elif cfield == 'eastward_wind' or cfield == 'u_in_w2h':
-                    levels = np.arange(-20, 36, 4.)
+                    if (formulation == 'moist'):
+                        levels = np.arange(-54, 72, 6.)
+                    else:
+                        levels = np.arange(-20, 36, 4.)
                 elif cfield == 'northward_wind' or cfield == 'v_in_w2h':
-                    levels = np.linspace(-25, 40, 14)
+                    if (formulation == 'moist'):
+                        levels = np.linspace(-50, 75, 14)
+                    else:
+                        levels = np.linspace(-25, 40, 14)
                 elif cfield == 'upward_air_velocity' or cfield == 'w_in_wth':
-                    levels = np.linspace(-0.3, 0.3, 11)
+                    if (formulation == 'moist'):
+                        levels = np.linspace(-0.4, 0.4, 11)
+                    else:
+                        levels = np.linspace(-0.3, 0.3, 11)
                 elif cfield == 'exner_pressure' or cfield == 'exner':
                     # Exner will be converted to hPa
                     levels = np.linspace(916, 1020, 14)
                 elif cfield == 'air_density':
                     levels = np.arange(0, 1.4, 0.05)
+                elif cfield == 'm_cl':
+                    levels = np.arange(0.0, 7.5e-3, 0.5e-3)
+                elif cfield == 'm_v':
+                    levels = np.arange( 0.0, 5.0e-3, 2.0e-4)
 
                 n_levs = len(cube.coord(levels_name).points)
 
@@ -160,14 +173,21 @@ def make_figures(filein, plotpath, fields, vertical_spacing):
                 for iplot in range(nplots):
                     ax = interp_fig.add_subplot(nxplots, nyplots, iplot+1)
                     level = iplot
+                    if (cfield == 'm_v' or  cfield == 'm_cl'):
+                        # Plot level 10 for mositure fields
+                        level = 10
+                        cmap = magma.reversed()
+                    else:
+                        cmap = magma
                     ys = np.tile(yi, (n_levs, 1))
+                    
 
                     if direction == 'xz':
                         lon, height = np.meshgrid(xi, zi)
                         CS = plt.contourf(lon, height,
                                           plot_data[:, plot_lat, :].T,
-                                          levels=levels, cmap=magma)
-                        plt.colorbar(cmap=magma)
+                                          levels=levels, cmap=cmap)
+                        plt.colorbar(cmap=cmap)
                         CL = plt.contour(lat, height,
                                          plot_data[:, plot_lat, :].T,
                                          levels=levels, linewidths=0.5,
@@ -177,8 +197,8 @@ def make_figures(filein, plotpath, fields, vertical_spacing):
                         lat, height = np.meshgrid(yi, zi)
                         CS = plt.contourf(lat, height,
                                           plot_data[:, plot_long, :].T,
-                                          levels=levels, cmap=magma)
-                        plt.colorbar(cmap=magma)
+                                          levels=levels, cmap=cmap)
+                        plt.colorbar(cmap=cmap)
                         CL = plt.contour(lat, height,
                                          plot_data[:, plot_long, :].T,
                                          levels=levels, linewidths=0.5,
@@ -196,8 +216,8 @@ def make_figures(filein, plotpath, fields, vertical_spacing):
                         if cfield != 'exner':
                             CS = plt.contourf(lon, lat,
                                               plot_data[:, :, level].T,
-                                              levels=levels, cmap=magma)
-                            plt.colorbar(cmap=magma)
+                                              levels=levels, cmap=cmap)
+                            plt.colorbar(cmap=cmap)
                         if cfield != 'theta':
                             CL = plt.contour(lon, lat, dz.T, levels=levels,
                                              linewidths=1.0, colors='k')
@@ -214,13 +234,13 @@ if __name__ == "__main__":
 
     try:
         args = sys.argv[:]
-        filein, plotpath, vertical_grid = args[1:4]
+        filein, plotpath, vertical_grid, formulation = args[1:5]
         field_list = None
-        if len(args[:]) > 4:
-            field_list = args[4].split(':')
+        if len(args[:]) > 5:
+            field_list = args[5].split(':')
     except ValueError:
-        print("Usage: {0} <filein> <plotpath> <vertical_grid> [<fields_list>]"
+        print("Usage: {0} <filein> <plotpath> <vertical_grid> <formulation> [<fields_list>] "
               .format(sys.argv[0]))
         exit(1)
 
-    make_figures(filein, plotpath, field_list, vertical_grid)
+    make_figures(filein, plotpath, field_list, vertical_grid, formulation)

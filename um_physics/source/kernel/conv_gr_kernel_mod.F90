@@ -531,7 +531,7 @@ contains
     use timestep_mod, only: timestep
 
     use free_tracers_inputs_mod, only: n_wtrac
-    use wtrac_conv_mod, only: l_wtrac_conv 
+    use wtrac_conv_mod, only: l_wtrac_conv
 
     ! subroutines used
     use glue_conv_6a_mod, only: glue_conv_6a
@@ -1173,7 +1173,7 @@ contains
       it_cg_term(1,1) = 0
 
       call glue_conv_6a                                                     &
-        ( rows*row_length, segments, n_conv_levels, n_wtrac, bl_levels      & 
+        ( rows*row_length, segments, n_conv_levels, n_wtrac, bl_levels      &
         , call_number, seg_num, theta_conv, q_conv, qcl_conv, qcf_conv      &
         , q_wtrac, qcl_wtrac, qcf_wtrac                                     &
         , cf_liquid_conv, cf_frozen_conv, bulk_cf_conv                      &
@@ -1181,7 +1181,7 @@ contains
         , u_conv, v_conv, w(1,1,1)                                          &
         , tot_tracer, dthbydt, dqbydt,   dqclbydt, dqcfbydt                 &
         , dcflbydt, dcffbydt, dbcfbydt, dubydt_p, dvbydt_p                  &
-        , dqbydt_wtrac, dqclbydt_wtrac, dqcfbydt_wtrac                      &   
+        , dqbydt_wtrac, dqclbydt_wtrac, dqcfbydt_wtrac                      &
         , it_conv_rain, it_conv_snow, it_conv_rain_3d, it_conv_snow_3d      &
         , rain_wtrac, snow_wtrac                                            &
         , it_cca0_dp, it_cca0_md, it_cca0_sh                                &

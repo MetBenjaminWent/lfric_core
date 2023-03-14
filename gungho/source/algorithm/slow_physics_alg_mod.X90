@@ -30,18 +30,20 @@ module slow_physics_alg_mod
                                        blayer_placement,               &
                                        blayer_placement_slow,          &
                                        convection_placement,           &
-                                       convection_placement_slow
+                                       convection_placement_slow,      &
+                                       evap_condense_placement,        &
+                                       evap_condense_placement_slow
   use radiation_config_mod,      only: n_radstep, l_inc_radstep, n_inc_radstep
-  use section_choice_config_mod, only: aerosol, aerosol_um,                 &
-                                       boundary_layer, boundary_layer_um,   &
-                                       microphysics, microphysics_um,       &
-                                       orographic_drag, orographic_drag_um, &
-                                       radiation, radiation_socrates,       &
-                                       spectral_gwd, spectral_gwd_um,       &
-                                       methane_oxidation,                   &
-                                       surface, surface_jules,              &
-                                       convection, convection_um,           &
-                                       cloud, cloud_um,                     &
+  use section_choice_config_mod, only: aerosol, aerosol_um,                  &
+                                       boundary_layer, boundary_layer_um,    &
+                                       microphysics, microphysics_um,        &
+                                       orographic_drag, orographic_drag_um,  &
+                                       radiation, radiation_socrates,        &
+                                       spectral_gwd, spectral_gwd_um,        &
+                                       methane_oxidation,                    &
+                                       surface, surface_jules,               &
+                                       convection, convection_um,            &
+                                       cloud, cloud_um, cloud_evap_condense, &
                                        external_forcing
 
   ! Derived Types
@@ -63,6 +65,7 @@ module slow_physics_alg_mod
                                        write_conservation_diag
   use timer_mod,                 only: timer
   use external_forcing_alg_mod,  only: external_forcing_alg
+  use evap_condense_kernel_mod,  only: evap_condense_kernel_type
   ! Physics schemes called
 #ifdef UM_PHYSICS
   use planet_config_mod,         only: p_zero, kappa
@@ -220,6 +223,9 @@ contains
     type( field_type ) :: u_inc_leonard
     type( field_type ), pointer :: mt_inc_leonard => null()
     type( field_type ), pointer :: thetal_inc_leonard => null()
+    ! ...for evaporation condensation
+    type( field_type ) :: dtheta_cld
+    type( field_type ) :: dmr_cld(nummr)
 #ifdef UM_PHYSICS
     ! ...for Convection
     type( field_type ), pointer :: dmv_conv => null()
@@ -260,6 +266,7 @@ contains
     logical( kind=l_def ) :: methox_done
     logical( kind=l_def ) :: boundary_layer_done
     logical( kind=l_def ) :: leonard_term_done
+    logical( kind=l_def ) :: evap_condense_done
 #ifdef UM_PHYSICS
     ! Variables for extracting horizontal number of cells from mesh
     integer( kind=i_def ) :: ncells
@@ -285,6 +292,7 @@ contains
     methox_done          = .false.
     boundary_layer_done  = .false.
     leonard_term_done    = .false.
+    evap_condense_done   = .false.
 
     !--------------------------------------------------------------------
     ! External forcing options
@@ -624,6 +632,16 @@ contains
     end if ! bl_um
 #endif
 
+    if (evap_condense_placement == evap_condense_placement_slow .and. &
+        cloud == cloud_evap_condense) then
+      call clone_bundle(mr, dmr_cld, nummr)
+      call invoke( evap_condense_kernel_type(dtheta_cld, theta,  &
+                                             dmr_cld,            &
+                                             mr,                 &
+                                             exner_in_wth) )
+      evap_condense_done = .true.
+    end if
+
     !=====================================================================
     ! Update the main fields and increments to pass out
     !=====================================================================
@@ -691,6 +709,12 @@ contains
     if (boundary_layer_done) then
       call invoke(inc_X_plus_Y(du, du_bl), &
                   inc_X_plus_Y(dtheta, dtheta_bl) )
+    end if
+
+    if (evap_condense_done) then
+      call invoke(inc_X_plus_Y(dtheta,      dtheta_cld),     &
+                  inc_X_plus_Y(mr(imr_v),   dmr_cld(imr_v)), &
+                  inc_X_plus_Y(mr(imr_cl),  dmr_cld(imr_cl)))
     end if
 
 #ifdef UM_PHYSICS

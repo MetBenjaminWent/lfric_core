@@ -17,7 +17,7 @@ module semi_implicit_timestep_alg_mod
   use reference_element_mod,     only: T
 
   ! Configuration options
-  use section_choice_config_mod,  only: cloud, cloud_um,                &
+  use section_choice_config_mod,  only: cloud, cloud_um, &
                                         aerosol, aerosol_um
   use physics_config_mod,         only: blayer_placement,                  &
                                         blayer_placement_fast,             &

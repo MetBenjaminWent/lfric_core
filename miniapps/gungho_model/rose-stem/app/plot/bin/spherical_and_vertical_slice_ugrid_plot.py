@@ -183,7 +183,7 @@ def make_figures(filein, plotpath, field_list, slice_list,
         # This is a diagnostic field so we extract several fields
         # Remove this if we actually have theta_e as a diagnostic
         if field == 'theta_e':
-            cube = get_theta_e_cube(filein)
+            cube = get_theta_e_cube(filein, zmin, zmax)
         elif field == 'theta_vd_pert':
             cube = get_theta_vd_pert_cube(filein)
         else:
@@ -622,7 +622,7 @@ def make_extrusion(extrusion, nz, zmin, zmax):
 # --------------------------------------------------------------------------- #
 
 
-def get_theta_e_cube(filein):
+def get_theta_e_cube(filein, zmin, zmax):
     """
     Takes name of file and returns cube for theta_e variable.
     """
@@ -631,8 +631,38 @@ def get_theta_e_cube(filein):
 
     cube_theta = read_ugrid_data(filein, 'theta')
     cube_mr_v = read_ugrid_data(filein, 'm_v')
-    cube_exner = read_ugrid_data(filein, 'exner_in_wth')
-    cube_T = cube_theta * cube_exner
+    cube_exner = read_ugrid_data(filein, 'exner')
+    cube_exner_wtheta = cube_theta.copy()
+    cube_shape = np.shape(cube_exner.data)
+
+    # Get height data
+    levels_name = cube_theta.dim_coords[-1].name()
+    nz_full = len(cube_theta.coord(levels_name).points)
+    levels_name = cube_exner.dim_coords[-1].name()
+    nz = len(cube_exner.coord(levels_name).points)
+    z1d_full = make_extrusion(extrusion, nz_full, zmin, zmax)
+    z1d_half = 0.5*(z1d_full[1:] + z1d_full[0:nz_full-1])
+
+    for j in range(0,cube_shape[1]):   # Loop through columns
+        # Map from W3 to Wtheta
+        weight_denom = z1d_half[j] - z1d_half[j-1]
+        weight_upper = z1d_full[j] - z1d_half[j-1]
+        weight_lower = z1d_half[j] - z1d_full[j]
+        cube_exner_wtheta.data[:, j, :] = weight_upper / weight_denom *cube_exner.data[:, j, :] + weight_lower / weight_denom *cube_exner.data[:, j, :]
+
+    # Bottom
+    weight_denom = z1d_half[1] - z1d_half[0]
+    weight_upper = z1d_full[0] - z1d_half[0]
+    weight_lower = z1d_half[1] - z1d_full[0]
+    cube_exner_wtheta.data[:, 0, :] = weight_upper / weight_denom *cube_exner.data[:, 1, :] + weight_lower / weight_denom *cube_exner.data[:, 0, :]
+    # Top
+    weight_denom = z1d_half[cube_shape[1]-1] - z1d_half[cube_shape[1]-2]
+    weight_upper = z1d_full[cube_shape[1]] - z1d_half[cube_shape[1]-2]
+    weight_lower = z1d_half[cube_shape[1]-1] - z1d_full[cube_shape[1]]
+    cube_exner_wtheta.data[:, cube_shape[1], :] = weight_upper / weight_denom *cube_exner.data[:, cube_shape[1]-1, :] + weight_lower / weight_denom *cube_exner.data[:, cube_shape[1]-2, :]
+
+    # Theta_e
+    cube_T = cube_theta * cube_exner_wtheta
     exp_arg = Lv * cube_mr_v / (cp * cube_T)
     cube = cube_theta * np.exp(exp_arg.data)
 

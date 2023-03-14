@@ -126,7 +126,7 @@ contains
                                     ZR = 2000.0_r_def
     real(kind=r_def)             :: long, lat, radius
     real(kind=r_def)             :: l1, l2
-    real(kind=r_def)             :: density, temperature
+    real(kind=r_def)             :: density, temperature, mr_v
     real(kind=r_def)             :: t0
     real(kind=r_def)             :: u, v, w
 
@@ -189,11 +189,10 @@ contains
       temperature = analytic_temperature(chi, choice)
       pressure = t0/temperature
       density = p_zero/(Rd*temperature) * pressure**( (1.0_r_def - kappa )/ kappa )
-
     case (test_deep_baroclinic_wave)
       call deep_baroclinic_wave(long, lat, radius-scaled_radius, &
                                 pressure, temperature, density, &
-                                u, v, w)
+                                u, v, w, mr_v)
     case(test_dry_cbl, test_shallow_conv, test_snow)
       call reference_profile(pressure, density, temperature, chi, choice)
 

@@ -305,7 +305,6 @@
 	<field id="rho_in_wth" name="rho_in_wth" long_name="dry_air_density_at_cell_interfaces" unit="kg m-3" grid_ref="full_level_face_grid" />
 	<field id="wetrho_in_w3" name="wetrho_in_w3" long_name="wet_air_density_at_cell_centres" unit="kg m-3" grid_ref="half_level_face_grid" />
 	<field id="wetrho_in_wth" name="wetrho_in_wth" long_name="wet_air_density_at_cell_interfaces" unit="kg m-3" grid_ref="full_level_face_grid" />
-	  <field id="potential_vorticity" name="potential_vorticity" long_name="potential_vorticity" standard_name="potential_vorticity" unit="s-1" grid_ref="half_level_face_grid" />
 	<field id="exner" name="exner" long_name="exner_pressure" unit="1" grid_ref="half_level_face_grid" />
 	<field id="exner_in_wth" name="exner_in_wth" long_name="exner_pressure_at_cell_interfaces" unit="1" grid_ref="full_level_face_grid" />
 	<field id="exner_wth_n" name="exner_wth_n" long_name="start_of_timestep_exner_pressure_at_cell_interfaces" unit="1" grid_ref="full_level_face_grid" />
@@ -319,7 +318,7 @@
 	<field id="xi1" name="xi1" long_name="eastward_vorticity" unit="s-1" grid_ref="half_level_face_grid" />
 	<field id="xi2" name="xi2" long_name="northward_vorticity" unit="s-1" grid_ref="half_level_face_grid" />
 	<field id="xi3" name="xi3" long_name="vertical_vorticity" unit="s-1" grid_ref="half_level_face_grid" />
-	<field id="potential_vorticity" name="potential_vorticity" long_name="potential_vorticity" standard_name="potential_vorticity" unit="s-1" grid_ref="half_level_face_grid" />
+	<field id="potential_vorticity" name="potential_vorticity" long_name="potential_vorticity" standard_name="potential_vorticity" unit="m2 s-1 K kg-1" grid_ref="half_level_face_grid" />
 	<field id="divergence" name="divergence" long_name="divergence_of_wind" standard_name="divergence_of_wind" unit="s-1" grid_ref="half_level_face_grid" />
 	<field id="shear" name="shear" long_name="3d_wind_shear" unit="s-1" grid_ref="full_level_face_grid" />
 	<field id="theta_star" name="theta_star" long_name="physics_predictor_air_potential_temperature" unit="K" grid_ref="full_level_face_grid" />
@@ -879,9 +878,8 @@
 	<field id="init_u_in_w2h" name="u_in_w2h" long_name="eastward_wind_at_cell_faces" standard_name="eastward_wind"  unit="m s-1" grid_ref="half_level_edge_grid" />
 	<field id="init_v_in_w2h" name="v_in_w2h" long_name="northward_wind_at_cell_faces" standard_name="northward_wind" unit="m s-1" grid_ref="half_level_edge_grid" />
 	<field id="init_w_in_wth" name="w_in_wth" long_name="upward_air_velocity_at_cell_interfaces" standard_name="upward_air_velocity" unit="m s-1" grid_ref="full_level_face_grid" />
-	<field id="init_potential_vorticity" name="potential_vorticity" long_name="potential_vorticity" standard_name="potential_vorticity" unit="s-1" grid_ref="half_level_face_grid" />
 	<field id="init_divergence" name="divergence" long_name="divergence_of_wind" standard_name="divergence_of_wind" unit="s-1" grid_ref="half_level_face_grid" />
-	<field id="init_potential_vorticity" name="potential_vorticity" long_name="potential_vorticity" standard_name="potential_vorticity" unit="s-1" grid_ref="half_level_face_grid" />
+	<field id="init_potential_vorticity" name="potential_vorticity" long_name="potential_vorticity" standard_name="potential_vorticity" unit="m2 s-1 K kg-1" grid_ref="half_level_face_grid" />
 	<field id="init_exner" name="exner" long_name="exner_pressure" unit="1" grid_ref="half_level_face_grid" />
 	<field id="init_height_w3" name="height_w3" long_name="height_of_cell_centres_above_earth_radius" unit="m" grid_ref="half_level_face_grid" />
 	<field id="init_height_wth" name="height_wth" long_name="height_of_cell_interfaces_above_earth_radius" unit="m" grid_ref="full_level_face_grid" />

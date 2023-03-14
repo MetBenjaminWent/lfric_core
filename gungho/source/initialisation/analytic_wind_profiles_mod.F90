@@ -10,26 +10,26 @@
 module analytic_wind_profiles_mod
 
 use constants_mod,            only: r_def, pi, EPS
-use initial_wind_config_mod,  only: profile_none,                      &
-                                    profile_solid_body_rotation,       &
-                                    profile_solid_body_rotation_alt,   &
-                                    profile_constant_uv,               &
-                                    profile_constant_shear_uv,         &
-                                    profile_dcmip301,                  &
-                                    profile_sin_uv,                    &
-                                    profile_deep_baroclinic_steady,    &
-                                    profile_deep_baroclinic_perturbed, &
-                                    profile_vortex,                    &
-                                    profile_xy_NL_case_1,              &
-                                    profile_yz_NL_case_1,              &
-                                    profile_NL_case_1,                 &
-                                    profile_NL_case_2,                 &
-                                    profile_NL_case_3,                 &
-                                    profile_NL_case_4,                 &
-                                    profile_hadley_like_dcmip,         &
-                                    profile_curl_free_reversible,      &
-                                    profile_sbr_with_vertical,         &
-                                    profile_dcmip_101,                 &
+use initial_wind_config_mod,  only: profile_none,                         &
+                                    profile_solid_body_rotation,          &
+                                    profile_solid_body_rotation_alt,      &
+                                    profile_constant_uv,                  &
+                                    profile_constant_shear_uv,            &
+                                    profile_dcmip301,                     &
+                                    profile_sin_uv,                       &
+                                    profile_deep_baroclinic_steady,       &
+                                    profile_deep_baroclinic_perturbed,    &
+                                    profile_vortex,                       &
+                                    profile_xy_NL_case_1,                 &
+                                    profile_yz_NL_case_1,                 &
+                                    profile_NL_case_1,                    &
+                                    profile_NL_case_2,                    &
+                                    profile_NL_case_3,                    &
+                                    profile_NL_case_4,                    &
+                                    profile_hadley_like_dcmip,            &
+                                    profile_curl_free_reversible,         &
+                                    profile_sbr_with_vertical,            &
+                                    profile_dcmip_101,                    &
                                     profile_vertical_deformation
 use planet_config_mod,        only: scaled_radius
 use log_mod,                  only: log_event,                         &
@@ -411,7 +411,7 @@ function analytic_wind( chi, time, choice, num_options, &
   real(kind=r_def)             :: option(num_options)
   real(kind=r_def)             :: u(3)
   real(kind=r_def)             :: s, r_on_a
-  real(kind=r_def)             :: pressure, temperature, density
+  real(kind=r_def)             :: pressure, temperature, density, mr_v
   real(kind=r_def)             :: lat_pole, lon_pole
   real(kind=r_def)             :: k_z                 ! vertical wavenumber
   real(kind=r_def)             :: z                   ! height in spherical coordinates
@@ -486,7 +486,7 @@ function analytic_wind( chi, time, choice, num_options, &
            profile_deep_baroclinic_perturbed)
       call deep_baroclinic_wave(chi(1), chi(2), chi(3)-scaled_radius, &
                                 pressure, temperature, density, &
-                                u(1), u(2), u(3))
+                                u(1), u(2), u(3), mr_v)
     case ( profile_vortex )
       u = vortex_wind(chi(2),chi(1),chi(3))
     case ( profile_NL_case_1 )

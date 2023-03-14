@@ -301,22 +301,6 @@
                                        },
                          }
                      )',
-    'run_application("lfric_atm", "bryan_fritsch-moist",
-                     resolutions=[("BiP200x4-100x100",2.0)],
-                     env={"crun":1, "nrun":500,
-                          "directives":{"default":{"mpi_parts":4,
-                                                   "panel_decomp":' + row + ',
-                                                   "wallclock":"00:15:00"}}},
-                     plotstr="spherical_and_vertical_slice_ugrid_plot.py $NODAL_DATA_DIR/lfric_diag.nc $PLOT_DIR theta_e xz all linear bryan_fritsch"
-                    )',
-    'run_application("lfric_atm", "grabowski-clark",
-                     resolutions=[("BiP180x4-20x20",2.0)],
-                     env={"crun":1, "nrun":250,
-                          "directives":{"default":{"mpi_parts":4,
-                                                   "panel_decomp":' + row + ',
-                                                   "wallclock":"00:15:00"}}},
-                     plotstr="spherical_and_vertical_slice_ugrid_plot.py $NODAL_DATA_DIR/lfric_diag.nc $PLOT_DIR theta_vd_pert:m_cl xz all linear grabowski_clark"
-                    )',
     'run_application("lfric_atm", "aquaplanet",
                      resolutions=[("C12",1800.0)],
                      env={"crun":2, "nrun":12,

@@ -75,7 +75,7 @@ function analytic_temperature(chi, choice) result(temperature)
                                   ZR = 2000.0_r_def
   real(kind=r_def)             :: long, lat, radius, z
   real(kind=r_def)             :: l1, l2
-  real(kind=r_def)             :: pressure, density
+  real(kind=r_def)             :: pressure, density, mr_v
   real(kind=r_def)             :: s, u00, f_sb, t0
   real(kind=r_def)             :: r_on_a
   real(kind=r_def)             :: u, v, w
@@ -205,8 +205,7 @@ function analytic_temperature(chi, choice) result(temperature)
   case( test_deep_baroclinic_wave )
     call deep_baroclinic_wave(long, lat, radius-scaled_radius, &
                               pressure, temperature, density, &
-                              u, v, w)
-
+                              u, v, w, mr_v)
   case( test_dry_cbl, test_snow )
     ! For the time being this is a fixed profile for the dry cbl
     ! but to be read in and made generic later

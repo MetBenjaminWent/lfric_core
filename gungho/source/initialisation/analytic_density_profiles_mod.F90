@@ -145,7 +145,7 @@ function analytic_density(chi, choice, time) result(density)
                                   ZR = 2000.0_r_def
   real(kind=r_def)             :: long, lat, radius
   real(kind=r_def)             :: l1, l2
-  real(kind=r_def)             :: pressure, temperature
+  real(kind=r_def)             :: pressure, temperature, mr_v
   real(kind=r_def)             :: t0, g
   real(kind=r_def)             :: u, v, w
 
@@ -231,8 +231,7 @@ function analytic_density(chi, choice, time) result(density)
   case( test_deep_baroclinic_wave )
     call deep_baroclinic_wave(long, lat, radius-scaled_radius, &
                               pressure, temperature, density, &
-                              u, v, w)
-
+                              u, v, w, mr_v)
   case( test_cosine_bubble )
     l1 = sqrt( ((chi(1) - x1)/r1)**2 + ((chi(3) - y1)/r2)**2 )
     if ( l1 < 1.0_r_def ) then

@@ -45,9 +45,9 @@ module deep_baroclinic_wave_mod
 
 contains
 
-  subroutine deep_baroclinic_wave(lon, lat, z, &
+  subroutine deep_baroclinic_wave(lon, lat, z,       &
                                   exner, theta, rho, &
-                                  u, v, w)
+                                  u, v, w, mr_v)
 
     implicit none
 
@@ -66,9 +66,11 @@ contains
                 rho,        & ! density (kg m^-3)
                 u,          & ! Zonal wind (m s^-1)
                 v,          & ! Meridional wind (m s^-1)
-                w             ! Vertical Velocity (m s^-1)
+                w,          & ! Vertical Velocity (m s^-1)
+                mr_v          ! Water vapour mixing ratio (kg kg^-1)
 
-    real(kind=r_def) :: p, t
+
+    real(kind=r_def) :: p, t, q, eta
     real(kind=r_def) :: T0, constA, constB, constC, constH, scaledZ
     real(kind=r_def) :: tau1, tau2, inttau1, inttau2
     real(kind=r_def) :: rratio, inttermT, inttermU, bigU, rcoslat, omegarcoslat
@@ -166,6 +168,17 @@ contains
           - evaluate_streamfunction(lon - dxepsilon, lat, z))
     end if
 
+    eta = p/p_zero
+
+    if ( eta >  1.0e4_r_def/p_zero) then
+      q = 1.8e-2_r_def*exp(-(lat/(2.0_r_def*pi/9.0_r_def))**4.0_r_def) &
+          *exp(-((eta-1.0_r_def)*p_zero/340.0e2_r_def)**2.0_r_def )
+    else
+      q = 1.0e-12_r_def
+    end if
+
+    mr_v = q/(1.0_r_def - q)
+
 
   end subroutine deep_baroclinic_wave
 
@@ -207,4 +220,3 @@ contains
   end function evaluate_streamfunction
 
 end module deep_baroclinic_wave_mod
-
