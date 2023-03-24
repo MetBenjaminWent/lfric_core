@@ -37,7 +37,8 @@ export EXTERNAL_DYNAMIC_LIBRARIES = netcdff netcdf yaxt yaxt_c
 export PROJECT_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 export ROOT_DIR    ?= ../..
 
-export INTERNAL_DEPENDENCIES = $(ROOT_DIR)/infrastructure
+export INTERNAL_DEPENDENCIES = $(ROOT_DIR)/infrastructure \
+							   $(ROOT_DIR)/gungho
 
 export SUITE_GROUP ?= developer
 export SUITE_GROUP_NAME ?= $(notdir $(realpath $(shell pwd)/$(ROOT_DIR)))-$(PROJECT_NAME)-.*
@@ -81,7 +82,9 @@ document-api: api-documentation
 # Unit tests
 #
 unit-tests/%: export ADDITIONAL_EXTRACTION = $(ROOT_DIR)/infrastructure/source \
-                                             $(ROOT_DIR)/components/science/source
+                                             $(ROOT_DIR)/components/science/source \
+											 $(ROOT_DIR)/components/driver/source \
+											 $(ROOT_DIR)/gungho/unit-test
 unit-tests/%: export BIN_DIR ?= $(PROJECT_DIR)/test
 unit-tests/%: export FFLAGS += -D UNIT_TEST
 unit-tests/%: export META_FILE_DIR = rose-meta/lfric-da/HEAD

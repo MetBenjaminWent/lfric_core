@@ -8,3 +8,6 @@ export PROJECT_SOURCE = $(ROOT_DIR)/components/lfric-da/source
 .PHONY: import-lfric-da
 import-lfric-da:
 	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/extract.mk SOURCE_DIR=$(PROJECT_SOURCE)
+	$Q$(MAKE) $(QUIET_ARG) -f $(LFRIC_BUILD)/psyclone/psyclone.mk \
+            SOURCE_DIR=$(PROJECT_SOURCE) \
+            OPTIMISATION_PATH=$(OPTIMISATION_PATH)

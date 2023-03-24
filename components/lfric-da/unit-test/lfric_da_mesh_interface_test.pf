@@ -1,0 +1,225 @@
+!------------------------------------------------------------------------------
+! (C) Crown copyright 2023 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!------------------------------------------------------------------------------
+!
+! Unit tests for procedures in lfric_da_mesh_interface_mod
+!
+module lfric_da_mesh_interface_test
+  use constants_mod,                  only: i_def, r_def
+  use halo_routing_collection_mod,    only: halo_routing_collection, &
+                                            halo_routing_collection_type
+  use local_mesh_collection_mod,      only: local_mesh_collection, &
+                                            local_mesh_collection_type
+  use local_mesh_mod,                 only: local_mesh_type
+  use mesh_collection_mod,            only: mesh_collection_type, &
+                                            mesh_collection
+  use mesh_mod,                       only: mesh_type, PLANE, PLANE_TWOD
+  use feign_config_mod,               only: feign_extrusion_config
+  use extrusion_config_mod,           only: method_uniform, &
+                                            stretching_method_linear
+
+  use lfric_da_mesh_interface_mod,    only: get_domain_top,         &
+                                            get_stretching_height,  &
+                                            get_grid_size,          &
+                                            get_levels,             &
+                                            get_lonlat,             &
+                                            get_sigma_w3_levels,    &
+                                            get_sigma_wtheta_levels
+  use log_mod,                        only: log_event, LOG_LEVEL_INFO
+
+  use pFUnit_Mod
+
+  implicit none
+
+  @TestCase
+  type, extends(TestCase), public :: lfric_da_mesh_interface_test_type
+    private
+    integer(i_def) :: mesh_id
+    real(r_def)    :: tol
+
+  contains
+    procedure setUp
+    procedure tearDown
+    procedure test_get_domain_top
+    procedure test_get_stretching_height
+    procedure test_get_grid_size
+    procedure test_get_levels
+    procedure test_get_lonlat
+    procedure test_get_sigma_w3_levels
+    procedure test_get_sigma_wtheta_levels
+  end type lfric_da_mesh_interface_test_type
+
+  contains
+
+  subroutine setUp( this )
+    implicit none
+    class(lfric_da_mesh_interface_test_type), intent(inout) :: this
+
+    type(local_mesh_type), pointer  :: unit_test_local_mesh_ptr
+    type(local_mesh_type), target   :: unit_test_local_mesh
+    type(mesh_type)                 :: unit_test_mesh, unit_test_twod_mesh
+    integer(i_def)                  :: mesh_id
+
+    ! Create top level collections
+    mesh_collection = mesh_collection_type()
+    local_mesh_collection = local_mesh_collection_type()
+    halo_routing_collection = halo_routing_collection_type()
+
+    ! Create unit test meshes
+    call unit_test_local_mesh%initialise()
+    mesh_id = local_mesh_collection%add_new_local_mesh(unit_test_local_mesh)
+    unit_test_local_mesh_ptr => local_mesh_collection%get_mesh_by_id(mesh_id)
+
+    ! 2d mesh
+    unit_test_twod_mesh = mesh_type( PLANE_TWOD, unit_test_local_mesh_ptr )
+    mesh_id = mesh_collection%add_new_mesh( unit_test_twod_mesh )
+
+    ! 3d mesh
+    unit_test_mesh = mesh_type( PLANE, unit_test_local_mesh_ptr )
+    mesh_id = mesh_collection%add_new_mesh( unit_test_mesh )
+
+    call feign_extrusion_config(    &
+      method=method_uniform,        &
+      domain_top=1.0_r_def,         &
+      number_of_layers=5_i_def,     &
+      stretching_height=1.0_r_def,  &
+      stretching_method=stretching_method_linear)
+
+    ! Set constants
+    this%mesh_id = mesh_id
+    this%tol = 1e-5_r_def
+
+  end subroutine setUp
+
+  subroutine tearDown( this )
+    implicit none
+    class(lfric_da_mesh_interface_test_type), intent(inout) :: this
+
+    deallocate(mesh_collection)
+    deallocate(halo_routing_collection)
+    deallocate(local_mesh_collection)
+
+  end subroutine tearDown
+
+  @Test
+  subroutine test_get_domain_top( this )
+    implicit none
+    class(lfric_da_mesh_interface_test_type), intent(inout) :: this
+    real(r_def) :: out, kgo
+
+    call log_event("test_get_domain_top", LOG_LEVEL_INFO)
+
+    out = get_domain_top(this%mesh_id)
+    kgo = 1e4_r_def
+
+    @assertEqual(kgo, out, this%tol)
+
+  end subroutine test_get_domain_top
+
+  @Test
+  subroutine test_get_stretching_height( this )
+    implicit none
+    class(lfric_da_mesh_interface_test_type), intent(inout) :: this
+    real(r_def) :: out, kgo
+
+    call log_event("test_get_stretching_height", LOG_LEVEL_INFO)
+
+    out = get_stretching_height()
+    kgo = 1_r_def
+
+    @assertEqual(kgo, out, this%tol)
+
+  end subroutine test_get_stretching_height
+
+  @Test
+  subroutine test_get_grid_size( this )
+    implicit none
+    class(lfric_da_mesh_interface_test_type), intent(inout) :: this
+    integer(i_def) :: size_out, size_kgo
+    logical        :: valid_out, valid_kgo
+
+    call log_event("test_get_grid_size", LOG_LEVEL_INFO)
+
+    call get_grid_size(this%mesh_id, valid_out, size_out)
+
+    valid_kgo = .false.
+    size_kgo = 9_i_def
+
+    @assertEqual(valid_kgo, valid_out)
+    @assertEqual(size_kgo, size_out)
+
+  end subroutine test_get_grid_size
+
+  @Test
+  subroutine test_get_levels( this )
+    implicit none
+    class(lfric_da_mesh_interface_test_type), intent(inout) :: this
+    integer(i_def) :: out, kgo
+
+    call log_event("test_get_levels", LOG_LEVEL_INFO)
+
+    out = get_levels(this%mesh_id)
+
+    kgo = 5_i_def
+
+    @assertEqual(kgo, out)
+
+  end subroutine test_get_levels
+
+  @Test
+  subroutine test_get_lonlat( this )
+    implicit none
+    class(lfric_da_mesh_interface_test_type), intent(inout) :: this
+
+    real(r_def)               :: lon_kgo(9), lat_kgo(9)
+    real(r_def), allocatable  :: lon_out(:), lat_out(:)
+
+    lon_kgo = [ -1.5, -1.5, -1.5,  0.0,  0.0,  0.0,  1.5,  1.5,  1.5 ]
+    lat_kgo = [ -1.5,  0.0,  1.5, -1.5,  0.0,  1.5, -1.5,  0.0,  1.5 ]
+
+    call log_event("test_get_lonlat", LOG_LEVEL_INFO)
+
+    call get_lonlat(this%mesh_id, lon_out, lat_out)
+
+    @assertEqual(lon_kgo, lon_out, this%tol)
+    @assertEqual(lat_kgo, lat_out, this%tol)
+
+  end subroutine test_get_lonlat
+
+  @Test
+  subroutine test_get_sigma_w3_levels( this )
+    implicit none
+    class(lfric_da_mesh_interface_test_type), intent(inout) :: this
+    real(r_def), allocatable :: out(:), kgo(:)
+
+    integer :: i
+
+    call log_event("test_get_sigma_w3_levels", LOG_LEVEL_INFO)
+
+    out = get_sigma_w3_levels(this%mesh_id)
+    kgo = [ 0.1, 0.3, 0.5, 0.7, 0.9 ]
+
+    @assertEqual(kgo, out, this%tol)
+
+  end subroutine test_get_sigma_w3_levels
+
+  @Test
+  subroutine test_get_sigma_wtheta_levels( this )
+    implicit none
+    class(lfric_da_mesh_interface_test_type), intent(inout) :: this
+    real(r_def), allocatable :: out(:), kgo(:)
+
+    integer :: i
+
+    call log_event("test_get_sigma_wtheta_levels", LOG_LEVEL_INFO)
+
+    out = get_sigma_wtheta_levels(this%mesh_id)
+    kgo = [ 0.0, 0.2, 0.4, 0.6, 0.8, 1.0 ]
+
+    @assertEqual(kgo, out, this%tol)
+
+  end subroutine test_get_sigma_wtheta_levels
+
+end module lfric_da_mesh_interface_test

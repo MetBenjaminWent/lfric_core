@@ -1266,6 +1266,7 @@ contains
     self%nverts_per_cell    =  4_i_def
     self%nverts_per_edge    =  2_i_def
     self%nedges_per_cell    =  4_i_def
+    self%ncells_global_mesh =  9_i_def
     self%num_cells_in_layer =  9_i_def
     self%n_unique_vertices  = 16_i_def
     self%n_unique_edges     = 24_i_def

@@ -2958,6 +2958,104 @@ contains
       self%vertex_coords (:,96) = [  6927.127582_r_def, -15136.049906_r_def, &
                                      36371.897073_r_def ]
 
+      !=========================================================
+      ! Assign [x,y,z] cell centre coords in (m), with [0,0,0] at centre
+      ! of planet (radius=30000.0).
+      ! layer 1
+      self%cell_centre_coords (:, 1) = [   155.116303_r_def, &
+                                      -2187.360125_r_def, -30922.344585_r_def ]
+      self%cell_centre_coords (:, 2) = [  2192.853252_r_def, &
+                                     -30922.344585_r_def,      0.000000_r_def ]
+      self%cell_centre_coords (:, 3) = [   155.116303_r_def, &
+                                      -2187.360125_r_def,  30922.344585_r_def ]
+      self%cell_centre_coords (:, 4) = [  2192.853252_r_def, &
+                                          0.000000_r_def, -30922.344585_r_def ]
+      self%cell_centre_coords (:, 5) = [ 31000.000000_r_def, &
+                                          0.000000_r_def,      0.000000_r_def ]
+      self%cell_centre_coords (:, 6) = [  2192.853252_r_def, &
+                                          0.000000_r_def,  30922.344585_r_def ]
+      self%cell_centre_coords (:, 7) = [   155.116303_r_def, &
+                                       2187.360125_r_def, -30922.344585_r_def ]
+      self%cell_centre_coords (:, 8) = [  2192.853252_r_def, &
+                                      30922.344585_r_def,      0.000000_r_def ]
+      self%cell_centre_coords (:, 9) = [   155.116303_r_def, &
+                                       2187.360125_r_def,  30922.344585_r_def ]
+      ! Layer 2
+      self%cell_centre_coords (:,10) = [   165.123806_r_def, &
+                                      -2328.480133_r_def, -32917.334558_r_def ]
+      self%cell_centre_coords (:,11) = [  2334.327655_r_def, &
+                                     -32917.334558_r_def,      0.000000_r_def ]
+      self%cell_centre_coords (:,12) = [   165.123806_r_def, &
+                                      -2328.480133_r_def,  32917.334558_r_def ]
+      self%cell_centre_coords (:,13) = [  2334.327655_r_def, &
+                                          0.000000_r_def, -32917.334558_r_def ]
+      self%cell_centre_coords (:,14) = [ 33000.000000_r_def, &
+                                          0.000000_r_def,      0.000000_r_def ]
+      self%cell_centre_coords (:,15) = [  2334.327655_r_def, &
+                                          0.000000_r_def,  32917.334558_r_def ]
+      self%cell_centre_coords (:,16) = [   165.123806_r_def, &
+                                       2328.480133_r_def, -32917.334558_r_def ]
+      self%cell_centre_coords (:,17) = [  2334.327655_r_def, &
+                                      32917.334558_r_def,      0.000000_r_def ]
+      self%cell_centre_coords (:,18) = [   165.123806_r_def, &
+                                       2328.480133_r_def,  32917.334558_r_def ]
+      ! Layer 3
+      self%cell_centre_coords (:,19) = [   175.131309_r_def, &
+                                      -2469.600141_r_def, -34912.324531_r_def ]
+      self%cell_centre_coords (:,20) = [  2475.802058_r_def, &
+                                     -34912.324531_r_def,      0.000000_r_def ]
+      self%cell_centre_coords (:,21) = [   175.131309_r_def, &
+                                      -2469.600141_r_def,  34912.324531_r_def ]
+      self%cell_centre_coords (:,22) = [  2475.802058_r_def, &
+                                          0.000000_r_def, -34912.324531_r_def ]
+      self%cell_centre_coords (:,23) = [ 35000.000000_r_def, &
+                                          0.000000_r_def,      0.000000_r_def ]
+      self%cell_centre_coords (:,24) = [  2475.802058_r_def, &
+                                          0.000000_r_def,  34912.324531_r_def ]
+      self%cell_centre_coords (:,25) = [   175.131309_r_def, &
+                                       2469.600141_r_def, -34912.324531_r_def ]
+      self%cell_centre_coords (:,26) = [  2475.802058_r_def, &
+                                      34912.324531_r_def,      0.000000_r_def ]
+      self%cell_centre_coords (:,27) = [   175.131309_r_def, &
+                                       2469.600141_r_def,  34912.324531_r_def ]
+      ! Layer 4
+      self%cell_centre_coords (:,28) = [   185.138813_r_def, &
+                                      -2610.720149_r_def, -36907.314504_r_def ]
+      self%cell_centre_coords (:,29) = [  2617.276462_r_def, &
+                                     -36907.314504_r_def,      0.000000_r_def ]
+      self%cell_centre_coords (:,30) = [   185.138813_r_def, &
+                                      -2610.720149_r_def,  36907.314504_r_def ]
+      self%cell_centre_coords (:,31) = [  2617.276462_r_def, &
+                                          0.000000_r_def, -36907.314504_r_def ]
+      self%cell_centre_coords (:,32) = [ 37000.000000_r_def, &
+                                          0.000000_r_def,      0.000000_r_def ]
+      self%cell_centre_coords (:,33) = [  2617.276462_r_def, &
+                                          0.000000_r_def,  36907.314504_r_def ]
+      self%cell_centre_coords (:,34) = [   185.138813_r_def, &
+                                       2610.720149_r_def, -36907.314504_r_def ]
+      self%cell_centre_coords (:,35) = [  2617.276462_r_def, &
+                                      36907.314504_r_def,      0.000000_r_def ]
+      self%cell_centre_coords (:,36) = [   185.138813_r_def, &
+                                       2610.720149_r_def,  36907.314504_r_def ]
+      ! Layer 5
+      self%cell_centre_coords (:,37) = [   195.146316_r_def, &
+                                      -2751.840157_r_def, -38902.304478_r_def ]
+      self%cell_centre_coords (:,38) = [  2758.750865_r_def, &
+                                     -38902.304478_r_def,      0.000000_r_def ]
+      self%cell_centre_coords (:,39) = [   195.146316_r_def, &
+                                      -2751.840157_r_def,  38902.304478_r_def ]
+      self%cell_centre_coords (:,40) = [  2758.750865_r_def, &
+                                          0.000000_r_def, -38902.304478_r_def ]
+      self%cell_centre_coords (:,41) = [ 39000.000000_r_def, &
+                                          0.000000_r_def,      0.000000_r_def ]
+      self%cell_centre_coords (:,42) = [  2758.750865_r_def, &
+                                          0.000000_r_def,  38902.304478_r_def ]
+      self%cell_centre_coords (:,43) = [   195.146316_r_def, &
+                                       2751.840157_r_def, -38902.304478_r_def ]
+      self%cell_centre_coords (:,44) = [  2758.750865_r_def, &
+                                      38902.304478_r_def,      0.000000_r_def ]
+      self%cell_centre_coords (:,45) = [   195.146316_r_def, &
+                                       2751.840157_r_def,  38902.304478_r_def ]
 
       ! Domain limits
       global_domain_extents(:,1) = [ -1.0_r_def, -0.5_r_def ]*PI
@@ -3290,6 +3388,29 @@ contains
                                       29097.517658_r_def ]
       self%vertex_coords (:,32) = [  5541.702066_r_def, -12108.839925_r_def, &
                                       29097.517658_r_def ]
+
+      !=========================================================
+      ! Assign [x,y,z] cell centre coords in (m), with [0,0,0] at centre
+      ! of planet (radius=30000.0).
+      ! layer 1
+      self%cell_centre_coords (:, 1) = [   155.116303_r_def, &
+                                      -2187.360125_r_def, -30922.344585_r_def ]
+      self%cell_centre_coords (:, 2) = [  2192.853252_r_def, &
+                                     -30922.344585_r_def,      0.000000_r_def ]
+      self%cell_centre_coords (:, 3) = [   155.116303_r_def, &
+                                      -2187.360125_r_def,  30922.344585_r_def ]
+      self%cell_centre_coords (:, 4) = [  2192.853252_r_def, &
+                                          0.000000_r_def, -30922.344585_r_def ]
+      self%cell_centre_coords (:, 5) = [ 31000.000000_r_def, &
+                                          0.000000_r_def,      0.000000_r_def ]
+      self%cell_centre_coords (:, 6) = [  2192.853252_r_def, &
+                                          0.000000_r_def,  30922.344585_r_def ]
+      self%cell_centre_coords (:, 7) = [   155.116303_r_def, &
+                                       2187.360125_r_def, -30922.344585_r_def ]
+      self%cell_centre_coords (:, 8) = [  2192.853252_r_def, &
+                                      30922.344585_r_def,      0.000000_r_def ]
+      self%cell_centre_coords (:, 9) = [   155.116303_r_def, &
+                                       2187.360125_r_def,  30922.344585_r_def ]
 
       ! Domain limits
       global_domain_extents(:,1) = [  0.0_r_def,    -0.5_r_def*PI ]
