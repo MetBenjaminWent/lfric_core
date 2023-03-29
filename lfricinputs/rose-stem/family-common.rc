@@ -172,15 +172,25 @@
     [[x86_weights]]
         inherit = WEIGHTS, LINUX
         pre-script = """
-                     module load scitools
-		     module unload libraries/gcc
-                     module load libraries/gcc/6.1.0
-                     module unload ifort
+                     module purge
+
+                     module use /data/users/lfric/software/modulefiles.rhel7
+                     module use /project/extrasoftware/modulefiles.rhel7
+                     module load environment/lfric/gcc/6.1.0/6
+                     module load esmf/7.1.0r/gcc/6.1.0
+
+                     module load scitools/production-os46-1
                      module load ifort/16.0_64
                      module load um_tools
-                     PATH=/project/um1/esmf/esmf7_1_0_rhel7/apps/appsO/Linux.gfortran.64.mpi.default/:$PATH
+
                      module list 2>&1
                      """
+       post-script = """
+                     module purge
+                     """
+        [[[environment]]]
+            PATH = /project/extrasoftware/packages.rhel7/esmf/7.1.0r/gcc/6.1.0/bin/binO/Linux.gfortran.64.mpich3.default/:$PATH
+
 {% if SPICE %}
         [[[directives]]]
             --partition=rhel7
