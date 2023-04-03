@@ -32,6 +32,7 @@ module da_dev_driver_mod
                                       LOG_LEVEL_ALWAYS,   &
                                       LOG_LEVEL_INFO
   use mesh_mod,                 only: mesh_type
+  use extrusion_mod,            only: extrusion_type
   use model_clock_mod,          only: model_clock_type
   use mpi_mod,                  only: get_comm_size, &
                                       get_comm_rank
@@ -43,6 +44,7 @@ module da_dev_driver_mod
   use lfric_xios_read_mod,      only: read_state
   use lfric_xios_write_mod,     only: write_state
   use lfric_xios_context_mod,   only: lfric_xios_context_type, advance
+  use da_dev_extrusion_mod,     only: create_extrusion
 
   implicit none
 
@@ -101,6 +103,7 @@ contains
     character(:), allocatable              :: filename_local
     procedure(filelist_populator), pointer :: fl_populator => null()
     class(io_context_type),        pointer :: model_io_context => null()
+    class(extrusion_type), allocatable     :: extrusion
 
     if (present(filename)) then
       call load_configuration( filename, program_name )
@@ -125,8 +128,9 @@ contains
     call init_time( model_clock )
 
     ! Create the mesh
+    allocate( extrusion, source=create_extrusion() )
     call init_mesh( get_comm_rank(), get_comm_size(), mesh, &
-                    twod_mesh = twod_mesh )
+                    twod_mesh = twod_mesh, input_extrusion = extrusion )
 
     ! Create FEM specifics (function spaces and chi field)
     call init_fem( mesh, chi, panel_id )
