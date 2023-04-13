@@ -53,8 +53,6 @@ module linear_driver_mod
   private
   public initialise, run, finalise
 
-  character(*), parameter :: application_name = "linear"
-
   ! Model run working data set
   type (model_data_type) :: model_data
   type(model_clock_type), allocatable :: model_clock
@@ -68,19 +66,20 @@ contains
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !>@brief Sets up required state in preparation for run.
-  subroutine initialise()
+  subroutine initialise( program_name )
 
     implicit none
 
-    class(io_context_type), pointer :: io_context => null()
+    character(*), intent(in) :: program_name
 
-    character(:),  allocatable :: filename
+    class(io_context_type), pointer :: io_context => null()
+    character(:),  allocatable      :: filename
 
     call get_initial_filename( filename )
 
     ! Initialise infrastructure and setup constants
     call initialise_infrastructure( filename,          &
-                                    application_name,  &
+                                    program_name,      &
                                     mesh,              &
                                     twod_mesh,         &
                                     shifted_mesh,      &
@@ -143,11 +142,13 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !>@brief Timesteps the model, calling the desired timestepping algorithm based
   !upon the configuration
-  subroutine run()
+  subroutine run( program_name )
 
     implicit none
 
-    write( log_scratch_space,'(A)' ) 'Running '//application_name//' ...'
+    character(*), intent(in) :: program_name
+
+    write( log_scratch_space,'(A)' ) 'Running '//program_name//' ...'
     call log_event( log_scratch_space, LOG_LEVEL_ALWAYS )
 
     do while ( model_clock%tick() )
@@ -187,18 +188,20 @@ contains
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !>@brief Tidies up after a run.
-  subroutine finalise()
+  subroutine finalise( program_name )
 
     implicit none
 
-    call log_event( 'Finalising '//application_name//' ...', LOG_LEVEL_ALWAYS )
+    character(*), intent(in) :: program_name
+
+    call log_event( 'Finalising '//program_name//' ...', LOG_LEVEL_ALWAYS )
 
     ! Output the fields stored in the model_data (checkpoint and dump)
     call output_model_data( model_data, model_clock )
 
     ! Model configuration finalisation
     call finalise_model( model_data, &
-                         application_name )
+                         program_name )
 
     call finalise_linear_model( )
 
@@ -206,7 +209,7 @@ contains
     call finalise_model_data( model_data )
 
     ! Finalise infrastructure and constants
-    call finalise_infrastructure( application_name )
+    call finalise_infrastructure( program_name )
 
   end subroutine finalise
 

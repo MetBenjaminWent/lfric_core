@@ -41,6 +41,7 @@ default_project_names=( infrastructure  \
                         lfric_atm       \
                         mesh_tools      \
                         linear          \
+                        linear_model    \
                         skeleton        \
                         da_dev          \
                         diagnostics     \
@@ -60,7 +61,8 @@ default_app_names=( infrastructure:none            \
                     gungho_model:mesh              \
                     lfric_atm:lfric_atm            \
                     mesh_tools:mesh                \
-                    linear:linear                  \
+                    linear:none                    \
+                    linear_model:linear_model      \
                     skeleton:skeleton              \
                     da_dev:da_dev                  \
                     diagnostics:diagnostics        \
@@ -112,6 +114,7 @@ project_folder_location=(                  \
   [lfric_atm]=lfric_atm                    \
   [mesh_tools]=mesh_tools                  \
   [linear]=linear                          \
+  [linear_model]=miniapps/linear_model     \
   [skeleton]=miniapps/skeleton             \
   [da_dev]=miniapps/da_dev                 \
   [diagnostics]=miniapps/diagnostics       \
@@ -133,7 +136,8 @@ project_primary_app=(             \
   [gungho_model]=gungho_model     \
   [lfric_atm]=lfric_atm           \
   [mesh_tools]=mesh               \
-  [linear]=linear                 \
+  [linear]=none                   \
+  [linear_model]=linear_model     \
   [skeleton]=skeleton             \
   [da_dev]=da_dev                 \
   [diagnostics]=diagnostics       \
