@@ -81,6 +81,7 @@ lbc_option='none',
 ls_option='analytic',
 n_orog_smooth=0,
 read_w2h_wind=.false.
+coarse_aerosol_ancil=.false.
 /
 &initial_density
 r1=0.0,

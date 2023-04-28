@@ -257,10 +257,6 @@ subroutine read_field_time_var(xios_field_name, field_proxy, time_indices, time_
 
   ! Call error if field not on prime mesh
   mesh => field_proxy%vspace%get_mesh()
-  if ( .not. prime_io_mesh_is(mesh) ) then
-    call log_event( "Read method 'read_field_time_var' only works for " // &
-                    "fields on the model's primary mesh", LOG_LEVEL_ERROR)
-  end if
 
   fs_id = field_proxy%vspace%which()
   if ( fs_id /= W3 .and. fs_id /= WTheta .and. fs_id /= W2H ) then
@@ -280,18 +276,34 @@ subroutine read_field_time_var(xios_field_name, field_proxy, time_indices, time_
   fs_id = field_proxy%vspace%which()
 
   ! get the horizontal / vertical / time domain sizes
-  if ( fs_id == W3 ) then
-    call xios_get_domain_attr( 'face', ni=domain_size )
-    call xios_get_axis_attr( 'vert_axis_half_levels', n_glo=vert_axis_size )
-  else if ( fs_id == WTheta ) then
-    call xios_get_domain_attr( 'face', ni=domain_size )
-    call xios_get_axis_attr( 'vert_axis_full_levels', n_glo=vert_axis_size )
-  else if ( fs_id == W2H ) then
-    call xios_get_domain_attr( 'edge', ni=domain_size )
-    call xios_get_axis_attr( 'vert_axis_half_levels', n_glo=vert_axis_size )
+  if (prime_io_mesh_is(mesh)) then
+    if ( fs_id == W3 ) then
+      call xios_get_domain_attr( 'face', ni=domain_size )
+      call xios_get_axis_attr( 'vert_axis_half_levels', n_glo=vert_axis_size )
+    else if ( fs_id == WTheta ) then
+      call xios_get_domain_attr( 'face', ni=domain_size )
+      call xios_get_axis_attr( 'vert_axis_full_levels', n_glo=vert_axis_size )
+    else if ( fs_id == W2H ) then
+      call xios_get_domain_attr( 'edge', ni=domain_size )
+      call xios_get_axis_attr( 'vert_axis_half_levels', n_glo=vert_axis_size )
+    else
+      call log_event( 'Time varying fields only readable for W3, WTheta or W2H function spaces', &
+                      LOG_LEVEL_ERROR )
+    end if
   else
-    call log_event( 'Time varying fields only readable for W3, WTheta or W2H function spaces', &
-                     LOG_LEVEL_ERROR )
+    if ( fs_id == W3 ) then
+      call xios_get_domain_attr( trim(adjustl(mesh%get_mesh_name()))//"_face", ni=domain_size )
+      call xios_get_axis_attr( 'vert_axis_half_levels', n_glo=vert_axis_size )
+    else if ( fs_id == WTheta ) then
+      call xios_get_domain_attr( trim(adjustl(mesh%get_mesh_name()))//"_face", ni=domain_size )
+      call xios_get_axis_attr( 'vert_axis_full_levels', n_glo=vert_axis_size )
+    else if ( fs_id == W2H ) then
+      call xios_get_domain_attr( trim(adjustl(mesh%get_mesh_name()))//"_edge", ni=domain_size )
+      call xios_get_axis_attr( 'vert_axis_half_levels', n_glo=vert_axis_size )
+    else
+      call log_event( 'Time varying fields only readable for W3, WTheta or W2H function spaces', &
+                      LOG_LEVEL_ERROR )
+    end if
   end if
 
   ! Define vertical levels based on whether we are on a 2D mesh

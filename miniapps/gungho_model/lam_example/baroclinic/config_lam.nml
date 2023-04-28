@@ -46,6 +46,7 @@ stretching_method='linear',
 /
 &files
 ancil_directory='',
+coarse_ancil_directory='',
 checkpoint_stem_name='',
 diag_stem_name='diagGungho',
 orography_ancil_path='',

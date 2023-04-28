@@ -70,6 +70,8 @@ module multires_coupling_driver_mod
   type(mesh_type), pointer :: dynamics_2D_mesh => null()
   type(mesh_type), pointer :: physics_mesh     => null()
   type(mesh_type), pointer :: physics_2D_mesh  => null()
+  type(mesh_type), pointer :: aerosol_mesh     => null()
+  type(mesh_type), pointer :: aerosol_2D_mesh  => null()
 
   ! 2D Mesh names
   character(str_def) :: dynamics_2D_mesh_name
@@ -125,10 +127,14 @@ contains
     call create_model_data( dynamics_mesh_model_data, &
                             dynamics_mesh,            &
                             dynamics_2D_mesh,         &
+                            aerosol_mesh,             &
+                            aerosol_2D_mesh,          &
                             model_clock )
     call create_model_data( physics_mesh_model_data, &
                             physics_mesh,            &
                             physics_2D_mesh,         &
+                            aerosol_mesh,            &
+                            aerosol_2D_mesh,         &
                             model_clock )
 
 

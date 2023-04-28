@@ -31,10 +31,14 @@ module gungho_model_mod
   use field_mod,                  only : field_type
   use field_parent_mod,           only : write_interface
   use field_collection_mod,       only : field_collection_type
+  use multires_coupling_config_mod, &
+                                  only : physics_mesh_name,                       &
+                                         multires_coupling_mesh_tags
   use formulation_config_mod,     only : l_multigrid,              &
                                          moisture_formulation,     &
                                          moisture_formulation_dry, &
-                                         use_physics
+                                         use_physics,              &
+                                         use_multires_coupling
   use gungho_extrusion_mod,       only : create_extrusion
   use gungho_mod,                 only : load_configuration
   use gungho_model_data_mod,      only : model_data_type
@@ -42,6 +46,7 @@ module gungho_model_mod
   use gungho_transport_control_alg_mod, &
                                   only : gungho_transport_control_alg_final
   use init_altitude_mod,          only : init_altitude
+  use initialization_config_mod,  only : coarse_aerosol_ancil
   use io_config_mod,              only : subroutine_timers,       &
                                          subroutine_counters,     &
                                          use_xios_io,             &
@@ -64,6 +69,8 @@ module gungho_model_mod
                                          minmax_tseries_final
   use model_clock_mod,            only : model_clock_type
   use mesh_mod,                   only : mesh_type
+  use mesh_collection_mod,        only : mesh_collection, &
+                                         mesh_collection_type
   use moisture_conservation_alg_mod, &
                                   only : moisture_conservation_alg
   use mpi_mod,                    only : global_mpi
@@ -138,6 +145,8 @@ contains
                                         twod_mesh,            &
                                         shifted_mesh,         &
                                         double_level_mesh,    &
+                                        aerosol_mesh,         &
+                                        aerosol_twod_mesh,    &
                                         model_data, model_clock )
 
     use logging_config_mod, only: key_from_run_log_level, &
@@ -156,6 +165,8 @@ contains
     type(mesh_type), intent(inout), pointer :: shifted_mesh
     type(mesh_type), intent(inout), pointer :: twod_mesh
     type(mesh_type), intent(inout), pointer :: double_level_mesh
+    type(mesh_type), intent(inout), pointer :: aerosol_mesh
+    type(mesh_type), intent(inout), pointer :: aerosol_twod_mesh
 
     type(model_data_type),               intent(out) :: model_data
     type(model_clock_type), allocatable, intent(out) :: model_clock
@@ -180,6 +191,15 @@ contains
     integer(i_def),   allocatable :: multigrid_2d_mesh_ids(:)
     type(field_type), allocatable :: chi_mg(:,:)
     type(field_type), allocatable :: panel_id_mg(:)
+
+    integer(i_def),   allocatable :: multires_coupling_mesh_ids(:)
+    integer(i_def),   allocatable :: multires_coupling_2D_mesh_ids(:)
+    type(field_type), allocatable, target :: chi_mrc(:,:)
+    type(field_type), allocatable, target :: panel_id_mrc(:)
+    type(field_type), allocatable :: chi_xios(:,:)
+    type(field_type), allocatable :: panel_id_xios(:)
+
+    integer(i_def) :: i, j, mesh_counter, n_multires_meshes
 
 #ifdef UM_PHYSICS
     integer(i_def) :: ncells
@@ -237,6 +257,10 @@ contains
                     multigrid_2D_mesh_ids  = multigrid_2D_mesh_ids,         &
                     use_multigrid          = l_multigrid,                   &
                     required_stencil_depth = get_required_stencil_depth(),  &
+                    multires_coupling_mesh_ids    = multires_coupling_mesh_ids,    &
+                    multires_coupling_2D_mesh_ids = multires_coupling_2D_mesh_ids, &
+                    multires_coupling_mesh_tags   = multires_coupling_mesh_tags,   &
+                    use_multires_coupling         = use_multires_coupling,         &
                     input_extrusion        = extrusion )
 
     call init_fem( mesh, chi, panel_id,                           &
@@ -248,7 +272,12 @@ contains
                    multigrid_2D_mesh_ids = multigrid_2D_mesh_ids, &
                    chi_mg                = chi_mg,                &
                    panel_id_mg           = panel_id_mg,           &
-                   use_multigrid         = l_multigrid )
+                   use_multigrid         = l_multigrid,           &
+                   multires_coupling_mesh_ids    = multires_coupling_mesh_ids,    &
+                   multires_coupling_2D_mesh_ids = multires_coupling_2D_mesh_ids, &
+                   chi_multires_coupling         = chi_mrc,                       &
+                   panel_id_multires_coupling    = panel_id_mrc,                  &
+                   use_multires_coupling         = use_multires_coupling )
 
     !-------------------------------------------------------------------------
     ! initialize coupling
@@ -277,11 +306,33 @@ contains
 
     call log_event("Initialising I/O context", LOG_LEVEL_INFO)
 
-    files_init_ptr => init_gungho_files
-    call init_io( io_context_name, communicator, &
-                  chi, panel_id,                 &
-                  model_clock, get_calendar(),   &
-                  populate_filelist=files_init_ptr )
+    if (size(multires_coupling_mesh_ids) > 1) then
+      allocate(chi_xios(SIZE(multires_coupling_mesh_ids)-1,3))
+      allocate(panel_id_xios(SIZE(multires_coupling_mesh_ids)-1))
+      mesh_counter = 1
+      do i = 2, SIZE(multires_coupling_mesh_ids)
+        do j =1,3
+          call chi_mrc(j,i)%copy_field(chi_xios(mesh_counter,j))
+        end do
+        call panel_id_mrc(i)%copy_field(panel_id_xios(mesh_counter))
+        mesh_counter = mesh_counter + 1
+      end do
+      files_init_ptr => init_gungho_files
+      call init_io( io_context_name, communicator,    &
+                    chi, panel_id,                    &
+                    model_clock, get_calendar(),      &
+                    populate_filelist=files_init_ptr, &
+                    alt_coords = chi_xios,          &
+                    alt_panel_ids = panel_id_xios )
+
+    else
+      files_init_ptr => init_gungho_files
+      call init_io( io_context_name, communicator,    &
+                    chi, panel_id,                    &
+                    model_clock, get_calendar(),      &
+                    populate_filelist=files_init_ptr )
+    end if
+
 
     ! Set up surface altitude field - this will be used to generate orography
     ! for models with global land mass included (i.e GAL)
@@ -312,8 +363,22 @@ contains
                                    shifted_mesh, shifted_chi,                 &
                                    double_level_mesh, double_level_chi,       &
                                    multigrid_mesh_ids, multigrid_2D_mesh_ids, &
-                                   chi_mg, panel_id_mg )
-
+                                   chi_mg, panel_id_mg, multires_coupling_mesh_ids,        &
+                                   multires_coupling_2D_mesh_ids,     &
+                                   chi_mrc,             &
+                                   panel_id_mrc   )
+    ! Assign aerosol meshes
+    if (coarse_aerosol_ancil) then
+      ! Assign to be coarsed mesh
+      n_multires_meshes = size(multires_coupling_mesh_ids)
+      aerosol_mesh      => mesh_collection%get_mesh(multires_coupling_mesh_ids(n_multires_meshes))
+      aerosol_twod_mesh => mesh_collection%get_mesh(multires_coupling_2D_mesh_ids(n_multires_meshes))
+      write( log_scratch_space,'(A,A)' ) "aerosol mesh name:", aerosol_mesh%get_mesh_name()
+      call log_event( log_scratch_space, LOG_LEVEL_INFO )
+    else
+      aerosol_mesh => mesh
+      aerosol_twod_mesh => twod_mesh
+    end if
 #ifdef UM_PHYSICS
     ! Set derived planet constants and presets
     call set_planet_constants()

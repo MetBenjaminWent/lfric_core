@@ -195,16 +195,23 @@ contains
   !> @param[inout] model_data The working data set for a model run
   !> @param[in]    mesh      The current 3d mesh
   !> @param[in]    twod_mesh The current 2d mesh
-  subroutine create_model_data( model_data, &
-                                mesh,       &
-                                twod_mesh,  &
-                                model_clock )
+  !> @param[in]    aerosol_mesh      Aerosol 3d mesh
+  !> @param[in]    aerosol_twod_mesh Aerosol 2d mesh
+subroutine create_model_data( model_data,         &
+                              mesh,               &
+                              twod_mesh,          &
+                              aerosol_mesh,       &
+                              aerosol_twod_mesh,  &
+                              model_clock         )
+
 
     implicit none
 
     type( model_data_type ), intent(inout)       :: model_data
     type( mesh_type ),       intent(in), pointer :: mesh
     type( mesh_type ),       intent(in), pointer :: twod_mesh
+    type( mesh_type ),       intent(in), pointer :: aerosol_mesh
+    type( mesh_type ),       intent(in), pointer :: aerosol_twod_mesh
     class(model_clock_type), intent(in)          :: model_clock
 
     !-------------------------------------------------------------------------
@@ -289,6 +296,8 @@ contains
           call create_fd_ancils( model_data%depository,   &
                                  model_data%ancil_fields, &
                                  mesh, twod_mesh ,        &
+                                 aerosol_mesh,            &
+                                 aerosol_twod_mesh,       &
                                  model_data%ancil_times_list )
       end select
 #endif

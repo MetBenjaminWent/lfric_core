@@ -25,6 +25,7 @@ number_of_layers = 10
 
 &files
 ancil_directory = ''
+coarse_ancil_directory = ''
 checkpoint_stem_name = 'restartGravityWave'
 diag_stem_name = 'diagGravityWave'
 orography_ancil_path = ''
@@ -87,6 +88,7 @@ wind_time_period = 0.0
 ancil_option = 'none'
 init_option = 'analytic'
 lbc_option = 'none'
+coarse_aerosol_ancil=.false.
 /
 
 &io

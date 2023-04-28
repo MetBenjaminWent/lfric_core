@@ -9,7 +9,10 @@
 !>          time axis object can be linked to a field to provide information
 !>          of how the field should be updated with time.
 module lfric_xios_time_axis_mod
-
+#if defined(UM_PHYSICS)
+  use intermesh_mappings_alg_mod, &
+                            only: map_scalar_intermesh
+#endif
   use constants_mod,        only: i_def, i_native, str_def, str_long, &
                                   str_max_filename, r_def, l_def
   use field_mod,            only: field_type, field_proxy_type
@@ -17,12 +20,19 @@ module lfric_xios_time_axis_mod
   use field_collection_iterator_mod, &
                             only: field_collection_iterator_type
   use field_collection_mod, only: field_collection_type
+  use mesh_mod,             only: mesh_type
+  use function_space_mod, &
+                            only: function_space_type
+  use function_space_collection_mod, &
+                            only: function_space_collection
+  use finite_element_config_mod, &
+                            only: element_order
   use file_mod,             only: FILE_OP_OPEN, FILE_MODE_READ
   use lfric_ncdf_dims_mod,  only: lfric_ncdf_dims_type
   use lfric_ncdf_field_mod, only: lfric_ncdf_field_type
   use lfric_ncdf_file_mod,  only: lfric_ncdf_file_type
   use lfric_xios_read_mod,  only: read_field_time_var
-  use lfric_xios_utils_mod, only: parse_date_as_xios
+  use lfric_xios_utils_mod, only: parse_date_as_xios, seconds_from_date
   use linked_list_data_mod, only: linked_list_data_type
   use log_mod,              only: log_event, log_scratch_space, &
                                   LOG_LEVEL_ERROR, LOG_LEVEL_INFO, LOG_LEVEL_TRACE
@@ -114,7 +124,7 @@ module lfric_xios_time_axis_mod
 
 end interface
 
-public :: update_interface, seconds_from_date
+public :: update_interface
 
 contains
 
@@ -311,40 +321,6 @@ contains
     end if
 
   end subroutine read_time_data
-
-  !> @brief Wrapper around xios_date_convert_to_seconds to nullify XIOS bug
-  !> @param[in] date            The input xios_date object
-  !> @result    date_in_seconds The resulting seconds converted from "date"
-  function seconds_from_date(date) result(date_in_seconds)
-
-    implicit none
-
-    type(xios_date), intent(in) :: date
-
-    type(xios_date)        :: time_origin
-    integer(i_def)         :: year_diff
-    real(r_def)            :: date_in_seconds
-
-    integer(i_def), parameter :: length360d = 31104000
-
-    call xios_get_time_origin(time_origin)
-
-    ! Get time in seconds from XIOS dates - due to a bug in XIOS, non-360day
-    ! calendars do not return the correct values around the time origin so a
-    ! workaround is implemented below. Also due to a bug in XIOS calendar types
-    ! cannot be identified except by the number of seconds per year
-    if ( date < time_origin .and. &
-         xios_get_year_length_in_seconds(date%year) /= length360d ) &
-      then
-      year_diff = date%year - time_origin%year
-      date_in_seconds = real(xios_date_convert_to_seconds(date), r_def) + &
-        ( real(xios_get_year_length_in_seconds(date%year), r_def) * &
-          real(year_diff, r_def) )
-    else
-      date_in_seconds = real(xios_date_convert_to_seconds(date), r_def)
-    end if
-
-  end function seconds_from_date
 
   !> @brief Returns the time_axis name.
   !> @return output_name The time axis name
@@ -565,12 +541,20 @@ contains
     class(time_axis_type),       intent(inout) :: self
     type(field_collection_type), intent(in)    :: model_fields
 
-    class(field_parent_type), pointer :: field_next => null()
-    type(field_type),         pointer :: model_field => null()
-    type(field_type),         pointer :: data_field => null()
+    class(field_parent_type),  pointer :: field_next => null()
+    type(field_type),          pointer :: model_field => null()
+    type(field_type),          pointer :: data_field => null()
+    type(field_type),          target  :: interpolating_field
+    type(field_type),          pointer :: interpolating_field_ptr => null()
+    type(mesh_type),           pointer :: mesh_model => null()
+    type(mesh_type),           pointer :: mesh_temp => null()
+    type(mesh_type),           pointer :: mesh_data => null()
+    type(function_space_type), pointer :: data_fs => null()
+    type(function_space_type), pointer :: model_fs => null()
 
     type(field_collection_iterator_type) :: pop_iter
-    type(field_proxy_type)               :: data_proxy, model_proxy
+    type(field_proxy_type)               :: data_proxy, model_proxy, interpolating_proxy
+    integer(i_def)                       :: ndata
 
     ! Loop over time axis fields
 
@@ -582,29 +566,60 @@ contains
       field_next => pop_iter%next()
 
       ! If time axis field has a counterpart in model data field collection
-      if ( model_fields%field_exists(trim(field_next%get_name())) ) then
+      if ( model_fields%field_exists( trim(field_next%get_name()) ) ) then
+
+        ! model_field = the model field to populate from the input data
+        ! data_field = the input data field corresponding to this model_field
+        ! interpolating_field = a field used for spatial interpolation of input
+        !                       data to model field if these use different meshes
+        !                       This will have the same mesh as the data_field.
         call model_fields%get_field(trim(field_next%get_name()), model_field)
         model_proxy = model_field%get_proxy()
         call self%fields%get_field(trim(field_next%get_name()), data_field)
         data_proxy = data_field%get_proxy()
 
-         call log_event( &
+        model_fs => model_field%get_function_space()
+        ndata = model_fs%get_ndata()
+        mesh_model => model_proxy%vspace%get_mesh()
+        mesh_data => data_proxy%vspace%get_mesh()
+        ! If the data is on a different mesh to the model field, then an intermediate field
+        ! is needed.  This has the same spatial and multidata structure as the input data
+        ! field, but is a single time point.
+        data_fs => function_space_collection%get_fs(mesh_data, element_order, &
+           model_field%which_function_space(), ndata)
+        call interpolating_field%initialise( data_fs )
+        interpolating_field_ptr => interpolating_field
+        interpolating_proxy = interpolating_field%get_proxy()
+
+        call log_event( &
             'Updating '//trim(adjustl(model_field%get_name())), &
             LOG_LEVEL_INFO)
 
-        ! Populate model fields based on interpolation flag
+        ! Populate model fields based on time interpolation flag
         if ( self%does_interpolation ) then
-          call interp_field_1d( model_field, model_proxy, data_proxy, &
+          call interp_field_1d( interpolating_field_ptr, interpolating_proxy, data_proxy, &
                                 self%time_data(1:self%window_size), self%window_size, self%current_window )
         else
-          model_proxy%data(:) = data_proxy%data(1::self%window_size)
+          interpolating_proxy%data(:) = data_proxy%data(1::self%window_size)
         end if
 
+        ! If any spatial interpolated is needed then that is done here.
+        ! Otherwise this algorithm does a copy of data from interpolating_field
+        ! to model_field
+#if defined(UM_PHYSICS)
+        call map_scalar_intermesh(model_field, interpolating_field, ndata=ndata)
+#else
+        model_proxy%data(:) = interpolating_proxy%data(:)
+#endif
         ! Set halos dirty
         call model_proxy%set_dirty()
 
+        nullify(data_fs)
         nullify(model_field)
         nullify(data_field)
+        nullify(mesh_model)
+        nullify(mesh_data)
+        nullify(mesh_temp)
 
       end if
 
@@ -648,6 +663,7 @@ contains
       time_entry_proxy = field_time_entries(t)%get_proxy()
       time_entry_proxy%data(:) = data_proxy%data(window_start+t-1::window_size)
     end do
+
 
     ! Initialise interpolation variables
     call dData%initialise( model_proxy%vspace )

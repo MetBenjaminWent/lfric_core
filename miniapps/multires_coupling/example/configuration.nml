@@ -94,6 +94,7 @@ prime_mesh_name='C24',
  init_option = 'analytic'
  ancil_option = 'none'
  lbc_option = 'none'
+ coarse_aerosol_ancil=.false.
 /
 
 &files
@@ -102,6 +103,7 @@ prime_mesh_name='C24',
   start_dump_filename       = 'UM2LFRic_dump'
   start_dump_directory      = './'
   ancil_directory           = './'
+  coarse_ancil_directory = './'
   orography_ancil_path      = 'qrparm.orog.ugrid'
 /
 

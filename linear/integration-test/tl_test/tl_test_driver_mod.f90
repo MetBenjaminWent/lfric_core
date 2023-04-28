@@ -69,6 +69,8 @@ module tl_test_driver_mod
   type(mesh_type), pointer :: twod_mesh         => null()
   type(mesh_type), pointer :: shifted_mesh      => null()
   type(mesh_type), pointer :: double_level_mesh => null()
+  type(mesh_type), pointer :: aerosol_mesh      => null()
+  type(mesh_type), pointer :: aerosol_twod_mesh => null()
 
 contains
 
@@ -90,13 +92,17 @@ contains
                                     twod_mesh,         &
                                     shifted_mesh,      &
                                     double_level_mesh, &
+                                    aerosol_mesh,      &
+                                    aerosol_twod_mesh, &
                                     model_data,        &
                                     model_clock )
 
     ! Instantiate the fields stored in model_data
-    call create_model_data( model_data, &
-                            mesh,       &
-                            twod_mesh,  &
+    call create_model_data( model_data,        &
+                            mesh,              &
+                            twod_mesh,         &
+                            aerosol_mesh,      &
+                            aerosol_twod_mesh, &
                             model_clock )
 
     ! Instantiate the linearisation state

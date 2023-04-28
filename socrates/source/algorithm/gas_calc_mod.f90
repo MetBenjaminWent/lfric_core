@@ -2,7 +2,7 @@ module gas_calc_mod
 
   use constants_mod, only: i_def, r_def, l_def
   use xios,          only: xios_date, xios_get_current_date
-  use lfric_xios_time_axis_mod, only: seconds_from_date
+  use lfric_xios_utils_mod, only: seconds_from_date
   use well_mixed_gases_config_mod, only: l_cts_fcg_rates
   use log_mod,              only: log_event,         &
                                   log_scratch_space, &

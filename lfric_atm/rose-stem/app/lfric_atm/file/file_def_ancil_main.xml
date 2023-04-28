@@ -58,23 +58,23 @@
   <!-- Note that variable names have changed in code and will need to changed in the ancillary file in future,  e.g. OC to OM-->
   <file id="aerosols_ancil" name="aerosols_ancil" mode="read" output_freq="1ts" convention="UGRID" cyclic="false" enabled=".FALSE.">
     <field id="aerosols_time" name="time" unit="days" operation="once" axis_ref="monthly_axis"/>
-    <field id="n_ait_sol_data" name="AiSo___103" long_name="aitken_soluble_mode_number" unit="1" operation="once" grid_ref="3D_monthly_grid"/>
-    <field id="ait_sol_su_data" name="AiSoSU_104" long_name="aitken_soluble_mode_h2so4_mmr" unit="kg kg-1" operation="once" grid_ref="3D_monthly_grid"/>
-    <field id="ait_sol_bc_data" name="AiSoBC_105" long_name="aitken_soluble_mode_black_carbon_mmr" unit="kg kg-1" operation="once" grid_ref="3D_monthly_grid"/>
-    <field id="ait_sol_om_data" name="AiSoOC_106" long_name="aitken_soluble_mode_organic_matter_mmr" unit="kg kg-1" operation="once" grid_ref="3D_monthly_grid"/>
-    <field id="n_acc_sol_data" name="AcSo___107" long_name="accumulation_soluble_mode_number" unit="1" operation="once" grid_ref="3D_monthly_grid"/>
-    <field id="acc_sol_su_data" name="AcSoSU_108" long_name="accumulation_soluble_mode_h2so4_mmr" unit="kg kg-1" operation="once" grid_ref="3D_monthly_grid"/>
-    <field id="acc_sol_bc_data" name="AcSoBC_109" long_name="accumulation_soluble_mode_black_carbon_mmr" unit="kg kg-1" operation="once" grid_ref="3D_monthly_grid"/>
-    <field id="acc_sol_om_data" name="AcSoOC_110" long_name="accumulation_soluble_mode_organic_matter_mmr" unit="kg kg-1" operation="once" grid_ref="3D_monthly_grid"/>
-    <field id="acc_sol_ss_data" name="AcSoSS_111" long_name="accumulation_soluble_mode_sea_salt_mmr" unit="kg kg-1" operation="once" grid_ref="3D_monthly_grid"/>
-    <field id="n_cor_sol_data" name="CoSo___113" long_name="coarse_soluble_mode_number" unit="1" operation="once" grid_ref="3D_monthly_grid"/>
-    <field id="cor_sol_su_data" name="CoSoSU_114" long_name="coarse_soluble_mode_h2so4_mmr" unit="kg kg-1" operation="once" grid_ref="3D_monthly_grid"/>
-    <field id="cor_sol_bc_data" name="CoSoBC_115" long_name="coarse_soluble_mode_black_carbon_mmr" unit="kg kg-1" operation="once" grid_ref="3D_monthly_grid"/>
-    <field id="cor_sol_om_data" name="CoSoOC_116" long_name="coarse_soluble_mode_organic_matter_mmr" unit="kg kg-1" operation="once" grid_ref="3D_monthly_grid"/>
-    <field id="cor_sol_ss_data" name="CoSoSS_117" long_name="coarse_soluble_mode_sea_salt_mmr" unit="kg kg-1" operation="once" grid_ref="3D_monthly_grid"/>
-    <field id="n_ait_ins_data" name="AiIn___119" long_name="aitken_insoluble_mode_number" unit="1" operation="once" grid_ref="3D_monthly_grid"/>
-    <field id="ait_ins_bc_data" name="AiInBC_120" long_name="aitken_insoluble_mode_black_carbon_mmr" unit="kg kg-1" operation="once" grid_ref="3D_monthly_grid"/>
-    <field id="ait_ins_om_data" name="AiInOC_121" long_name="aitken_insoluble_mode_organic_matter_mmr" unit="kg kg-1" operation="once" grid_ref="3D_monthly_grid"/>
+    <field id="n_ait_sol_data" name="AiSo___103" long_name="aitken_soluble_mode_number" unit="1" operation="once" grid_ref="variable_3D_monthly_grid"/>
+    <field id="ait_sol_su_data" name="AiSoSU_104" long_name="aitken_soluble_mode_h2so4_mmr" unit="kg kg-1" operation="once" grid_ref="variable_3D_monthly_grid"/>
+    <field id="ait_sol_bc_data" name="AiSoBC_105" long_name="aitken_soluble_mode_black_carbon_mmr" unit="kg kg-1" operation="once" grid_ref="variable_3D_monthly_grid"/>
+    <field id="ait_sol_om_data" name="AiSoOC_106" long_name="aitken_soluble_mode_organic_matter_mmr" unit="kg kg-1" operation="once" grid_ref="variable_3D_monthly_grid"/>
+    <field id="n_acc_sol_data" name="AcSo___107" long_name="accumulation_soluble_mode_number" unit="1" operation="once" grid_ref="variable_3D_monthly_grid"/>
+    <field id="acc_sol_su_data" name="AcSoSU_108" long_name="accumulation_soluble_mode_h2so4_mmr" unit="kg kg-1" operation="once" grid_ref="variable_3D_monthly_grid"/>
+    <field id="acc_sol_bc_data" name="AcSoBC_109" long_name="accumulation_soluble_mode_black_carbon_mmr" unit="kg kg-1" operation="once" grid_ref="variable_3D_monthly_grid"/>
+    <field id="acc_sol_om_data" name="AcSoOC_110" long_name="accumulation_soluble_mode_organic_matter_mmr" unit="kg kg-1" operation="once" grid_ref="variable_3D_monthly_grid"/>
+    <field id="acc_sol_ss_data" name="AcSoSS_111" long_name="accumulation_soluble_mode_sea_salt_mmr" unit="kg kg-1" operation="once" grid_ref="variable_3D_monthly_grid"/>
+    <field id="n_cor_sol_data" name="CoSo___113" long_name="coarse_soluble_mode_number" unit="1" operation="once" grid_ref="variable_3D_monthly_grid"/>
+    <field id="cor_sol_su_data" name="CoSoSU_114" long_name="coarse_soluble_mode_h2so4_mmr" unit="kg kg-1" operation="once" grid_ref="variable_3D_monthly_grid"/>
+    <field id="cor_sol_bc_data" name="CoSoBC_115" long_name="coarse_soluble_mode_black_carbon_mmr" unit="kg kg-1" operation="once" grid_ref="variable_3D_monthly_grid"/>
+    <field id="cor_sol_om_data" name="CoSoOC_116" long_name="coarse_soluble_mode_organic_matter_mmr" unit="kg kg-1" operation="once" grid_ref="variable_3D_monthly_grid"/>
+    <field id="cor_sol_ss_data" name="CoSoSS_117" long_name="coarse_soluble_mode_sea_salt_mmr" unit="kg kg-1" operation="once" grid_ref="variable_3D_monthly_grid"/>
+    <field id="n_ait_ins_data" name="AiIn___119" long_name="aitken_insoluble_mode_number" unit="1" operation="once" grid_ref="variable_3D_monthly_grid"/>
+    <field id="ait_ins_bc_data" name="AiInBC_120" long_name="aitken_insoluble_mode_black_carbon_mmr" unit="kg kg-1" operation="once" grid_ref="variable_3D_monthly_grid"/>
+    <field id="ait_ins_om_data" name="AiInOC_121" long_name="aitken_insoluble_mode_organic_matter_mmr" unit="kg kg-1" operation="once" grid_ref="variable_3D_monthly_grid"/>
   </file>
 
   <!-- UKCA emission files -->

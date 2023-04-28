@@ -194,13 +194,15 @@ contains
   !> @param[in]     source_field       Source field
   !> @param[in]     lowest_order_flag  Optional logical argument to force any
   !!                                   recovery to be lowest-order
-  subroutine map_scalar_intermesh( target_field, source_field, lowest_order_flag )
+  !> @param[in]     ndata              Size of data if a multidata field
+  subroutine map_scalar_intermesh( target_field, source_field, lowest_order_flag, ndata )
 
     implicit none
 
     type(field_type),              intent(in)    :: source_field
     type(field_type),              intent(inout) :: target_field
     logical(kind=l_def), optional, intent(in)    :: lowest_order_flag
+    integer(kind=i_def), optional, intent(in)    :: ndata
 
     type(mesh_type), pointer  :: source_mesh => null()
     type(mesh_type), pointer  :: target_mesh => null()
@@ -220,9 +222,15 @@ contains
       call invoke( setval_X(target_field, source_field))
 
     else if ( source_ncells > target_ncells ) then
+      if (present(ndata) .and. ndata > 1) then
+        call log_event('Restriction not available for multidata field', LOG_LEVEL_ERROR)
+      end if
       call restrict_scalar(target_field, source_field)
 
     else
+      if (present(ndata) .and. ndata > 1) then
+        call log_event('Prolongation not available for multidata field', LOG_LEVEL_ERROR)
+      end if
       if ( present(lowest_order_flag) .and. lowest_order_flag ) then
         recovery_order_arg = recovery_order_constant
       else

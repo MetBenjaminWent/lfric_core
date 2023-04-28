@@ -58,6 +58,7 @@ stretching_method='smooth',
 /
 &files
 ancil_directory='',
+coarse_ancil_directory='',
 checkpoint_stem_name='restartLfricAtm',
 diag_stem_name='diagLfricAtm',
 orography_ancil_path='',

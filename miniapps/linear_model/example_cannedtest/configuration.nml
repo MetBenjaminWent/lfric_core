@@ -77,6 +77,7 @@ si_pressure_tolerance=1.0e-6,
 test='gravity_wave',
 /
 &initialization
+coarse_aerosol_ancil=.false.
 ancil_option='none',
 init_option='analytic',
 lbc_option='none',

@@ -48,12 +48,12 @@ for i in "${!project[@]}"; do
   echo 'Running psyclone on '"${project[$i]}"' source'
   echo
 
-  # First preprocess the .x90 files to remove ifdef's etc.
+  # First preprocess the .x90 and .X90 files to remove ifdef's etc.
   processed_source="${BASE_SRC_DIR}../preprocess-${project[$i]}-x90"
   mkdir -p $processed_source
 
   DIR_LIST="${alg_src_dir[$i]}"
-  for x90file in $(find $DIR_LIST -name '*.x90'); do
+  for x90file in $(find $DIR_LIST -name '*.[xX]90'); do
 
     basename=`basename $x90file`
     processed_name="${processed_source}/$basename"
@@ -63,11 +63,11 @@ for i in "${!project[@]}"; do
 
   # Now setup and invoke psyclone for each processed source file
   DIR_LIST="${processed_source}"
-  for x90file in $(find $DIR_LIST -name '*.x90'); do
+  for x90file in $(find $DIR_LIST -name '*.[xX]90'); do
 
     basename=`basename $x90file`
-    algname=`echo $basename | sed -e 's/.x90/_alg.f90/g'`
-    psyname=`echo $basename | sed -e 's/.x90/_psy.f90/g'`
+    algname=`echo $basename | sed -e 's/.[xX]90/_alg.f90/g'`
+    psyname=`echo $basename | sed -e 's/.[xX]90/_psy.f90/g'`
 
     if [ -z "${kernel_src_flag[$i]}" ]
     then

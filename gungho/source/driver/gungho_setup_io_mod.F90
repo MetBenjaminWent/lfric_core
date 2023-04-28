@@ -68,7 +68,8 @@ module gungho_setup_io_mod
                                        lbc_filename,              &
                                        lbc_directory,             &
                                        ls_filename,               &
-                                       ls_directory
+                                       ls_directory,              &
+                                       coarse_ancil_directory
   use initialization_config_mod, only: init_option,               &
                                        init_option_fd_start_dump, &
                                        ancil_option,              &
@@ -81,7 +82,8 @@ module gungho_setup_io_mod
                                        ls_option,                 &
                                        ls_option_file,            &
                                        sst_source,                &
-                                       sst_source_start_dump
+                                       sst_source_start_dump,     &
+                                       coarse_aerosol_ancil
   use io_config_mod,             only: use_xios_io,               &
                                        diagnostic_frequency,      &
                                        checkpoint_write,          &
@@ -127,6 +129,9 @@ module gungho_setup_io_mod
                                        ancil_fname,            &
                                        lbc_fname,              &
                                        ls_fname
+#ifdef UM_PHYSICS
+    character(len=str_max_filename) :: aerosol_ancil_directory
+#endif
     integer(i_def)                  :: ts_start, ts_end
     integer(i_native)               :: rc
     integer(i_def)                  :: i
@@ -285,7 +290,12 @@ module gungho_setup_io_mod
          (ancil_option == ancil_option_fixed .or. &
           ancil_option == ancil_option_updating) ) then
       ! Set aerosol ancil filename from namelist
-      write(ancil_fname,'(A)') trim(ancil_directory)//'/'// &
+      if ( coarse_aerosol_ancil ) then
+        aerosol_ancil_directory = coarse_ancil_directory
+      else
+        aerosol_ancil_directory = ancil_directory
+      end if
+      write(ancil_fname,'(A)') trim(aerosol_ancil_directory)//'/'// &
                                trim(aerosols_ancil_path)
       call files_list%insert_item( lfric_xios_file_type( ancil_fname,              &
                                                          xios_id="aerosols_ancil", &
