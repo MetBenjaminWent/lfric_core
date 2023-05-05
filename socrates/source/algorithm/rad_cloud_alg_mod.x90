@@ -49,6 +49,7 @@ contains
 !> @param[in]     convection_fields        Fields for convection scheme
 !> @param[in]     rad_this_tstep           Flag for radiation timestep
 !> @param[in]     rad_inc_this_tstep       Flag for radiation increment timestep
+!> @param[in]     cosp_this_tstep          Flag for COSP this timestep
 !> @param[in]     twod_mesh                Current 2d mesh
 subroutine rad_cloud_alg(rand_seed, n_cloud_layer, &
                          radiative_cloud_fraction, radiative_conv_fraction, &
@@ -56,7 +57,8 @@ subroutine rad_cloud_alg(rand_seed, n_cloud_layer, &
                          conv_liquid_mmr, conv_frozen_mmr, &
                          temperature_in_wth, &
                          cloud_fields, convection_fields, &
-                         rad_this_tstep, rad_inc_this_tstep, twod_mesh)
+                         rad_this_tstep, rad_inc_this_tstep, &
+                         cosp_this_tstep, twod_mesh)
 
   implicit none
 
@@ -75,6 +77,7 @@ subroutine rad_cloud_alg(rand_seed, n_cloud_layer, &
   type( mesh_type ), pointer, intent(in) :: twod_mesh
 
   logical( kind=l_def ), intent(in) :: rad_this_tstep, rad_inc_this_tstep
+  logical( kind=l_def ), intent(in) :: cosp_this_tstep
 
   ! Unpacked fields from collections
   type( field_type ), pointer :: area_fraction => null()
@@ -100,7 +103,7 @@ subroutine rad_cloud_alg(rand_seed, n_cloud_layer, &
   wtheta_space => function_space_collection%get_fs( mesh, 0, Wtheta )
   w3_2d_space => function_space_collection%get_fs( twod_mesh, 0, W3 )
 
-  if (rad_this_tstep .or. rad_inc_this_tstep ) then
+  if (rad_this_tstep .or. rad_inc_this_tstep .or. cosp_this_tstep) then
 
     call cloud_fields%get_field('area_fraction', area_fraction)
     call convection_fields%get_field('cca', cca)
