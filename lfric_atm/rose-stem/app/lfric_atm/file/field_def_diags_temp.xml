@@ -270,6 +270,15 @@
   <field id="casim__ns_mphys" name="ns_mphys" long_name="number_concentration_of_snow_after_microphysics" unit="kg-1" grid_ref="full_level_face_grid" />
   <field id="casim__ng_mphys" name="ng_mphys" long_name="number_concentration_of_graupel_after_microphysics" unit="kg-1" grid_ref="full_level_face_grid" />
   <field id="casim__nl_mphys_act" name="nl_mphys_act" long_name="number_concentration_of_cloud_droplets_after_activation" unit="kg-1" grid_ref="full_level_face_grid" />
+  <!-- Electric (lightning) diagnostics -->
+  <field id="electric__flash_potential" name="flash_potential" long_name="lightning_flash_potential" unit="1" domain_ref="face" />
+  <field id="electric__gwp" name="gwp" long_name="graupel_water_path" unit="kg m-2" domain_ref="face" />
+  <field id="electric__tiwp" name="tiwp" long_name="total_ice_water_path" unit="kg m-2" domain_ref="face" />
+  <field id="electric__total_flash_rate" name="total_flash_rate" long_name="total_lightning_flash_rate" unit="s-1" domain_ref="face" />
+  <field id="electric__num_lightning_flashes" name="num_lightning_flashes" long_name="number_of_lightning_flashes_in_column" unit="1" domain_ref="face" />
+  <field id="electric__graupel_flux_flash_rate" name="graupel_flux_flash_rate" long_name="lightning_flash_rate_due_to_upward_graupel_flux" unit="s-1" domain_ref="face" />
+  <field id="electric__total_column_ice_flash_rate" name="total_column_ice_flash_rate" long_name="lightning_flash_rate_due_to_total_ice_in_column" unit="s-1" domain_ref="face" />
+  <field id="electric__storm_field_indicator" name="" long_name="" unit="1" domain_ref="face" />
   <!-- spectral GWD diagnostics -->
   <field id="spectral_gwd__dtheta_spectral_gwd" name="dtheta_spectral_gwd" long_name="spectral_gravity_wave_drag_theta_increment" unit="K" grid_ref="full_level_face_grid" />
   <field id="spectral_gwd__dtemp_spectral_gwd" name="dtemp_spectral_gwd" long_name="spectral_gravity_wave_drag_T_increment" unit="K" grid_ref="full_level_face_grid" />

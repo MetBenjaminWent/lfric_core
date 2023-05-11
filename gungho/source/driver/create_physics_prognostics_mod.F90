@@ -46,6 +46,7 @@ module create_physics_prognostics_mod
                                              radiation, radiation_socrates,    &
                                              boundary_layer,                   &
                                              boundary_layer_um,                &
+                                             electric, electric_um,            &
                                              surface, surface_jules,           &
                                              orographic_drag,                  &
                                              orographic_drag_um,               &
@@ -91,6 +92,7 @@ contains
   !> @param[out]   derived_fields Collection of FD fields derived from FE fields
   !> @param[out]   radition_fields Collection of fields for radiation scheme
   !> @param[out]   microphysics_fields Collection of fields for microphys scheme
+  !> @param[out]   electric_fields Collection of fields for electric scheme
   !> @param[out]   orography_fields Collection of fields for orogr drag scheme
   !> @param[out]   turbulence_fields Collection of fields for turbulence scheme
   !> @param[out]   convection_fields Collection of fields for convection scheme
@@ -110,6 +112,7 @@ contains
                                          derived_fields,        &
                                          radiation_fields,      &
                                          microphysics_fields,   &
+                                         electric_fields,       &
                                          orography_fields,      &
                                          turbulence_fields,     &
                                          convection_fields,     &
@@ -135,6 +138,7 @@ contains
     type(field_collection_type), intent(out) :: derived_fields
     type(field_collection_type), intent(out) :: radiation_fields
     type(field_collection_type), intent(out) :: microphysics_fields
+    type(field_collection_type), intent(out) :: electric_fields
     type(field_collection_type), intent(out) :: orography_fields
     type(field_collection_type), intent(out) :: turbulence_fields
     type(field_collection_type), intent(out) :: convection_fields
@@ -673,6 +677,21 @@ contains
     call add_physics_field( microphysics_fields, depository, prognostic_fields,&
       adv_fields_last_outer, &
       'rim_agg', wtheta_space )
+
+    !========================================================================
+    ! Fields owned by the electric scheme
+    !========================================================================
+    call electric_fields%initialise(name='electric_fields', table_len=100)
+
+    if ( electric == electric_um ) then
+
+      ! 2D lightning potential field. Assuming needs checkpointing for now.
+      ! This field doesn't need to be advected.
+      call add_physics_field( electric_fields, depository, prognostic_fields, &
+         adv_fields_last_outer, 'flash_potential', twod_space,                &
+         checkpoint_flag=.true., twod=.true. )
+
+    end if
 
     !========================================================================
     ! Fields owned by the orographic drag schemes

@@ -86,6 +86,7 @@ module gungho_step_mod
     type( field_collection_type ), pointer :: derived_fields => null()
     type( field_collection_type ), pointer :: radiation_fields => null()
     type( field_collection_type ), pointer :: microphysics_fields => null()
+    type( field_collection_type ), pointer :: electric_fields => null()
     type( field_collection_type ), pointer :: orography_fields => null()
     type( field_collection_type ), pointer :: turbulence_fields => null()
     type( field_collection_type ), pointer :: convection_fields => null()
@@ -127,6 +128,7 @@ module gungho_step_mod
     derived_fields => model_data%derived_fields
     radiation_fields => model_data%radiation_fields
     microphysics_fields => model_data%microphysics_fields
+    electric_fields => model_data%electric_fields
     orography_fields => model_data%orography_fields
     turbulence_fields => model_data%turbulence_fields
     convection_fields => model_data%convection_fields
@@ -157,7 +159,8 @@ module gungho_step_mod
                                     adv_fields_all_outer,                      &
                                     adv_fields_last_outer,                     &
                                     derived_fields, radiation_fields,          &
-                                    microphysics_fields, orography_fields,     &
+                                    microphysics_fields, electric_fields,      &
+                                    orography_fields,                          &
                                     turbulence_fields, convection_fields,      &
                                     cloud_fields, surface_fields,              &
                                     soil_fields, snow_fields,                  &

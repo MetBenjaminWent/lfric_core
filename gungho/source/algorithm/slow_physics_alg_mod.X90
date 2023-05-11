@@ -21,6 +21,9 @@ module slow_physics_alg_mod
   use print_field_stats_alg_mod, only: print_field_stats_alg
   use physics_config_mod,        only: microphysics_placement,         &
                                        microphysics_placement_slow,    &
+                                       electric_placement,             &
+                                       electric_placement_slow,        &
+                                       electric_placement_post_mphys,  &
                                        orographic_drag_placement,      &
                                        orographic_drag_placement_slow, &
                                        radiation_placement,            &
@@ -36,6 +39,7 @@ module slow_physics_alg_mod
   use radiation_config_mod,      only: n_radstep, l_inc_radstep, n_inc_radstep
   use section_choice_config_mod, only: aerosol, aerosol_um,                  &
                                        boundary_layer, boundary_layer_um,    &
+                                       electric, electric_um,                &
                                        microphysics, microphysics_um,        &
                                        orographic_drag, orographic_drag_um,  &
                                        radiation, radiation_socrates,        &
@@ -75,6 +79,7 @@ module slow_physics_alg_mod
   use strat_aerosol_alg_mod,     only: strat_aerosol_alg
   use mphys_alg_mod,             only: mphys_alg
   use casim_alg_mod,             only: casim_alg
+  use electric_main_alg_mod,     only: electric_main_alg
   use illuminate_alg_mod,        only: illuminate_alg
   use rad_tile_alg_mod,          only: rad_tile_alg
   use rad_cloud_alg_mod,         only: rad_cloud_alg
@@ -126,6 +131,7 @@ contains
   !> @param[in]     derived_fields         Group of derived fields
   !> @param[in,out] radiation_fields       Fields for radiation scheme
   !> @param[in,out] microphysics_fields    Fields for mphys scheme
+  !> @param[in,out] electric_fields        Fields for electric (lightning) scheme
   !> @param[in]     orography_fields       Fields for orog drag scheme
   !> @param[in,out] turbulence_fields      Fields for turbulence scheme
   !> @param[in,out] convection_fields      Fields for convection scheme
@@ -143,6 +149,7 @@ contains
   subroutine slow_physics(du, dtheta, mr, visc_m, visc_h,                      &
                           theta, u, rho, exner, mr_n, derived_fields,          &
                           radiation_fields, microphysics_fields,               &
+                          electric_fields,                                     &
                           orography_fields, turbulence_fields,                 &
                           convection_fields, cloud_fields, surface_fields,     &
                           soil_fields, snow_fields, chemistry_fields,          &
@@ -163,6 +170,7 @@ contains
     type( field_collection_type ), intent(inout) :: derived_fields
     type( field_collection_type ), intent(inout) :: radiation_fields
     type( field_collection_type ), intent(inout) :: microphysics_fields
+    type( field_collection_type ), intent(inout) :: electric_fields
     type( field_collection_type ), intent(in)    :: orography_fields
     type( field_collection_type ), intent(inout) :: turbulence_fields
     type( field_collection_type ), intent(inout) :: convection_fields
@@ -202,6 +210,9 @@ contains
     type( field_type ) :: tile_lwinc_albedo
     type( field_type ) :: tile_sw_diffuse_albedo, tile_sw_direct_albedo
     type( field_type ) :: tile_swinc_diffuse_albedo, tile_swinc_direct_albedo
+    ! ...for electric
+    type( field_type ) :: mr_electric(nummr)
+    type( field_type ), pointer :: theta_electric => null()
     ! ...for radiation
     logical( kind=l_def ) :: rad_this_tstep, rad_inc_this_tstep
     logical( kind=l_def ) :: cosp_this_tstep
@@ -403,6 +414,47 @@ contains
       end if
       microphysics_done = .true. ! Collect this increment later on
     end if
+
+    !--------------------------------------------------------------------
+    ! UM Electric (Lightning) scheme
+    !--------------------------------------------------------------------
+
+    if ( electric == electric_um .and. &
+         electric_placement == electric_placement_slow) then
+
+      ! Call electric_main_alg with the start of the model timestep
+      ! information... this differs from the UM (called after microphysics).
+
+      call electric_main_alg( mr_n, theta, derived_fields, electric_fields, dt )
+
+      ! no electric_done flag yet as at present the scheme only generates
+      ! diagnostics and does not affect model evolution.
+
+    else if (microphysics_done .and. electric == electric_um .and.      &
+        electric_placement == electric_placement_post_mphys ) then
+
+      ! Run the electric scheme but the updated information from the
+      ! microphysics, matching what we did in the UM pre-LFRic.
+
+      ! Mixing ratios and theta need updating due to microphysics
+      ! however, derived fields and electric_fields will remain unchanged.
+
+      ! Update mixing ratios due to microphysics increment.
+      call clone_bundle(mr_n, mr_electric, nummr)
+      call add_bundle(mr_n, dmr_mphys, mr_electric, nummr)
+
+      ! Update theta due to microphysics
+      call invoke(X_plus_Y(theta_electric, theta, dtheta_mphys))
+
+      ! Finally, call electric_main_alg with the quantities updated
+      ! from the microphysics
+      call electric_main_alg( mr_electric, theta_electric,         &
+                              derived_fields, electric_fields, dt )
+
+      ! no electric_done flag yet as at present the scheme only generates
+      ! diagnostics and does not affect model evolution.
+
+    end if ! call to electric scheme
 
     !--------------------------------------------------------------------
     ! Socrates radiation scheme

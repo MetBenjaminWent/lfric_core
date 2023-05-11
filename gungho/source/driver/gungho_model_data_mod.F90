@@ -124,6 +124,8 @@ module gungho_model_data_mod
     type( field_collection_type ), public   :: radiation_fields
     !> Fields owned by the microphysics scheme
     type( field_collection_type ), public   :: microphysics_fields
+    !> Fields owned by the electric scheme
+    type( field_collection_type ), public   :: electric_fields
     !> Fields owned by the orographic drag schemes
     type( field_collection_type ), public   :: orography_fields
     !> Fields owned by the turbulence scheme
@@ -271,6 +273,7 @@ subroutine create_model_data( model_data,         &
                                        model_data%derived_fields,        &
                                        model_data%radiation_fields,      &
                                        model_data%microphysics_fields,   &
+                                       model_data%electric_fields,       &
                                        model_data%orography_fields,      &
                                        model_data%turbulence_fields,     &
                                        model_data%convection_fields,     &
@@ -329,6 +332,7 @@ subroutine create_model_data( model_data,         &
     if (use_physics) then
           call init_physics_prognostics_alg( model_data%radiation_fields,    &
                                              model_data%microphysics_fields, &
+                                             model_data%electric_fields,     &
                                              model_data%orography_fields,    &
                                              model_data%turbulence_fields,   &
                                              model_data%convection_fields,   &
@@ -579,6 +583,7 @@ subroutine create_model_data( model_data,         &
       call model_data%derived_fields%clear()
       call model_data%radiation_fields%clear()
       call model_data%microphysics_fields%clear()
+      call model_data%electric_fields%clear()
       call model_data%orography_fields%clear()
       call model_data%turbulence_fields%clear()
       call model_data%convection_fields%clear()

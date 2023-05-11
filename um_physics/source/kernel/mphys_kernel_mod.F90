@@ -30,7 +30,7 @@ private
 
 type, public, extends(kernel_type) :: mphys_kernel_type
   private
-  type(arg_type) :: meta_args(42) = (/                                      &
+  type(arg_type) :: meta_args(41) = (/                                      &
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                       & ! mv_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                       & ! ml_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                       & ! mi_wth
@@ -41,7 +41,6 @@ type, public, extends(kernel_type) :: mphys_kernel_type
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                       & ! cff_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  W3),                           & ! u_in_w3
        arg_type(GH_FIELD, GH_REAL, GH_READ,  W3),                           & ! v_in_w3,
-       arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                       & ! w_in_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                       & ! theta_in_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  WTHETA),                       & ! exner_in_wth
        arg_type(GH_FIELD, GH_REAL, GH_READ,  W3),                           & ! wetrho_in_w3
@@ -96,7 +95,6 @@ contains
 !> @param[in]     cff_wth             Ice cloud fraction
 !> @param[in]     u_in_w3             'Zonal' wind in density space
 !> @param[in]     v_in_w3             'Meridional' wind in density space
-!> @param[in]     w_in_wth            'Vertical' wind in theta space
 !> @param[in]     theta_in_wth        Potential temperature field
 !> @param[in]     exner_in_wth        Exner pressure in potential temperature space
 !> @param[in]     wetrho_in_w3        Wet density in density space
@@ -153,7 +151,7 @@ subroutine mphys_code( nlayers, seg_len,            &
                        mv_wth,   ml_wth,   mi_wth,  &
                        mr_wth,   mg_wth,            &
                        cf_wth,   cfl_wth,  cff_wth, &
-                       u_in_w3, v_in_w3, w_in_wth,  &
+                       u_in_w3, v_in_w3,            &
                        theta_in_wth,                &
                        exner_in_wth, wetrho_in_w3,  &
                        dry_rho_in_w3,               &
@@ -191,10 +189,6 @@ subroutine mphys_code( nlayers, seg_len,            &
 
     use cloud_inputs_mod,           only: i_cld_vn, rhcrit
     use pc2_constants_mod,          only: i_cld_off, i_cld_pc2
-    use electric_inputs_mod,        only: electric_method, em_gwp, em_mccaul
-    use electric_main_mod,          only: electric_main
-
-    use atm_fields_bounds_mod,      only: tdims
 
     use ls_ppn_mod,                 only: ls_ppn
 
@@ -239,7 +233,6 @@ subroutine mphys_code( nlayers, seg_len,            &
     real(kind=r_def), intent(in),  dimension(undf_wth) :: cff_wth
     real(kind=r_def), intent(in),  dimension(undf_w3)  :: u_in_w3
     real(kind=r_def), intent(in),  dimension(undf_w3)  :: v_in_w3
-    real(kind=r_def), intent(in),  dimension(undf_wth) :: w_in_wth
     real(kind=r_def), intent(in),  dimension(undf_wth) :: theta_in_wth
     real(kind=r_def), intent(in),  dimension(undf_wth) :: exner_in_wth
     real(kind=r_def), intent(in),  dimension(undf_w3)  :: wetrho_in_w3
@@ -283,7 +276,7 @@ subroutine mphys_code( nlayers, seg_len,            &
     ! Local variables for the kernel
 
     real(r_um), dimension(seg_len,1,nlayers) ::                                &
-         u_on_p, v_on_p, w, q_work, qcl_work, qcf_work, deltaz, cfl_work,      &
+         u_on_p, v_on_p, q_work, qcl_work, qcf_work, deltaz, cfl_work,         &
          cff_work, cf_work, rhodz_dry, rhodz_moist, t_n, t_work,               &
          p_theta_levels, ls_rain3d, ls_snow3d, ls_graup3d, rainfrac3d,         &
          n_drop_pot, n_drop_3d, so4_accu_work, so4_diss_work,                  &
@@ -307,8 +300,6 @@ subroutine mphys_code( nlayers, seg_len,            &
     real(r_um), dimension(3, seg_len, 1, nlayers) :: f_arr
 
     real(r_um), dimension(1,1,1) :: sea_salt_film, sea_salt_jet
-
-    real(r_um) :: stashwork21(1)
 
     logical, dimension(seg_len,1) :: land_sea_mask
 
@@ -384,7 +375,6 @@ subroutine mphys_code( nlayers, seg_len,            &
     nitr_diss_work   = 0.0_r_um
     aerosol_work     = 0.0_r_um
 
-    flash_pot = 0.0_r_um
     land_sea_mask = .false.
 
     l_cosp_lsp = .false.
@@ -428,8 +418,6 @@ subroutine mphys_code( nlayers, seg_len,            &
 
         u_on_p(i,j,k) = u_in_w3(map_w3(1,i) + k-1)
         v_on_p(i,j,k) = v_in_w3(map_w3(1,i) + k-1)
-        w(i,j,k)   = w_in_wth(map_wth(1,i) + k)
-
         t_n(i,j,k)    = theta_in_wth(map_wth(1,i) + k) *                       &
                         exner_in_wth(map_wth(1,i) + k)
         ! N.B. dtheta is actually a temperature increment when passed in
@@ -680,17 +668,6 @@ subroutine mphys_code( nlayers, seg_len,            &
                 l_cosp_lsp,                                                    &
                 hmteff, zb, tnuc_new,                                          &
                 wtrac_as, wtrac_mp)
-
-! Lightning scheme
-! Should not change prognostic variables, but is worth including here
-! in order to prove that it actually works.
-if (l_mcr_qgraup .and. ( electric_method == em_gwp .or. &
-     electric_method == em_mccaul ) )  then
-
-  call electric_main( qcf_work, qcf2_work, qgraup_work, rhodz_dry,             &
-                      rhodz_moist, t_n, w, stashwork21,                        &
-                      flash_pot(:, :, 1 : tdims%k_end ) )
-end if
 
   ! Update theta and compulsory prognostic variables
   j = 1

@@ -90,7 +90,6 @@ contains
     type( field_type ), pointer :: exner_in_wth        => null()
     type( field_type ), pointer :: u_in_w3             => null()
     type( field_type ), pointer :: v_in_w3             => null()
-    type( field_type ), pointer :: w_in_wth            => null()
     type( field_type ), pointer :: wetrho_in_w3        => null()
     type( field_type ), pointer :: rho_in_wth          => null()
 
@@ -148,7 +147,6 @@ contains
     call derived_fields%get_field('exner_in_wth', exner_in_wth)
     call derived_fields%get_field('u_in_w3', u_in_w3)
     call derived_fields%get_field('v_in_w3', v_in_w3)
-    call derived_fields%get_field('w_in_wth', w_in_wth)
     call derived_fields%get_field('wetrho_in_w3', wetrho_in_w3)
     call derived_fields%get_field('rho_in_wth', rho_in_wth)
 
@@ -188,7 +186,7 @@ contains
     call invoke( mphys_kernel_type ( mr_n(imr_v), mr_n(imr_cl), mr_n(imr_ci),  &
                                      mr_n(imr_r), mr_n(imr_g),                 &
                                      bcf_in, cfl_in, cff_in,                   &
-                                     u_in_w3, v_in_w3, w_in_wth,               &
+                                     u_in_w3, v_in_w3,                         &
                                      theta, exner_in_wth,                      &
                                      wetrho_in_w3, dry_rho_in_w3,              &
                                      height_w3, height_wth,                    &

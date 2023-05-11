@@ -22,6 +22,10 @@
     <field field_ref="microphysics__ls_prec" />
     <field field_ref="microphysics__ls_rain" />
     <field field_ref="microphysics__ls_snow" />
+    <field field_ref="electric__gwp" />
+    <field field_ref="electric__tiwp" />
+    <field field_ref="electric__total_flash_rate" />
+    <field field_ref="electric__num_lightning_flashes" />
     <field field_ref="surface__tile_fraction" />
     <field field_ref="surface__grid_surface_temperature" />
     <field field_ref="surface__t1p5m" />

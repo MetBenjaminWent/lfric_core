@@ -10,6 +10,7 @@ module init_physics_prognostics_alg_mod
 #ifdef UM_PHYSICS
   use init_radiation_fields_alg_mod,    only : init_radiation_fields_alg
   use init_microphysics_fields_alg_mod, only : init_microphysics_fields_alg
+  use init_electric_fields_alg_mod,     only : init_electric_fields_alg
   use init_orography_fields_alg_mod,    only : init_orography_fields_alg
   use init_turbulence_fields_alg_mod,   only : init_turbulence_fields_alg
   use init_convection_fields_alg_mod,   only : init_convection_fields_alg
@@ -21,7 +22,9 @@ module init_physics_prognostics_alg_mod
   use init_aerosol_fields_alg_mod,      only : init_aerosol_fields_alg
 
   use section_choice_config_mod, only: surface, surface_jules, &
-                                       aerosol, aerosol_um
+                                       aerosol, aerosol_um,    &
+                                       electric, electric_um
+
   use aerosol_config_mod,        only: glomap_mode, glomap_mode_ukca
 #endif
   use log_mod,                        only : log_event,         &
@@ -48,6 +51,7 @@ contains
   !> @param[in,out] aerosol_fields Collection of fields for aerosol scheme
   subroutine init_physics_prognostics_alg( radiation_fields,                   &
                                            microphysics_fields,                &
+                                           electric_fields,                    &
                                            orography_fields,                   &
                                            turbulence_fields,                  &
                                            convection_fields,                  &
@@ -63,6 +67,7 @@ contains
     ! Collections of fields
     type(field_collection_type), intent(inout) :: radiation_fields
     type(field_collection_type), intent(inout) :: microphysics_fields
+    type(field_collection_type), intent(inout) :: electric_fields
     type(field_collection_type), intent(inout) :: orography_fields
     type(field_collection_type), intent(inout) :: turbulence_fields
     type(field_collection_type), intent(inout) :: convection_fields
@@ -83,6 +88,9 @@ contains
     ! it is switched off.
     call init_radiation_fields_alg(radiation_fields)
     call init_microphysics_fields_alg(microphysics_fields)
+    if (electric == electric_um) then
+      call init_electric_fields_alg(electric_fields)
+    end if
     call init_orography_fields_alg(orography_fields)
     call init_turbulence_fields_alg(turbulence_fields)
     call init_convection_fields_alg(convection_fields)

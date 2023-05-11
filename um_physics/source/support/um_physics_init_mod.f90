@@ -114,6 +114,8 @@ module um_physics_init_mod
                                         convection_um,     &
                                         cloud,             &
                                         cloud_um,          &
+                                        electric,          &
+                                        electric_um,       &
                                         microphysics,      &
                                         microphysics_um,   &
                                         orographic_drag,   &
@@ -151,7 +153,7 @@ module um_physics_init_mod
 
   ! UM modules used
   use cderived_mod,         only : delta_lambda, delta_phi
-  use nlsizes_namelist_mod, only : bl_levels
+  use nlsizes_namelist_mod, only : bl_levels, model_levels
   use level_heights_mod,    only : eta_theta_levels
 
   implicit none
@@ -242,14 +244,17 @@ contains
          dust_veg_emiss, us_am, sm_corr, horiz_d, l_fix_size_dist,         &
          l_twobin_dust, dust_parameters_load,                              &
          dust_parameters_unload
-    use electric_inputs_mod, only: electric_method, no_lightning
+    use electric_inputs_mod, only: electric_method, no_lightning, em_mccaul, &
+         k1, k2, gwp_thresh, tiwp_thresh, storm_definition, graupel_and_ice
     use fsd_parameters_mod, only: fsd_eff_lam, fsd_eff_phi, f_cons
     use glomap_clim_option_mod, only: i_glomap_clim_setup,                     &
                                       l_glomap_clim_aie2,                      &
                                       i_glomap_clim_tune_bc
     use g_wave_input_mod, only: ussp_launch_factor, wavelstar, l_add_cgw,  &
          cgw_scale_factor, i_moist, scale_aware, middle, var
-    use mphys_bypass_mod, only: mphys_mod_top
+    use mphys_bypass_mod, only: mphys_mod_top,                               &
+         qcf2_idims_start, qcf2_idims_end, qcf2_jdims_start, qcf2_jdims_end, &
+         qcf2_kdims_end
     use mphys_constants_mod, only: cx, constp
     use mphys_inputs_mod, only: ai, ar, bi, c_r_correl, ci_input, cic_input, &
         di_input, dic_input, i_mcr_iter, l_diff_icevt,                       &
@@ -828,9 +833,6 @@ contains
         call log_event( log_scratch_space, LOG_LEVEL_ERROR )
       end if
 
-      ! Electric namelist options
-      electric_method = no_lightning
-
       select case (graupel_scheme)
         case (graupel_scheme_none)
           graupel_option = no_graupel
@@ -966,6 +968,41 @@ contains
 
       end if ! microphysics_casim
     end if ! microphysics == microphysics_um
+
+    !---------------------------------------------------------
+    ! UM electric (lightning) scheme settings
+    !---------------------------------------------------------
+
+    if ( electric == electric_um ) then
+      ! Turn on mcccaul lightning scheme
+      electric_method = em_mccaul
+      storm_definition = graupel_and_ice
+      gwp_thresh = 0.2_r_um
+      tiwp_thresh = 1.0_r_um
+
+      if (l_mcr_qcf2) then
+        qcf2_idims_start = 1_i_um
+        qcf2_jdims_start = 1_i_um
+        qcf2_idims_end = 1_i_um
+        qcf2_jdims_end = 1_i_um
+        qcf2_kdims_end = model_levels
+      end if
+
+      if ( microphysics_casim ) then
+        ! Use CASIM microphysics-specific settings
+        k1 = 0.21_r_um
+        k2 = 0.60_r_um
+      else
+        ! Use Wilson-Ballard microphysics settings
+        k1 = 0.042_r_um
+        k2 = 0.20_r_um
+      end if
+
+    else
+      ! Switch off the lightning scheme
+      electric_method = no_lightning
+    end if
+
 
     if ( microphysics == microphysics_um                                    &
          .or. radiation == radiation_socrates ) then

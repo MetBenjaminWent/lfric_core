@@ -147,6 +147,8 @@
       <field id="checkpoint_conv_prog_dtheta" name="conv_prog_dtheta" long_name="convective_prognostic_dtheta" unit="K" grid_ref="full_level_face_grid" />
       <field id="checkpoint_conv_prog_dmv" name="conv_prog_dmv" long_name="convective_prognostic_dmv" unit="kg kg-1" grid_ref="full_level_face_grid" />
       <field id="checkpoint_conv_prog_precip" name="conv_prog_precip" long_name="convective_prognostic_precipitation" unit="kg m-2 s-1" grid_ref="full_level_face_grid" />
+      <!-- electric fields -->
+      <field id="checkpoint_flash_potential" name="flash_potential" long_name="lightning_flash_potential" unit="1" domain_ref="face" />
       <!-- casim microphysics fields -->
       <field id="checkpoint_nl_mphys" name="nl_mphys" long_name="nl_mphys" unit="kg-1" grid_ref="full_level_face_grid" />
       <field id="checkpoint_nr_mphys" name="nr_mphys" long_name="nr_mphys" unit="kg-1" grid_ref="full_level_face_grid"  />
@@ -417,6 +419,8 @@
     <field id="restart_conv_prog_dtheta" name="conv_prog_dtheta" long_name="convective_prognostic_dtheta" unit="K" operation="once" grid_ref="full_level_face_grid" />
     <field id="restart_conv_prog_dmv" name="conv_prog_dmv" long_name="convective_prognostic_dmv" unit="kg kg-1" operation="once" grid_ref="full_level_face_grid" />
     <field id="restart_conv_prog_precip" name="conv_prog_precip" long_name="convective_prognostic_precipitation" unit="kg m-2 s-1" operation="once" grid_ref="full_level_face_grid" />
+    <!-- electric fields -->
+    <field id="restart_flash_potential" name="flash_potential" long_name="lightning_flash_potential" unit="1" operation="once" domain_ref="face" />
     <!-- casim microphysics fields -->
     <field id="restart_nl_mphys" name="nl_mphys" long_name="nl_mphys" unit="kg-1" operation="once" grid_ref="full_level_face_grid" />
     <field id="restart_nr_mphys" name="nr_mphys" long_name="nr_mphys" unit="kg-1" operation="once" grid_ref="full_level_face_grid"  />

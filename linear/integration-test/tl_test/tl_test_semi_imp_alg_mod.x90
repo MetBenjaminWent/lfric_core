@@ -78,6 +78,7 @@ module tl_test_semi_imp_alg_mod
     type( field_collection_type ), pointer :: derived_fields => null()
     type( field_collection_type ), pointer :: radiation_fields => null()
     type( field_collection_type ), pointer :: microphysics_fields => null()
+    type( field_collection_type ), pointer :: electric_fields => null()
     type( field_collection_type ), pointer :: orography_fields => null()
     type( field_collection_type ), pointer :: turbulence_fields => null()
     type( field_collection_type ), pointer :: convection_fields => null()
@@ -142,6 +143,7 @@ module tl_test_semi_imp_alg_mod
     derived_fields => model_data%derived_fields
     radiation_fields => model_data%radiation_fields
     microphysics_fields => model_data%microphysics_fields
+    electric_fields => model_data%electric_fields
     orography_fields => model_data%orography_fields
     turbulence_fields => model_data%turbulence_fields
     convection_fields => model_data%convection_fields
@@ -236,7 +238,8 @@ module tl_test_semi_imp_alg_mod
     call semi_implicit_alg_step(u, rho, theta, exner, mr, moist_dyn,         &
                                 adv_fields_all_outer, adv_fields_last_outer, &
                                 derived_fields, radiation_fields,            &
-                                microphysics_fields, orography_fields,       &
+                                microphysics_fields, electric_fields,        &
+                                orography_fields,                            &
                                 turbulence_fields, convection_fields,        &
                                 cloud_fields, surface_fields,                &
                                 soil_fields, snow_fields,                    &
@@ -295,7 +298,8 @@ module tl_test_semi_imp_alg_mod
                                   n_moist_dyn,                                &
                                   adv_fields_all_outer, adv_fields_last_outer,&
                                   derived_fields, radiation_fields,           &
-                                  microphysics_fields, orography_fields,      &
+                                  microphysics_fields, electric_fields,       &
+                                  orography_fields,                           &
                                   turbulence_fields, convection_fields,       &
                                   cloud_fields, surface_fields,               &
                                   soil_fields, snow_fields,                   &
