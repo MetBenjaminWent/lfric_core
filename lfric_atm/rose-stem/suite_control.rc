@@ -147,7 +147,7 @@
                      plotstr="plot_scm.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR")',
     'run_application("lfric_atm", "scm_rad_gas",
                      resolutions=[("BiP4x4-2500x2500",600.0)] ,
-                     env={"crun":1, "nrun":48,
+                     env={"crun":1, "nrun":288,
 		          "directives":{"default":{"wallclock":"00:05:00"} } },
                      plotstr="plot_scm.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR")',
     'run_application("lfric_atm", "scm_bl_ice",

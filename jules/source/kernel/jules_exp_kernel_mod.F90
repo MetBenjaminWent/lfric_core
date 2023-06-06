@@ -452,7 +452,7 @@ contains
          can_rad_mod, l_acclim
     use nlsizes_namelist_mod, only: land_field, sm_levels, ntiles, bl_levels
     use planet_constants_mod, only: p_zero, kappa, planet_radius, cp, g, grcp, &
-         c_virtual, repsilon, r, lcrcp, lsrcp
+         c_virtual, repsilon, r, lcrcp, lsrcp, vkman
     use rad_input_mod, only: co2_mmr
     use bl_option_mod, only: one_third, flux_bc_opt,interactive_fluxes,        &
          specified_fluxes_only, specified_fluxes_cd, l_noice_in_turb
@@ -1446,8 +1446,10 @@ contains
 
         fb_surf(i,1) = g * ( bt_blend(i,1)*ftl(i,1) +                         &
                              bq_blend(i,1)*fqw(i,1) ) /rhostar(i,1)
+        recip_l_mo_sea(i,1) = -vkman * fb_surf(i,1)                           &
+                              / ( ustargbm(i,1)*ustargbm(i,1)*ustargbm(i,1) )
         if ( fb_surf(i,1)  >   0.0_r_um) then
-          w_m  = ( 0.25_r_um*jules_vars%zh(i,1)*fb_surf(i,1) +                 &
+          w_m  = ( 0.25_r_um*jules_vars%zh(i,1)*fb_surf(i,1) +                &
                   ustargbm(i,1)*ustargbm(i,1)*ustargbm(i,1) ) ** one_third
 
           t1_sd(i,1) = 1.93_r_um * ftl(i,1) / (rhostar(i,1) * w_m)

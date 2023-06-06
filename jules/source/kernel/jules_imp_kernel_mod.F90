@@ -303,7 +303,7 @@ contains
     use atm_fields_bounds_mod, only: pdims, pdims_s
     use atm_step_local, only: dim_cs1
     use bl_option_mod, only: l_noice_in_turb, alpha_cd, flux_bc_opt, &
-         interactive_fluxes, puns, pstb, on
+         interactive_fluxes, specified_fluxes_only, puns, pstb, on
     use carbon_options_mod, only: l_co2_interactive
     use csigma, only: sbcon
     use dust_parameters_mod, only: ndiv, ndivh
@@ -1402,6 +1402,16 @@ contains
         end if
 
       else !loop = 2
+
+        if (flux_bc_opt == specified_fluxes_only) then
+          ! tstar on sea surfaces will not have been updated so, to try and maintain
+          ! consistency between tstar and the supplied surface flux, update estimate
+          ! of tstar with the increment to level 1 temperature
+          do i = 1, seg_len
+            tile_temperature(map_tile(1,i)+first_sea_tile-1) =                 &
+                 tile_temperature(map_tile(1,i)+first_sea_tile-1)+dtl1_2d(map_2d(1,i))
+          end do
+        end if
 
         ! Sea-ice bulk temperature
         do n = 1, n_sea_ice_tile
