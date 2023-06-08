@@ -9,9 +9,11 @@
 !>
 module gungho_driver_mod
 
+  use base_mesh_config_mod,       only : prime_mesh_name
   use clock_mod,                  only : clock_type
   use derived_config_mod,         only : l_esm_couple
   use driver_io_mod,              only : get_io_context
+  use extrusion_mod,              only : TWOD
   use gungho_diagnostics_driver_mod, &
                                   only : gungho_diagnostics_driver
   use gungho_model_mod,           only : initialise_infrastructure, &
@@ -32,7 +34,8 @@ module gungho_driver_mod
                                          lbc_option_gungho_file,   &
                                          lbc_option_um2lfric_file, &
                                          ancil_option,             &
-                                         ancil_option_updating
+                                         ancil_option_updating,    &
+                                         coarse_aerosol_ancil
   use init_gungho_lbcs_alg_mod,   only : update_lbcs_file_alg
   use log_mod,                    only : log_event,           &
                                          log_level_always,    &
@@ -40,8 +43,11 @@ module gungho_driver_mod
                                          log_level_info,      &
                                          log_scratch_space
   use mesh_mod,                   only : mesh_type
+  use mesh_collection_mod,        only : mesh_collection
   use model_clock_mod,            only : model_clock_type
   use mpi_mod,                    only : mpi_type
+  use multires_coupling_config_mod, &
+                                  only : aerosol_mesh_name
 #ifdef UM_PHYSICS
   use variable_fields_mod,        only : update_variable_fields
   use update_ancils_alg_mod,      only : update_ancils_alg
@@ -59,13 +65,6 @@ module gungho_driver_mod
   public initialise, run, finalise
 
   type(model_clock_type), allocatable :: model_clock
-
-  type(mesh_type), pointer :: mesh              => null()
-  type(mesh_type), pointer :: twod_mesh         => null()
-  type(mesh_type), pointer :: shifted_mesh      => null()
-  type(mesh_type), pointer :: double_level_mesh => null()
-  type(mesh_type), pointer :: aerosol_mesh      => null()
-  type(mesh_type), pointer :: aerosol_twod_mesh => null()
 
 contains
 
@@ -90,18 +89,29 @@ contains
     class(mpi_type), intent(inout)       :: mpi
 
     class(io_context_type), pointer :: io_context => null()
+    type(mesh_type),        pointer :: mesh              => null()
+    type(mesh_type),        pointer :: twod_mesh         => null()
+    type(mesh_type),        pointer :: aerosol_mesh      => null()
+    type(mesh_type),        pointer :: aerosol_twod_mesh => null()
 
     ! Initialise infrastructure and setup constants
-    call initialise_infrastructure( program_name,         &
-                                    mesh,                 &
-                                    twod_mesh,            &
-                                    shifted_mesh,         &
-                                    double_level_mesh,    &
-                                    aerosol_mesh,         &
-                                    aerosol_twod_mesh,    &
-                                    model_data,           &
-                                    model_clock,          &
-                                    mpi )
+    call initialise_infrastructure( program_name, model_data, model_clock, mpi )
+
+    ! Get primary and 2D meshes for initialising model data
+    mesh => mesh_collection%get_mesh(prime_mesh_name)
+    twod_mesh => mesh_collection%get_mesh(mesh, TWOD)
+
+    ! If aerosol data is on a different mesh, get this
+    if (coarse_aerosol_ancil) then
+      ! For now use the coarsest mesh
+      aerosol_mesh => mesh_collection%get_mesh(aerosol_mesh_name)
+      aerosol_twod_mesh => mesh_collection%get_mesh(aerosol_mesh, TWOD)
+      write( log_scratch_space,'(A,A)' ) "aerosol mesh name:", aerosol_mesh%get_mesh_name()
+      call log_event( log_scratch_space, LOG_LEVEL_INFO )
+    else
+      aerosol_mesh => mesh
+      aerosol_twod_mesh => twod_mesh
+    end if
 
     ! Instantiate the fields stored in model_data
     call create_model_data( model_data, mesh, twod_mesh, aerosol_mesh, aerosol_twod_mesh, model_clock )
@@ -125,6 +135,7 @@ contains
     call log_event(log_scratch_space, LOG_LEVEL_INFO)
 #endif
 
+    nullify(mesh, twod_mesh, aerosol_mesh, aerosol_twod_mesh)
 
   end subroutine initialise
 
@@ -140,6 +151,8 @@ contains
 
     character(*), intent(in)             :: program_name
     type(model_data_type), intent(inout) :: model_data
+    type(mesh_type), pointer :: mesh      => null()
+    type(mesh_type), pointer :: twod_mesh => null()
 
     write(log_scratch_space,'(A)') 'Running '//program_name//' ...'
     call log_event( log_scratch_space, LOG_LEVEL_ALWAYS )
@@ -151,6 +164,10 @@ contains
       write(log_scratch_space,'(A)') 'Configuration is not coupled to ocean'
       call log_event( log_scratch_space, LOG_LEVEL_ALWAYS )
     endif
+
+    ! Get primary and 2D meshes
+    mesh => mesh_collection%get_mesh(prime_mesh_name)
+    twod_mesh => mesh_collection%get_mesh(mesh, TWOD)
 
     do while (model_clock%tick())
 
@@ -171,7 +188,6 @@ contains
 
       endif
 #endif
-
 
       if ( lbc_option == lbc_option_gungho_file .or. &
            lbc_option == lbc_option_um2lfric_file) then
@@ -227,6 +243,8 @@ contains
                            model_clock)
     endif
 #endif
+
+    nullify(mesh, twod_mesh)
 
   end subroutine run
 

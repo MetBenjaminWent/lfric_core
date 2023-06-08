@@ -8,26 +8,32 @@
 
 module gravity_wave_infrastructure_mod
 
+  use base_mesh_config_mod,       only : prime_mesh_name
   use check_configuration_mod,    only : get_required_stencil_depth
   use constants_mod,              only : i_def, i_native, &
                                          PRECISION_REAL,  &
-                                         r_def, r_second
+                                         r_def, r_second, &
+                                         l_def, str_def
   use convert_to_upper_mod,       only : convert_to_upper
   use derived_config_mod,         only : set_derived_config
+  use geometric_constants_mod,    only : get_chi_inventory,  &
+                                         get_panel_id_inventory
+  use inventory_by_mesh_mod,      only : inventory_by_mesh_type
   use log_mod,                    only : log_event,          &
                                          log_scratch_space,  &
                                          LOG_LEVEL_ALWAYS,   &
                                          LOG_LEVEL_INFO
-  use mesh_mod,                   only : mesh_type
+  use mesh_collection_mod,        only : mesh_collection
   use model_clock_mod,            only : model_clock_type
   use mpi_mod,                    only : mpi_type
   use field_mod,                  only : field_type
-  use driver_fem_mod,             only : init_fem
+  use driver_fem_mod,             only : init_fem, init_function_space_chains
   use driver_io_mod,              only : init_io, final_io
   use driver_mesh_mod,            only : init_mesh
   use driver_time_mod,            only : init_time, get_calendar
   use runtime_constants_mod,      only : create_runtime_constants
   use formulation_config_mod,     only : l_multigrid
+  use multigrid_config_mod,       only : chain_mesh_tags
 
   implicit none
 
@@ -39,31 +45,25 @@ module gravity_wave_infrastructure_mod
 contains
 
   !> @brief Initialises the infrastructure used by the model
-  !> @param [in]     program_name  An identifier given to the model begin run
-  !> @param [in,out] mesh          The model prime mesh
-  !> @param [in,out] twod_mesh     The model prime 2D mesh
-  subroutine initialise_infrastructure( mesh,         &
-                                        twod_mesh,    &
-                                        model_clock,  &
-                                        mpi )
+  !> @param [out]    model_clock  Time within the model
+  !> @param [in]     mpi          Communication object
+  subroutine initialise_infrastructure( model_clock, mpi )
 
     use log_mod,                 only : log_level_error
     use step_calendar_mod,       only : step_calendar_type
 
     implicit none
 
-    type(mesh_type),        intent(inout), pointer :: mesh
-    type(mesh_type),        intent(inout), pointer :: twod_mesh
     type(model_clock_type), intent(out), allocatable :: model_clock
     class(mpi_type),        intent(inout)            :: mpi
 
-    type(field_type), target :: chi(3)
-    type(field_type), target :: panel_id
+    type(inventory_by_mesh_type), pointer :: chi_inventory => null()
+    type(inventory_by_mesh_type), pointer :: panel_id_inventory => null()
 
-    integer(i_def),   allocatable :: multigrid_mesh_ids(:)
-    integer(i_def),   allocatable :: multigrid_2d_mesh_ids(:)
-    type(field_type), allocatable :: chi_mg(:,:)
-    type(field_type), allocatable :: panel_id_mg(:)
+    logical(l_def)                  :: mesh_already_exists
+    integer(i_def)                  :: i, j, mesh_ctr, max_num_meshes
+    character(str_def), allocatable :: base_mesh_names(:)
+    character(str_def), allocatable :: tmp_mesh_names(:)
 
     write(log_scratch_space,'(A)')                        &
         'Application built with '//trim(PRECISION_REAL)// &
@@ -75,30 +75,63 @@ contains
     call init_time( model_clock )
 
     !-------------------------------------------------------------------------
+    ! Work out which meshes are required
+    !-------------------------------------------------------------------------
+
+    ! Gather together names of meshes
+    max_num_meshes = 1
+    if ( l_multigrid ) max_num_meshes = max_num_meshes + SIZE(chain_mesh_tags)
+    ! Don't know the full number of meshes, so allocate maximum for now
+    allocate(tmp_mesh_names(max_num_meshes))
+
+    ! Prime extrusions -------------------------------------------------------
+    ! Always have the prime mesh
+    mesh_ctr = 1
+    tmp_mesh_names(1) = prime_mesh_name
+    ! Multigrid meshes
+    if ( l_multigrid ) then
+      do i = 1, SIZE(chain_mesh_tags)
+        ! Only add mesh if it has not already been added
+        mesh_already_exists = .false.
+        do j = 1, mesh_ctr
+          if ( tmp_mesh_names(j) == chain_mesh_tags(i) ) then
+            mesh_already_exists = .true.
+            exit
+          end if
+        end do
+        if ( .not. mesh_already_exists ) then
+          mesh_ctr = mesh_ctr + 1
+          tmp_mesh_names(mesh_ctr) = chain_mesh_tags(i)
+        end if
+      end do
+    end if
+    ! Transfer mesh names from temporary array to an array of appropriate size
+    allocate(base_mesh_names(mesh_ctr))
+    do i = 1, mesh_ctr
+      base_mesh_names(i) = tmp_mesh_names(i)
+    end do
+    deallocate(tmp_mesh_names)
+
+    !-------------------------------------------------------------------------
     ! Initialise aspects of the grid
     !-------------------------------------------------------------------------
     ! Create the mesh
-    call init_mesh( mpi%get_comm_rank(), mpi%get_comm_size(),       &
-                    mesh,                                           &
-                    twod_mesh              = twod_mesh,             &
-                    multigrid_mesh_ids     = multigrid_mesh_ids,    &
-                    multigrid_2D_mesh_ids  = multigrid_2D_mesh_ids, &
-                    use_multigrid          = l_multigrid,           &
+    call init_mesh( mpi%get_comm_rank(), mpi%get_comm_size(),             &
+                    base_mesh_names,                                      &
                     required_stencil_depth = get_required_stencil_depth() )
 
     ! Create FEM specifics (function spaces and chi field)
-    call init_fem( mesh, chi, panel_id,                           &
-                   multigrid_mesh_ids    = multigrid_mesh_ids,    &
-                   multigrid_2D_mesh_ids = multigrid_2D_mesh_ids, &
-                   chi_mg                = chi_mg,                &
-                   panel_id_mg           = panel_id_mg,           &
-                   use_multigrid         = l_multigrid )
+    chi_inventory => get_chi_inventory()
+    panel_id_inventory => get_panel_id_inventory()
+    call init_fem( mesh_collection, chi_inventory, panel_id_inventory )
+    if ( l_multigrid ) then
+      call init_function_space_chains( mesh_collection, chain_mesh_tags )
+    end if
 
     !-------------------------------------------------------------------------
     ! Initialise aspects of output
     !-------------------------------------------------------------------------
-    call init_io( xios_ctx, mpi%get_comm(), &
-                  chi, panel_id,            &
+    call init_io( xios_ctx, mpi%get_comm(), chi_inventory, panel_id_inventory, &
                   model_clock, get_calendar() )
 
     !-------------------------------------------------------------------------
@@ -108,13 +141,12 @@ contains
     ! Create runtime_constants object. This in turn creates various things
     ! needed by the timestepping algorithms such as mass matrix operators, mass
     ! matrix diagonal fields and the geopotential field and limited area masks.
-    call create_runtime_constants( mesh, twod_mesh,                        &
-                                   chi, panel_id, model_clock,             &
-                                   mg_mesh_ids    = multigrid_mesh_ids,    &
-                                   mg_2D_mesh_ids = multigrid_2D_mesh_ids, &
-                                   chi_mg         = chi_mg,                &
-                                   panel_id_mg    = panel_id_mg )
+    call create_runtime_constants( mesh_collection, chi_inventory, &
+                                   panel_id_inventory, model_clock )
 
+
+    nullify(chi_inventory, panel_id_inventory)
+    deallocate(base_mesh_names)
 
   end subroutine initialise_infrastructure
 

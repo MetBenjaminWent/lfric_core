@@ -17,6 +17,7 @@ export ROOT_DIR    ?= ../..
 export INTERNAL_DEPENDENCIES = $(ROOT_DIR)/infrastructure \
                                $(ROOT_DIR)/components/diagnostics_infrastructure \
                                $(ROOT_DIR)/components/science \
+                               $(ROOT_DIR)/components/inventory \
                                $(ROOT_DIR)/components/lfric-xios \
                                $(ROOT_DIR)/components/driver
 
@@ -161,6 +162,7 @@ unit-tests/%: export ADDITIONAL_EXTRACTION                   \
                   = $(ROOT_DIR)/infrastructure/source        \
                     $(ROOT_DIR)/components/driver/source     \
                     $(ROOT_DIR)/components/science/source    \
+                    $(ROOT_DIR)/components/inventory/source  \
                     $(ROOT_DIR)/components/lfric-xios/source \
                     $(ROOT_DIR)/components/diagnostics_infrastructure/source \
                     $(ROOT_DIR)/um_physics/source/diagnostics_meta/meta_types

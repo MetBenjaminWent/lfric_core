@@ -24,6 +24,7 @@ export ROOT_DIR    ?= ../..
 export INTERNAL_DEPENDENCIES = $(ROOT_DIR)/infrastructure \
                                $(ROOT_DIR)/components/driver \
                                $(ROOT_DIR)/components/science \
+                               $(ROOT_DIR)/components/inventory \
                                $(ROOT_DIR)/components/lfric-da \
                                $(ROOT_DIR)/components/lfric-xios
 
@@ -179,6 +180,7 @@ build: ALWAYS
 unit-tests/%: export ADDITIONAL_EXTRACTION                          \
 	                = $(ROOT_DIR)/infrastructure/source               \
 	                  $(ROOT_DIR)/components/driver/source            \
+                    $(ROOT_DIR)/components/inventory/source         \
 	                  $(ROOT_DIR)/components/science/source/kernel    \
 	                  $(ROOT_DIR)/components/science/source/algorithm \
 	                  $(ROOT_DIR)/components/science/source/psy       \
@@ -201,6 +203,7 @@ unit-tests: unit-tests/run
 integration-tests/%: export ADDITIONAL_EXTRACTION                  \
                         = $(ROOT_DIR)/infrastructure/source        \
                           $(ROOT_DIR)/components/driver/source     \
+                          $(ROOT_DIR)/components/inventory/source  \
                           $(ROOT_DIR)/components/science/source    \
                           $(ROOT_DIR)/components/lfric-da/source   \
                           $(ROOT_DIR)/components/lfric-xios/source

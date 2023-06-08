@@ -8,6 +8,7 @@
 !!
 module shallow_water_driver_mod
 
+  use base_mesh_config_mod,          only: prime_mesh_name
   use constants_mod,                 only: i_def, i_native, imdi, r_def
   use field_mod,                     only: field_type
   use field_collection_mod,          only: field_collection_type
@@ -18,13 +19,11 @@ module shallow_water_driver_mod
                                            log_scratch_space, &
                                            log_level_error,   &
                                            LOG_LEVEL_INFO
-  use mesh_collection_mod,           only: mesh_collection, &
-                                           mesh_collection_type
+  use mesh_collection_mod,           only: mesh_collection
   use mesh_mod,                      only: mesh_type
   use model_clock_mod,               only: model_clock_type
   use mpi_mod,                       only: mpi_type
-  use runtime_constants_mod,         only: create_runtime_constants, &
-                                           final_runtime_constants
+  use runtime_constants_mod,         only: final_runtime_constants
   use shallow_water_diagnostics_mod, only: shallow_water_diagnostics
   use shallow_water_model_mod,       only: initialise_infrastructure, &
                                            initialise_model,          &
@@ -47,9 +46,6 @@ module shallow_water_driver_mod
 
   type(model_clock_type), allocatable :: model_clock
 
-  ! Coordinate field
-  type(field_type), target :: chi(3)
-
   ! Mesh
   type(mesh_type), pointer :: mesh => null()
 
@@ -61,39 +57,26 @@ contains
   !!          model_data, then sets the initial conditions for the run.
   !> @param [in,out] model_data The structure that holds model state
   !> @param [in,out] mpi        The structure that holds comms details
-  subroutine initialise(  model_data, mpi, program_name )
+  !> @param [in]     program_name An identifier given to the model begin run
+  subroutine initialise( model_data, mpi, program_name )
 
     implicit none
 
     type(model_data_type), intent(inout) :: model_data
     class(mpi_type),       intent(inout) :: mpi
-    character(*),    intent(in)    :: program_name
-
-    type(mesh_type),   pointer :: twod_mesh => null()
-    type(field_type)           :: panel_id
+    character(*),          intent(in)    :: program_name
 
     ! Initialise infrastructure (from shallow_water_model_mod.F90) and setup constants
-    call initialise_infrastructure( program_name, &
-                                    mesh,         &
-                                    twod_mesh,    &
-                                    chi,          &
-                                    panel_id,     &
-                                    model_clock,  &
-                                    mpi )
+    call initialise_infrastructure( program_name, model_clock, mpi )
 
     !-------------------------------------------------------------------------
     ! Setup constants
     !-------------------------------------------------------------------------
 
-    ! Create runtime_constants object. This in turn creates various things
-    ! needed by the timestepping algorithms such as mass matrix operators, mass
-    ! matrix diagonal fields and the geopotential field
-    call create_runtime_constants(mesh, twod_mesh, chi, panel_id, model_clock)
-
     call log_event( 'Creating model data ...', LOG_LEVEL_INFO )
     ! Instantiate the fields stored in model_data
-    call create_model_data( model_data,   &
-                            mesh )
+    mesh => mesh_collection%get_mesh(prime_mesh_name)
+    call create_model_data( model_data, mesh )
 
     call log_event( 'Initialising model data ...', LOG_LEVEL_INFO )
     ! Initialise the fields stored in the model_data
@@ -111,8 +94,7 @@ contains
     end if
 
     ! Model configuration initialisation
-    call initialise_model( mesh,    &
-                           model_data )
+    call initialise_model( mesh, model_data )
 
   end subroutine initialise
 

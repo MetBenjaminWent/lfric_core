@@ -12,37 +12,41 @@ module gungho_model_mod
   use base_mesh_config_mod,       only : prime_mesh_name
   use checksum_alg_mod,           only : checksum_alg
   use clock_mod,                  only : clock_type
-  use driver_fem_mod,             only : init_fem, final_fem
+  use driver_fem_mod,             only : init_fem, final_fem, &
+                                         init_function_space_chains
   use driver_io_mod,              only : init_io, final_io,  &
                                          filelist_populator
   use driver_mesh_mod,            only : init_mesh, final_mesh
   use driver_time_mod,            only : init_time, get_calendar
-  use check_configuration_mod,    only : get_required_stencil_depth
+  use check_configuration_mod,    only : get_required_stencil_depth, &
+                                         check_any_shifted
   use conservation_algorithm_mod, only : conservation_algorithm
   use constants_mod,              only : i_def, i_native, r_def, l_def, &
-                                         PRECISION_REAL, r_second
+                                         PRECISION_REAL, r_second, str_def
   use convert_to_upper_mod,       only : convert_to_upper
   use count_mod,                  only : count_type, halo_calls
   use derived_config_mod,         only : set_derived_config
-  use extrusion_mod,              only : extrusion_type
+  use extrusion_mod,              only : extrusion_type, TWOD, &
+                                         SHIFTED, DOUBLE_LEVEL
   use field_mod,                  only : field_type
   use field_parent_mod,           only : write_interface
   use field_collection_mod,       only : field_collection_type
+  use multigrid_config_mod,       only : chain_mesh_tags
   use multires_coupling_config_mod, &
-                                  only : physics_mesh_name,                       &
-                                         multires_coupling_mesh_tags
+                                  only : multires_coupling_mesh_tags
   use formulation_config_mod,     only : l_multigrid,              &
                                          moisture_formulation,     &
                                          moisture_formulation_dry, &
                                          use_physics,              &
                                          use_multires_coupling
+  use geometric_constants_mod,    only : get_chi_inventory, get_panel_id_inventory
   use gungho_extrusion_mod,       only : create_extrusion
   use gungho_model_data_mod,      only : model_data_type
   use gungho_setup_io_mod,        only : init_gungho_files
   use gungho_transport_control_alg_mod, &
                                   only : gungho_transport_control_alg_final
   use init_altitude_mod,          only : init_altitude
-  use initialization_config_mod,  only : coarse_aerosol_ancil
+  use inventory_by_mesh_mod,      only : inventory_by_mesh_type
   use io_config_mod,              only : subroutine_timers,       &
                                          subroutine_counters,     &
                                          use_xios_io,             &
@@ -65,8 +69,7 @@ module gungho_model_mod
                                          minmax_tseries_final
   use model_clock_mod,            only : model_clock_type
   use mesh_mod,                   only : mesh_type
-  use mesh_collection_mod,        only : mesh_collection, &
-                                         mesh_collection_type
+  use mesh_collection_mod,        only : mesh_collection
   use moisture_conservation_alg_mod, &
                                   only : moisture_conservation_alg
   use mpi_mod,                    only : mpi_type
@@ -127,23 +130,12 @@ contains
   !>        model.
   !>
   !> @param [in]     program_name An identifier given to the model begin run
-  !> @param [in,out] mesh         The current 3d mesh
-  !> @param [in,out] twod_mesh    The current 2d mesh
-  !> @param [in,out] shifted_mesh The vertically shifted 3d mesh
-  !> @param [in,out] double_level_mesh The double-level 3d mesh
   !> @param [in,out] model_data   The working data set for the model run
   !> @param [out]    model_clock  Time within the model
   !> @param [in]     mpi          Communication object
   !>
-  subroutine initialise_infrastructure( program_name,         &
-                                        mesh,                 &
-                                        twod_mesh,            &
-                                        shifted_mesh,         &
-                                        double_level_mesh,    &
-                                        aerosol_mesh,         &
-                                        aerosol_twod_mesh,    &
-                                        model_data, model_clock, &
-                                        mpi )
+  subroutine initialise_infrastructure( program_name, model_data, &
+                                        model_clock, mpi )
 
     use logging_config_mod, only: key_from_run_log_level, &
                                   RUN_LOG_LEVEL_ERROR,    &
@@ -162,17 +154,15 @@ contains
     !
     class(mpi_type), intent(inout) :: mpi
 
-    type(mesh_type), intent(inout), pointer :: mesh
-    type(mesh_type), intent(inout), pointer :: shifted_mesh
-    type(mesh_type), intent(inout), pointer :: twod_mesh
-    type(mesh_type), intent(inout), pointer :: double_level_mesh
-    type(mesh_type), intent(inout), pointer :: aerosol_mesh
-    type(mesh_type), intent(inout), pointer :: aerosol_twod_mesh
-
     type(model_data_type),               intent(out) :: model_data
     type(model_clock_type), allocatable, intent(out) :: model_clock
 
     character(len=*), parameter :: io_context_name = "gungho_atm"
+
+    type(mesh_type), pointer :: mesh => null()
+    type(mesh_type), pointer :: shifted_mesh => null()
+    type(mesh_type), pointer :: double_level_mesh => null()
+    type(mesh_type), pointer :: twod_mesh => null()
 
     procedure(filelist_populator), pointer :: files_init_ptr => null()
 
@@ -180,24 +170,18 @@ contains
 
     class(extrusion_type), allocatable :: extrusion
 
-    type(field_type), target :: chi(3)
-    type(field_type), target :: panel_id
-    type(field_type), target :: shifted_chi(3)
-    type(field_type), target :: double_level_chi(3)
+    type(field_type),     pointer :: chi(:) => null()
 
-    integer(i_def),   allocatable :: multigrid_mesh_ids(:)
-    integer(i_def),   allocatable :: multigrid_2d_mesh_ids(:)
-    type(field_type), allocatable :: chi_mg(:,:)
-    type(field_type), allocatable :: panel_id_mg(:)
+    type(inventory_by_mesh_type), pointer :: chi_inventory => null()
+    type(inventory_by_mesh_type), pointer :: panel_id_inventory => null()
 
-    integer(i_def),   allocatable :: multires_coupling_mesh_ids(:)
-    integer(i_def),   allocatable :: multires_coupling_2D_mesh_ids(:)
-    type(field_type), allocatable, target :: chi_mrc(:,:)
-    type(field_type), allocatable, target :: panel_id_mrc(:)
-    type(field_type), allocatable :: chi_xios(:,:)
-    type(field_type), allocatable :: panel_id_xios(:)
-
-    integer(i_def) :: i, j, mesh_counter, n_multires_meshes
+    logical(l_def)                  :: mesh_already_exists
+    integer(i_def)                  :: i, j, mesh_ctr, max_num_meshes
+    character(str_def), allocatable :: base_mesh_names(:)
+    character(str_def), allocatable :: shifted_mesh_names(:)
+    character(str_def), allocatable :: double_level_mesh_names(:)
+    character(str_def), allocatable :: tmp_mesh_names(:)
+    character(str_def), allocatable :: extra_io_mesh_names(:)
 
 #ifdef UM_PHYSICS
     integer(i_def) :: ncells
@@ -232,6 +216,127 @@ contains
     call init_time( model_clock )
 
     !-------------------------------------------------------------------------
+    ! Work out which meshes are required
+    !-------------------------------------------------------------------------
+
+    ! Gather together names of meshes
+    max_num_meshes = 1
+    if ( l_multigrid ) max_num_meshes = max_num_meshes + SIZE(chain_mesh_tags)
+    if ( use_multires_coupling ) max_num_meshes = max_num_meshes + SIZE(multires_coupling_mesh_tags)
+    ! Don't know the full number of meshes, so allocate maximum for now
+    allocate(tmp_mesh_names(max_num_meshes))
+
+    ! Prime extrusions -------------------------------------------------------
+    ! Always have the prime mesh
+    mesh_ctr = 1
+    tmp_mesh_names(1) = prime_mesh_name
+    ! Multigrid meshes
+    if ( l_multigrid ) then
+      do i = 1, SIZE(chain_mesh_tags)
+        ! Only add mesh if it has not already been added
+        mesh_already_exists = .false.
+        do j = 1, mesh_ctr
+          if ( tmp_mesh_names(j) == chain_mesh_tags(i) ) then
+            mesh_already_exists = .true.
+            exit
+          end if
+        end do
+        if ( .not. mesh_already_exists ) then
+          mesh_ctr = mesh_ctr + 1
+          tmp_mesh_names(mesh_ctr) = chain_mesh_tags(i)
+        end if
+      end do
+    end if
+    ! Multires coupling meshes
+    if ( use_multires_coupling ) then
+      do i = 1, SIZE(multires_coupling_mesh_tags)
+        ! Only add mesh if it has not already been added
+        mesh_already_exists = .false.
+        do j = 1, mesh_ctr
+          if ( tmp_mesh_names(j) == multires_coupling_mesh_tags(i) ) then
+            mesh_already_exists = .true.
+            exit
+          end if
+        end do
+        if ( .not. mesh_already_exists ) then
+          mesh_ctr = mesh_ctr + 1
+          tmp_mesh_names(mesh_ctr) = multires_coupling_mesh_tags(i)
+        end if
+      end do
+    end if
+
+    ! Transfer mesh names from temporary array to an array of appropriate size
+    allocate(base_mesh_names(mesh_ctr))
+    do i = 1, mesh_ctr
+      base_mesh_names(i) = tmp_mesh_names(i)
+    end do
+    deallocate(tmp_mesh_names)
+
+    ! Shifted meshes ---------------------------------------------------------
+    if ( check_any_shifted() ) then
+      allocate(tmp_mesh_names(SIZE(base_mesh_names)))
+
+      mesh_ctr = 1
+      tmp_mesh_names(1) = prime_mesh_name
+
+      if ( use_multires_coupling ) then
+        do i = 1, SIZE(multires_coupling_mesh_tags)
+          ! Only add mesh if it has not already been added
+          mesh_already_exists = .false.
+          do j = 1, mesh_ctr
+            if ( tmp_mesh_names(j) == multires_coupling_mesh_tags(i) ) then
+              mesh_already_exists = .true.
+              exit
+            end if
+          end do
+          if ( .not. mesh_already_exists ) then
+            mesh_ctr = mesh_ctr + 1
+            tmp_mesh_names(mesh_ctr) = multires_coupling_mesh_tags(i)
+          end if
+        end do
+      end if
+
+      ! Transfer mesh names from temporary array to an array of appropriate size
+      allocate(shifted_mesh_names(mesh_ctr))
+      do i = 1, mesh_ctr
+        shifted_mesh_names(i) = tmp_mesh_names(i)
+      end do
+      deallocate(tmp_mesh_names)
+    end if
+
+    ! Double level meshes ------------------------------------------------------
+    if ( check_any_shifted() ) then
+      allocate(tmp_mesh_names(SIZE(base_mesh_names)))
+
+      mesh_ctr = 1
+      tmp_mesh_names(1) = prime_mesh_name
+
+      if ( use_multires_coupling ) then
+        do i = 1, SIZE(multires_coupling_mesh_tags)
+          ! Only add mesh if it has not already been added
+          mesh_already_exists = .false.
+          do j = 1, mesh_ctr
+            if ( tmp_mesh_names(j) == multires_coupling_mesh_tags(i) ) then
+              mesh_already_exists = .true.
+              exit
+            end if
+          end do
+          if ( .not. mesh_already_exists ) then
+            mesh_ctr = mesh_ctr + 1
+            tmp_mesh_names(mesh_ctr) = multires_coupling_mesh_tags(i)
+          end if
+        end do
+      end if
+
+      ! Transfer mesh names from temporary array to an array of appropriate size
+      allocate(double_level_mesh_names(mesh_ctr))
+      do i = 1, mesh_ctr
+        double_level_mesh_names(i) = tmp_mesh_names(i)
+      end do
+      deallocate(tmp_mesh_names)
+    end if
+
+    !-------------------------------------------------------------------------
     ! Initialise aspects of the grid
     !-------------------------------------------------------------------------
 
@@ -240,35 +345,23 @@ contains
 
     ! Create the mesh
     call init_mesh( mpi%get_comm_rank(), mpi%get_comm_size(),               &
-                    mesh,                                                   &
-                    twod_mesh              = twod_mesh,                     &
-                    shifted_mesh           = shifted_mesh,                  &
-                    double_level_mesh      = double_level_mesh,             &
-                    multigrid_mesh_ids     = multigrid_mesh_ids,            &
-                    multigrid_2D_mesh_ids  = multigrid_2D_mesh_ids,         &
-                    use_multigrid          = l_multigrid,                   &
-                    required_stencil_depth = get_required_stencil_depth(),  &
-                    multires_coupling_mesh_ids    = multires_coupling_mesh_ids,    &
-                    multires_coupling_2D_mesh_ids = multires_coupling_2D_mesh_ids, &
-                    multires_coupling_mesh_tags   = multires_coupling_mesh_tags,   &
-                    use_multires_coupling         = use_multires_coupling,         &
-                    input_extrusion        = extrusion )
+                    base_mesh_names,                                        &
+                    shifted_mesh_names      = shifted_mesh_names,           &
+                    double_level_mesh_names = double_level_mesh_names,      &
+                    required_stencil_depth  = get_required_stencil_depth(), &
+                    input_extrusion         = extrusion )
 
-    call init_fem( mesh, chi, panel_id,                           &
-                   shifted_mesh          = shifted_mesh,          &
-                   shifted_chi           = shifted_chi,           &
-                   double_level_mesh     = double_level_mesh,     &
-                   double_level_chi      = double_level_chi,      &
-                   multigrid_mesh_ids    = multigrid_mesh_ids,    &
-                   multigrid_2D_mesh_ids = multigrid_2D_mesh_ids, &
-                   chi_mg                = chi_mg,                &
-                   panel_id_mg           = panel_id_mg,           &
-                   use_multigrid         = l_multigrid,           &
-                   multires_coupling_mesh_ids    = multires_coupling_mesh_ids,    &
-                   multires_coupling_2D_mesh_ids = multires_coupling_2D_mesh_ids, &
-                   chi_multires_coupling         = chi_mrc,                       &
-                   panel_id_multires_coupling    = panel_id_mrc,                  &
-                   use_multires_coupling         = use_multires_coupling )
+    chi_inventory => get_chi_inventory()
+    panel_id_inventory => get_panel_id_inventory()
+
+    call init_fem( mesh_collection, chi_inventory, panel_id_inventory )
+    if ( l_multigrid ) then
+      call init_function_space_chains( mesh_collection, chain_mesh_tags )
+    end if
+
+    mesh => mesh_collection%get_mesh(prime_mesh_name)
+    twod_mesh => mesh_collection%get_mesh(mesh, TWOD)
+    call chi_inventory%get_field_array(mesh, chi)
 
     !-------------------------------------------------------------------------
     ! initialize coupling
@@ -297,30 +390,29 @@ contains
 
     call log_event("Initialising I/O context", LOG_LEVEL_INFO)
 
-    if (use_multires_coupling) then
-      allocate(chi_xios(SIZE(multires_coupling_mesh_ids)-1,3))
-      allocate(panel_id_xios(SIZE(multires_coupling_mesh_ids)-1))
-      mesh_counter = 1
-      do i = 2, SIZE(multires_coupling_mesh_ids)
-        do j =1,3
-          call chi_mrc(j,i)%copy_field_serial(chi_xios(mesh_counter,j))
-        end do
-        call panel_id_mrc(i)%copy_field_serial(panel_id_xios(mesh_counter))
-        mesh_counter = mesh_counter + 1
+    files_init_ptr => init_gungho_files
+    if ( use_multires_coupling ) then
+      ! Compose list of meshes for I/O
+      ! This is list of namelist mesh names minus the prime mesh name
+      allocate(extra_io_mesh_names(SIZE(multires_coupling_mesh_tags)-1))
+      mesh_ctr = 1
+      do i = 1, SIZE(multires_coupling_mesh_tags)
+        if (multires_coupling_mesh_tags(i) /= prime_mesh_name) then
+          extra_io_mesh_names(mesh_ctr) = multires_coupling_mesh_tags(i)
+          mesh_ctr = mesh_ctr + 1
+        end if
       end do
-      files_init_ptr => init_gungho_files
+
       call init_io( io_context_name, mpi%get_comm(),  &
-                    chi, panel_id,                    &
-                    model_clock, get_calendar(),      &
-                    populate_filelist=files_init_ptr, &
-                    alt_coords = chi_xios,          &
-                    alt_panel_ids = panel_id_xios )
+                    chi_inventory, panel_id_inventory, &
+                    model_clock, get_calendar(),       &
+                    populate_filelist=files_init_ptr,  &
+                    alt_mesh_names=extra_io_mesh_names )
 
     else
-      files_init_ptr => init_gungho_files
       call init_io( io_context_name, mpi%get_comm(),  &
-                    chi, panel_id,                    &
-                    model_clock, get_calendar(),      &
+                    chi_inventory, panel_id_inventory, &
+                    model_clock, get_calendar(),       &
                     populate_filelist=files_init_ptr )
     end if
 
@@ -330,16 +422,22 @@ contains
     call init_altitude( twod_mesh, surface_altitude )
 
     ! Assignment of orography from surface_altitude
-    call assign_orography_field(chi, panel_id, mesh, surface_altitude)
-    call assign_orography_field(shifted_chi, panel_id, &
-                                shifted_mesh, surface_altitude)
-    call assign_orography_field(double_level_chi, panel_id, &
-                                double_level_mesh, surface_altitude)
+    call assign_orography_field(chi_inventory, panel_id_inventory, &
+                                mesh, surface_altitude)
+
+    if ( check_any_shifted() ) then
+      shifted_mesh => mesh_collection%get_mesh(mesh, SHIFTED)
+      call assign_orography_field(chi_inventory, panel_id_inventory, &
+                                  shifted_mesh, surface_altitude)
+      double_level_mesh => mesh_collection%get_mesh(mesh, DOUBLE_LEVEL)
+      call assign_orography_field(chi_inventory, panel_id_inventory, &
+                                  double_level_mesh, surface_altitude)
+    end if
 
     ! Set up orography fields for multgrid meshes
     if ( l_multigrid ) then
-      call mg_orography_alg(multigrid_mesh_ids, multigrid_2D_mesh_ids, &
-                            chi_mg, panel_id_mg, surface_altitude)
+      call mg_orography_alg(chain_mesh_tags, chi_inventory, &
+                            panel_id_inventory, surface_altitude)
     end if
 
     !-------------------------------------------------------------------------
@@ -349,27 +447,11 @@ contains
     ! Create runtime_constants object. This in turn creates various things
     ! needed by the timestepping algorithms such as mass matrix operators, mass
     ! matrix diagonal fields and the geopotential field
-    call create_runtime_constants( mesh, twod_mesh, chi, panel_id,            &
-                                   model_clock,                               &
-                                   shifted_mesh, shifted_chi,                 &
-                                   double_level_mesh, double_level_chi,       &
-                                   multigrid_mesh_ids, multigrid_2D_mesh_ids, &
-                                   chi_mg, panel_id_mg, multires_coupling_mesh_ids,        &
-                                   multires_coupling_2D_mesh_ids,     &
-                                   chi_mrc,             &
-                                   panel_id_mrc   )
-    ! Assign aerosol meshes
-    if (coarse_aerosol_ancil) then
-      ! Assign to be coarsed mesh
-      n_multires_meshes = size(multires_coupling_mesh_ids)
-      aerosol_mesh      => mesh_collection%get_mesh(multires_coupling_mesh_ids(n_multires_meshes))
-      aerosol_twod_mesh => mesh_collection%get_mesh(multires_coupling_2D_mesh_ids(n_multires_meshes))
-      write( log_scratch_space,'(A,A)' ) "aerosol mesh name:", aerosol_mesh%get_mesh_name()
-      call log_event( log_scratch_space, LOG_LEVEL_INFO )
-    else
-      aerosol_mesh => mesh
-      aerosol_twod_mesh => twod_mesh
-    end if
+    call create_runtime_constants( mesh_collection,    &
+                                   chi_inventory,      &
+                                   panel_id_inventory, &
+                                   model_clock )
+
 #ifdef UM_PHYSICS
     ! Set derived planet constants and presets
     call set_planet_constants()
@@ -410,6 +492,12 @@ contains
       call um_ukca_init()
     end if
 #endif
+
+    nullify(mesh, twod_mesh, shifted_mesh, double_level_mesh, chi, &
+            chi_inventory, panel_id_inventory, files_init_ptr)
+    deallocate(base_mesh_names)
+    if (allocated(shifted_mesh_names)) deallocate(shifted_mesh_names)
+    if (allocated(double_level_mesh_names)) deallocate(double_level_mesh_names)
 
   end subroutine initialise_infrastructure
 

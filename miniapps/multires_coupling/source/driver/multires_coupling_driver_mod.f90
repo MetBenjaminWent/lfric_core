@@ -54,13 +54,6 @@ module multires_coupling_driver_mod
 
   type(model_clock_type), allocatable :: model_clock
 
-  ! Primary mesh ids
-  type(mesh_type), pointer :: prime_mesh    => null()
-  type(mesh_type), pointer :: prime_2D_mesh => null()
-
-  type(mesh_type), pointer :: prime_shifted_mesh      => null()
-  type(mesh_type), pointer :: prime_double_level_mesh => null()
-
   ! Dynamics and Physics mesh ids
   type(mesh_type), pointer :: dynamics_mesh    => null()
   type(mesh_type), pointer :: dynamics_2D_mesh => null()
@@ -107,10 +100,6 @@ contains
     call log_event( 'Initialising Infrastructure...', LOG_LEVEL_ALWAYS )
 
     call initialise_infrastructure( program_name,            &
-                                    prime_mesh,              &
-                                    prime_2D_mesh,           &
-                                    prime_shifted_mesh,      &
-                                    prime_double_level_mesh, &
                                     model_clock,             &
                                     mpi )
 

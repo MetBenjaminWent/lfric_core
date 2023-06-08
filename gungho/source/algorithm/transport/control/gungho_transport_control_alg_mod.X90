@@ -42,6 +42,7 @@ contains
   !> @params[in] mesh   The mesh to initialise on
   subroutine gungho_transport_control_alg_init( mesh )
 
+    use check_configuration_mod,      only: check_any_shifted
     use reconstruct_w3_field_alg_mod, only: reconstruct_w3_field_alg_init
     use wt_advective_update_alg_mod,  only: wt_advective_update_alg_init
     use transport_config_mod,         only: profile_size,          &
@@ -100,10 +101,12 @@ contains
     end do
 
     ! Initialise any necessary transport fields or coefficients
-    shifted_mesh => mesh_collection%get_mesh(mesh, SHIFTED)
     call reconstruct_w3_field_alg_init( mesh )
     call wt_advective_update_alg_init( mesh )
-    call reconstruct_w3_field_alg_init( shifted_mesh )
+    if (check_any_shifted()) then
+      shifted_mesh => mesh_collection%get_mesh(mesh, SHIFTED)
+      call reconstruct_w3_field_alg_init( shifted_mesh )
+    end if
 
 
     ! Initialise transport_runtime_collection

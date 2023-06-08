@@ -8,10 +8,11 @@
 module shallow_water_model_mod
 
   use assign_orography_field_mod,     only: assign_orography_field
+  use base_mesh_config_mod,           only: prime_mesh_name
   use check_configuration_mod,        only: get_required_stencil_depth
   use checksum_alg_mod,               only: checksum_alg
   use conservation_algorithm_mod,     only: conservation_algorithm
-  use constants_mod,                  only: i_def, i_native, &
+  use constants_mod,                  only: i_def, i_native, str_def, &
                                             PRECISION_REAL
   use convert_to_upper_mod,           only: convert_to_upper
   use count_mod,                      only: count_type, halo_calls
@@ -24,8 +25,9 @@ module shallow_water_model_mod
   use field_mod,                      only: field_type
   use field_parent_mod,               only: write_interface
   use field_collection_mod,           only: field_collection_type
-  use global_mesh_collection_mod,     only: global_mesh_collection, &
-                                            global_mesh_collection_type
+  use geometric_constants_mod,        only: get_chi_inventory, &
+                                            get_panel_id_inventory
+  use inventory_by_mesh_mod,          only: inventory_by_mesh_type
   use io_config_mod,                  only: subroutine_timers,       &
                                             subroutine_counters,     &
                                             use_xios_io,             &
@@ -34,20 +36,18 @@ module shallow_water_model_mod
                                             write_minmax_tseries
   use lfric_xios_file_mod,            only: lfric_xios_file_type
   use linked_list_mod,                only: linked_list_type
-  use local_mesh_collection_mod,      only: local_mesh_collection, &
-                                            local_mesh_collection_type
   use log_mod,                        only: log_event,          &
                                             log_set_level,      &
                                             log_scratch_space,  &
                                             LOG_LEVEL_INFO
-  use mesh_collection_mod,            only: mesh_collection, &
-                                            mesh_collection_type
+  use mesh_collection_mod,            only: mesh_collection
   use mesh_mod,                       only: mesh_type
   use minmax_tseries_mod,             only: minmax_tseries,      &
                                             minmax_tseries_init, &
                                             minmax_tseries_final
   use model_clock_mod,                only: model_clock_type
   use mpi_mod,                        only: mpi_type
+  use runtime_constants_mod,          only: create_runtime_constants
   use shallow_water_model_data_mod,   only: model_data_type
   use shallow_water_setup_io_mod,     only: init_shallow_water_files
   use timer_mod,                      only: timer, output_timer, init_timer
@@ -68,29 +68,24 @@ module shallow_water_model_mod
   !=============================================================================
   !> @brief Initialises the infrastructure and sets up constants used by the model.
   !> @param[in]     program_name An identifier given to the model begin run
-  !> @param[in,out] mesh         The 3D mesh
-  !> @param[in,out] chi          A size 3 array of fields holding the coordinates of the mesh
+  !> @param [out]   model_clock  Time within the model
+  !> @param [in]    mpi          Communication object
   subroutine initialise_infrastructure(program_name, &
-                                       mesh,         &
-                                       twod_mesh,    &
-                                       chi,          &
-                                       panel_id,     &
                                        model_clock,  &
                                        mpi )
 
     implicit none
 
-    character(*),           intent(in)             :: program_name
-    type(mesh_type),        intent(inout), pointer :: mesh
-    type(mesh_type),        intent(out),   pointer :: twod_mesh
-    type(field_type),       intent(inout)          :: chi(3)
-    type(field_type),       intent(out),   target  :: panel_id
+    character(*),           intent(in)               :: program_name
     type(model_clock_type), intent(out), allocatable :: model_clock
-    class(mpi_type),        intent(inout)          :: mpi
+    class(mpi_type),        intent(inout)            :: mpi
 
+    type(inventory_by_mesh_type),  pointer :: chi_inventory => null()
+    type(inventory_by_mesh_type),  pointer :: panel_id_inventory => null()
     procedure(filelist_populator), pointer :: files_init_ptr => null()
 
-    character(len=*), parameter :: io_context_name = "shallow_water"
+    character(len=*),   parameter   :: io_context_name = "shallow_water"
+    character(str_def), allocatable :: base_mesh_names(:)
 
     !-------------------------------------------------------------------------
     ! Initialise aspects of the infrastructure
@@ -121,17 +116,27 @@ module shallow_water_model_mod
     call init_time( model_clock )
 
     !-------------------------------------------------------------------------
+    ! Work out which meshes are required
+    !-------------------------------------------------------------------------
+
+    ! Always have just one base mesh with shifted version
+    allocate(base_mesh_names(1))
+    base_mesh_names(1) = prime_mesh_name
+
+    !-------------------------------------------------------------------------
     ! Initialise aspects of the grid
     !-------------------------------------------------------------------------
 
     ! TODO Stencil depth needs to be taken from configuration options
     ! Create the mesh
     call init_mesh( mpi%get_comm_rank(),  mpi%get_comm_size(), &
-                    mesh, twod_mesh,                           &
+                    base_mesh_names,                                         &
                     required_stencil_depth = get_required_stencil_depth() )
 
     ! Create FEM specifics (function spaces and chi field)
-    call init_fem(mesh, chi, panel_id)
+    chi_inventory => get_chi_inventory()
+    panel_id_inventory => get_panel_id_inventory()
+    call init_fem(mesh_collection, chi_inventory, panel_id_inventory)
 
     !-------------------------------------------------------------------------
     ! Initialise aspects of output
@@ -141,10 +146,23 @@ module shallow_water_model_mod
     ! domain and context
 
     files_init_ptr => init_shallow_water_files
-    call init_io( io_context_name, mpi%get_comm(), &
-                  chi, panel_id,                   &
-                  model_clock, get_calendar(),     &
+    call init_io( io_context_name, mpi%get_comm(),   &
+                  chi_inventory, panel_id_inventory, &
+                  model_clock, get_calendar(),       &
                   populate_filelist=files_init_ptr )
+
+    !-------------------------------------------------------------------------
+    ! Setup constants
+    !-------------------------------------------------------------------------
+
+    ! Create runtime_constants object. This in turn creates various things
+    ! needed by the timestepping algorithms such as mass matrix operators, mass
+    ! matrix diagonal fields and the geopotential field
+    call create_runtime_constants(mesh_collection, chi_inventory, &
+                                  panel_id_inventory, model_clock)
+
+    deallocate(base_mesh_names)
+    nullify(chi_inventory, panel_id_inventory)
 
   end subroutine initialise_infrastructure
 
@@ -223,7 +241,6 @@ module shallow_water_model_mod
 
   !=============================================================================
   !> @brief Finalise the shallow_water application.
-  !> @param[in]     mesh_id      The identifier of the primary mesh
   !> @param[in,out] model_data   The working data set for the model run
   !> @param[in]     program_name An identifier given to the model begin run
   subroutine finalise_model( model_data, &

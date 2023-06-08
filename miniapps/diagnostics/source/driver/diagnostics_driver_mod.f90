@@ -9,12 +9,14 @@
 !>
 module diagnostics_driver_mod
 
+  use base_mesh_config_mod,          only : prime_mesh_name
   use clock_mod,                     only : clock_type
   use constants_mod,                 only : i_def, i_native, str_def, r_def
   use driver_fem_mod,                only : init_fem
   use driver_io_mod,                 only : init_io, final_io
   use driver_mesh_mod,               only : init_mesh
   use driver_time_mod,               only : init_time, get_calendar
+  use extrusion_mod,                 only : TWOD
   use field_mod,                     only : field_type
   use field_parent_mod,              only : field_parent_type
   use field_collection_mod,          only : field_collection_type
@@ -22,6 +24,7 @@ module diagnostics_driver_mod
   use driver_model_data_mod,         only : model_data_type
   use io_config_mod,                 only : write_diag, &
                                             use_xios_io
+  use inventory_by_mesh_mod,         only : inventory_by_mesh_type
   use log_mod,                       only : log_event,         &
                                             log_scratch_space, &
                                             log_level_error,   &
@@ -29,6 +32,7 @@ module diagnostics_driver_mod
                                             LOG_LEVEL_INFO,    &
                                             LOG_LEVEL_TRACE
   use mesh_mod,                      only : mesh_type
+  use mesh_collection_mod,           only : mesh_collection
   use model_clock_mod,               only : model_clock_type
   use mpi_mod,                       only : mpi_type
 
@@ -40,8 +44,8 @@ module diagnostics_driver_mod
   type(model_clock_type), allocatable :: model_clock
 
   ! Coordinate field
-  type(field_type), target, dimension(3) :: chi
-  type(field_type), target               :: panel_id
+  type(field_type), pointer :: chi(:) => null()
+  type(field_type), pointer :: panel_id => null()
 
   type(mesh_type), pointer :: mesh      => null()
   type(mesh_type), pointer :: twod_mesh => null()
@@ -74,6 +78,9 @@ contains
     type(model_data_type), intent(inout) :: model_data
     class(mpi_type),       intent(inout) :: mpi
     character(*),          intent(in)    :: xios_ctx
+    character(str_def)              :: base_mesh_names(1)
+    type(inventory_by_mesh_type)    :: chi_inventory
+    type(inventory_by_mesh_type)    :: panel_id_inventory
 
     !----------------------------------------------------------------------
     ! Model init
@@ -83,11 +90,12 @@ contains
     call init_time( model_clock )
 
     ! Create the mesh
+    base_mesh_names(1) = prime_mesh_name
     call init_mesh( mpi%get_comm_rank(), mpi%get_comm_size(), &
-                    mesh, twod_mesh=twod_mesh )
+                    base_mesh_names )
 
     ! Create FEM specifics (function spaces and chi field)
-    call init_fem( mesh, chi, panel_id )
+    call init_fem( mesh_collection, chi_inventory, panel_id_inventory )
 
     !----------------------------------------------------------------------
     ! IO init
@@ -96,14 +104,18 @@ contains
     call log_event("Populating fieldspec collection", LOG_LEVEL_INFO)
     call populate_fieldspec_collection(iodef_path)
 
-    call init_io( xios_ctx,       &
+    call init_io( xios_ctx,           &
                   mpi%get_comm(), &
-                  chi,            &
-                  panel_id,       &
-                  model_clock,    &
+                  chi_inventory,      &
+                  panel_id_inventory, &
+                  model_clock,        &
                   get_calendar() )
 
     ! Create and initialise prognostic fields
+    mesh => mesh_collection%get_mesh(prime_mesh_name)
+    twod_mesh => mesh_collection%get_mesh(mesh, TWOD)
+    call chi_inventory%get_field_array(mesh, chi)
+    call panel_id_inventory%get_field(mesh, panel_id)
     call init_diagnostics( mesh, twod_mesh,                    &
                            chi, panel_id,                      &
                            model_clock%get_seconds_per_step(), &

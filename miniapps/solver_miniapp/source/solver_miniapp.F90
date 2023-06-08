@@ -11,7 +11,8 @@
 
 program solver_miniapp
 
-  use constants_mod,                    only : i_def, PRECISION_REAL
+  use base_mesh_config_mod,             only : prime_mesh_name
+  use constants_mod,                    only : i_def, PRECISION_REAL, str_def
   use convert_to_upper_mod,             only : convert_to_upper
   use cli_mod,                          only : get_initial_filename
   use driver_config_mod,                only : init_config, final_config
@@ -21,6 +22,7 @@ program solver_miniapp
   use halo_comms_mod,                   only : initialise_halo_comms, &
                                                finalise_halo_comms
   use init_solver_miniapp_mod,          only : init_solver_miniapp
+  use inventory_by_mesh_mod,            only : inventory_by_mesh_type
   use mpi_mod,                          only : global_mpi, &
                                                create_comm, destroy_comm
   use field_mod,                        only : field_type
@@ -33,6 +35,7 @@ program solver_miniapp
                                                LOG_LEVEL_ALWAYS,     &
                                                LOG_LEVEL_INFO
   use mesh_mod,                         only : mesh_type
+  use mesh_collection_mod,              only : mesh_collection
   use checksum_alg_mod,                 only : checksum_alg
 
   implicit none
@@ -45,12 +48,16 @@ program solver_miniapp
   integer(i_def) :: comm = -999
 
   ! prognostic fields
-  type( field_type ), target, dimension(3) :: chi
-  type( field_type ), target :: panel_id
-  type( field_type ) :: field_1, field_2
-  type( field_vector_type) :: fv_1
+  type(field_type),    pointer :: chi(:) => null()
+  type(field_type),    pointer :: panel_id => null()
+  type(field_type)             :: field_1, field_2
+  type(field_vector_type)      :: fv_1
 
-  type(mesh_type), pointer :: mesh => null()
+  type(mesh_type),     pointer :: mesh => null()
+  type(inventory_by_mesh_type) :: chi_inventory
+  type(inventory_by_mesh_type) :: panel_id_inventory
+
+  character(str_def)           :: base_mesh_names(1)
 
 
   !-----------------------------------------------------------------------------
@@ -85,14 +92,18 @@ program solver_miniapp
   !-----------------------------------------------------------------------------
   call log_event( 'Initialising '//program_name//' ...', LOG_LEVEL_ALWAYS )
 
-  call init_mesh( local_rank, total_ranks, mesh )
+  base_mesh_names(1) = prime_mesh_name
+  call init_mesh( local_rank, total_ranks, base_mesh_names )
 
-  call init_fem( mesh, chi, panel_id )
+  call init_fem( mesh_collection, chi_inventory, panel_id_inventory )
 
   ! Create and initialise prognostic fields
-  call init_solver_miniapp( mesh, chi, panel_id, fv_1 )
+  mesh => mesh_collection%get_mesh(prime_mesh_name)
+  call init_solver_miniapp( mesh, fv_1 )
 
   ! Call an algorithm
+  call chi_inventory%get_field_array(mesh, chi)
+  call panel_id_inventory%get_field(mesh, panel_id)
   call solver_miniapp_alg( fv_1, chi, panel_id )
 
   ! Write out output file
@@ -115,6 +126,8 @@ program solver_miniapp
   !-----------------------------------------------------------------------------
   ! Driver layer finalise
   !-----------------------------------------------------------------------------
+
+  nullify(chi, panel_id, mesh)
 
   ! Finalise namelist configurations
   call final_configuration()

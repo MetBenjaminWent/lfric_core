@@ -31,15 +31,11 @@ module init_solver_miniapp_mod
 contains
   !> initialise the fields and field vector for the miniapp.
   !> @param[in]    mesh  The primary mesh
-  !> @param[inout] chi   An size 3 array of fields holding the coordinates of the mesh
-  !> @param[inout]       The field vector which is to be initialised.
-  subroutine init_solver_miniapp( mesh, chi, panel_id, fv )
+  subroutine init_solver_miniapp( mesh, fv )
 
     implicit none
 
     type( mesh_type ),  intent(in), pointer :: mesh
-    type( field_type ), intent(inout)       :: chi(:)
-    type( field_type ), intent(inout)       :: panel_id
     ! prognostic fields
     type( field_vector_type ), intent(inout) :: fv
     type( field_type )                       :: f1, f2

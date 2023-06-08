@@ -119,13 +119,17 @@ contains
   !> routines calculate analytic orography from horizontal coordinates or else
   !> use the surface_altitude field and then update the vertical coordinate.
   !>
-  !> @param[in,out] chi      Model coordinate array of size 3 of fields
-  !> @param[in]     panel_id Field giving the ID of mesh panels
-  !> @param[in]     mesh     Mesh on which this field is attached
-  !> @param[in]     surface_altitude Field containing the surface altitude
+  !> @param[in,out] chi_inventory      Contains all of the model's coordinate
+  !!                                   fields, itemised by mesh
+  !> @param[in]     panel_id_inventory Contains all of the model's panel ID
+  !!                                   fields, itemised by mesh
+  !> @param[in]     mesh               Mesh to apply orography to
+  !> @param[in]     surface_altitude   Field containing the surface altitude
   !=============================================================================
-  subroutine assign_orography_field(chi, panel_id, mesh, surface_altitude)
+  subroutine assign_orography_field(chi_inventory, panel_id_inventory, &
+                                    mesh, surface_altitude)
 
+    use inventory_by_mesh_mod,          only : inventory_by_mesh_type
     use field_mod,                      only : field_type, field_proxy_type
     use mesh_mod,                       only : mesh_type
     use domain_mod,                     only : domain_type
@@ -137,15 +141,17 @@ contains
     implicit none
 
     ! Arguments
-    type( field_type ),  intent( inout )       :: chi(3)
-    type( field_type ),  intent( in )          :: panel_id
-    type( mesh_type),    intent( in ), pointer :: mesh
+    type( inventory_by_mesh_type ),  intent( inout )       :: chi_inventory
+    type( inventory_by_mesh_type ),  intent( in )          :: panel_id_inventory
+    type( mesh_type ),               intent( in ), pointer :: mesh
 
     ! We keep the surface_altitude as an optional argument since it is
     ! not needed for miniapps that only want analytic orography
     type( field_type ),  intent( in ), optional :: surface_altitude
 
     ! Local variables
+    type( field_type ),  pointer :: chi(:) => null()
+    type( field_type ),  pointer :: panel_id => null()
     type( field_proxy_type )     :: chi_proxy(3)
     type( field_proxy_type )     :: panel_id_proxy
     type( domain_type )          :: domain
@@ -178,10 +184,12 @@ contains
          LOG_LEVEL_ERROR )
     end if
 
+    call chi_inventory%get_field_array(mesh, chi)
+    call panel_id_inventory%get_field(mesh, panel_id)
+
     ! Get domain size
     domain = mesh%get_domain()
     call set_horizontal_domain_size( domain )
-
 
     ! Get physical height of flat domain surface from the domain_size object
     domain_surface = domain%get_base_height()
@@ -341,6 +349,8 @@ contains
       deallocate(basis_sf_on_chi)
 
     end if
+
+    nullify(chi, panel_id)
 
   end subroutine assign_orography_field
 

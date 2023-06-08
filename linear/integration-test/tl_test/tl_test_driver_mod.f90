@@ -9,7 +9,9 @@
 !!         method to gungho, but with the addition of the linearisation state.
 module tl_test_driver_mod
 
+  use base_mesh_config_mod,       only : prime_mesh_name
   use constants_mod,              only : i_def, i_native, imdi
+  use extrusion_mod,              only : TWOD
   use gungho_model_mod,           only : initialise_infrastructure, &
                                          initialise_model,          &
                                          finalise_infrastructure,   &
@@ -22,6 +24,7 @@ module tl_test_driver_mod
   use log_mod,                    only : log_event,         &
                                          LOG_LEVEL_ALWAYS
   use mesh_mod,                   only : mesh_type
+  use mesh_collection_mod,        only : mesh_collection
   use model_clock_mod,            only : model_clock_type
   use mpi_mod,                    only : mpi_type
   use linear_model_data_mod,      only : linear_create_ls,  &
@@ -63,15 +66,10 @@ module tl_test_driver_mod
          run_semi_imp_alg,            &
          run_transport_control
 
+  type( mesh_type ),          pointer :: mesh      => null()
+  type( mesh_type ),          pointer :: twod_mesh => null()
   type(model_data_type)               :: model_data
   type(model_clock_type), allocatable :: model_clock
-
-  type(mesh_type), pointer :: mesh              => null()
-  type(mesh_type), pointer :: twod_mesh         => null()
-  type(mesh_type), pointer :: shifted_mesh      => null()
-  type(mesh_type), pointer :: double_level_mesh => null()
-  type(mesh_type), pointer :: aerosol_mesh      => null()
-  type(mesh_type), pointer :: aerosol_twod_mesh => null()
 
 contains
 
@@ -85,18 +83,24 @@ contains
     character(*),    intent(in)    :: program_name
     class(mpi_type), intent(inout) :: mpi
 
+    type( mesh_type ), pointer :: aerosol_mesh      => null()
+    type( mesh_type ), pointer :: aerosol_twod_mesh => null()
+
+
     ! Initialise infrastructure and setup constants
     !
     call initialise_infrastructure( program_name,      &
-                                    mesh,              &
-                                    twod_mesh,         &
-                                    shifted_mesh,      &
-                                    double_level_mesh, &
-                                    aerosol_mesh,      &
-                                    aerosol_twod_mesh, &
                                     model_data,        &
                                     model_clock,       &
                                     mpi )
+
+    ! Get primary and 2D meshes for initialising model data
+    mesh => mesh_collection%get_mesh(prime_mesh_name)
+    twod_mesh => mesh_collection%get_mesh(mesh, TWOD)
+
+    ! Assume aerosol mesh is the same as dynamics mesh
+    aerosol_mesh => mesh
+    aerosol_twod_mesh => twod_mesh
 
     ! Instantiate the fields stored in model_data
     call create_model_data( model_data,        &

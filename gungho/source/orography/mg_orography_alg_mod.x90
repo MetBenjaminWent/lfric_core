@@ -7,10 +7,12 @@
 
 module mg_orography_alg_mod
 
-  use constants_mod,                 only: i_def
+  use constants_mod,                 only: i_def, str_def
+  use extrusion_mod,                 only: TWOD
   use field_mod,                     only: field_type
   use fs_continuity_mod,             only: W3
   use function_space_collection_mod, only: function_space_collection
+  use inventory_by_mesh_mod,         only: inventory_by_mesh_type
   use mesh_collection_mod,           only: mesh_collection
   use mesh_mod,                      only: mesh_type
 
@@ -25,18 +27,16 @@ contains
   !>          from the finest mesh. Then the orography field for the
   !>          multigrid meshes is assigned from the respective surface
   !>          altitude field for each multigrid mesh.
-  !> @param[in]     multigrid_mesh_ids    An array of the mesh IDs for the
-  !>                                      multigrid meshes.
-  !> @param[in]     multigrid_2D_mesh_ids An array of the mesh IDs for the
-  !>                                      2D multigrid meshes.
-  !> @param[in,out] chi_mg                An array of all the coordinate fields
-  !>                                      for the multigrid meshes.
-  !> @param[in]     panel_id_mg           An array of the mesh panel IDs for the
-  !>                                      multigrid meshes.
+  !> @param[in]     multigrid_mesh_names  An array of the names of the meshes
+  !!                                      in the multigrid chain.
+  !> @param[in,out] chi_inventory         Contains the model's coordinate fields
+  !!                                      paired with their mesh.
+  !> @param[in]     panel_id_inventory    Contains the model's panel ID fields
+  !!                                      paired with their mesh.
   !> @param[in]     surface_altitude      Surface altitude on the finest mesh.
-  subroutine mg_orography_alg( multigrid_mesh_ids,    &
-                               multigrid_2D_mesh_ids, &
-                               chi_mg, panel_id_mg,   &
+  subroutine mg_orography_alg( multigrid_mesh_names, &
+                               chi_inventory,        &
+                               panel_id_inventory,   &
                                surface_altitude       )
 
     use assign_orography_field_mod, only: assign_orography_field
@@ -46,33 +46,30 @@ contains
 
     implicit none
 
-    integer(kind=i_def), intent(in)    :: multigrid_mesh_ids(:)
-    integer(kind=i_def), intent(in)    :: multigrid_2D_mesh_ids(:)
-    type( field_type ),  intent(inout) :: chi_mg(:,:)
-    type( field_type ),  intent(in)    :: panel_id_mg(:)
-    type( field_type ),  intent(in)    :: surface_altitude
+    character(str_def),            intent(in)    :: multigrid_mesh_names(:)
+    type(inventory_by_mesh_type),  intent(inout) :: chi_inventory
+    type(inventory_by_mesh_type),  intent(in)    :: panel_id_inventory
+    type(field_type),              intent(in)    :: surface_altitude
 
     ! local variables
-    type(mesh_type), pointer      :: mesh => null()
-    type(mesh_type), pointer      :: twod_mesh => null()
+    type(mesh_type),  pointer     :: mesh => null()
+    type(mesh_type),  pointer     :: twod_mesh => null()
     integer(kind=i_def)           :: level, surface_order
-    integer(kind=i_def)           :: mg_mesh_id
-    integer(kind=i_def)           :: mg_2D_mesh_id
+    integer(kind=i_def)           :: num_meshes
     type(field_type), allocatable :: surface_altitude_mg(:)
 
-    allocate(surface_altitude_mg(SIZE(multigrid_mesh_ids)))
+    num_meshes = SIZE(multigrid_mesh_names)
+
+    allocate(surface_altitude_mg(num_meshes))
     call surface_altitude%copy_field_properties(surface_altitude_mg(1))
     call invoke( setval_X(surface_altitude_mg(1), surface_altitude) )
 
     surface_order = surface_altitude%get_element_order()
 
-    do level = 2, SIZE(multigrid_mesh_ids)
+    do level = 2, num_meshes
 
-      mg_mesh_id    = multigrid_mesh_ids(level)
-      mg_2D_mesh_id = multigrid_2D_mesh_ids(level)
-
-      mesh      => mesh_collection%get_mesh(mg_mesh_id)
-      twod_mesh => mesh_collection%get_mesh(mg_2D_mesh_id)
+      mesh      => mesh_collection%get_mesh(multigrid_mesh_names(level))
+      twod_mesh => mesh_collection%get_mesh(mesh, TWOD)
 
       !------------------------------------------------------------------------!
       ! Create the surface altitude fields on the multigrid meshes
@@ -90,11 +87,12 @@ contains
       ! Use the surface altitude to introduce orography on the multigrid meshes
       !------------------------------------------------------------------------!
 
-      call assign_orography_field(chi_mg(:,level), panel_id_mg(level), &
-                                  mesh, surface_altitude_mg(level))
+      call assign_orography_field(chi_inventory, panel_id_inventory, mesh, &
+                                  surface_altitude_mg(level))
     end do
 
     deallocate(surface_altitude_mg)
+    nullify(mesh, twod_mesh)
 
 
   end subroutine mg_orography_alg

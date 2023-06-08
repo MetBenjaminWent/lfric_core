@@ -137,8 +137,8 @@ contains
 
     ! ============================= Start loop ================================!
 
-    ! Best way to loop through mesh collection is to get all mesh names, then
-    ! to get mesh from collection using these names
+    ! To loop through mesh collection, get all mesh names
+    ! Then get mesh from collection using these names
     all_mesh_names = mesh_collection%get_mesh_names()
 
     do i = 1, SIZE(all_mesh_names)

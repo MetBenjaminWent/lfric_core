@@ -67,65 +67,44 @@ contains
 
 !> @brief  Generates a mesh and determines the basis functions and dofmaps.
 !>
-!> @param[in]   local_rank                     Number of the MPI rank of this process
-!> @param[in]   total_ranks                    Total number of MPI ranks in this job
-!> @param[out]  mesh                           Mesh of partitioned prime mesh
-!> @param[out]  twod_mesh                      Optional, mesh of the 2D (surface) mesh
-!> @param[out]  shifted_mesh                   Optional, mesh of vertically shifted mesh
-!!                                             with an extra level
-!> @param[out]  double_level_mesh              Optional, mesh of vertically double level mesh
-!> @param[out]  multigrid_mesh_ids             Optional, multigrid chain mesh IDs
-!> @param[out]  multigrid_2D_mesh_ids          Optional, multigrid chain 2D-mesh IDs
-!> @param[in]   use_multigrid                  Optional, configuration switch for multigrid
-!> @param[in]   required_stencil_depth         Optional, Stencil depth that local meshes should support
-!> @param[out]  multires_coupling_mesh_ids     Optional, multiresolution coupling miniapp mesh IDs
-!> @param[out]  multires_coupling_2D_mesh_ids  Optional, multiresolution coupling miniapp 2D-mesh IDs
-!> @param[in]   multires_coupling_mesh_tags    Optional, multiresolution coupling miniapp mesh names
-!> @param[in]   use_multires_coupling          Optional, logical flag to enable
-!!                                             multiresolution atmospheric coupling
-!> @param[in]   input_extrusion                Optional, mesh extrusion object to create prime 3D mesh
+!> @param[in]   local_rank                Number of the MPI rank of this process
+!> @param[in]   total_ranks               Total number of MPI ranks in this job
+!> @param[in]   base_mesh_names           Array of base mesh names. For each of
+!!                                        these, a 3D "prime" extrusion will be
+!!                                        constructed as well as its 2D version
+!> @param[in]   shifted_mesh_names        Optional, array of names of meshes for
+!!                                        which to make a shifted extrusion
+!> @param[in]   double_level_mesh_names   Optional, array of names of meshes for
+!!                                        which to make a double level extrusion
+!> @param[in]   required_stencil_depth    Optional, stencil depth that local
+!!                                        meshes should support
+!> @param[in]   input_extrusion           Optional, mesh extrusion object
 subroutine init_mesh( local_rank, total_ranks,        &
-                      mesh, twod_mesh,                &
-                      shifted_mesh,                   &
-                      double_level_mesh,              &
-                      multigrid_mesh_ids,             &
-                      multigrid_2D_mesh_ids,          &
-                      use_multigrid,                  &
+                      base_mesh_names,                &
+                      shifted_mesh_names,             &
+                      double_level_mesh_names,        &
                       required_stencil_depth,         &
-                      multires_coupling_mesh_ids,     &
-                      multires_coupling_2D_mesh_ids,  &
-                      multires_coupling_mesh_tags,    &
-                      use_multires_coupling,          &
                       input_extrusion )
 
   use finite_element_config_mod,  only: cellshape,          &
                                         key_from_cellshape, &
                                         cellshape_triangle, &
                                         cellshape_quadrilateral
-  use multigrid_config_mod,       only: chain_mesh_tags
 
   implicit none
 
-  integer(kind=i_def), intent(in)  :: local_rank
-  integer(kind=i_def), intent(in)  :: total_ranks
+  integer(kind=i_def),    intent(in) :: local_rank
+  integer(kind=i_def),    intent(in) :: total_ranks
+  character(len=str_def), intent(in) :: base_mesh_names(:)
 
-  type(mesh_type), intent(out), pointer           :: mesh
-  type(mesh_type), intent(out), pointer, optional :: twod_mesh
-  type(mesh_type), intent(out), pointer, optional :: shifted_mesh
-  type(mesh_type), intent(out), pointer, optional :: double_level_mesh
+  ! Optional lists of meshes to create shifted or double level extrusions of
+  character(len=str_def), optional, allocatable, intent(in) :: shifted_mesh_names(:)
+  character(len=str_def), optional, allocatable, intent(in) :: double_level_mesh_names(:)
 
-  integer(kind=i_def), intent(out), optional, allocatable :: multigrid_mesh_ids(:)
-  integer(kind=i_def), intent(out), optional, allocatable :: multigrid_2d_mesh_ids(:)
-  integer(kind=i_def), intent(out), optional, allocatable :: multires_coupling_mesh_ids(:)
-  integer(kind=i_def), intent(out), optional, allocatable :: multires_coupling_2d_mesh_ids(:)
-
-  integer(kind=i_def),    intent(in), optional :: required_stencil_depth
-  character(len=str_def), intent(in), optional :: multires_coupling_mesh_tags(:)
-  logical(kind=l_def),    intent(in), optional :: use_multigrid
-  logical(kind=l_def),    intent(in), optional :: use_multires_coupling
+  integer(kind=i_def),    optional, intent(in) :: required_stencil_depth
 
   ! Optional prime extrusion can be passed in for model-specific cases
-  class(extrusion_type), intent(in), optional :: input_extrusion
+  class(extrusion_type),  optional, intent(in) :: input_extrusion
 
   ! Parameters
   integer(kind=i_def), parameter :: max_factor_iters = 10000
@@ -136,27 +115,28 @@ subroutine init_mesh( local_rank, total_ranks,        &
 
   procedure(partitioner_interface), pointer :: partitioner_ptr => null()
 
-  logical(kind=l_def) :: create_2d_mesh                     = .false.
-  logical(kind=l_def) :: create_shifted_mesh                = .false.
-  logical(kind=l_def) :: create_double_level_mesh           = .false.
-  logical(kind=l_def) :: create_multigrid_meshes            = .false.
-  logical(kind=l_def) :: create_multigrid_2d_meshes         = .false.
-  logical(kind=l_def) :: create_multires_coupling_meshes    = .false.
-  logical(kind=l_def) :: create_multires_coupling_2d_meshes = .false.
-  logical(kind=l_def) :: create_multigrid                   = .false.
+  logical(kind=l_def) :: create_shifted_meshes      = .false.
+  logical(kind=l_def) :: create_double_level_meshes = .false.
 
-  integer(kind=i_def) :: i, j, n_coupling_meshes, n_chain_meshes, stencil_depth
+  integer(kind=i_def) :: i, j, stencil_depth
 
-  character(len=str_def) :: mesh_name
   character(len=str_def) :: mesh_name_A
   character(len=str_def) :: mesh_name_B
+  character(len=str_def) :: twod_name_A
+  character(len=str_def) :: twod_name_B
 
   class(extrusion_type), allocatable :: prime_extrusion
 
   character(str_max_filename)     :: input_mesh_file
   character(str_def), allocatable :: tmp_mesh_names(:)
+  character(str_def), allocatable :: target_mesh_names(:)
+  character(str_def), allocatable :: shifted_meshes_to_create(:)
+  character(str_def), allocatable :: double_level_meshes_to_create(:)
 
   character(len=9), parameter :: routine_name = 'init_mesh'
+
+  type(mesh_type),       pointer :: mesh => null()
+  type(local_mesh_type), pointer :: local_mesh => null()
 
   ! Allocate mesh collections
   allocate( local_mesh_collection, source=local_mesh_collection_type() )
@@ -185,42 +165,18 @@ subroutine init_mesh( local_rank, total_ranks,        &
   !=================================================================
   ! 1.0 Use input args to determine which meshes to create
   !=================================================================
-  if ( present(twod_mesh) )         create_2d_mesh           = .true.
-  if ( present(shifted_mesh) )      create_shifted_mesh      = .true.
-  if ( present(double_level_mesh) ) create_double_level_mesh = .true.
-
-  n_chain_meshes = 0
-  if ( present(use_multigrid) ) then
-    create_multigrid = use_multigrid
-    if ( create_multigrid ) then
-      n_chain_meshes = size(chain_mesh_tags)
-      if ( present(multigrid_mesh_ids) ) then
-        create_multigrid_meshes    = .true.
-        if (allocated(multigrid_mesh_ids)) deallocate(multigrid_mesh_ids)
-        allocate(multigrid_mesh_ids(n_chain_meshes))
-      end if
-      if ( present(multigrid_2d_mesh_ids) )then
-        create_multigrid_2d_meshes = .true.
-        if (allocated(multigrid_2d_mesh_ids)) deallocate(multigrid_2d_mesh_ids)
-        allocate(multigrid_2d_mesh_ids(n_chain_meshes))
-      end if
+  if (present(shifted_mesh_names)) then
+    if (allocated(shifted_mesh_names)) then
+      create_shifted_meshes = .true.
+      allocate(shifted_meshes_to_create(SIZE(shifted_mesh_names)))
+      shifted_meshes_to_create(:) = shifted_mesh_names(:)
     end if
   end if
-
-  if ( present(use_multires_coupling) ) then
-    if ( use_multires_coupling               .and. &
-         present(multires_coupling_mesh_ids) .and. &
-         present(multires_coupling_mesh_tags)) then
-      create_multires_coupling_meshes    = .true.
-      if (allocated(multires_coupling_mesh_ids)) deallocate(multires_coupling_mesh_ids)
-      allocate(multires_coupling_mesh_ids(size(multires_coupling_mesh_tags)))
-    end if
-    if ( use_multires_coupling                  .and. &
-         present(multires_coupling_2d_mesh_ids) .and. &
-         present(multires_coupling_mesh_tags) ) then
-      create_multires_coupling_2d_meshes = .true.
-    if (allocated(multires_coupling_2d_mesh_ids)) deallocate(multires_coupling_2d_mesh_ids)
-      allocate(multires_coupling_2d_mesh_ids(size(multires_coupling_mesh_tags)))
+  if (present(double_level_mesh_names)) then
+    if (allocated(double_level_mesh_names)) then
+      create_double_level_meshes = .true.
+      allocate(double_level_meshes_to_create(SIZE(double_level_mesh_names)))
+      double_level_meshes_to_create(:) = double_level_mesh_names(:)
     end if
   end if
 
@@ -249,9 +205,7 @@ subroutine init_mesh( local_rank, total_ranks,        &
     !=================================================================
     ! Each partitioned mesh file will contain meshes of the
     ! same name as all other partitions.
-    call load_all_local_meshes( input_mesh_file,  &
-                                create_multigrid, &
-                                multires_coupling_mesh_tags )
+    call load_all_local_meshes( input_mesh_file, base_mesh_names )
 
 
 
@@ -296,10 +250,7 @@ subroutine init_mesh( local_rank, total_ranks,        &
                                  xproc, yproc,                    &
                                  stencil_depth,                   &
                                  partitioner_ptr,                 &
-                                 create_multigrid,                &
-                                 n_chain_meshes,                  &
-                                 create_multires_coupling_meshes, &
-                                 multires_coupling_mesh_tags )
+                                 base_mesh_names )
 
     ! 3.3 Check loaded local meshes have the required stencil depth.
     !=================================================================
@@ -315,104 +266,82 @@ subroutine init_mesh( local_rank, total_ranks,        &
   !=================================================================
   ! 4.0 Extrude all meshes into 3D local meshes
   !=================================================================
-  if (present(multires_coupling_mesh_tags)) then
-    call create_all_3d_meshes( prime_extrusion,                 &
-                               create_2d_mesh,                  &
-                               create_shifted_mesh,             &
-                               create_double_level_mesh,        &
-                               create_multigrid_meshes ,        &
-                               create_multires_coupling_meshes, &
-                               multires_coupling_mesh_tags )
-  else
-    call create_all_3d_meshes( prime_extrusion,          &
-                               create_2d_mesh,           &
-                               create_shifted_mesh,      &
-                               create_double_level_mesh, &
-                               create_multigrid_meshes , &
-                               create_multires_coupling_meshes )
-  end if
+  call create_all_3d_meshes( prime_extrusion,              &
+                             base_mesh_names,              &
+                             create_shifted_meshes,        &
+                             create_double_level_meshes,   &
+                             shifted_meshes_to_create,     &
+                             double_level_meshes_to_create )
 
   !=================================================================
   ! 5.0 Assign maps to local 3D meshes
   !=================================================================
-  if (create_multigrid_meshes) then
-    do i=1, n_chain_meshes-1
-      mesh_name_A = chain_mesh_tags(i)
-      mesh_name_B = chain_mesh_tags(i+1)
-      call add_mesh_maps( mesh_name_A, mesh_name_B )
-      multigrid_mesh_ids(i) = mesh_collection%get_mesh_id(mesh_name_A)
-    end do
-    multigrid_mesh_ids(n_chain_meshes) = mesh_collection%get_mesh_id(mesh_name_B)
-  end if
+  ! Add mesh maps to prime extrusion and 2D meshes
+  if (SIZE(base_mesh_names) > 1) then
+    do i = 1, SIZE(base_mesh_names)
+      mesh_name_A = base_mesh_names(i)
+      twod_name_A = trim(mesh_name_A)//'_2d'
+      ! Find all of the target meshes associated with this mesh
+      mesh => mesh_collection%get_mesh(mesh_name_A)
+      local_mesh => mesh%get_local_mesh()
+      call local_mesh%get_target_mesh_names(target_mesh_names)
 
-  if (create_multigrid_2d_meshes) then
-    do i=1, n_chain_meshes-1
-      mesh_name_A = trim(chain_mesh_tags(i))//'_2d'
-      mesh_name_B = trim(chain_mesh_tags(i+1))//'_2d'
-      call add_mesh_maps( mesh_name_A, mesh_name_B )
-      multigrid_2d_mesh_ids(i) = mesh_collection%get_mesh_id(mesh_name_A)
-    end do
-    multigrid_2d_mesh_ids(n_chain_meshes) = mesh_collection%get_mesh_id(mesh_name_B)
-  end if
-
-  if (create_multires_coupling_meshes) then
-    n_coupling_meshes = size(multires_coupling_mesh_tags)
-    if ( n_coupling_meshes == 1 ) then
-      multires_coupling_mesh_ids(1) = mesh_collection%get_mesh_id(multires_coupling_mesh_tags(1))
-    else
-      do i=1, n_coupling_meshes-1
-        mesh_name_A = multires_coupling_mesh_tags(i)
-        do j=i+1, n_coupling_meshes
-          mesh_name_B = multires_coupling_mesh_tags(j)
+      if (allocated(target_mesh_names)) then
+        do j = 1, SIZE(target_mesh_names)
+          mesh_name_B = target_mesh_names(j)
           call add_mesh_maps( mesh_name_A, mesh_name_B )
+          twod_name_B = trim(mesh_name_B)//'_2d'
+          call add_mesh_maps( twod_name_A, twod_name_B )
         end do
-        multires_coupling_mesh_ids(i) = mesh_collection%get_mesh_id(mesh_name_A)
+        deallocate(target_mesh_names)
+      end if
+    end do
+  end if
+
+  if (create_shifted_meshes) then
+    if (SIZE(shifted_mesh_names) > 1) then
+      do i = 1, SIZE(shifted_mesh_names)
+        mesh_name_A = trim(shifted_mesh_names(i))//'_shifted'
+        ! Find all of the target meshes associated with this mesh
+        mesh => mesh_collection%get_mesh(mesh_name_A)
+        local_mesh => mesh%get_local_mesh()
+        call local_mesh%get_target_mesh_names(target_mesh_names)
+
+        if (allocated(target_mesh_names)) then
+          do j = 1, SIZE(target_mesh_names)
+            mesh_name_B = trim(target_mesh_names(j))//'_shifted'
+            call add_mesh_maps( mesh_name_A, mesh_name_B )
+          end do
+          deallocate(target_mesh_names)
+        end if
       end do
-      multires_coupling_mesh_ids(n_coupling_meshes) = mesh_collection%get_mesh_id(mesh_name_B)
     end if
   end if
 
-  if (create_multires_coupling_2d_meshes) then
-    n_coupling_meshes = size(multires_coupling_mesh_tags)
-    if ( n_coupling_meshes == 1 ) then
-      mesh_name_A = trim(multires_coupling_mesh_tags(1))//'_2d'
-      multires_coupling_2d_mesh_ids(1) = mesh_collection%get_mesh_id(mesh_name_A)
-    else
-      do i=1, n_coupling_meshes-1
-        mesh_name_A = trim(multires_coupling_mesh_tags(i))//'_2d'
-        do j=i+1, n_coupling_meshes
-          mesh_name_B = trim(multires_coupling_mesh_tags(j))//'_2d'
-          call add_mesh_maps( mesh_name_A, mesh_name_B )
-        end do
-        multires_coupling_2d_mesh_ids(i) = mesh_collection%get_mesh_id(mesh_name_A)
+  if (create_double_level_meshes) then
+    if (SIZE(double_level_mesh_names) > 1) then
+      do i = 1, SIZE(double_level_mesh_names)
+        mesh_name_A = trim(double_level_mesh_names(i))//'_double'
+        ! Find all of the target meshes associated with this mesh
+        mesh => mesh_collection%get_mesh(mesh_name_A)
+        local_mesh => mesh%get_local_mesh()
+        call local_mesh%get_target_mesh_names(target_mesh_names)
+
+        if (allocated(target_mesh_names)) then
+          do j = 1, SIZE(target_mesh_names)
+            mesh_name_B = trim(target_mesh_names(j))//'_double'
+            call add_mesh_maps( mesh_name_A, mesh_name_B )
+          end do
+          deallocate(target_mesh_names)
+        end if
       end do
-      multires_coupling_2d_mesh_ids(n_coupling_meshes) = mesh_collection%get_mesh_id(mesh_name_B)
     end if
   end if
 
-  !=================================================================
-  ! 6.0 Extract out mesh IDs
-  !=================================================================
-  mesh_name = prime_mesh_name
-  mesh => mesh_collection%get_mesh(mesh_name)
-
-  if ( create_2d_mesh ) then
-    mesh_name = trim(prime_mesh_name)//'_2d'
-    twod_mesh => mesh_collection%get_mesh(mesh_name)
-  end if
-
-  if ( create_shifted_mesh ) then
-    mesh_name = trim(prime_mesh_name)//'_shifted'
-    shifted_mesh => mesh_collection%get_mesh(mesh_name)
-  end if
-
-  if ( create_double_level_mesh ) then
-    mesh_name = trim(prime_mesh_name)//'_double'
-    double_level_mesh => mesh_collection%get_mesh(mesh_name)
-  end if
+  nullify(mesh, local_mesh)
 
   !=================================================================
-  ! 7.0 Discard global mesh collection and all meshes in it.
+  ! 6.0 Discard global mesh collection and all meshes in it.
   !     (They should not be used past this point in the code)
   !=================================================================
   if (allocated(global_mesh_collection)) deallocate(global_mesh_collection)
@@ -571,28 +500,23 @@ end subroutine set_partition_parameters
 !> @brief  Reads in global meshes from UGRID file, partitions them
 !!         and creates local meshes.
 !>
-!> @param[in]  input_mesh_file                 Input file to load meshes from.
-!> @param[in]  local_rank                      Number of the local MPI rank
-!> @param[in]  total_ranks                     Total number of MPI ranks in this job
-!> @param[in]  xproc                           Number of ranks in mesh panel x-direction
-!> @param[in]  yproc                           Number of ranks in mesh panel y-direction
-!> @param[in]  stencil_depth                   Depth of cells outside the base cell
-!!                                             of stencil
-!> @param[in]  partitioner_ptr                 Mesh partitioning strategy
-!> @param[in]  create_multigrid                Logical for making multigrid meshes
-!> @param[in]  create_multires_coupling_meshes Logical for making multiresolution coupling meshes
-!> @param[in]  multires_coupling_mesh_tags     Multiresolution Coupling miniapp mesh names
+!> @param[in]  input_mesh_file         Input file to load meshes from.
+!> @param[in]  local_rank              Number of the local MPI rank
+!> @param[in]  total_ranks             Total number of MPI ranks in this job
+!> @param[in]  xproc                   Number of ranks in mesh panel x-direction
+!> @param[in]  yproc                   Number of ranks in mesh panel y-direction
+!> @param[in]  stencil_depth           Depth of cells outside the base cell
+!!                                     of stencil
+!> @param[in]  partitioner_ptr         Mesh partitioning strategy
+!> @param[in]  base_mesh_names         Array of base mesh names to create
 subroutine create_all_base_meshes( input_mesh_file,                 &
                                    local_rank, total_ranks,         &
                                    xproc, yproc,                    &
                                    stencil_depth,                   &
                                    partitioner_ptr,                 &
-                                   create_multigrid,                &
-                                   n_multigrid_levels,              &
-                                   create_multires_coupling_meshes, &
-                                   multires_coupling_mesh_tags )
+                                   base_mesh_names )
 
-  use multigrid_config_mod, only: chain_mesh_tags
+  use multigrid_config_mod, only: chain_mesh_tags, multigrid_chain_nitems
 
   implicit none
 
@@ -603,19 +527,12 @@ subroutine create_all_base_meshes( input_mesh_file,                 &
   integer(kind=i_def),                       intent(in) :: yproc
   integer(kind=i_def),                       intent(in) :: stencil_depth
   procedure(partitioner_interface), pointer, intent(in) :: partitioner_ptr
-  logical(kind=l_def),                       intent(in) :: create_multigrid
-  integer(kind=i_def),                       intent(in) :: n_multigrid_levels
-  logical(kind=l_def),                       intent(in) :: create_multires_coupling_meshes
-  character(len=str_def),          optional, intent(in) :: multires_coupling_mesh_tags(:)
+  character(len=str_def),                    intent(in) :: base_mesh_names(:)
 
-  ! 1.0 Read in prime mesh first by default
-  !----------------------------------------------
-  write(log_scratch_space,'(A)') &
-      'Reading prime global mesh: "'//trim(prime_mesh_name)//'"'
-  call log_event(log_scratch_space, LOG_LEVEL_INFO)
+  integer(kind=i_def) :: n_multigrid_levels
 
   call create_base_meshes( input_mesh_file,         &
-                           [prime_mesh_name],       &
+                           base_mesh_names,         &
                            local_rank, total_ranks, &
                            xproc, yproc,            &
                            stencil_depth,           &
@@ -623,32 +540,11 @@ subroutine create_all_base_meshes( input_mesh_file,                 &
 
   ! Check that the partitioning strategy will result in partitions that
   ! align for all levels of multigrid
-  if( create_multigrid )then
+  if ( SIZE(base_mesh_names) > 1 .and. multigrid_chain_nitems > 1 ) then
+    n_multigrid_levels = SIZE(chain_mesh_tags)
     call check_multigrid_partitioning(prime_mesh_name, &
                                       xproc, yproc,    &
                                       n_multigrid_levels)
-  end if
-
-  ! 2.0 Read in any other global meshes required
-  !     by other additional configured schemes
-  !----------------------------------------------
-  if ( create_multigrid ) then
-    call create_base_meshes( input_mesh_file,         &
-                             chain_mesh_tags,         &
-                             local_rank, total_ranks, &
-                             xproc, yproc,            &
-                             stencil_depth,           &
-                             partitioner_ptr )
-  end if
-
-  if ( create_multires_coupling_meshes .and. &
-       present(multires_coupling_mesh_tags) ) then
-    call create_base_meshes( input_mesh_file,             &
-                             multires_coupling_mesh_tags, &
-                             local_rank, total_ranks,     &
-                             xproc, yproc,                &
-                             stencil_depth,               &
-                             partitioner_ptr )
   end if
 
 end subroutine create_all_base_meshes
@@ -871,36 +767,34 @@ end subroutine create_mesh_maps
 !> @details  The extrusion types are set up for the required configuration
 !!           before 3D-meshes are instantiated.
 !>
-!> @param[in]  extrusion                       The prime vertical mesh extrusion
-!> @param[in]  create_2d_mesh                  Create 2D-mesh based on prime mesh
-!> @param[in]  create_shifted_mesh             Create shifted mesh based on prime mesh
-!> @param[in]  create_double_level_mesh        Create double-level mesh based on prime mesh
-!> @param[in]  create_multigrid_meshes         Create meshes to support multigrid
-!> @param[in]  create_multires_coupling_meshes Create meshes for multires_coupling miniapp
-!> @param[in]  multires_coupling_mesh_tags     Multiresolution Coupling miniapp mesh names
-subroutine create_all_3D_meshes( extrusion,                       &
-                                 create_2d_mesh,                  &
-                                 create_shifted_mesh,             &
-                                 create_double_level_mesh,        &
-                                 create_multigrid_meshes,         &
-                                 create_multires_coupling_meshes, &
-                                 multires_coupling_mesh_tags )
+!> @param[in]  extrusion                  The prime vertical mesh extrusion
+!> @param[in]  base_mesh_names            Array of base mesh names. For each of
+!!                                        these, a 3D "prime" extrusion will be
+!!                                        constructed as well as its 2D version
+!> @param[in]  create_shifted_meshes      Create shifted meshes
+!> @param[in]  create_double_level_meshes Create double-level meshes
+!> @param[in]  shifted_mesh_names         Optional, array of names of meshes for
+!!                                        which to make a shifted extrusion
+!> @param[in]  double_level_mesh_names    Optional, array of names of meshes for
+!!                                        which to make a double level extrusion
+subroutine create_all_3D_meshes( extrusion,                  &
+                                 base_mesh_names,            &
+                                 create_shifted_meshes,      &
+                                 create_double_level_meshes, &
+                                 shifted_mesh_names,         &
+                                 double_level_mesh_names )
 
   use extrusion_mod,           only: TWOD, SHIFTED, DOUBLE_LEVEL
   use extrusion_config_mod,    only: domain_top
-  use multigrid_config_mod,    only: chain_mesh_tags
 
   implicit none
 
-  class(extrusion_type),  intent(in) :: extrusion
-  logical(kind=l_def),    intent(in) :: create_2d_mesh
-  logical(kind=l_def),    intent(in) :: create_shifted_mesh
-  logical(kind=l_def),    intent(in) :: create_double_level_mesh
-  logical(kind=l_def),    intent(in) :: create_multigrid_meshes
-  logical(kind=l_def),    intent(in) :: create_multires_coupling_meshes
-
-  character(len=str_def), intent(in), &
-                            optional :: multires_coupling_mesh_tags(:)
+  class(extrusion_type), intent(in) :: extrusion
+  character(str_def),    intent(in) :: base_mesh_names(:)
+  logical(kind=l_def),   intent(in) :: create_shifted_meshes
+  logical(kind=l_def),   intent(in) :: create_double_level_meshes
+  character(str_def),    intent(in) :: shifted_mesh_names(:)
+  character(str_def),    intent(in) :: double_level_mesh_names(:)
 
   class(extrusion_type), allocatable :: extrusion_shifted
   class(extrusion_type), allocatable :: extrusion_double
@@ -913,86 +807,58 @@ subroutine create_all_3D_meshes( extrusion,                       &
   integer(kind=i_def), parameter :: one_layer = 1_i_def
   real(kind=r_def),    parameter :: atmos_bottom = 0.0_r_def
 
-  ! 1.0 Prime Mesh
+  ! 1.0 Prime extrusions and 2D meshes
   !===================================================================
-  call create_3d_mesh( prime_mesh_name, &
-                       extrusion )
+  do i = 1, SIZE(base_mesh_names)
+    write(log_scratch_space,'(A,I4)') 'Creating prime mesh ', i
+    call log_event(log_scratch_space, LOG_LEVEL_INFO)
+
+    call create_3d_mesh( base_mesh_names(i), extrusion )
 
   ! 2.0 Generate addition 3d mesh partitions based on the prime mesh
   ! NOTE: This includes 2D meshes as they are currently implemented
   !       as a 3D mesh of 1-layer thick.
-  if (create_2d_mesh) then
     extrusion_2d = uniform_extrusion_type( atmos_bottom, &
                                            domain_top,   &
                                            one_layer,    &
                                            TWOD )
 
-    mesh_name = trim(prime_mesh_name)//'_2d'
+    mesh_name = trim(base_mesh_names(i))//'_2d'
 
-    call create_3d_mesh( prime_mesh_name, &
+    call create_3d_mesh( base_mesh_names(i), &
                          extrusion_2d,    &
                          mesh_name=mesh_name )
-  end if
+  end do
 
-  ! 3.0 Generate addition shifted 3d mesh partition
-  !     based on the prime mesh.
-  if (create_shifted_mesh) then
+  ! 3.0 Generate shifted 3d mesh partition
+  if (create_shifted_meshes) then
 
     if (allocated(extrusion_shifted)) deallocate(extrusion_shifted)
     allocate( extrusion_shifted, &
               source=shifted_extrusion_type(extrusion) )
 
-    mesh_name = trim(prime_mesh_name)//'_shifted'
+    do i = 1, SIZE(shifted_mesh_names)
+      mesh_name = trim(shifted_mesh_names(i))//'_shifted'
 
-    call create_3d_mesh( prime_mesh_name,   &
-                         extrusion_shifted, &
-                         mesh_name=mesh_name )
+      call create_3d_mesh( shifted_mesh_names(i),   &
+                           extrusion_shifted,       &
+                           mesh_name=mesh_name )
+    end do
   end if
 
-  ! 4.0 Generate addition double-level 3d mesh partition
-  !     based on the prime mesh.
-  if (create_double_level_mesh) then
+  ! 4.0 Generate double-level 3d mesh partition
+  if (create_double_level_meshes) then
 
     allocate( extrusion_double, &
               source=double_level_extrusion_type(extrusion) )
-    mesh_name = trim(prime_mesh_name)//'_double'
 
-    call create_3d_mesh( prime_mesh_name,  &
-                         extrusion_double, &
-                         mesh_name=mesh_name )
-  end if
+    do i = 1, SIZE(double_level_mesh_names)
+      mesh_name = trim(double_level_mesh_names(i))//'_double'
 
-  ! 5.0 Generate meshes required by any other schemes
-  !     in the model run configuration.
-  !===================================================================
-  ! 5.1 Dynamics Multigrid
-  if (create_multigrid_meshes) then
-
-    do i=1, size(chain_mesh_tags)
-      call create_3d_mesh( chain_mesh_tags(i), &
-                           extrusion )
-
-      mesh_name = trim(chain_mesh_tags(i))//'_2d'
-      call create_3d_mesh( chain_mesh_tags(i), &
-                           extrusion_2d,       &
+      call create_3d_mesh( double_level_mesh_names(i),  &
+                           extrusion_double,            &
                            mesh_name=mesh_name )
     end do
-
-  end if
-
-  ! 5.2 Multires Coupling Miniapp
-  if (create_multires_coupling_meshes) then
-
-    do i=1, size(multires_coupling_mesh_tags)
-      call create_3d_mesh( multires_coupling_mesh_tags(i), &
-                           extrusion )
-
-      mesh_name = trim(multires_coupling_mesh_tags(i))//'_2d'
-      call create_3d_mesh( multires_coupling_mesh_tags(i), &
-                           extrusion_2d,                   &
-                           mesh_name=mesh_name )
-    end do
-
   end if
 
   if (allocated(extrusion_shifted)) deallocate( extrusion_shifted )
@@ -1181,56 +1047,26 @@ end subroutine add_mesh_maps
 
 !> @brief    Load all the local mesh(es) required.
 !> @details  Load the local mesh(es) UGRID mesh input file.
-!>           The prime mesh is always loaded by default.
 !>
-!> @param[in]  input_mesh_file              UGRID file containing data to
-!>                                          populate <local_mesh_type> objects.
-!> @param[in]  create_multigrid             Optional: Flag to load populate local
-!>                                                    meshes for multigrid.
-!> @param[in]  multires_coupling_mesh_tags  Optional: Mesh names required for
-!>                                                    Multi-resolution coupling.
-
-subroutine load_all_local_meshes( input_mesh_file,     &
-                                  create_multigrid,    &
-                                  multires_coupling_mesh_tags )
-
-  use multigrid_config_mod, only: chain_mesh_tags
+!> @param[in]  input_mesh_file            UGRID file containing data to
+!>                                        populate <local_mesh_type> objects.
+!> @param[in]  base_mesh_names            Array of base mesh names to read in
+subroutine load_all_local_meshes( input_mesh_file, base_mesh_names )
 
   implicit none
 
   character(str_max_filename), intent(in) :: input_mesh_file
-  logical(l_def), intent(in) :: create_multigrid
-  character(str_def), intent(in), optional :: multires_coupling_mesh_tags(:)
+  character(str_def),          intent(in) :: base_mesh_names(:)
 
   integer(i_def) :: i
 
-  ! 1.0 Read in prime mesh first by default
-  !----------------------------------------------
-  write(log_scratch_space,'(A)') &
-      'Reading prime mesh: "'//trim(prime_mesh_name)//'"'
-  call log_event(log_scratch_space, LOG_LEVEL_INFO)
+  do i = 1, SIZE(base_mesh_names)
+    write(log_scratch_space,'(A)') &
+        'Reading mesh: "'//trim(base_mesh_names(i))//'"'
+    call log_event(log_scratch_space, LOG_LEVEL_INFO)
 
-  call load_local_mesh(input_mesh_file, prime_mesh_name)
-
-
-  ! 2.0 Read in any other global meshes required
-  !     by other additional configured schemes
-  !----------------------------------------------
-  if (create_multigrid) then
-    do i=1, size(chain_mesh_tags)
-      call load_local_mesh(input_mesh_file, chain_mesh_tags(i))
-    end do
-  end if
-
-
-  ! 3.0 Read in any other global meshes required
-  !     by other additional configured schemes
-  !----------------------------------------------
-  if (present(multires_coupling_mesh_tags)) then
-    do i=1, size(multires_coupling_mesh_tags)
-      call load_local_mesh(input_mesh_file, multires_coupling_mesh_tags(i))
-    end do
-  end if
+    call load_local_mesh(input_mesh_file, base_mesh_names(i))
+  end do
 
 end subroutine load_all_local_meshes
 

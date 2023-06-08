@@ -5,21 +5,24 @@
 ! *****************************COPYRIGHT*******************************
 MODULE lfricinp_lfric_driver_mod
 
-USE constants_mod,              ONLY: i_def, imdi, r_second
+USE constants_mod,              ONLY: i_def, imdi, r_second, str_def
 USE log_mod,                    ONLY: log_event, log_scratch_space,            &
                                       LOG_LEVEL_INFO, LOG_LEVEL_ERROR,         &
                                       LOG_LEVEL_ALWAYS
 
 ! LFRic Modules
+USE base_mesh_config_mod,       ONLY: prime_mesh_name
 USE driver_mesh_mod,            ONLY: init_mesh
 USE driver_fem_mod,             ONLY: init_fem
 USE driver_log_mod,             ONLY: init_logger, final_logger
 USE derived_config_mod,         ONLY: set_derived_config
-USE extrusion_mod,              ONLY: extrusion_type
+USE extrusion_mod,              ONLY: extrusion_type, TWOD
 USE field_collection_mod,       ONLY: field_collection_type
 USE field_mod,                  ONLY: field_type
+USE geometric_constants_mod,    ONLY: get_chi_inventory, get_panel_id_inventory
 USE gungho_extrusion_mod,       ONLY: create_extrusion
 USE halo_comms_mod,             ONLY: initialise_halo_comms
+USE inventory_by_mesh_mod,      ONLY: inventory_by_mesh_type
 USE model_clock_mod,            ONLY: model_clock_type
 USE lfric_xios_context_mod,     ONLY: lfric_xios_context_type, advance
 USE lfric_xios_driver_mod,      ONLY: lfric_xios_initialise, &
@@ -27,6 +30,7 @@ USE lfric_xios_driver_mod,      ONLY: lfric_xios_initialise, &
 USE lfricinp_setup_io_mod,      ONLY: init_lfricinp_files
 USE linked_list_mod,            ONLY: linked_list_type
 USE mesh_mod,                   ONLY: mesh_type
+USE mesh_collection_mod,        ONLY: mesh_collection
 USE lfricinp_runtime_constants_mod, ONLY: lfricinp_create_runtime_constants
 USE step_calendar_mod,          ONLY: step_calendar_type
 
@@ -52,10 +56,6 @@ INTEGER(KIND=i_def), PUBLIC :: total_ranks
 INTEGER(KIND=i_def), PUBLIC :: local_rank
 
 INTEGER(KIND=i_def), PUBLIC :: comm = -999
-
-! Coordinate field
-TYPE(field_type), TARGET :: chi(3)
-TYPE(field_type), TARGET :: panel_id
 
 TYPE(mesh_type), PUBLIC, pointer :: mesh      => null()
 TYPE(mesh_type), PUBLIC, pointer :: twod_mesh => null()
@@ -88,9 +88,15 @@ INTEGER(KIND=i_def), INTENT(IN) :: first_step, last_step
 REAL(r_second),      INTENT(IN) :: spinup_period
 REAL(r_second),      INTENT(IN) :: seconds_per_step
 
+CHARACTER(len=str_def),   ALLOCATABLE :: base_mesh_names(:)
 CLASS(extrusion_type),    ALLOCATABLE :: extrusion
 TYPE(step_calendar_type), ALLOCATABLE :: model_calendar
 TYPE(linked_list_type),   POINTER     :: file_list => null()
+
+TYPE(field_type), POINTER :: chi(:) => null()
+TYPE(field_type), POINTER :: panel_id => null()
+TYPE(inventory_by_mesh_type), POINTER :: chi_inventory => null()
+TYPE(inventory_by_mesh_type), POINTER :: panel_id_inventory => null()
 
 ! Set module variables
 program_name = program_name_arg
@@ -128,15 +134,23 @@ CALL log_event('Initialising mesh', LOG_LEVEL_INFO)
 
 ! Generate prime mesh extrusion
 ALLOCATE(extrusion, source=create_extrusion())
+ALLOCATE(base_mesh_names(1))
 
-CALL init_mesh(local_rank, total_ranks, mesh, twod_mesh, &
+base_mesh_names(1) = prime_mesh_name
+CALL init_mesh(local_rank, total_ranks, base_mesh_names, &
                input_extrusion=extrusion)
 
 ! Create FEM specifics (function spaces and chi field)
 CALL log_event('Creating function spaces and chi', LOG_LEVEL_INFO)
-CALL init_fem(mesh, chi, panel_id)
+chi_inventory => get_chi_inventory()
+panel_id_inventory => get_panel_id_inventory()
+CALL init_fem(mesh_collection, chi_inventory, panel_id_inventory)
 
 ! XIOS domain initialisation
+mesh => mesh_collection%get_mesh(prime_mesh_name)
+twod_mesh => mesh_collection%get_mesh(mesh, TWOD)
+call chi_inventory%get_field_array(mesh, chi)
+call panel_id_inventory%get_field(mesh, panel_id)
 model_calendar = step_calendar_type(time_origin, start_date)
 model_clock = model_clock_type( first_step, last_step, seconds_per_step, &
                                 spinup_period )
@@ -144,17 +158,18 @@ model_clock = model_clock_type( first_step, last_step, seconds_per_step, &
 allocate( io_context )
 file_list => io_context%get_filelist()
 CALL init_lfricinp_files(file_list)
-CALL io_context%initialise( xios_ctx, comm, chi, panel_id, model_clock, &
-                            model_calendar )
+CALL io_context%initialise( xios_ctx, comm, chi, panel_id, &
+                            model_clock, model_calendar )
 call advance(io_context, model_clock)
 
 ! Initialise runtime constants
 CALL log_event('Initialising runtime constants', LOG_LEVEL_INFO)
-CALL lfricinp_create_runtime_constants(mesh,                                   &
-                              twod_mesh,                                       &
-                              chi,                                             &
-                              panel_id,                                        &
-                              seconds_per_step)
+CALL lfricinp_create_runtime_constants(mesh_collection,    &
+                                       chi_inventory,      &
+                                       panel_id_inventory, &
+                                       seconds_per_step)
+
+nullify(chi, panel_id, chi_inventory, panel_id_inventory)
 
 END SUBROUTINE lfricinp_initialise_lfric
 

@@ -10,15 +10,19 @@
 !>
 module driver_io_mod
 
+  use base_mesh_config_mod,    only: prime_mesh_name
   use calendar_mod,            only: calendar_type
-  use constants_mod,           only: i_native
+  use constants_mod,           only: i_native, str_def, i_def
   use driver_model_data_mod,   only: model_data_type
   use field_mod,               only: field_type
+  use inventory_by_mesh_mod,   only: inventory_by_mesh_type
   use io_context_mod,          only: io_context_type
   use io_config_mod,           only: use_xios_io, subroutine_timers
   use log_mod,                 only: log_event, log_level_error, &
                                      log_level_trace
   use linked_list_mod,         only: linked_list_type
+  use mesh_mod,                only: mesh_type
+  use mesh_collection_mod,     only: mesh_collection
   use model_clock_mod,         only: model_clock_type
 #ifdef USE_XIOS
   use lfric_xios_context_mod,  only: lfric_xios_context_type
@@ -46,49 +50,94 @@ contains
 
   !> @brief  Initialises the model I/O
   !>
-  !> @param[in] id                A string identifier for the model
-  !> @param[in] communicator      The ID for the model MPI communicator
-  !> @param[in] chi               The model coordinate field
-  !> @param[in] panel_id          Field containing the panel ID for each mesh
-  !!                              vertex
-  !> @param[in] model_clock       The model clock
-  !> @param[in] calendar          The model calendar
-  !> @param[in] populate_filelist Optional procedure for creating a list of
-  !!                              file descriptions used by the model I/O
-  !> @param[in] model_data        Optional Model data object
-  !> @param[in] alt_coords        Optional array of coordinate fields
-  !!                              for alternative meshes
-  !> @param[in] alt_panel_ids     Optional panel ID fields for alternative meshes
+  !> @param[in] id                  A string identifier for the model
+  !> @param[in] communicator        The ID for the model MPI communicator
+  !> @param[in] chi_inventory       Contains the model's coordinate fields
+  !> @param[in] panel_id_inventory  Contains the model's panel ID fields
+  !> @param[in] model_clock         The model clock
+  !> @param[in] calendar            The model calendar
+  !> @param[in] populate_filelist   Optional procedure for creating a list of
+  !!                                file descriptions used by the model I/O
+  !> @param[in] model_data          Optional Model data object
+  !> @param[in] alt_mesh_names      Optional array of names for other meshes
+  !!                                to initialise I/O for
   subroutine init_io( id, communicator,      &
-                      chi, panel_id,         &
+                      chi_inventory,         &
+                      panel_id_inventory,    &
                       model_clock, calendar, &
                       populate_filelist,     &
                       model_data,            &
-                      alt_coords, alt_panel_ids )
+                      alt_mesh_names         )
 
     implicit none
 
     character(*),                     intent(in)    :: id
     integer(i_native),                intent(in)    :: communicator
-    class(field_type),                intent(in)    :: chi(:)
-    class(field_type),                intent(in)    :: panel_id
+    type(inventory_by_mesh_type),     intent(in)    :: chi_inventory
+    type(inventory_by_mesh_type),     intent(in)    :: panel_id_inventory
     type(model_clock_type),           intent(inout) :: model_clock
     class(calendar_type),             intent(in)    :: calendar
     procedure(filelist_populator), &
                    pointer, optional, intent(in)    :: populate_filelist
     class(model_data_type), optional, intent(in)    :: model_data
-    type(field_type),       optional, intent(in)    :: alt_coords(:,:)
-    type(field_type),       optional, intent(in)    :: alt_panel_ids(:)
+    character(len=str_def), optional, intent(in)    :: alt_mesh_names(:)
 
-    ! Initialise model's main I/O context
-    call init_io_context( model_context,         &
-                          id, communicator,      &
-                          chi, panel_id,         &
-                          model_clock, calendar, &
-                          populate_filelist,     &
-                          model_data,            &
-                          alt_coords,            &
-                          alt_panel_ids )
+    type(mesh_type),                  pointer       :: mesh => null()
+    type(field_type),                 pointer       :: chi(:) => null()
+    type(field_type),                 pointer       :: panel_id => null()
+    type(field_type),                 pointer       :: alt_chi_ptr(:) => null()
+    type(field_type),                 pointer       :: alt_panel_id_ptr => null()
+    type(field_type),                 allocatable   :: alt_coords(:,:)
+    type(field_type),                 allocatable   :: alt_panel_ids(:)
+    integer(kind=i_def)                             :: num_meshes, i, j
+
+    ! Get coordinate fields for prime mesh
+    mesh => mesh_collection%get_mesh(prime_mesh_name)
+    call chi_inventory%get_field_array(mesh, chi)
+    call panel_id_inventory%get_field(mesh, panel_id)
+
+    ! Unpack alternative meshes and get their coordinates to pass to I/O
+    if (present(alt_mesh_names)) then
+      num_meshes = SIZE(alt_mesh_names)
+      allocate(alt_coords(num_meshes,3))
+      allocate(alt_panel_ids(num_meshes))
+
+      do i = 1, num_meshes
+        mesh => mesh_collection%get_mesh(alt_mesh_names(i))
+        call chi_inventory%get_field_array(mesh, alt_chi_ptr)
+        call panel_id_inventory%get_field(mesh, alt_panel_id_ptr)
+        ! Copy into array to give to I/O
+        do j =1,3
+          call alt_chi_ptr(j)%copy_field_serial(alt_coords(i,j))
+        end do
+        call alt_panel_id_ptr%copy_field_serial(alt_panel_ids(i))
+      end do
+
+      ! Initialise model's main I/O context
+      call init_io_context( model_context,         &
+                            id, communicator,      &
+                            chi, panel_id,         &
+                            model_clock, calendar, &
+                            populate_filelist,     &
+                            model_data,            &
+                            alt_coords,            &
+                            alt_panel_ids )
+
+      deallocate(alt_coords)
+      deallocate(alt_panel_ids)
+
+    else
+      ! Initialise model's main I/O context
+      call init_io_context( model_context,         &
+                            id, communicator,      &
+                            chi, panel_id,         &
+                            model_clock, calendar, &
+                            populate_filelist,     &
+                            model_data )
+    end if
+
+
+    nullify(mesh, chi, panel_id, alt_chi_ptr, alt_panel_id_ptr)
 
   end subroutine init_io
 

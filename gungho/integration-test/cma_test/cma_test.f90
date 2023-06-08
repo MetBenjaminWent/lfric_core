@@ -31,7 +31,7 @@ program cma_test
                                              test_cma_add,                   &
                                              test_cma_apply_inv,             &
                                              test_cma_diag_DhMDhT
-  use constants_mod,                  only : i_def, r_def, r_solver, pi
+  use constants_mod,                  only : i_def, r_def, r_solver, pi, str_def
   use derived_config_mod,             only : set_derived_config
   use mpi_mod,                        only : global_mpi, &
                                              create_comm, destroy_comm
@@ -52,6 +52,7 @@ program cma_test
                                              LOG_LEVEL_ERROR,   &
                                              LOG_LEVEL_INFO
   use mesh_mod,                       only : mesh_type
+  use mesh_collection_mod,            only : mesh_collection
   use planet_config_mod,              only : radius
 
   implicit none
@@ -83,6 +84,7 @@ program cma_test
   real   (kind=r_def) :: domain_top
   ! Grid spacing in horizontal and vertical
   real   (kind=r_def) :: dx, dz
+  character(str_def)  :: base_mesh_names(1)
   ! Variables for reading configuration from namelist file
   character(*), parameter ::       &
        required_configuration(6) = &
@@ -229,10 +231,12 @@ program cma_test
 
   call log_event( 'Initialising harness', LOG_LEVEL_INFO )
 
-  call init_mesh( local_rank, total_ranks, mesh, &
+  base_mesh_names(1) = prime_mesh_name
+  call init_mesh( local_rank, total_ranks, base_mesh_names, &
                   required_stencil_depth=get_required_stencil_depth() )
 
   ! Work out grid spacing, which should be of order 1
+  mesh => mesh_collection%get_mesh(prime_mesh_name)
   ncells_2d_local = mesh%get_ncells_2d()
 
   ! Ensure that a spherical geometry is used (otherwise tests are too simple)

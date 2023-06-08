@@ -9,8 +9,12 @@
 module multires_coupling_model_mod
 
   use assign_orography_field_mod, only : assign_orography_field
+  use base_mesh_config_mod,       only : prime_mesh_name
   use checksum_alg_mod,           only : checksum_alg
-  use driver_fem_mod,             only : init_fem, final_fem
+  use check_configuration_mod,    only : get_required_stencil_depth, &
+                                         check_any_shifted
+  use driver_fem_mod,             only : init_fem, final_fem, &
+                                         init_function_space_chains
   use driver_mesh_mod,            only : init_mesh, final_mesh
   use driver_io_mod,              only : init_io, final_io, &
                                          filelist_populator
@@ -22,6 +26,8 @@ module multires_coupling_model_mod
   use convert_to_upper_mod,       only : convert_to_upper
   use count_mod,                  only : count_type, halo_calls
   use derived_config_mod,         only : set_derived_config
+  use extrusion_mod,              only : extrusion_type, TWOD, &
+                                         SHIFTED, DOUBLE_LEVEL
   use field_mod,                  only : field_type
   use field_parent_mod,           only : write_interface
   use field_collection_mod,       only : field_collection_type
@@ -30,13 +36,14 @@ module multires_coupling_model_mod
                                          moisture_formulation_dry, &
                                          use_physics,              &
                                          use_multires_coupling
-  use mesh_collection_mod,        only : mesh_collection, &
-                                         mesh_collection_type
+  use geometric_constants_mod,    only : get_chi_inventory, get_panel_id_inventory
+  use gungho_extrusion_mod,       only : create_extrusion
+  use inventory_by_mesh_mod,      only : inventory_by_mesh_type
+  use mesh_collection_mod,        only : mesh_collection
   use mesh_mod,                   only : mesh_type
   use model_clock_mod,            only : model_clock_type
   use multires_coupling_config_mod, &
                                   only : physics_mesh_name,          &
-                                         dynamics_mesh_name,         &
                                          multires_coupling_mesh_tags
   use gungho_model_data_mod,      only : model_data_type
   use gungho_setup_io_mod,        only : init_gungho_files
@@ -61,6 +68,7 @@ module multires_coupling_model_mod
   use moisture_conservation_alg_mod, &
                                   only : moisture_conservation_alg
   use mpi_mod,                    only : mpi_type
+  use multigrid_config_mod,       only : chain_mesh_tags
   use rk_alg_timestep_mod,        only : rk_alg_init, &
                                          rk_alg_final
   use runtime_constants_mod,      only : create_runtime_constants, &
@@ -102,65 +110,41 @@ contains
   !> @brief Initialises the infrastructure and sets up constants used by the
   !>        model.
   !>
-  !> @param [in]     program_name An identifier given to the model begin run
-  !> @param [in,out] mesh         The current 3d mesh
-  !> @param [in,out] twod_mesh    The current 2d mesh
-  !> @param [in,out] shifted_mesh The vertically shifted 3d mesh
-  !> @param [in,out] double_level_mesh The double-level 3d mesh
-  !> @param [out]    model_clock  Time within the model
-  !> @param[in,out]  mpi          Communication object
+  !> @param[in]     program_name An identifier given to the model begin run
+  !> @param[out]    model_clock  Time within the model
+  !> @param[in,out] mpi          Communication object
   !>
-  subroutine initialise_infrastructure( program_name,      &
-                                        mesh,              &
-                                        twod_mesh,         &
-                                        shifted_mesh,      &
-                                        double_level_mesh, &
-                                        model_clock,       &
-                                        mpi )
+  subroutine initialise_infrastructure( program_name, model_clock, mpi )
 
     use check_configuration_mod, only: get_required_stencil_depth
 
     implicit none
 
     character(*),           intent(in)               :: program_name
-    type(mesh_type),        intent(inout), pointer   :: mesh
-    type(mesh_type),        intent(inout), pointer   :: twod_mesh
-    type(mesh_type),        intent(inout), pointer   :: double_level_mesh
-    type(mesh_type),        intent(inout), pointer   :: shifted_mesh
     type(model_clock_type), intent(out), allocatable :: model_clock
     class(mpi_type),        intent(inout)            :: mpi
 
-    procedure(filelist_populator), pointer :: files_init_ptr
+    type(mesh_type), pointer :: mesh => null()
+    type(mesh_type), pointer :: shifted_mesh => null()
+    type(mesh_type), pointer :: double_level_mesh => null()
+    type(mesh_type), pointer :: twod_mesh => null()
+    type(mesh_type), pointer :: physics_mesh => null()
 
-    integer(i_def) :: i
+    procedure(filelist_populator), pointer :: files_init_ptr => null()
 
     type(field_type) :: surface_altitude
+    class(extrusion_type), allocatable :: extrusion
 
-    type(field_type), target :: chi(3)
-    type(field_type), target :: panel_id
-    type(field_type), target :: shifted_chi(3)
-    type(field_type), target :: double_level_chi(3)
+    type(inventory_by_mesh_type), pointer :: chi_inventory => null()
+    type(inventory_by_mesh_type), pointer :: panel_id_inventory => null()
 
-
-    integer(i_def),   allocatable :: multigrid_mesh_ids(:)
-    integer(i_def),   allocatable :: multigrid_2d_mesh_ids(:)
-    type(field_type), allocatable :: chi_mg(:,:)
-    type(field_type), allocatable :: panel_id_mg(:)
-
-    logical(l_def)                :: found_dynamics_chi
-    character(str_def)            :: dynamics_2D_mesh_name
-
-    type(mesh_type), pointer      :: dynamics_mesh    => null()
-    type(mesh_type), pointer      :: physics_mesh     => null()
-    type(mesh_type), pointer      :: dynamics_2D_mesh => null()
-
-    integer(i_def),   allocatable :: multires_coupling_mesh_ids(:)
-    integer(i_def),   allocatable :: multires_coupling_2D_mesh_ids(:)
-    type(field_type), allocatable, target :: chi_mrc(:,:)
-    type(field_type), allocatable, target :: panel_id_mrc(:)
-
-    type(field_type),     pointer :: dynamics_chi(:) => null()
-    type(field_type),     pointer :: dynamics_panel_id => null()
+    logical(l_def)                  :: mesh_already_exists
+    integer(i_def)                  :: i, j, mesh_ctr, max_num_meshes
+    character(str_def), allocatable :: base_mesh_names(:)
+    character(str_def), allocatable :: shifted_mesh_names(:)
+    character(str_def), allocatable :: double_level_mesh_names(:)
+    character(str_def), allocatable :: tmp_mesh_names(:)
+    character(str_def), allocatable :: extra_io_mesh_names(:)
 
 #ifdef UM_PHYSICS
     integer(i_def) :: ncells
@@ -196,92 +180,193 @@ contains
     call init_time( model_clock )
 
     !-------------------------------------------------------------------------
+    ! Work out which meshes are required
+    !-------------------------------------------------------------------------
+
+    ! Gather together names of meshes
+    max_num_meshes = 1
+    if ( l_multigrid ) max_num_meshes = max_num_meshes + SIZE(chain_mesh_tags)
+    if ( use_multires_coupling ) max_num_meshes = max_num_meshes + SIZE(multires_coupling_mesh_tags)
+    ! Don't know the full number of meshes, so allocate maximum for now
+    allocate(tmp_mesh_names(max_num_meshes))
+
+    ! Prime extrusions -------------------------------------------------------
+    ! Always have the prime mesh
+    mesh_ctr = 1
+    tmp_mesh_names(1) = prime_mesh_name
+    ! Multigrid meshes
+    if ( l_multigrid ) then
+      do i = 1, SIZE(chain_mesh_tags)
+        ! Only add mesh if it has not already been added
+        mesh_already_exists = .false.
+        do j = 1, mesh_ctr
+          if ( tmp_mesh_names(j) == chain_mesh_tags(i) ) then
+            mesh_already_exists = .true.
+            exit
+          end if
+        end do
+        if ( .not. mesh_already_exists ) then
+          mesh_ctr = mesh_ctr + 1
+          tmp_mesh_names(mesh_ctr) = chain_mesh_tags(i)
+        end if
+      end do
+    end if
+    ! Multires coupling meshes
+    if ( use_multires_coupling ) then
+      do i = 1, SIZE(multires_coupling_mesh_tags)
+        ! Only add mesh if it has not already been added
+        mesh_already_exists = .false.
+        do j = 1, mesh_ctr
+          if ( tmp_mesh_names(j) == multires_coupling_mesh_tags(i) ) then
+            mesh_already_exists = .true.
+            exit
+          end if
+        end do
+        if ( .not. mesh_already_exists ) then
+          mesh_ctr = mesh_ctr + 1
+          tmp_mesh_names(mesh_ctr) = multires_coupling_mesh_tags(i)
+        end if
+      end do
+    end if
+
+    ! Transfer mesh names from temporary array to an array of appropriate size
+    allocate(base_mesh_names(mesh_ctr))
+    do i = 1, mesh_ctr
+      base_mesh_names(i) = tmp_mesh_names(i)
+    end do
+    deallocate(tmp_mesh_names)
+
+    ! Shifted meshes ---------------------------------------------------------
+    if ( check_any_shifted() ) then
+      allocate(tmp_mesh_names(SIZE(base_mesh_names)))
+
+      mesh_ctr = 1
+      tmp_mesh_names(1) = prime_mesh_name
+
+      if ( use_multires_coupling ) then
+        do i = 1, SIZE(multires_coupling_mesh_tags)
+          ! Only add mesh if it has not already been added
+          mesh_already_exists = .false.
+          do j = 1, mesh_ctr
+            if ( tmp_mesh_names(j) == multires_coupling_mesh_tags(i) ) then
+              mesh_already_exists = .true.
+              exit
+            end if
+          end do
+          if ( .not. mesh_already_exists ) then
+            mesh_ctr = mesh_ctr + 1
+            tmp_mesh_names(mesh_ctr) = multires_coupling_mesh_tags(i)
+          end if
+        end do
+      end if
+
+      ! Transfer mesh names from temporary array to an array of appropriate size
+      allocate(shifted_mesh_names(mesh_ctr))
+      do i = 1, mesh_ctr
+        shifted_mesh_names(i) = tmp_mesh_names(i)
+      end do
+      deallocate(tmp_mesh_names)
+    end if
+
+    ! Double level meshes ------------------------------------------------------
+    if ( check_any_shifted() ) then
+      allocate(tmp_mesh_names(SIZE(base_mesh_names)))
+
+      mesh_ctr = 1
+      tmp_mesh_names(1) = prime_mesh_name
+
+      if ( use_multires_coupling ) then
+        do i = 1, SIZE(multires_coupling_mesh_tags)
+          ! Only add mesh if it has not already been added
+          mesh_already_exists = .false.
+          do j = 1, mesh_ctr
+            if ( tmp_mesh_names(j) == multires_coupling_mesh_tags(i) ) then
+              mesh_already_exists = .true.
+              exit
+            end if
+          end do
+          if ( .not. mesh_already_exists ) then
+            mesh_ctr = mesh_ctr + 1
+            tmp_mesh_names(mesh_ctr) = multires_coupling_mesh_tags(i)
+          end if
+        end do
+      end if
+
+      ! Transfer mesh names from temporary array to an array of appropriate size
+      allocate(double_level_mesh_names(mesh_ctr))
+      do i = 1, mesh_ctr
+        double_level_mesh_names(i) = tmp_mesh_names(i)
+      end do
+      deallocate(tmp_mesh_names)
+    end if
+
+    !-------------------------------------------------------------------------
     ! Initialise aspects of the grid
     !-------------------------------------------------------------------------
 
-    ! Create the mesh
-    call init_mesh( mpi%get_comm_rank(), mpi%get_comm_size(),                      &
-                    mesh,                                                          &
-                    twod_mesh                     = twod_mesh,                     &
-                    shifted_mesh                  = shifted_mesh,                  &
-                    double_level_mesh             = double_level_mesh,             &
-                    multigrid_mesh_ids            = multigrid_mesh_ids,            &
-                    multigrid_2D_mesh_ids         = multigrid_2D_mesh_ids,         &
-                    use_multigrid                 = l_multigrid,                   &
-                    multires_coupling_mesh_ids    = multires_coupling_mesh_ids,    &
-                    multires_coupling_2D_mesh_ids = multires_coupling_2D_mesh_ids, &
-                    multires_coupling_mesh_tags   = multires_coupling_mesh_tags,   &
-                    use_multires_coupling         = use_multires_coupling,         &
-                    required_stencil_depth        = get_required_stencil_depth() )
+    ! Generate prime mesh extrusion
+    allocate( extrusion, source=create_extrusion() )
 
-    call init_fem( mesh, chi, panel_id,                                           &
-                   shifted_mesh                  = shifted_mesh,                  &
-                   shifted_chi                   = shifted_chi,                   &
-                   double_level_mesh             = double_level_mesh,             &
-                   double_level_chi              = double_level_chi,              &
-                   multigrid_mesh_ids            = multigrid_mesh_ids,            &
-                   multigrid_2D_mesh_ids         = multigrid_2D_mesh_ids,         &
-                   chi_mg                        = chi_mg,                        &
-                   panel_id_mg                   = panel_id_mg,                   &
-                   use_multigrid                 = l_multigrid,                   &
-                   multires_coupling_mesh_ids    = multires_coupling_mesh_ids,    &
-                   multires_coupling_2D_mesh_ids = multires_coupling_2D_mesh_ids, &
-                   chi_multires_coupling         = chi_mrc,                       &
-                   panel_id_multires_coupling    = panel_id_mrc,                  &
-                   use_multires_coupling         = use_multires_coupling )
+    ! Create the mesh
+    call init_mesh( mpi%get_comm_rank(), mpi%get_comm_size(),               &
+                    base_mesh_names,                                        &
+                    shifted_mesh_names      = shifted_mesh_names,           &
+                    double_level_mesh_names = double_level_mesh_names,      &
+                    required_stencil_depth  = get_required_stencil_depth(), &
+                    input_extrusion         = extrusion )
+
+    chi_inventory => get_chi_inventory()
+    panel_id_inventory => get_panel_id_inventory()
+
+    call init_fem( mesh_collection, chi_inventory, panel_id_inventory )
+    if ( l_multigrid ) then
+      call init_function_space_chains( mesh_collection, chain_mesh_tags )
+    end if
 
     !-------------------------------------------------------------------------
     ! Initialise aspects of output
     !-------------------------------------------------------------------------
 
-    dynamics_2D_mesh_name = trim(dynamics_mesh_name)//'_2d'
-    dynamics_mesh    => mesh_collection%get_mesh( dynamics_mesh_name )
-    dynamics_2D_mesh => mesh_collection%get_mesh( dynamics_2D_mesh_name )
-    ! Find chi for dynamics mesh
-    ! We haven't computed runtime constants yet so have to add this here
-    found_dynamics_chi = .false.
-    if ( associated( dynamics_mesh, mesh ) ) then
-      dynamics_chi => chi
-      dynamics_panel_id => panel_id
-      found_dynamics_chi = .true.
-    else
-      do i = 1, SIZE(multires_coupling_mesh_ids)
-        if ( dynamics_mesh%get_id() == multires_coupling_mesh_ids(i) ) then
-          dynamics_chi => chi_mrc(:,i)
-          dynamics_panel_id => panel_id_mrc(i)
-          found_dynamics_chi = .true.
-          exit
-        end if
-      end do
-    end if
-    if (.not. found_dynamics_chi) then
-      call log_event('Unable to find chi for dynamics mesh', LOG_LEVEL_ERROR)
-    end if
+    allocate(extra_io_mesh_names(SIZE(multires_coupling_mesh_tags)-1))
+    mesh_ctr = 1
+    do i = 1, SIZE(multires_coupling_mesh_tags)
+      if (multires_coupling_mesh_tags(i) /= prime_mesh_name) then
+        extra_io_mesh_names(mesh_ctr) = multires_coupling_mesh_tags(i)
+        mesh_ctr = mesh_ctr + 1
+      end if
+    end do
 
     files_init_ptr => init_gungho_files
-    call init_io( program_name,                    &
-                  mpi%get_comm(),                  &
-                  dynamics_chi,                    &
-                  dynamics_panel_id,               &
-                  model_clock, get_calendar(),     &
-                  populate_filelist=files_init_ptr )
+    call init_io( program_name,                      &
+                  mpi%get_comm(),                    &
+                  chi_inventory, panel_id_inventory, &
+                  model_clock, get_calendar(),       &
+                  populate_filelist=files_init_ptr,  &
+                  alt_mesh_names=extra_io_mesh_names )
 
     ! Set up surface altitude field - this will be used to generate orography
     ! for models with global land mass included (i.e GAL)
+    mesh => mesh_collection%get_mesh(prime_mesh_name)
+    twod_mesh => mesh_collection%get_mesh(mesh, TWOD)
     call init_altitude( twod_mesh, surface_altitude )
 
     ! Assignment of orography from surface_altitude
-    call assign_orography_field( chi, panel_id,                      &
-                                 mesh, surface_altitude )
-    call assign_orography_field( shifted_chi, panel_id,              &
-                                 shifted_mesh, surface_altitude )
-    call assign_orography_field( double_level_chi, panel_id,         &
-                                 double_level_mesh, surface_altitude )
+    call assign_orography_field(chi_inventory, panel_id_inventory, &
+                                mesh, surface_altitude)
+
+    if ( check_any_shifted() ) then
+      shifted_mesh => mesh_collection%get_mesh(mesh, SHIFTED)
+      call assign_orography_field(chi_inventory, panel_id_inventory, &
+                                  shifted_mesh, surface_altitude)
+      double_level_mesh => mesh_collection%get_mesh(mesh, DOUBLE_LEVEL)
+      call assign_orography_field(chi_inventory, panel_id_inventory, &
+                                  double_level_mesh, surface_altitude)
+    end if
 
     ! Set up orography fields for multgrid meshes
     if ( l_multigrid ) then
-      call mg_orography_alg( multigrid_mesh_ids, multigrid_2D_mesh_ids, &
-                             chi_mg, panel_id_mg, surface_altitude )
+      call mg_orography_alg( chain_mesh_tags, chi_inventory, &
+                             panel_id_inventory, surface_altitude )
     end if
 
     !-------------------------------------------------------------------------
@@ -291,15 +376,8 @@ contains
     ! Create runtime_constants object. This in turn creates various things
     ! needed by the timestepping algorithms such as mass matrix operators, mass
     ! matrix diagonal fields and the geopotential field
-    call create_runtime_constants(mesh, twod_mesh, chi,                      &
-                                  panel_id, model_clock,                     &
-                                  shifted_mesh, shifted_chi,                 &
-                                  double_level_mesh, double_level_chi,       &
-                                  multigrid_mesh_ids, multigrid_2D_mesh_ids, &
-                                  chi_mg, panel_id_mg,                       &
-                                  multires_coupling_mesh_ids,                &
-                                  multires_coupling_2D_mesh_ids,             &
-                                  chi_mrc, panel_id_mrc )
+    call create_runtime_constants(mesh_collection, chi_inventory, &
+                                  panel_id_inventory, model_clock )
 
     physics_mesh => mesh_collection%get_mesh( physics_mesh_name )
 
@@ -335,6 +413,12 @@ contains
       call um_ukca_init()
     end if
 #endif
+
+    nullify(physics_mesh, mesh, twod_mesh, shifted_mesh, double_level_mesh, &
+            chi_inventory, panel_id_inventory, files_init_ptr)
+    deallocate(base_mesh_names)
+    if (allocated(shifted_mesh_names)) deallocate(shifted_mesh_names)
+    if (allocated(double_level_mesh_names)) deallocate(double_level_mesh_names)
 
   end subroutine initialise_infrastructure
 

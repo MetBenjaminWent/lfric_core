@@ -576,62 +576,48 @@ contains
   !> @return  any_shifted
   function check_any_shifted() result(any_shifted)
 
-    use extrusion_mod,       only: SHIFTED
-    use mesh_collection_mod, only: mesh_collection
-    use mesh_mod,            only: mesh_type
-    use constants_mod,       only: str_def
+    use formulation_config_mod, only: moisture_formulation, &
+                                      moisture_formulation_dry
+    use io_config_mod,          only: write_conservation_diag
 
     implicit none
 
-    logical(kind=l_def)      :: any_shifted, shifted_mesh_exists
+    logical(kind=l_def)      :: any_shifted
     integer(kind=i_def)      :: i
-    type(mesh_type), pointer :: mesh => null()
-    character(len=str_def), allocatable, dimension(:) :: mesh_names
 
     any_shifted = .false.
-    shifted_mesh_exists = .false.
 
-    ! First check if the mesh collection has a shifted mesh
-    ! Extract all names and use these to loop through meshes
-    mesh_names = mesh_collection%get_mesh_names()
-    do i = 1, SIZE(mesh_names)
-      mesh => mesh_collection%get_mesh(mesh_names(i))
-      if (mesh%get_extrusion_id() == SHIFTED) then
-        shifted_mesh_exists = .true.
-        exit
+    ! Need a shifted mesh if:
+    ! (a) a variable uses the conservative or consistent transport equation
+    ! (b) a Wtheta variable uses FFSL
+    do i = 1, profile_size
+      ! Check for a variable using conservative/consistent equation
+      ! (but don't include "dry_field" which will never use shifted grid)
+      if ( equation_form(i) /= equation_form_advective &
+            .and. field_names(i) /= dry_field_name ) then
+          any_shifted = .true.
+          return
       end if
+
+      ! Check if there is a transport scheme using FFSL
+      select case (scheme(i))
+        ! It could be either 3D FFSL or split scheme using FFSL
+        case (scheme_ffsl_3d)
+          any_shifted = .true.
+          return
+
+        case (scheme_split)
+          if ( vertical_method(i) == split_method_ffsl &
+                .or. horizontal_method(i) == split_method_ffsl ) then
+            any_shifted = .true.
+            return
+          end if
+
+      end select
     end do
 
-    if (shifted_mesh_exists) then
-      ! Need a shifted mesh if:
-      ! (a) a variable uses the conservative or consistent transport equation
-      ! (b) a Wtheta variable uses FFSL
-      do i = 1, profile_size
-        ! Check for a variable using conservative/consistent equation
-        ! (but don't include "dry_field" which will never use shifted grid)
-        if ( equation_form(i) /= equation_form_advective &
-             .and. field_names(i) /= dry_field_name ) then
-            any_shifted = .true.
-            return
-        end if
-
-        ! Check if there is a transport scheme using FFSL
-        select case (scheme(i))
-          ! It could be either 3D FFSL or split scheme using FFSL
-          case (scheme_ffsl_3d)
-            any_shifted = .true.
-            return
-
-          case (scheme_split)
-            if ( vertical_method(i) == split_method_ffsl &
-                 .or. horizontal_method(i) == split_method_ffsl ) then
-              any_shifted = .true.
-              return
-            end if
-
-        end select
-       end do
-    end if
+    if (write_conservation_diag .and. &
+        moisture_formulation /= moisture_formulation_dry) any_shifted = .true.
 
   end function check_any_shifted
 

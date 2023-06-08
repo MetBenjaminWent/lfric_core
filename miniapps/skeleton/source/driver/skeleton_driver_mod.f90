@@ -9,8 +9,9 @@
 !>
 module skeleton_driver_mod
 
+  use base_mesh_config_mod,       only : prime_mesh_name
   use checksum_alg_mod,           only : checksum_alg
-  use constants_mod,              only : i_def, i_native, &
+  use constants_mod,              only : i_def, i_native, str_def, &
                                          PRECISION_REAL, r_def, r_second
   use convert_to_upper_mod,       only : convert_to_upper
   use driver_time_mod,            only : init_time, get_calendar
@@ -19,10 +20,12 @@ module skeleton_driver_mod
   use driver_io_mod,              only : init_io, final_io
   use field_mod,                  only : field_type
   use init_skeleton_mod,          only : init_skeleton
+  use inventory_by_mesh_mod,      only : inventory_by_mesh_type
   use io_config_mod,              only : write_diag
   use log_mod,                    only : log_event, log_scratch_space, &
                                          LOG_LEVEL_ALWAYS, LOG_LEVEL_INFO
   use mesh_mod,                   only : mesh_type
+  use mesh_collection_mod,        only : mesh_collection
   use model_clock_mod,            only : model_clock_type
   use mpi_mod,                    only : mpi_type
   use skeleton_alg_mod,           only : skeleton_alg
@@ -36,12 +39,6 @@ module skeleton_driver_mod
 
   ! Prognostic fields
   type( field_type ) :: field_1
-
-  ! Coordinate field
-  type(field_type), target, dimension(3) :: chi
-  type(field_type), target               :: panel_id
-  type(mesh_type),  pointer              :: mesh      => null()
-  type(mesh_type),  pointer              :: twod_mesh => null()
 
 contains
 
@@ -57,6 +54,15 @@ contains
 
     real(r_def) :: dt_model
 
+    ! Coordinate field
+    type(field_type),             pointer :: chi(:) => null()
+    type(field_type),             pointer :: panel_id => null()
+    type(mesh_type),              pointer :: mesh => null()
+    type(inventory_by_mesh_type)          :: chi_inventory
+    type(inventory_by_mesh_type)          :: panel_id_inventory
+    character(str_def),       allocatable :: base_mesh_names(:)
+
+
     write(log_scratch_space,'(A)')                        &
         'Application built with '//trim(PRECISION_REAL)// &
         '-bit real numbers'
@@ -71,18 +77,25 @@ contains
     dt_model = real(model_clock%get_seconds_per_step(), r_def)
 
     ! Create the mesh
-    call init_mesh( mpi%get_comm_rank(), mpi%get_comm_size(), &
-                    mesh, twod_mesh=twod_mesh )
+    allocate(base_mesh_names(1))
+    base_mesh_names(1) = prime_mesh_name
+    call init_mesh( mpi%get_comm_rank(), mpi%get_comm_size(), base_mesh_names )
 
     ! Create FEM specifics (function spaces and chi field)
-    call init_fem( mesh, chi, panel_id )
+    call init_fem( mesh_collection, chi_inventory, panel_id_inventory )
 
     ! Initialise I/O context
-    call init_io( program_name, mpi%get_comm(), chi, panel_id, &
-                  model_clock, get_calendar() )
+    call init_io( program_name, mpi%get_comm(), chi_inventory, &
+                  panel_id_inventory, model_clock, get_calendar() )
 
     ! Create and initialise prognostic fields
+    mesh => mesh_collection%get_mesh(prime_mesh_name)
+    call chi_inventory%get_field_array(mesh, chi)
+    call panel_id_inventory%get_field(mesh, panel_id)
     call init_skeleton( mesh, chi, panel_id, dt_model, field_1 )
+
+    nullify(mesh, chi, panel_id)
+    deallocate(base_mesh_names)
 
   end subroutine initialise
 

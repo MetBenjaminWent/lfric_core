@@ -343,6 +343,7 @@ external_forcing=.false.
 /
 
 &multires_coupling
+  aerosol_mesh_name='C24'
   multires_coupling_mesh_tags = 'C24'
   dynamics_mesh_name= 'C24'
   negative_correction='none'

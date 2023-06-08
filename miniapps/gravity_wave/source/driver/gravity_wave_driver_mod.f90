@@ -8,6 +8,7 @@
 !>
 module gravity_wave_driver_mod
 
+  use base_mesh_config_mod,           only: prime_mesh_name
   use constants_mod,                  only: i_def, i_native, r_def
   use gravity_wave_infrastructure_mod,only: initialise_infrastructure, &
                                             finalise_infrastructure
@@ -46,6 +47,7 @@ module gravity_wave_driver_mod
                                             log_level_error,     &
                                             log_scratch_space
   use mesh_mod,                       only: mesh_type
+  use mesh_collection_mod,            only: mesh_collection
   use model_clock_mod,                only: model_clock_type
   use mpi_mod,                        only: mpi_type
   use io_mod,                         only: ts_fname
@@ -66,7 +68,6 @@ module gravity_wave_driver_mod
   type( field_type ), target :: buoyancy
 
   type( mesh_type ), pointer :: mesh      => null()
-  type( mesh_type ), pointer :: twod_mesh => null()
 
 contains
 
@@ -81,10 +82,7 @@ contains
   character(*),    intent(in)    :: program_name
 
   ! Initialise aspects of the infrastructure
-  call initialise_infrastructure( mesh,         &
-                                  twod_mesh,    &
-                                  model_clock,  &
-                                  mpi )
+  call initialise_infrastructure( model_clock, mpi )
 
   call log_event( 'Initialising '//program_name//' ...', LOG_LEVEL_ALWAYS )
 
@@ -111,6 +109,7 @@ contains
   end if
 
   ! Create the prognostic fields
+  mesh => mesh_collection%get_mesh(prime_mesh_name)
   call create_gravity_wave_prognostics(mesh, wind, pressure, buoyancy)
 
   ! Initialise prognostic fields

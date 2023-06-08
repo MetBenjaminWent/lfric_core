@@ -12,9 +12,10 @@
 !!         takes a real field and adds one to its value.
 program algorithm_test
 
+  use base_mesh_config_mod,          only : prime_mesh_name
   use configuration_mod,             only : final_configuration, &
                                             read_configuration
-  use constants_mod,                 only : i_def, r_def
+  use constants_mod,                 only : i_def, r_def, str_def
   use test_algorithm_mod,            only : test_algorithm_finalise,   &
                                             test_algorithm_initialise, &
                                             test_da_dev_increment_alg
@@ -26,7 +27,6 @@ program algorithm_test
                                             finalise_logging,   &
                                             LOG_LEVEL_ERROR,    &
                                             LOG_LEVEL_INFO
-  use mesh_mod,                      only : mesh_type
   use mpi_mod,                       only : global_mpi, &
                                             create_comm, destroy_comm
 
@@ -53,7 +53,7 @@ program algorithm_test
   ! Usage message to print
   character(len=256)       :: usage_message
 
-  type(mesh_type), pointer :: mesh => null()
+  character(str_def)       :: base_mesh_names(1)
 
   real(r_def), parameter   :: tolerance = 1.0e-3_r_def
 
@@ -110,8 +110,9 @@ program algorithm_test
 
   ! Setup configuration, mesh, and fem
   call read_configuration( filename )
-  call init_mesh( local_rank, total_ranks, mesh )
-  call test_algorithm_initialise(mesh) ! fem
+  base_mesh_names(1) = prime_mesh_name
+  call init_mesh( local_rank, total_ranks, base_mesh_names )
+  call test_algorithm_initialise(prime_mesh_name) ! fem
 
   if ( do_test_da_dev_increment_alg_mod ) then
     call test_da_dev_increment_alg(tolerance)
@@ -122,7 +123,6 @@ program algorithm_test
 
   call test_algorithm_finalise()
   call final_mesh()
-  nullify(mesh)
 
   if (allocated(program_name)) deallocate(program_name)
   if (allocated(filename))     deallocate(filename)

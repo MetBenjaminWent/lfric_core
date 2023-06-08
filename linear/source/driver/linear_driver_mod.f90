@@ -6,8 +6,10 @@
 !>@brief Drives the execution of the (tangent) linear model.
 module linear_driver_mod
 
+  use base_mesh_config_mod,       only : prime_mesh_name
   use constants_mod,              only : i_def, i_native, imdi
   use driver_io_mod,              only : get_io_context
+  use extrusion_mod,              only : TWOD
   use field_mod,                  only : field_type
   use gungho_diagnostics_driver_mod, &
                                   only : gungho_diagnostics_driver
@@ -23,17 +25,19 @@ module linear_driver_mod
   use gungho_step_mod,            only : gungho_step
   use init_fd_prognostics_mod,    only : init_fd_prognostics_dump
   use initial_output_mod,         only : write_initial_output
-  use initialization_config_mod,  only : ls_option,                &
-                                         ls_option_file,           &
-                                         init_option,              &
-                                         init_option_fd_start_dump
+  use initialization_config_mod,  only : ls_option,                 &
+                                         ls_option_file,            &
+                                         init_option,               &
+                                         init_option_fd_start_dump, &
+                                         coarse_aerosol_ancil
   use io_config_mod,              only : write_diag, &
                                          diagnostic_frequency, &
                                          nodal_output_on_w3
   use io_context_mod,             only : io_context_type
   use log_mod,                    only : log_event,         &
                                          log_scratch_space, &
-                                         LOG_LEVEL_ALWAYS
+                                         LOG_LEVEL_ALWAYS,  &
+                                         LOG_LEVEL_INFO
   use linear_model_data_mod,      only : linear_create_ls, &
                                          linear_init_ls,   &
                                          linear_init_pert
@@ -44,8 +48,11 @@ module linear_driver_mod
   use linear_step_mod,            only : linear_step
   use linear_data_algorithm_mod,  only : update_ls_file_alg
   use mesh_mod,                   only : mesh_type
+  use mesh_collection_mod,        only : mesh_collection
   use model_clock_mod,            only : model_clock_type
   use mpi_mod,                    only : mpi_type
+  use multires_coupling_config_mod, &
+                                  only : aerosol_mesh_name
   use create_tl_prognostics_mod,  only : create_tl_prognostics
 
   implicit none
@@ -53,14 +60,10 @@ module linear_driver_mod
   private
   public initialise, run, finalise
 
-  type(model_clock_type), allocatable :: model_clock
+  type( mesh_type ), pointer :: mesh      => null()
+  type( mesh_type ), pointer :: twod_mesh => null()
 
-  type( mesh_type ), pointer :: mesh                 => null()
-  type( mesh_type ), pointer :: twod_mesh            => null()
-  type( mesh_type ), pointer :: shifted_mesh         => null()
-  type( mesh_type ), pointer :: double_level_mesh    => null()
-  type( mesh_type ), pointer :: aerosol_mesh         => null()
-  type( mesh_type ), pointer :: aerosol_twod_mesh    => null()
+  type(model_clock_type), allocatable :: model_clock
 
 contains
 
@@ -77,19 +80,29 @@ contains
     type(model_data_type), intent(inout) :: model_data
     class(mpi_type),       intent(inout) :: mpi
 
-    class(io_context_type), pointer :: io_context => null()
+    class(io_context_type), pointer :: io_context        => null()
+    type( mesh_type ),      pointer :: aerosol_mesh      => null()
+    type( mesh_type ),      pointer :: aerosol_twod_mesh => null()
+
 
     ! Initialise infrastructure and setup constants
-    call initialise_infrastructure( program_name,      &
-                                    mesh,              &
-                                    twod_mesh,         &
-                                    shifted_mesh,      &
-                                    double_level_mesh, &
-                                    aerosol_mesh,      &
-                                    aerosol_twod_mesh, &
-                                    model_data,        &
-                                    model_clock,       &
-                                    mpi )
+    call initialise_infrastructure( program_name, model_data, model_clock, mpi )
+
+    ! Get primary and 2D meshes for initialising model data
+    mesh => mesh_collection%get_mesh(prime_mesh_name)
+    twod_mesh => mesh_collection%get_mesh(mesh, TWOD)
+
+    ! If aerosol data is on a different mesh, get this
+    if (coarse_aerosol_ancil) then
+      ! For now use the coarsest mesh
+      aerosol_mesh => mesh_collection%get_mesh(aerosol_mesh_name)
+      aerosol_twod_mesh => mesh_collection%get_mesh(aerosol_mesh, TWOD)
+      write( log_scratch_space,'(A,A)' ) "aerosol mesh name:", aerosol_mesh%get_mesh_name()
+      call log_event( log_scratch_space, LOG_LEVEL_INFO )
+    else
+      aerosol_mesh => mesh
+      aerosol_twod_mesh => twod_mesh
+    end if
 
     ! Instantiate the fields stored in model_data
     call create_model_data( model_data,        &

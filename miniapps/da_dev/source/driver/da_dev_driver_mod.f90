@@ -9,8 +9,9 @@
 !>
 module da_dev_driver_mod
 
+  use base_mesh_config_mod,     only: prime_mesh_name
   use checksum_alg_mod,         only: checksum_alg
-  use constants_mod,            only: i_def, i_native, &
+  use constants_mod,            only: i_def, i_native, str_def, &
                                       PRECISION_REAL, r_def
   use clock_mod,                only: clock_type
   use driver_model_data_mod,    only: model_data_type
@@ -19,6 +20,7 @@ module da_dev_driver_mod
   use driver_fem_mod,           only: init_fem, final_fem
   use driver_io_mod,            only: init_io, final_io, filelist_populator, &
                                       get_io_context
+  use inventory_by_mesh_mod,    only: inventory_by_mesh_type
   use io_config_mod,            only: use_xios_io
   use io_context_mod,           only: io_context_type
   use field_mod,                only: field_type
@@ -28,7 +30,8 @@ module da_dev_driver_mod
                                       LOG_LEVEL_ALWAYS,   &
                                       LOG_LEVEL_INFO
   use mesh_mod,                 only: mesh_type
-  use extrusion_mod,            only: extrusion_type
+  use mesh_collection_mod,      only: mesh_collection
+  use extrusion_mod,            only: extrusion_type, TWOD
   use model_clock_mod,          only: model_clock_type
   use mpi_mod,                  only: mpi_type
   use da_dev_increment_alg_mod, only: da_dev_increment_alg
@@ -52,10 +55,12 @@ module da_dev_driver_mod
   type(model_clock_type), allocatable, public :: model_clock
 
   ! Coordinate field
-  type(field_type), target, dimension(3) :: chi
-  type(field_type), target               :: panel_id
-  type(mesh_type),  pointer, public      :: mesh      => null()
-  type(mesh_type),  pointer, public      :: twod_mesh => null()
+  type(field_type), pointer, public :: chi(:)    => null()
+  type(field_type), pointer, public :: panel_id  => null()
+  type(mesh_type),  pointer, public :: mesh      => null()
+  type(mesh_type),  pointer, public :: twod_mesh => null()
+  type(inventory_by_mesh_type)      :: chi_inventory
+  type(inventory_by_mesh_type)      :: panel_id_inventory
 
 contains
 
@@ -72,7 +77,9 @@ contains
 
     procedure(filelist_populator), pointer :: fl_populator => null()
     class(io_context_type),        pointer :: model_io_context => null()
-    class(extrusion_type),     allocatable :: extrusion
+    class(extrusion_type), allocatable     :: extrusion
+    character(str_def)                     :: base_mesh_names(1)
+
 
     write(log_scratch_space,'(A)')                        &
         'Application built with '//trim(PRECISION_REAL)// &
@@ -87,17 +94,24 @@ contains
 
     ! Create the mesh
     allocate( extrusion, source=create_extrusion() )
+    base_mesh_names(1) = prime_mesh_name
     call init_mesh( mpi%get_comm_rank(), mpi%get_comm_size(), &
-                    mesh, twod_mesh = twod_mesh, input_extrusion = extrusion )
+                    base_mesh_names, input_extrusion = extrusion )
 
     ! Create FEM specifics (function spaces and chi field)
-    call init_fem( mesh, chi, panel_id )
+    call init_fem( mesh_collection, chi_inventory, panel_id_inventory )
 
-    if ( use_xios_io ) then
+    mesh => mesh_collection%get_mesh(prime_mesh_name)
+    twod_mesh => mesh_collection%get_mesh(mesh, TWOD)
+    call chi_inventory%get_field_array(mesh, chi)
+    call panel_id_inventory%get_field(mesh, panel_id)
+
+    if (use_xios_io) then
       ! Initialise I/O context
       fl_populator => init_da_dev_files
-      call init_io( program_name, mpi%get_comm(), chi, panel_id, &
-                    model_clock, get_calendar(), populate_filelist=fl_populator )
+      call init_io( program_name, mpi%get_comm(), chi_inventory,     &
+                    panel_id_inventory, model_clock, get_calendar(), &
+                    populate_filelist=fl_populator )
 
       ! Do initial step
       model_io_context => get_io_context()

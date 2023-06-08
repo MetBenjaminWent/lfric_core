@@ -10,6 +10,7 @@
 !>
 module io_dev_driver_mod
 
+  use base_mesh_config_mod,       only: prime_mesh_name
   use checksum_alg_mod,           only: checksum_alg
   use clock_mod,                  only: clock_type
   use constants_mod,              only: i_def, i_native, str_def, &
@@ -21,7 +22,9 @@ module io_dev_driver_mod
   use driver_io_mod,              only: init_io, final_io, &
                                         filelist_populator, &
                                         get_io_context
+  use extrusion_mod,              only: TWOD
   use field_mod,                  only: field_type
+  use inventory_by_mesh_mod,      only: inventory_by_mesh_type
   use io_dev_config_mod,          only: multi_mesh, alt_mesh_name
   use io_config_mod,              only: write_diag, diagnostic_frequency, &
                                         subroutine_timers, timer_output_path
@@ -56,10 +59,6 @@ module io_dev_driver_mod
 
   type(model_clock_type), allocatable :: model_clock
 
-  type(field_type), target, dimension(3) :: chi
-  type(field_type), target               :: panel_id
-  type(mesh_type), pointer               :: mesh      => null()
-  type(mesh_type), pointer               :: twod_mesh => null()
 
   contains
 
@@ -72,15 +71,17 @@ module io_dev_driver_mod
     class(mpi_type),         intent(inout) :: mpi
     character(*),            intent(in)    :: program_name
 
-    character(str_def), allocatable :: multires_mesh_tags(:)
-    integer(i_def),     allocatable :: multires_mesh_ids(:), multires_twod_mesh_ids(:)
 
-    type(field_type), allocatable, target :: multires_coords(:,:)
-    type(field_type), allocatable, target :: multires_panel_ids(:)
-
-    type(field_type), pointer :: alt_io_coords(:,:) => null()
-    type(field_type), pointer :: alt_io_panel_ids(:) => null()
+    type(field_type), pointer :: chi(:) => null()
+    type(field_type), pointer :: panel_id => null()
+    type(mesh_type),  pointer :: mesh => null()
+    type(mesh_type),  pointer :: twod_mesh => null()
     type(mesh_type),  pointer :: alt_mesh => null()
+
+    type(inventory_by_mesh_type)    :: chi_inventory
+    type(inventory_by_mesh_type)    :: panel_id_inventory
+    character(str_def), allocatable :: base_mesh_names(:)
+    character(str_def), allocatable :: alt_mesh_names(:)
 
     class(io_context_type), pointer :: io_context
 
@@ -105,45 +106,50 @@ module io_dev_driver_mod
     call init_time( model_clock )
 
     ! Create the meshes used to test multi-mesh output
-    multires_mesh_tags = [alt_mesh_name]
-    call init_mesh( mpi%get_comm_rank(), mpi%get_comm_size(),         &
-                    mesh, twod_mesh = twod_mesh,                      &
-                    use_multires_coupling = multi_mesh,               &
-                    multires_coupling_mesh_tags = multires_mesh_tags, &
-                    multires_coupling_mesh_ids = multires_mesh_ids ,  &
-                    multires_coupling_2D_mesh_ids = multires_twod_mesh_ids )
+    if (multi_mesh) then
+      allocate(base_mesh_names(2))
+      base_mesh_names(2) = alt_mesh_name
+    else
+      allocate(base_mesh_names(1))
+    end if
+
+    base_mesh_names(1) = prime_mesh_name
+
+    call init_mesh( mpi%get_comm_rank(), &
+                    mpi%get_comm_size(), &
+                    base_mesh_names )
 
     ! Create FEM specifics (function spaces and chi fields)
-    call init_fem( mesh, chi, panel_id,                                    &
-                   use_multires_coupling = multi_mesh,                     &
-                   multires_coupling_mesh_ids = multires_mesh_ids ,        &
-                   multires_coupling_2D_mesh_ids = multires_twod_mesh_ids, &
-                   chi_multires_coupling         = multires_coords,        &
-                   panel_id_multires_coupling    = multires_panel_ids )
+    call init_fem( mesh_collection, chi_inventory, panel_id_inventory )
 
     ! Create IO and instantiate the fields stored in model_data
     files_init_ptr => init_io_dev_files
+
+    mesh => mesh_collection%get_mesh(prime_mesh_name)
+    twod_mesh => mesh_collection%get_mesh(mesh, TWOD)
+    call chi_inventory%get_field_array(mesh, chi)
+    call panel_id_inventory%get_field(mesh, panel_id)
+
     if (multi_mesh) then
-      alt_io_coords => multires_coords
-      alt_io_panel_ids => multires_panel_ids
-      alt_mesh => mesh_collection%get_mesh(multires_mesh_ids(1))
+      alt_mesh => mesh_collection%get_mesh(alt_mesh_name)
+      allocate(alt_mesh_names(1))
+      alt_mesh_names(1) = alt_mesh_name
       call create_model_data( model_data, chi, panel_id, &
                               mesh, twod_mesh, alt_mesh )
-      call init_io( program_name, mpi%get_comm(),       &
-                    chi, panel_id,                      &
-                    model_clock, get_calendar(),        &
-                    populate_filelist = files_init_ptr, &
-                    model_data = model_data,            &
-                    alt_coords = alt_io_coords,         &
-                    alt_panel_ids = alt_io_panel_ids )
+      call init_io( program_name, mpi%get_comm(),              &
+                    chi_inventory, panel_id_inventory,         &
+                    model_clock, get_calendar(),               &
+                    populate_filelist = files_init_ptr,        &
+                    model_data = model_data,                   &
+                    alt_mesh_names = alt_mesh_names )
 
     else
       call create_model_data( model_data, chi, panel_id, &
                               mesh, twod_mesh )
-      call init_io( program_name, mpi%get_comm(),       &
-                    chi, panel_id,                      &
-                    model_clock, get_calendar(),        &
-                    populate_filelist = files_init_ptr, &
+      call init_io( program_name, mpi%get_comm(),              &
+                    chi_inventory, panel_id_inventory,         &
+                    model_clock, get_calendar(),               &
+                    populate_filelist = files_init_ptr,        &
                     model_data = model_data )
     end if
 
@@ -158,6 +164,9 @@ module io_dev_driver_mod
           call advance(io_context, model_clock)
       end select
     end if
+
+    nullify(mesh, twod_mesh, chi, panel_id, files_init_ptr)
+    deallocate(base_mesh_names)
 
   end subroutine initialise
 

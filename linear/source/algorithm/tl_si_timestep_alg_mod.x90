@@ -81,8 +81,6 @@ module tl_si_timestep_alg_mod
   use tl_derive_exner_from_eos_alg_mod, &
                                    only: tl_derive_exner_from_eos
 
-  use moisture_conservation_alg_mod, &
-                                   only: moisture_conservation_alg
   use update_prognostic_scalars_alg_mod, &
                                    only: update_prognostic_scalars_alg
   use mixing_alg_mod,              only: mixing_alg
@@ -364,8 +362,8 @@ contains
     ! Predictor the wind field (u-beta*dt*rhs) to be advected
     type( field_type ) :: advected_u
     type( field_type ) :: ls_advected_u
-    ! Whether to write moisture conservation diagnostics
-    logical(kind=l_def) :: write_moisture_diag
+    ! Don't write moisture diagnostics in linear app
+    logical(kind=l_def) :: write_moisture_diag = .false.
 
     if ( subroutine_timers ) call timer('semi_implicit_timestep_alg')
 

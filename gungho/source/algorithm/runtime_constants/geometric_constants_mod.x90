@@ -20,6 +20,7 @@ module geometric_constants_mod
   use fs_continuity_mod,                  only: W0, W1, W2, W3, Wtheta, Wchi
   use function_space_collection_mod,      only: function_space_collection
   use function_space_mod,                 only: function_space_type
+  use inventory_by_mesh_mod,              only: inventory_by_mesh_type
   use io_config_mod,                      only: subroutine_timers
   use log_mod,                            only: log_event, LOG_LEVEL_INFO, &
                                                 LOG_LEVEL_ERROR
@@ -58,6 +59,10 @@ module geometric_constants_mod
   ! Variables private to this module that can only be accessed by public
   ! functions returning pointers to them
 
+  ! Inventories for use in the rest of the model
+  type(inventory_by_mesh_type), target :: chi_inventory
+  type(inventory_by_mesh_type), target :: panel_id_inventory
+
   ! Panel ID fields
   type(field_type), allocatable,  target :: panel_id_list(:)
 
@@ -87,6 +92,8 @@ module geometric_constants_mod
   public :: get_dz_w3
   public :: get_latitude
   public :: get_longitude
+  public :: get_chi_inventory
+  public :: get_panel_id_inventory
 
 contains
 
@@ -388,6 +395,24 @@ contains
     call check_initialised_field(long_ptr, field_name, mesh_id)
 
   end function get_longitude
+
+  !> @brief Returns a pointer to the chi inventory
+  function get_chi_inventory() result(inventory_ptr)
+    implicit none
+    type(inventory_by_mesh_type), pointer :: inventory_ptr
+
+    inventory_ptr => chi_inventory
+
+  end function get_chi_inventory
+
+  !> @brief Returns a pointer to the panel_id inventory
+  function get_panel_id_inventory() result(inventory_ptr)
+    implicit none
+    type(inventory_by_mesh_type), pointer :: inventory_ptr
+
+    inventory_ptr => panel_id_inventory
+
+  end function get_panel_id_inventory
 
   !> @brief Explicitly reclaim memory from module scope variables
   !

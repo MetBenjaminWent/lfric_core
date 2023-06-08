@@ -11,14 +11,21 @@
 !>          throughout the algorithm layers.
 module runtime_constants_mod
 
+  use base_mesh_config_mod,    only: prime_mesh_name
   use boundaries_config_mod,   only: limited_area
   use constants_mod,           only: i_def, r_def, str_def, l_def
+  use extrusion_mod,           only: PRIME_EXTRUSION, SHIFTED, &
+                                     TWOD, DOUBLE_LEVEL
   use field_mod,               only: field_type
+  use formulation_config_mod,  only: l_multigrid
+  use inventory_by_mesh_mod,   only: inventory_by_mesh_type
   use io_config_mod,           only: subroutine_timers
-  use log_mod,                 only: log_event, LOG_LEVEL_INFO
-  use mesh_collection_mod,     only: mesh_collection
+  use log_mod,                 only: log_event, LOG_LEVEL_INFO, &
+                                     LOG_LEVEL_ERROR
+  use mesh_collection_mod,     only: mesh_collection_type
   use mesh_mod,                only: mesh_type
   use model_clock_mod,         only: model_clock_type
+  use multigrid_config_mod,    only: chain_mesh_tags
   use runtime_tools_mod,       only: primary_mesh_label,      &
                                      shifted_mesh_label,      &
                                      double_level_mesh_label, &
@@ -37,38 +44,14 @@ module runtime_constants_mod
 
 contains
   !>@brief Subroutine to create the runtime constants
-  !> @param[in] mesh                 Mesh
-  !> @param[in] twod_mesh            Mesh for 2D domain
-  !> @param[in] chi                  Coordinate field on primary mesh
-  !> @param[in] panel_id             panel id
+  !> @param[in] mesh_collection      The collection of meshes to loop over
+  !> @param[in] chi_inventory        Stores the coordinate fields by their mesh
+  !> @param[in] panel_id_inventory   Stores the panel id fields by their mesh
   !> @param[in] model_clock          Model time.
-  !> @param[in] shifted_mesh         Mesh for vertically shifted field
-  !> @param[in] shifted_chi          Coordinate field for vertically shifted field
-  !> @param[in] double_level_mesh    Mesh for double level field
-  !> @param[in] double_level_chi     Coordinate field for double level field
-  !> @param[in] mg_mesh_ids          A list of mesh IDs for the multigrid meshes
-  !> @param[in] mg_2D_mesh_ids       A list of mesh IDs for the 2D MG meshes
-  !> @param[in] chi_mg               The coordinate fields for the MG meshes
-  !> @param[in] panel_id_mg          The panel_id fields for the MG meshes
-  !> @param[in] extra_mesh_ids       A list of mesh IDs for any extra meshes
-  !> @param[in] extra_2D_mesh_ids    A list of mesh IDs for extra 2D meshes
-  !> @param[in] chi_extra            The coordinate fields for any extra meshes
-  !> @param[in] panel_id_extra       The panel_id fields for any extra MG meshes
-  subroutine create_runtime_constants(mesh, twod_mesh, chi,  &
-                                      panel_id,              &
-                                      model_clock,           &
-                                      shifted_mesh,          &
-                                      shifted_chi,           &
-                                      double_level_mesh,     &
-                                      double_level_chi,      &
-                                      mg_mesh_ids,           &
-                                      mg_2D_mesh_ids,        &
-                                      chi_mg,                &
-                                      panel_id_mg,           &
-                                      extra_mesh_ids,        &
-                                      extra_2D_mesh_ids,     &
-                                      chi_extra,             &
-                                      panel_id_extra         )
+  subroutine create_runtime_constants(mesh_collection,       &
+                                      chi_inventory,         &
+                                      panel_id_inventory,    &
+                                      model_clock)
 
     ! Other runtime_constants modules
     use wt_advective_update_alg_mod,  only: wt_advective_update_set_num_meshes
@@ -84,47 +67,38 @@ contains
 
     implicit none
 
-    type(mesh_type), intent(in), pointer :: mesh
-    type(mesh_type), intent(in), pointer :: twod_mesh
-    type(field_type),      target,   intent(in) :: chi(:)
-    type(field_type),      target,   intent(in) :: panel_id
-    class(model_clock_type),         intent(in) :: model_clock
-    type(field_type),      optional, intent(in) :: shifted_chi(:)
-    type(field_type),      optional, intent(in) :: double_level_chi(:)
-    integer(kind=i_def),   optional, intent(in) :: mg_mesh_ids(:)
-    integer(kind=i_def),   optional, intent(in) :: mg_2D_mesh_ids(:)
-    type(field_type),      optional, intent(in) :: chi_mg(:,:)
-    type(field_type),      optional, intent(in) :: panel_id_mg(:)
-    integer(kind=i_def),   optional, intent(in) :: extra_mesh_ids(:)
-    integer(kind=i_def),   optional, intent(in) :: extra_2D_mesh_ids(:)
-    type(field_type),      optional, intent(in) :: chi_extra(:,:)
-    type(field_type),      optional, intent(in) :: panel_id_extra(:)
+    type(mesh_collection_type),   intent(in) :: mesh_collection
+    type(inventory_by_mesh_type), intent(in) :: chi_inventory
+    type(inventory_by_mesh_type), intent(in) :: panel_id_inventory
+    class(model_clock_type),      intent(in) :: model_clock
 
-    type(mesh_type), optional, intent(in), pointer :: shifted_mesh
-    type(mesh_type), optional, intent(in), pointer :: double_level_mesh
+    type(mesh_type),  pointer :: mesh => null()
+    type(field_type), pointer :: chi(:) => null()
+    type(field_type), pointer :: panel_id => null()
+    type(mesh_type),  pointer :: prime_extrusion_mesh => null()
 
     ! Internal variables
-    integer(kind=i_def)                         :: num_meshes, mesh_counter, i, j
-    integer(kind=i_def),            allocatable :: mesh_id_list(:)
-    integer(kind=i_def),            allocatable :: label_list(:)
-    type(field_type),               allocatable :: chi_list(:,:)
-    type(field_type),               allocatable :: panel_id_list(:)
+    character(str_def),  allocatable :: all_mesh_names(:)
+    integer(kind=i_def)              :: num_meshes, i, j
+    integer(kind=i_def), allocatable :: mesh_id_list(:)
+    integer(kind=i_def), allocatable :: mg_mesh_ids(:)
+    integer(kind=i_def), allocatable :: label_list(:)
+    type(field_type),    allocatable :: chi_list(:,:)
+    type(field_type),    allocatable :: panel_id_list(:)
+    logical(kind=l_def)              :: is_multigrid_mesh
+    integer(kind=i_def)              :: num_mg_meshes
 
     if ( subroutine_timers ) call timer('runtime_constants_alg')
     call log_event( "Gungho: creating runtime_constants", LOG_LEVEL_INFO )
 
     !==========================================================================!
-    ! Turn all the mesh IDs and coordinate fields into lists
+    ! Turn all the meshes and coordinate fields into lists
     !==========================================================================!
 
-    ! Count the number of meshes that we have
-    num_meshes = 2_i_def ! We should always have primary mesh_id and twod_mesh_id
-    if ( present(shifted_mesh) .and. present(shifted_chi) ) num_meshes = num_meshes + 1_i_def
-    if ( present(double_level_mesh) .and. present(double_level_chi) ) num_meshes = num_meshes + 1_i_def
-    if ( present(mg_mesh_ids) .and. present(chi_mg) ) num_meshes = num_meshes + size(mg_mesh_ids)
-    if ( present(mg_2D_mesh_ids) .and. present(chi_mg) ) num_meshes = num_meshes + size(mg_2D_mesh_ids)
-    if ( present(extra_mesh_ids) .and. present(chi_extra) ) num_meshes = num_meshes + size(extra_mesh_ids)
-    if ( present(extra_2D_mesh_ids) .and. present(chi_extra) ) num_meshes = num_meshes + size(extra_2D_mesh_ids)
+    ! To loop through mesh collection, get all mesh names
+    ! Then get mesh from collection using these names
+    all_mesh_names = mesh_collection%get_mesh_names()
+    num_meshes = SIZE(all_mesh_names)
 
     allocate(mesh_id_list(num_meshes))
     allocate(chi_list(3,num_meshes))
@@ -132,88 +106,62 @@ contains
     allocate(label_list(num_meshes))
 
     ! Populate these lists
-    mesh_counter = 1_i_def
-    label_list(mesh_counter)   = primary_mesh_label
-    mesh_id_list(mesh_counter) = mesh%get_id()
-    call panel_id%copy_field_serial(panel_id_list(mesh_counter))
-    do j = 1, 3
-      call chi(j)%copy_field_serial(chi_list(j, mesh_counter))
+    do i = 1, num_meshes
+      mesh => mesh_collection%get_mesh(all_mesh_names(i))
+      if (mesh%get_extrusion_id() == TWOD) then
+        prime_extrusion_mesh => mesh_collection%get_mesh(mesh, PRIME_EXTRUSION)
+        call chi_inventory%get_field_array(prime_extrusion_mesh, chi)
+        call panel_id_inventory%get_field(prime_extrusion_mesh, panel_id)
+      else
+        call chi_inventory%get_field_array(mesh, chi)
+        call panel_id_inventory%get_field(mesh, panel_id)
+      end if
+
+      ! Copy mesh id, chi field and panel_id into lists
+      mesh_id_list(i) = mesh%get_id()
+      call panel_id%copy_field_serial(panel_id_list(i))
+      do j = 1, 3
+        call chi(j)%copy_field_serial(chi_list(j,i))
+      end do
+
+      ! Label meshes based on their role
+      select case (mesh%get_extrusion_id())
+      case (SHIFTED)
+        label_list(i) = shifted_mesh_label
+      case (DOUBLE_LEVEL)
+        label_list(i) = double_level_mesh_label
+      case (TWOD)
+        label_list(i) = twod_mesh_label
+      case (PRIME_EXTRUSION)
+        ! Now determine label based on namelist options
+        if (all_mesh_names(i) == prime_mesh_name) then
+          label_list(i) = primary_mesh_label
+        else if (l_multigrid) then
+          ! Search through chain mesh tags for matching mesh name
+          is_multigrid_mesh = .false.
+          do j = 1, SIZE(chain_mesh_tags)
+            if (all_mesh_names(i) == chain_mesh_tags(j)) then
+              is_multigrid_mesh = .true.
+              label_list(i) = multigrid_mesh_label
+              exit
+            end if
+          end do
+          ! If it was not a multigrid mesh, it must be an extra mesh
+          if (.not. is_multigrid_mesh) label_list(i) = extra_mesh_label
+        else
+          label_list(i) = extra_mesh_label
+        end if
+      case default
+        call log_event('Mesh extrusion not identified', LOG_LEVEL_ERROR)
+      end select
     end do
 
-    ! Primary 2D mesh
-    mesh_counter = mesh_counter + 1_i_def
-    label_list(mesh_counter) = twod_mesh_label
-    mesh_id_list(mesh_counter) = twod_mesh%get_id()
-    call panel_id%copy_field_serial(panel_id_list(mesh_counter))
-    do j = 1, 3
-      call chi(j)%copy_field_serial(chi_list(j, mesh_counter))
-    end do
-
-    if ( present(shifted_mesh) .and. present(shifted_chi) ) then
-      mesh_counter = mesh_counter + 1_i_def
-      label_list(mesh_counter) = shifted_mesh_label
-      mesh_id_list(mesh_counter) = shifted_mesh%get_id()
-      call panel_id%copy_field_serial(panel_id_list(mesh_counter)) ! Same as for primary mesh
-      do j = 1, 3
-        call shifted_chi(j)%copy_field_serial(chi_list(j, mesh_counter))
-      end do
-    end if
-
-    if ( present(double_level_mesh) .and. present(double_level_chi) ) then
-      mesh_counter = mesh_counter + 1_i_def
-      label_list(mesh_counter) = double_level_mesh_label
-      mesh_id_list(mesh_counter) = double_level_mesh%get_id()
-      call panel_id%copy_field_serial(panel_id_list(mesh_counter)) ! Same as for primary mesh
-      do j = 1, 3
-        call double_level_chi(j)%copy_field_serial(chi_list(j, mesh_counter))
-      end do
-    end if
-
-    if ( present(mg_mesh_ids) .and. present(chi_mg) ) then
-      do i = 1, size(mg_mesh_ids)
-        mesh_counter = mesh_counter + 1_i_def
-        label_list(mesh_counter) = multigrid_mesh_label
-        mesh_id_list(mesh_counter) = mg_mesh_ids(i)
-        call panel_id_mg(i)%copy_field_serial(panel_id_list(mesh_counter))
-        do j = 1, 3
-          call chi_mg(j,i)%copy_field_serial(chi_list(j, mesh_counter))
-        end do
-      end do
-    end if
-
-    if ( present(mg_2D_mesh_ids) .and. present(chi_mg) ) then
-      do i = 1, size(mg_2D_mesh_ids)
-        mesh_counter = mesh_counter + 1_i_def
-        label_list(mesh_counter) = twod_mesh_label
-        mesh_id_list(mesh_counter) = mg_2D_mesh_ids(i)
-        call panel_id_mg(i)%copy_field_serial(panel_id_list(mesh_counter))
-        do j = 1, 3
-          call chi_mg(j,i)%copy_field_serial(chi_list(j, mesh_counter))
-        end do
-      end do
-    end if
-
-    if ( present(extra_mesh_ids) .and. present(chi_extra) ) then
-      do i = 1, size(extra_mesh_ids)
-        mesh_counter = mesh_counter + 1_i_def
-        label_list(mesh_counter) = extra_mesh_label
-        mesh_id_list(mesh_counter) = extra_mesh_ids(i)
-        call panel_id_extra(i)%copy_field_serial(panel_id_list(mesh_counter))
-        do j = 1, 3
-          call chi_extra(j,i)%copy_field_serial(chi_list(j, mesh_counter))
-        end do
-      end do
-    end if
-
-    if ( present(extra_2D_mesh_ids) .and. present(chi_extra) ) then
-      do i = 1, size(extra_2D_mesh_ids)
-        mesh_counter = mesh_counter + 1_i_def
-        label_list(mesh_counter) = twod_mesh_label
-        mesh_id_list(mesh_counter) = extra_2D_mesh_ids(i)
-        call panel_id_extra(i)%copy_field_serial(panel_id_list(mesh_counter))
-        do j = 1, 3
-          call chi_extra(j,i)%copy_field_serial(chi_list(j, mesh_counter))
-        end do
+    if ( l_multigrid ) then
+      num_mg_meshes = SIZE(chain_mesh_tags)
+      allocate(mg_mesh_ids(num_mg_meshes))
+      do i = 1, num_mg_meshes
+        mesh => mesh_collection%get_mesh(chain_mesh_tags(i))
+        mg_mesh_ids(i) = mesh%get_id()
       end do
     end if
 
@@ -223,12 +171,13 @@ contains
 
     call init_mesh_id_list(mesh_id_list)
 
-    if ( present(mg_mesh_ids) ) then
+    if ( l_multigrid ) then
       ! mg_mesh_ids contains all mesh ids used in the multigrid chain
       ! including the primary mesh
       call init_hierarchical_mesh_id_list(mg_mesh_ids)
     else
       ! Just create a list with the primary mesh id in it
+      mesh => mesh_collection%get_mesh(prime_mesh_name)
       call init_hierarchical_mesh_id_list( (/ mesh%get_id() /) )
     end if
 
