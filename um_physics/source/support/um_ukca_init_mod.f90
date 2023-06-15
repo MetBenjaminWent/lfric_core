@@ -572,8 +572,10 @@ contains
            l_ukca_enable_seadms_ems=.true.,                                    &
            i_ukca_dms_flux=i_liss_merlivat,                                    &
            l_ukca_scale_seadms_ems=.false.,                                    &
-           l_ukca_scale_soa_yield=.true.,                                      &
-           soa_yield_scaling=2.0_r_um,                                         &
+           l_ukca_scale_soa_yield_mt=.true.,                                   &
+           soa_yield_scaling_mt=2.0_r_um,                                      &
+           l_ukca_scale_soa_yield_isop=.false.,                                &
+           soa_yield_scaling_isop=1.0_r_um,                                    &
            l_support_ems_vertprof=.true.,                                      &
            ! UKCA environmental driver configuration options
            l_param_conv=l_param_conv,                                          &
