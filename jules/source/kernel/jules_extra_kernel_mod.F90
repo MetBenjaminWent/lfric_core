@@ -1127,6 +1127,9 @@ contains
     call chemvars_nullify(chemvars)
     call chemvars_dealloc(chemvars_data)
 
+    call water_resources_nullify(water_resources)
+    call water_resources_dealloc(water_resources_data)
+
   end subroutine jules_extra_code
 
 end module jules_extra_kernel_mod
