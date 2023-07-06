@@ -16,12 +16,7 @@ module mpi_mod
 #ifdef NO_MPI
   ! No "use mpi" in non-mpi build
 #else
-  use mpi,           only : mpi_comm_rank, mpi_comm_size, mpi_finalize, &
-                            mpi_init, mpi_success, mpi_comm_world,      &
-                            mpi_max, mpi_min, mpi_sum,                  &
-                            mpi_character, mpi_double_precision,        &
-                            mpi_integer, mpi_integer1, mpi_integer2,    &
-                            mpi_integer8, mpi_logical, mpi_real4
+  use mpi
 #endif
   use log_mod,       only : log_event, LOG_LEVEL_ERROR
 

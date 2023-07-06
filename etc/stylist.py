@@ -18,6 +18,7 @@ from re import compile as re_compile
 from stylist.fortran import (
     FortranCharacterset,
     MissingImplicit,
+    MissingOnly,
     IntrinsicModule,
     ForbidUsage
 )
@@ -44,10 +45,17 @@ allowed_mpi = (
     "log_mod"
 )
 
+# We limit the modules that can be used without "only"
+allowed_use_no_only = (
+    "mpi",
+    "pfunit_mod"
+)
+
 infrastructure = Style(
     TrailingWhitespace(),
     FortranCharacterset(),
     MissingImplicit(),
+    MissingOnly(ignore=allowed_use_no_only),
     IntrinsicModule(),
     ForbidUsage('mpi', exceptions=allowed_mpi)
 )
