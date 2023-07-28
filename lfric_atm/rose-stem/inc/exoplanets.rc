@@ -5,10 +5,10 @@
   'thai_ben1': [
     'run_application("lfric_atm", "thai_ben1", checkkgo=False,
                             resolutions=[("C48_MG",1200.0)],
-                            env={"crun":40, "nrun":2160,
+                            env={"crun":1, "nrun":72,
                             "directives":{"C48_MG":{"mpi_parts":216,
                                                     "threads":1,
-                                                    "wallclock":"00:25:00"},
+                                                    "wallclock":"00:10:00"},
                                          },
                             },
 			    plotstr="plot_map.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR"
@@ -17,10 +17,10 @@
   'thai_ben2': [
     'run_application("lfric_atm", "thai_ben2", checkkgo=False,
                             resolutions=[("C48_MG",1200.0)],
-                            env={"crun":40, "nrun":2160,
+                            env={"crun":1, "nrun":72,
                             "directives":{"C48_MG":{"mpi_parts":216,
                                                     "threads":1,
-                                                    "wallclock":"00:35:00"},
+                                                    "wallclock":"00:10:00"},
                                          },
                             },
 			    plotstr="plot_map.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR"
@@ -29,10 +29,10 @@
   'thai_hab1': [
     'run_application("lfric_atm", "thai_hab1", checkkgo=False,
                             resolutions=[("C48_MG",1200.0)],
-                            env={"crun":40, "nrun":2160,
+                            env={"crun":1, "nrun":72,
                             "directives":{"C48_MG":{"mpi_parts":216,
                                                     "threads":1,
-                                                    "wallclock":"00:30:00"},
+                                                    "wallclock":"00:10:00"},
                                          },
                             },
 			    plotstr="plot_map.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR"
@@ -41,10 +41,10 @@
   'thai_hab2': [
     'run_application("lfric_atm", "thai_hab2", checkkgo=False,
                             resolutions=[("C48_MG",1200.0)],
-                            env={"crun":40, "nrun":2160,
+                            env={"crun":1, "nrun":72,
                             "directives":{"C48_MG":{"mpi_parts":216,
                                                     "threads":1,
-                                                    "wallclock":"00:45:00"},
+                                                    "wallclock":"00:10:00"},
                                          },
                             },
 			    plotstr="plot_map.py $NODAL_DATA_DIR/lfric_diag.nc  $PLOT_DIR"

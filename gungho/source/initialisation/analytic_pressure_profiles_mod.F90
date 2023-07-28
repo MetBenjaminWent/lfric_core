@@ -28,6 +28,7 @@ use idealised_config_mod,       only : test_cold_bubble_x,           &
                                        test_isentropic,              &
                                        test_isot_atm,                &
                                        test_isot_cold_atm,           &
+                                       test_isot_dry_atm,            &
                                        test_const_lapse_rate,        &
                                        test_dry_cbl,                 &
                                        test_snow,                    &
@@ -145,7 +146,7 @@ contains
 
     select case( choice )
     case (test_gravity_wave, test_isentropic, &
-          test_isot_atm, test_isot_cold_atm,  &
+          test_isot_atm, test_isot_cold_atm, test_isot_dry_atm, &
           test_const_lapse_rate, test_specified_profiles)
       call reference_profile(pressure, density, temperature, chi, choice)
 

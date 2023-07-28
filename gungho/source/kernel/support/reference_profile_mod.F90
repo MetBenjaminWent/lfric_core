@@ -25,6 +25,7 @@ use idealised_config_mod,           only : test_cold_bubble_x,    &
                                            test_isentropic,       &
                                            test_isot_atm,         &
                                            test_isot_cold_atm,    &
+                                           test_isot_dry_atm,     &
                                            test_warm_bubble,      &
                                            test_warm_bubble_3d,   &
                                            test_yz_cosine_hill,   &
@@ -86,7 +87,7 @@ if ( geometry == geometry_spherical .and. &
 
       rho_s = p/(Rd*t)
 
-    case( test_isot_atm )
+    case( test_isot_atm, test_isot_dry_atm )
       t = theta_surf
       p = p_zero * exp(-gravity * z / (Rd * t))
 

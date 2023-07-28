@@ -25,7 +25,8 @@ module initial_mr_kernel_mod
     use kernel_mod,                    only: kernel_type
     use section_choice_config_mod,     only: cloud, cloud_um
     use idealised_config_mod,          only: test, test_bryan_fritsch, &
-                                             test_grabowski_clark
+                                             test_grabowski_clark, &
+                                             test_isot_dry_atm
     use initial_pressure_config_mod,   only: method, method_balanced
 
     implicit none
@@ -203,7 +204,8 @@ contains
       ! methods. This will be done by #2877
       ! Reduce humidity at top of model for cloudy cases.
       if ( (cloud == cloud_um) .and. &
-           (test /= test_bryan_fritsch) .and. (test /= test_grabowski_clark) ) then
+           (test /= test_bryan_fritsch) .and. (test /= test_grabowski_clark) &
+           .and. ( test /= test_isot_dry_atm ) ) then
         mr_v(map_wtheta(1) + nlayers) = 1.0e-8
         mr_v(map_wtheta(1) + nlayers-1) = 1.0e-8
       end if

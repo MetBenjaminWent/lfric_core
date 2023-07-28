@@ -13,8 +13,9 @@ use constants_mod,                only : r_def, i_def, pi
 use log_mod,                      only : log_event,                &
                                          log_scratch_space,        &
                                          LOG_LEVEL_ERROR
-use idealised_config_mod,         only : test_grabowski_clark,     &
-                                         test_deep_baroclinic_wave
+use idealised_config_mod,         only : test_grabowski_clark,      &
+                                         test_deep_baroclinic_wave, &
+                                         test_isot_dry_atm
 use physics_common_mod,           only : qsaturation
 use planet_config_mod,            only : recip_epsilon, scaled_radius
 use coord_transform_mod,          only : xyz2llr, central_angle
@@ -95,6 +96,10 @@ function analytic_moisture(chi, temperature, pressure, choice) result(moisture)
     ! Now invert relative humidity expression to get water vapour mixing ratio
     moisture = rel_hum * mr_sat / &
                ( 1.0_r_def + (1.0_r_def - rel_hum)*mr_sat*recip_epsilon)
+
+  ! Isothermal **dry** atmosphere
+  case( test_isot_dry_atm )
+    moisture = 0.0_r_def
 
   case default
     ! In other cases, mixing ratio is set just under saturation value
