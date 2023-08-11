@@ -20,7 +20,7 @@ module map_physics_fields_alg_mod
                                        blayer_placement_slow,          &
                                        convection_placement,           &
                                        convection_placement_slow
-  use geometric_constants_mod,  only: get_da_at_w2, get_height
+  use geometric_constants_mod,  only: get_da_at_w2, get_height, get_panel_id
   use physical_op_constants_mod,only: get_dx_at_w2
   use fs_continuity_mod,        only: W3, Wtheta
   use mesh_mod,                 only: mesh_type
@@ -78,6 +78,7 @@ contains
     type( field_type ), pointer :: height_w3 => null()
     type( field_type ), pointer :: height_wth => null()
     type( field_type ), pointer :: dx_at_w2 => null()
+    type( field_type ), pointer :: panel_id => null()
 
     type( mesh_type ),  pointer :: mesh => null()
 
@@ -136,12 +137,14 @@ contains
       height_wth => get_height(Wtheta, mesh%get_id())
       height_w3 => get_height(W3, mesh%get_id())
       dx_at_w2 => get_dx_at_w2(mesh%get_id())
+      panel_id => get_panel_id(mesh%get_id())
 
       call invoke(smagorinsky_shear_kernel_type( shear,         &
                                                  u_physics,  1, &
                                                  dx_at_w2,      &
                                                  height_wth,    &
-                                                 height_w3) )
+                                                 height_w3,     &
+                                                 panel_id, 1) )
     end if
 
     if (blayer_placement == blayer_placement_slow .or.                        &

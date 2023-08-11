@@ -15,7 +15,7 @@ module leonard_term_alg_mod
   use formulation_config_mod,    only: moisture_formulation,    &
                                        moisture_formulation_dry
   use fs_continuity_mod,          only: W1, W2, W3, Wtheta
-  use geometric_constants_mod,    only: get_height
+  use geometric_constants_mod,    only: get_height, get_panel_id
   use physical_op_constants_mod,  only: get_dtrdz_fd2
 
   use mixing_config_mod,          only: leonard_kl
@@ -54,6 +54,7 @@ subroutine leonard_term_alg(mt_inc_leonard, thetal_inc_leonard, &
     use leonard_term_th_kernel_mod, only: leonard_term_th_kernel_type
     use leonard_term_u_kernel_mod,  only: leonard_term_u_kernel_type
     use planet_constants_mod, only: lcrcp, lsrcp, planet_radius
+    use nlsizes_namelist_mod, only: bl_levels
 
     implicit none
 
@@ -82,6 +83,7 @@ subroutine leonard_term_alg(mt_inc_leonard, thetal_inc_leonard, &
     type( field_type ), pointer :: height_w2          => null()
     type( field_type ), pointer :: height_w3          => null()
     type( field_type ), pointer :: height_wth         => null()
+    type( field_type ), pointer :: panel_id           => null()
 
     ! local variables
     integer(kind=i_def) :: mesh_id
@@ -114,6 +116,7 @@ subroutine leonard_term_alg(mt_inc_leonard, thetal_inc_leonard, &
     height_w3  => get_height(W3, mesh_id)
     height_w2  => get_height(W2, mesh_id)
     height_w1  => get_height(W1, mesh_id)
+    panel_id   => get_panel_id(mesh_id)
 
     ! Set-up arrays for local fields
     call rho%copy_field_properties(kl)
@@ -129,7 +132,7 @@ subroutine leonard_term_alg(mt_inc_leonard, thetal_inc_leonard, &
                                               stencil_depth,            &
                                               height_wth,               &
                                               leonard_kl,               &
-                                              dt ),                     &
+                                              dt, bl_levels),           &
 
     !--------------------------------------------------------------------
     ! Flux of vertical velocity:
@@ -144,7 +147,8 @@ subroutine leonard_term_alg(mt_inc_leonard, thetal_inc_leonard, &
                                               kl,                       &
                                               wetrho_in_w3,             &
                                               height_w3,                &
-                                              planet_radius ),          &
+                                              planet_radius,            &
+                                              bl_levels),               &
 
     !--------------------------------------------------------------------
     ! Flux of horizontal wind:
@@ -161,9 +165,11 @@ subroutine leonard_term_alg(mt_inc_leonard, thetal_inc_leonard, &
                                               height_w1,                &
                                               height_w2,                &
                                               wetrho_in_w2,             &
+                                              panel_id,                 &
+                                              stencil_depth,            &
                                               planet_radius,            &
                                               leonard_kl,               &
-                                              dt ),                     &
+                                              dt, bl_levels ),          &
 
     !--------------------------------------------------------------------
     ! Flux of liquid + ice water potential temperature:
@@ -184,7 +190,8 @@ subroutine leonard_term_alg(mt_inc_leonard, thetal_inc_leonard, &
                                               kl,                       &
                                               rho,                      &
                                               height_w3,                &
-                                              planet_radius ) )
+                                              planet_radius,            &
+                                              bl_levels) )
 
     !--------------------------------------------------------------------
     ! Flux of total water content:
@@ -203,7 +210,8 @@ subroutine leonard_term_alg(mt_inc_leonard, thetal_inc_leonard, &
                                                 kl,                     &
                                                 rho,                    &
                                                 height_w3,              &
-                                                planet_radius ) )
+                                                planet_radius,          &
+                                                bl_levels) )
 
     end if
 

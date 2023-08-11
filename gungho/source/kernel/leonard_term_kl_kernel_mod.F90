@@ -12,7 +12,8 @@ module leonard_term_kl_kernel_mod
   use argument_mod,          only : arg_type,                     &
                                     GH_FIELD, GH_SCALAR, GH_REAL, &
                                     GH_READ, GH_WRITE,            &
-                                    CELL_COLUMN, STENCIL, CROSS
+                                    CELL_COLUMN, STENCIL, CROSS,  &
+                                    GH_INTEGER
   use constants_mod,         only : r_def, i_def
   use fs_continuity_mod,     only : Wtheta, W3
   use kernel_mod,            only : kernel_type
@@ -29,12 +30,13 @@ module leonard_term_kl_kernel_mod
 
   type, public, extends(kernel_type) :: leonard_term_kl_kernel_type
     private
-    type(arg_type) :: meta_args(5) = (/                                    &
+    type(arg_type) :: meta_args(6) = (/                                    &
          arg_type(GH_FIELD,  GH_REAL, GH_WRITE, W3),                       &
          arg_type(GH_FIELD,  GH_REAL, GH_READ,  Wtheta, STENCIL(CROSS)),   &
          arg_type(GH_FIELD,  GH_REAL, GH_READ,  Wtheta),                   &
          arg_type(GH_SCALAR, GH_REAL, GH_READ),                            &
-         arg_type(GH_SCALAR, GH_REAL, GH_READ)                             &
+         arg_type(GH_SCALAR, GH_REAL, GH_READ),                            &
+         arg_type(GH_SCALAR, GH_INTEGER, GH_READ)                          &
          /)
     integer :: operates_on = CELL_COLUMN
   contains
@@ -59,6 +61,7 @@ contains
 !! @param[in] height_wth  Height of wth space levels above the surface
 !! @param[in] leonard_kl  The user-specified Leonard term parameter
 !! @param[in] dt  The model timestep length
+!! @param[in] bl_levels   The number of boundary-layer levels
 !! @param[in] ndf_w3  Number of degrees of freedom per cell for w3 space
 !! @param[in] undf_w3  Number of unique degrees of freedom for w3 space
 !! @param[in] map_w3  Cell dofmap for w3 space
@@ -71,7 +74,7 @@ subroutine leonard_term_kl_code( nlayers,                               &
                                  map_wt_stencil_size, map_wt_stencil,   &
                                  height_wth,                            &
                                  leonard_kl,                            &
-                                 dt,                                    &
+                                 dt, bl_levels,                         &
                                  ndf_w3, undf_w3, map_w3,               &
                                  ndf_wt, undf_wt, map_wt                &
                                 )
@@ -79,7 +82,7 @@ subroutine leonard_term_kl_code( nlayers,                               &
   implicit none
 
   ! Arguments
-  integer(kind=i_def), intent(in) :: nlayers
+  integer(kind=i_def), intent(in) :: nlayers, bl_levels
   integer(kind=i_def), intent(in) :: ndf_wt, undf_wt
   integer(kind=i_def), intent(in) :: ndf_w3, undf_w3
   integer(kind=i_def), intent(in) :: map_wt_stencil_size
@@ -99,7 +102,7 @@ subroutine leonard_term_kl_code( nlayers,                               &
   ! If the full stencil isn't available, we must be at the domain edge.
   ! Simply set the increment to 0 for now, and exit the routine.
   if (map_wt_stencil_size < 5_i_def) then
-    do k = 0, nlayers - 1
+    do k = 0, bl_levels
       kl(map_w3(1) + k) = leonard_kl
     end do
     return
@@ -114,7 +117,7 @@ subroutine leonard_term_kl_code( nlayers,                               &
   k = 0
   kl(map_w3(1) + k) = 0.0_r_def
 
-  do k = 1, nlayers - 2
+  do k = 1, bl_levels - 1
     kp = k + 1
     kl(map_w3(1) + k) = MIN( leonard_kl,                                 &
                         6.0_r_def * ( height_wth(map_wt(1) + kp) -       &
@@ -142,8 +145,8 @@ subroutine leonard_term_kl_code( nlayers,                               &
                         ) ) )
   end do
 
-  ! Set to zero at k=nlayers-1 as Leonard term isn't defined at k=nlayers-1
-  k = nlayers - 1
+  ! Set to zero at k=bl_levels as Leonard term isn't defined at k=bl_levels
+  k = bl_levels
   kl(map_w3(1) + k) = 0.0_r_def
 
 end subroutine leonard_term_kl_code

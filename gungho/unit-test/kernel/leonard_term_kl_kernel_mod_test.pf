@@ -155,7 +155,7 @@ contains
                                5, stencil_map_wt(:,:,cell),           &
                                height_wth,                            &
                                leonard_kl,                            &
-                               dt,                                    &
+                               dt, nlayers,                           &
                                ndf_w3, undf_w3, map_w3(:,cell),       &
                                ndf_wt, undf_wt, map_wt(:,cell)        &
                               )

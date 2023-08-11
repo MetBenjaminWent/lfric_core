@@ -7,8 +7,7 @@
 module check_configuration_mod
 
   use constants_mod,        only: i_def, l_def
-  use mixing_config_mod,    only: smagorinsky,            &
-                                  viscosity,              &
+  use mixing_config_mod,    only: viscosity,              &
                                   viscosity_mu
   use subgrid_config_mod,   only: dep_pt_stencil_extent, &
                                   inner_order,           &
@@ -426,9 +425,6 @@ contains
     logical(kind=l_def) :: any_horz_dep_pts
 
     stencil_depth = 1
-
-    ! Smagorinsky (or boundary layers) appears to need larger haloes
-    if (smagorinsky) stencil_depth = max( stencil_depth, 2 )
 
     if (operators == operators_fv) then
       ! Need larger haloes for fv operators

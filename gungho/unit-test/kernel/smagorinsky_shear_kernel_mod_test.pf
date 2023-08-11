@@ -8,12 +8,14 @@ module smagorinsky_shear_kernel_mod_test
 
 
   use constants_mod,                       only : i_def, r_def
-  use get_unit_test_m3x3_q3x3x3_sizes_mod, only : get_w2_m3x3_q3x3x3_size, &
-                                                  get_w3_m3x3_q3x3x3_size, &
-                                                  get_wtheta_m3x3_q3x3x3_size
-  use get_unit_test_m3x3_dofmap_mod,       only : get_w2_m3x3_dofmap,      &
-                                                  get_w3_m3x3_dofmap,      &
-                                                  get_wtheta_m3x3_dofmap,  &
+  use get_unit_test_m3x3_q3x3x3_sizes_mod, only : get_w2_m3x3_q3x3x3_size,     &
+                                                  get_w3_m3x3_q3x3x3_size,     &
+                                                  get_wtheta_m3x3_q3x3x3_size, &
+                                                  get_w3_m3x3_q3x3x3_size
+  use get_unit_test_m3x3_dofmap_mod,       only : get_w2_m3x3_dofmap,          &
+                                                  get_w3_m3x3_dofmap,          &
+                                                  get_wtheta_m3x3_dofmap,      &
+                                                  get_w3_m3x3_dofmap,          &
                                                   get_m3x3_stencil_dofmap_cross
   use pFUnit_Mod
 
@@ -36,40 +38,18 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine setUp( this )
 
-    use chi_transform_mod,          only : init_chi_transforms
-    use feign_config_mod,           only : feign_finite_element_config
-    use finite_element_config_mod,  only : cellshape_quadrilateral, &
-                                           coord_system_xyz
-
     implicit none
 
     class(smagorinsky_shear_test_type), intent(inout) :: this
-
-    call feign_finite_element_config(      &
-        cellshape=cellshape_quadrilateral, &
-        element_order=0_i_def,             &
-        coord_order=0_i_def,               &
-        coord_system=coord_system_xyz,     &
-        rehabilitate=.true.,               &
-        vorticity_in_w1=.false. )
-
-    call init_chi_transforms()
 
   end subroutine setUp
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine tearDown( this )
 
-    use chi_transform_mod, only: final_chi_transforms
-    use configuration_mod, only: final_configuration
-
     implicit none
 
     class(smagorinsky_shear_test_type), intent(inout) :: this
-
-    ! Finalise namelists
-    call final_chi_transforms()
-    call final_configuration()
 
   end subroutine tearDown
 
@@ -85,25 +65,29 @@ contains
 
     integer(i_def) :: nlayers, ncells
     integer(i_def) :: ndf_w2, undf_w2, &
-                      ndf_w3, undf_w3, ndf_wt, undf_wt
+                      ndf_w3, undf_w3, ndf_wt, undf_wt, ndf_pid, undf_pid
     integer(i_def) :: dim_space, dim_space_diff
     integer(i_def) :: nqp_h, nqp_v
 
     integer(i_def), allocatable :: map_w2(:,:)
+    integer(i_def), allocatable :: true_map_w2(:,:)
     integer(i_def), allocatable :: map_w3(:,:)
     integer(i_def), allocatable :: map_wt(:,:)
+    integer(i_def), allocatable :: map_pid(:,:)
     integer(i_def), allocatable :: stencil_map_w2(:,:,:)
+    integer(i_def), allocatable :: true_stencil_map_w2(:,:,:)
     integer(i_def), allocatable :: stencil_map_w3(:,:,:)
     integer(i_def), allocatable :: stencil_map_wt(:,:,:)
+    integer(i_def), allocatable :: stencil_map_pid(:,:,:)
 
     real(r_def), allocatable :: u(:), dx_at_w2(:)
     real(r_def), allocatable :: shear(:)
     real(r_def), allocatable :: height_wth(:)
     real(r_def), allocatable :: height_w3(:)
+    real(r_def), allocatable :: panel_id(:)
 
     real(r_def), parameter :: tol = 1.0e-10_r_def
     real(r_def), parameter :: dx = 1000.0_r_def, &
-                              dy = 1000.0_r_def, &
                               dz = 2000.0_r_def
     real(r_def) :: answer
 
@@ -127,13 +111,22 @@ contains
                                   dim_space, dim_space_diff, &
                                   nqp_h, nqp_v, &
                                   nlayers )
+    call get_w3_m3x3_q3x3x3_size( ndf_pid, undf_pid, ncells,     &
+                                      dim_space, dim_space_diff, &
+                                      nqp_h, nqp_v,              &
+                                      1 )
+
     ! Setup maps
     call get_w2_m3x3_dofmap(map_w2)
     call get_m3x3_stencil_dofmap_cross(stencil_map_w2, map_w2)
+    call get_w2_m3x3_dofmap(true_map_w2)
+    call get_m3x3_stencil_dofmap_cross(true_stencil_map_w2, true_map_w2)
     call get_w3_m3x3_dofmap(map_w3)
     call get_m3x3_stencil_dofmap_cross(stencil_map_w3, map_w3)
     call get_wtheta_m3x3_dofmap(map_wt)
     call get_m3x3_stencil_dofmap_cross(stencil_map_wt, map_wt)
+    call get_w3_m3x3_dofmap(map_pid,1)
+    call get_m3x3_stencil_dofmap_cross(stencil_map_pid, map_pid)
 
     ! Compute coordinates
     allocate(height_wth(undf_wt))
@@ -156,14 +149,29 @@ contains
     allocate(u(undf_w2))
     allocate(dx_at_w2(undf_w2))
     allocate(shear(undf_wt))
+    allocate(panel_id(undf_pid))
     u(:) = 1.0_r_def
     dx_at_w2(:) = dx
     shear(:) = 0.0_r_def
+    panel_id = 2.0_r_def
 
-    u(stencil_map_w2(5,1,cell)+0) = 0.0_r_def
-    u(stencil_map_w2(5,1,cell)+1) = 1.0_r_def
-    u(stencil_map_w2(5,1,cell)+2) = 2.0_r_def
-    u(stencil_map_w2(5,1,cell)+3) = 3.0_r_def
+    ! Create non-uniform wind to generate some shear
+    u(stencil_map_w2(3,1,cell)+1) = 2.0_r_def
+
+    ! Force data to cross a panel boundary
+    panel_id(stencil_map_pid(1,4,cell)) = 3.0_r_def
+    ! Correct stencil map on new panel for anti-clockwise rotation
+    stencil_map_w2(1,4,cell)=true_stencil_map_w2(2,4,cell)
+    stencil_map_w2(2,4,cell)=true_stencil_map_w2(3,4,cell)
+    stencil_map_w2(3,4,cell)=true_stencil_map_w2(4,4,cell)
+    stencil_map_w2(4,4,cell)=true_stencil_map_w2(1,4,cell)
+    ! Correct winds on new panel for flipping of parallel vectors
+    u(true_stencil_map_w2(2,4,cell)+0) = -1.0_r_def
+    u(true_stencil_map_w2(4,4,cell)+0) = -1.0_r_def
+    u(true_stencil_map_w2(2,4,cell)+1) = -1.0_r_def
+    u(true_stencil_map_w2(4,4,cell)+1) = -1.0_r_def
+    u(true_stencil_map_w2(2,4,cell)+2) = -1.0_r_def
+    u(true_stencil_map_w2(4,4,cell)+2) = -1.0_r_def
 
     ! Call the kernel
     call smagorinsky_shear_code( nlayers,                               &
@@ -173,17 +181,22 @@ contains
                                  dx_at_w2,                              &
                                  height_wth,                            &
                                  height_w3,                             &
+                                 panel_id,                              &
+                                 5, stencil_map_pid(:,:,cell),          &
                                  ndf_wt, undf_wt, map_wt(:,cell),       &
                                  ndf_w2, undf_w2, map_w2(:,cell),       &
-                                 ndf_w3, undf_w3, map_w3(:,cell)        &
+                                 ndf_w3, undf_w3, map_w3(:,cell),       &
+                                 ndf_pid, undf_pid, map_pid(:,cell)     &
                                )
 
-     answer = 0.7071067811e-3_r_def
+     answer = 1.1726039442198717e-3_r_def
      k = 1
      @assertEqual(answer, shear(map_wt(1,cell) + k), tol)
 
      deallocate(map_w2)
      deallocate(stencil_map_w2)
+     deallocate(true_map_w2)
+     deallocate(true_stencil_map_w2)
      deallocate(map_w3)
      deallocate(stencil_map_w3)
      deallocate(map_wt)
@@ -193,6 +206,7 @@ contains
      deallocate(u)
      deallocate(dx_at_w2)
      deallocate(shear)
+     deallocate(panel_id)
 
   end subroutine test_all
 

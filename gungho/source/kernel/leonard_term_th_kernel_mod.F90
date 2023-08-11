@@ -12,7 +12,8 @@ module leonard_term_th_kernel_mod
   use argument_mod,          only : arg_type,                     &
                                     GH_FIELD, GH_SCALAR, GH_REAL, &
                                     GH_READ, GH_WRITE,            &
-                                    CELL_COLUMN, STENCIL, CROSS
+                                    CELL_COLUMN, STENCIL, CROSS,  &
+                                    GH_INTEGER
   use constants_mod,         only : r_def, i_def
   use fs_continuity_mod,     only : Wtheta, W3
   use kernel_mod,            only : kernel_type
@@ -30,7 +31,7 @@ module leonard_term_th_kernel_mod
 
   type, public, extends(kernel_type) :: leonard_term_th_kernel_type
     private
-    type(arg_type) :: meta_args(8) = (/                                    &
+    type(arg_type) :: meta_args(9) = (/                                    &
          arg_type(GH_FIELD,  GH_REAL, GH_WRITE, Wtheta),                   &
          arg_type(GH_FIELD,  GH_REAL, GH_READ,  Wtheta, STENCIL(CROSS)),   &
          arg_type(GH_FIELD,  GH_REAL, GH_READ,  Wtheta, STENCIL(CROSS)),   &
@@ -38,7 +39,8 @@ module leonard_term_th_kernel_mod
          arg_type(GH_FIELD,  GH_REAL, GH_READ,  W3),                       &
          arg_type(GH_FIELD,  GH_REAL, GH_READ,  W3),                       &
          arg_type(GH_FIELD,  GH_REAL, GH_READ,  W3),                       &
-         arg_type(GH_SCALAR, GH_REAL, GH_READ)                             &
+         arg_type(GH_SCALAR, GH_REAL, GH_READ),                            &
+         arg_type(GH_SCALAR, GH_INTEGER, GH_READ)                          &
          /)
     integer :: operates_on = CELL_COLUMN
   contains
@@ -72,6 +74,7 @@ contains
 !! @param[in] rho  Density on w3 space levels
 !! @param[in] height_w3  Height of w3 space levels above the surface
 !! @param[in] planet_radius The planet radius
+!! @param[in] bl_levels   The number of boundary-layer levels
 !! @param[in] ndf_wt  Number of degrees of freedom per cell for theta space
 !! @param[in] undf_wt  Number of unique degrees of freedom for theta space
 !! @param[in] map_wt  Cell dofmap for theta space
@@ -88,7 +91,7 @@ subroutine leonard_term_th_code( nlayers,                               &
                                  kl,                                    &
                                  rho,                                   &
                                  height_w3,                             &
-                                 planet_radius,                         &
+                                 planet_radius, bl_levels,              &
                                  ndf_wt, undf_wt, map_wt,               &
                                  ndf_w3, undf_w3, map_w3                &
                                 )
@@ -96,7 +99,7 @@ subroutine leonard_term_th_code( nlayers,                               &
   implicit none
 
   ! Arguments
-  integer(kind=i_def), intent(in) :: nlayers
+  integer(kind=i_def), intent(in) :: nlayers, bl_levels
   integer(kind=i_def), intent(in) :: ndf_wt, undf_wt
   integer(kind=i_def), intent(in) :: ndf_w3, undf_w3
   integer(kind=i_def), intent(in) :: map_wth_stencil_size
@@ -119,9 +122,9 @@ subroutine leonard_term_th_code( nlayers,                               &
   integer(kind=i_def) :: k, kp
 
   ! Leonard term vertical flux on w3 levels
-  real(kind=r_def), dimension(0:nlayers-1) :: flux
+  real(kind=r_def), dimension(0:bl_levels) :: flux
   ! density * r^2 on w3 levels
-  real(kind=r_def), dimension(1:nlayers-1) :: rho_rsq
+  real(kind=r_def), dimension(1:bl_levels) :: rho_rsq
 
   ! If the full stencil isn't available, we must be at the domain edge.
   ! Simply set the increment to 0 for now, and exit the routine.
@@ -133,7 +136,7 @@ subroutine leonard_term_th_code( nlayers,                               &
   end if
 
   ! Calculate rho * r^2
-  do k = 1, nlayers - 1
+  do k = 1, bl_levels
      rho_rsq(k) = rho(map_w3(1) +k) *                             &
                   ( height_w3(map_w3(1) + k) + planet_radius ) *  &
                   ( height_w3(map_w3(1) + k) + planet_radius )
@@ -148,7 +151,7 @@ subroutine leonard_term_th_code( nlayers,                               &
   flux(k) = 0.0_r_def
   field_inc(map_wt(1) + k) = 0.0_r_def
 
-  do k = 1, nlayers - 2
+  do k = 1, bl_levels-1
     kp = k + 1
     flux(k) = ( kl(map_w3(1) + k) / 12.0_r_def )        &
             ! 4 terms contribute to each of x and y direction, so scale by 1/4
@@ -196,17 +199,18 @@ subroutine leonard_term_th_code( nlayers,                               &
   end do
 
   ! Set flux to zero at k=nlayers-1
-  k = nlayers - 1
+  k = bl_levels
   flux(k) = 0.0_r_def
 
-  ! Set increment to zero at k=nlayers
-  k = nlayers
-  field_inc(map_wt(1) + k) = 0.0_r_def
-
 ! Difference the flux in the vertical to get increment on wth
-  do k = 1, nlayers - 1
+  do k = 1, bl_levels
     field_inc(map_wt(1) + k) = -(flux(k) - flux(k-1))                     &
                                * dtrdz_tq_bl(map_wt(1) + k)
+  end do
+
+  ! Set increment to zero above bl_levels
+  do k = bl_levels+1, nlayers
+    field_inc(map_wt(1) + k) = 0.0_r_def
   end do
 
 end subroutine leonard_term_th_code

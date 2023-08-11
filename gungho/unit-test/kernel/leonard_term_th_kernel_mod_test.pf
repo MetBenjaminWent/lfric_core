@@ -162,7 +162,7 @@ contains
                                kl,                                    &
                                rho,                                   &
                                height_w3,                             &
-                               planet_radius,                         &
+                               planet_radius, nlayers,                &
                                ndf_wt, undf_wt, map_wt(:,cell),       &
                                ndf_w3, undf_w3, map_w3(:,cell)        &
                               )
