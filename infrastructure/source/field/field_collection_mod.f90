@@ -16,6 +16,7 @@ module field_collection_mod
   use constants_mod,           only: i_def, l_def, str_def
   use field_mod,               only: field_type, &
                                      field_pointer_type
+  use field_parent_mod,        only: field_parent_type
   use field_r32_mod,           only: field_r32_type, &
                                      field_r32_pointer_type
   use field_r64_mod,           only: field_r64_type, &
@@ -117,21 +118,9 @@ subroutine add_field(self, field)
   integer(i_def) :: hash
   character(len=str_def) :: name
 
+  name = get_field_name(field)
+
   ! Check field name is valid, if not then exit with error
-  select type(infield => field)
-    type is (field_r32_type)
-      name = infield%get_name()
-    type is (field_r64_type)
-      name = infield%get_name()
-    type is (integer_field_type)
-      name = infield%get_name()
-    type is (field_r32_pointer_type)
-      name = infield%field_ptr%get_name()
-    type is (field_r64_pointer_type)
-      name = infield%field_ptr%get_name()
-    type is (integer_field_pointer_type)
-      name = infield%field_ptr%get_name()
-  end select
   if ( trim(name) == 'none' .OR. trim(name) == 'unset') then
     write(log_scratch_space, '(3A)') &
     'Field name [', trim(name), &
@@ -140,50 +129,12 @@ subroutine add_field(self, field)
   end if
 
   ! Check if field exists in collection already, if it does, exit with error
-  select type(infield => field)
-    type is (field_r32_type)
-      if ( self%field_exists( trim(name) ) ) then
-        write(log_scratch_space, '(4A)') &
-          'Field [', trim(infield%get_name()), &
-          '] already exists in field collection: ', trim(self%name)
-        call log_event( log_scratch_space, LOG_LEVEL_ERROR)
-      end if
-    type is (field_r64_type)
-      if ( self%field_exists( trim(name) ) ) then
-        write(log_scratch_space, '(4A)') &
-          'Field [', trim(infield%get_name()), &
-          '] already exists in field collection: ', trim(self%name)
-        call log_event( log_scratch_space, LOG_LEVEL_ERROR)
-      end if
-    type is (integer_field_type)
-      if ( self%field_exists( trim(name) ) ) then
-        write(log_scratch_space, '(4A)') &
-          'Field [', trim(infield%get_name()), &
-          '] already exists in field collection: ', trim(self%name)
-        call log_event( log_scratch_space, LOG_LEVEL_ERROR)
-      end if
-    type is (field_r32_pointer_type)
-      if ( self%field_exists( trim(name) ) ) then
-        write(log_scratch_space, '(4A)') &
-          'Field [', trim(infield%field_ptr%get_name()), &
-          '] already exists in field collection: ', trim(self%name)
-        call log_event( log_scratch_space, LOG_LEVEL_ERROR)
-      end if
-    type is (field_r64_pointer_type)
-      if ( self%field_exists( trim(name) ) ) then
-        write(log_scratch_space, '(4A)') &
-          'Field [', trim(infield%field_ptr%get_name()), &
-          '] already exists in field collection: ', trim(self%name)
-        call log_event( log_scratch_space, LOG_LEVEL_ERROR)
-      end if
-    type is (integer_field_pointer_type)
-      if ( self%field_exists( trim(name) ) ) then
-        write(log_scratch_space, '(4A)') &
-          'Field [', trim(infield%field_ptr%get_name()), &
-          '] already exists in field collection: ', trim(self%name)
-        call log_event( log_scratch_space, LOG_LEVEL_ERROR)
-      end if
-  end select
+  if ( self%field_exists( trim(name) ) ) then
+    write(log_scratch_space, '(4A)') &
+      'Field [', trim(name), &
+      '] already exists in field collection: ', trim(self%name)
+    call log_event( log_scratch_space, LOG_LEVEL_ERROR)
+  end if
 
   ! Finished checking - so the field must be good to add - so add it
   hash = mod(sum_string(trim(name)),self%table_len)
@@ -203,6 +154,7 @@ function field_exists(self, field_name) result(exists)
   character(*), intent(in) :: field_name
   logical(l_def)           :: exists
   integer(i_def)           :: hash
+  character(len=str_def)   :: name
 
   ! Pointer to linked list - used for looping through the list
   type(linked_list_item_type), pointer :: loop => null()
@@ -221,40 +173,11 @@ function field_exists(self, field_name) result(exists)
       exit
     end if
     ! otherwise search list for the name of field we want
-
-    ! 'cast' to the field_type
-    select type(listfield => loop%payload)
-      type is (field_r32_type)
-      if ( trim(field_name) == trim(listfield%get_name()) ) then
-          exists=.true.
-          exit
-      end if
-      type is (field_r32_pointer_type)
-      if ( trim(field_name) == trim(listfield%field_ptr%get_name()) ) then
-          exists=.true.
-          exit
-      end if
-      type is (field_r64_type)
-      if ( trim(field_name) == trim(listfield%get_name()) ) then
-          exists=.true.
-          exit
-      end if
-      type is (field_r64_pointer_type)
-      if ( trim(field_name) == trim(listfield%field_ptr%get_name()) ) then
-          exists=.true.
-          exit
-      end if
-      type is (integer_field_type)
-      if ( trim(field_name) == trim(listfield%get_name()) ) then
-          exists=.true.
-          exit
-      end if
-      type is (integer_field_pointer_type)
-      if ( trim(field_name) == trim(listfield%field_ptr%get_name()) ) then
-          exists=.true.
-          exit
-      end if
-    end select
+    name = get_field_name(loop%payload)
+    if ( trim(field_name) == trim(name) ) then
+      exists=.true.
+      exit
+    end if
 
     loop => loop%next
   end do
@@ -316,6 +239,8 @@ subroutine remove_field(self, field_name)
   type(linked_list_item_type), pointer :: loop => null()
   integer(i_def) :: hash
 
+  character(len=str_def)   :: name
+
   ! Calculate the hash of the field being removed
   hash = mod(sum_string(trim(field_name)),self%table_len)
 
@@ -332,39 +257,11 @@ subroutine remove_field(self, field_name)
     end if
     ! otherwise search list for the name of field we want
 
-    ! 'cast' to the field_type
-    select type(listfield => loop%payload)
-      type is (field_r32_type)
-        if ( trim(field_name) == trim(listfield%get_name()) ) then
-          call self%field_list(hash)%remove_item(loop)
-          exit
-        end if
-      type is (field_r64_type)
-        if ( trim(field_name) == trim(listfield%get_name()) ) then
-          call self%field_list(hash)%remove_item(loop)
-          exit
-        end if
-      type is (integer_field_type)
-        if ( trim(field_name) == trim(listfield%get_name()) ) then
-          call self%field_list(hash)%remove_item(loop)
-          exit
-        end if
-      type is (field_r32_pointer_type)
-        if ( trim(field_name) == trim(listfield%field_ptr%get_name()) ) then
-          call self%field_list(hash)%remove_item(loop)
-          exit
-        end if
-      type is (field_r64_pointer_type)
-        if ( trim(field_name) == trim(listfield%field_ptr%get_name()) ) then
-          call self%field_list(hash)%remove_item(loop)
-          exit
-        end if
-      type is (integer_field_pointer_type)
-        if ( trim(field_name) == trim(listfield%field_ptr%get_name()) ) then
-          call self%field_list(hash)%remove_item(loop)
-          exit
-        end if
-    end select
+    name = get_field_name(loop%payload)
+    if ( trim(field_name) == trim(name) ) then
+      call self%field_list(hash)%remove_item(loop)
+      exit
+    end if
 
     loop => loop%next
   end do
@@ -392,20 +289,7 @@ function get_next_item(self, start) result(item)
     new_item => start%next
     if (.not.associated(new_item) ) then
       ! Next item is in the following linked list. Calculate the hash of 'start'
-      select type(listfield => start%payload)
-        type is (field_r32_type)
-          name = listfield%get_name()
-        type is (field_r64_type)
-          name = listfield%get_name()
-        type is (integer_field_type)
-          name = listfield%get_name()
-        type is (field_r32_pointer_type)
-          name = listfield%field_ptr%get_name()
-        type is (field_r64_pointer_type)
-          name = listfield%field_ptr%get_name()
-        type is (integer_field_pointer_type)
-          name = listfield%field_ptr%get_name()
-      end select
+      name = get_field_name(start%payload)
       hash = mod(sum_string(trim(name)),self%table_len)
       ! Find next valid item - or end of collection
       do i = hash+1, self%table_len-1
@@ -442,6 +326,7 @@ subroutine get_r32_field(self, field_name, field)
 
   character(*), intent(in) :: field_name
 
+  character(len=str_def) :: name
 
   ! Pointer to linked list - used for looping through the list
   type(linked_list_item_type), pointer :: loop => null()
@@ -464,15 +349,16 @@ subroutine get_r32_field(self, field_name, field)
     end if
     ! otherwise search list for the name of field we want
 
+    name = get_field_name(loop%payload)
     ! 'cast' to the field_type
     select type(listfield => loop%payload)
       type is (field_r32_type)
-      if ( trim(field_name) == trim(listfield%get_name()) ) then
+      if ( trim(field_name) == trim(name) ) then
           field => listfield
           exit
       end if
       type is (field_r32_pointer_type)
-      if ( trim(field_name) == trim(listfield%field_ptr%get_name()) ) then
+      if ( trim(field_name) == trim(name) ) then
           field => listfield%field_ptr
           exit
       end if
@@ -495,6 +381,7 @@ subroutine get_r64_field(self, field_name, field)
 
   character(*), intent(in) :: field_name
 
+  character(len=str_def) :: name
 
   ! Pointer to linked list - used for looping through the list
   type(linked_list_item_type), pointer :: loop => null()
@@ -517,15 +404,16 @@ subroutine get_r64_field(self, field_name, field)
     end if
     ! otherwise search list for the name of field we want
 
+    name = get_field_name(loop%payload)
     ! 'cast' to the field_type
     select type(listfield => loop%payload)
       type is (field_r64_type)
-      if ( trim(field_name) == trim(listfield%get_name()) ) then
+      if ( trim(field_name) == trim(name) ) then
           field => listfield
           exit
       end if
       type is (field_r64_pointer_type)
-      if ( trim(field_name) == trim(listfield%field_ptr%get_name()) ) then
+      if ( trim(field_name) == trim(name) ) then
           field => listfield%field_ptr
           exit
       end if
@@ -548,6 +436,8 @@ subroutine get_integer_field(self, field_name, field)
 
   character(*), intent(in) :: field_name
 
+  character(len=str_def) :: name
+
   ! Pointer to linked list - used for looping through the list
   type(linked_list_item_type), pointer :: loop => null()
 
@@ -569,15 +459,16 @@ subroutine get_integer_field(self, field_name, field)
     end if
     ! otherwise search list for the name of field we want
 
+    name = get_field_name(loop%payload)
     ! 'cast' to the integer_field_type
     select type(listfield => loop%payload)
       type is (integer_field_type)
-      if ( trim(field_name) == trim(listfield%get_name()) ) then
+      if ( trim(field_name) == trim(name) ) then
           field => listfield
           exit
       end if
       type is (integer_field_pointer_type)
-      if ( trim(field_name) == trim(listfield%field_ptr%get_name()) ) then
+      if ( trim(field_name) == trim(name) ) then
           field => listfield%field_ptr
           exit
       end if
@@ -678,17 +569,7 @@ subroutine copy_collection(self, dest, name)
       field_item => self%field_list(i)%get_head()
       do while (associated(field_item))
         select type(item => field_item%payload)
-          type is (field_r32_type)
-            call dest%add_field(item)
-          type is (field_r64_type)
-            call dest%add_field(item)
-          type is (integer_field_type)
-            call dest%add_field(item)
-          type is (field_r32_pointer_type)
-            call dest%add_field(item)
-          type is (field_r64_pointer_type)
-            call dest%add_field(item)
-          type is (integer_field_pointer_type)
+          class is (pure_abstract_field_type)
             call dest%add_field(item)
         end select
         field_item => field_item%next
@@ -727,6 +608,30 @@ subroutine field_collection_destructor(self)
 
   return
 end subroutine field_collection_destructor
+
+!> Private helper function extracts the name from any type of field
+!  (so hides all the SELECT TYPE nonsense in here)
+!> @param [in] field Polymorphic field type
+!> @return The name of the given field
+ function get_field_name(field) result(name)
+  implicit none
+  class(linked_list_data_type), intent(in) :: field
+  character(len=str_def) :: name
+  select type(infield => field)
+    ! Call get_name (from the parent) on any non-pointer field
+    ! (i.e. any field that inherits from field_parent_type)
+    class is (field_parent_type)
+      name = infield%get_name()
+    ! If the field is actually a pointer, dereference to the specific actual
+    ! field type and call get_name in that
+    type is (field_r32_pointer_type)
+      name = infield%field_ptr%get_name()
+    type is (field_r64_pointer_type)
+      name = infield%field_ptr%get_name()
+    type is (integer_field_pointer_type)
+      name = infield%field_ptr%get_name()
+  end select
+end function get_field_name
 
 !> Private function to return the sum of the character values in a string
 !> @param [in] string The string to be summed
