@@ -160,7 +160,21 @@
 "um2lfric"                                : ["um2lfric-safe",
                                              "um2lfric-rigorous",],
 
+"um2lfric-gadi-safe-aquaplanet"           : ["um2lfric-gadi_ifort_gcc_safe-aquaplanet_N48L38_C48L38",],
+"um2lfric-gadi-rigorous-aquaplanet"       : ["um2lfric-gadi_ifort_gcc_rigorous-aquaplanet_N48L38_C48L38",],
 
+"um2lfric-gadi-safe-basicgal"             : ["um2lfric-gadi_ifort_gcc_safe-basicgal_N216L85_C48L85",],
+"um2lfric-gadi-rigorous-basicgal"         : ["um2lfric-gadi_ifort_gcc_rigorous-basicgal_N216L85_C48L85",],
+
+"um2lfric-gadi-aquaplanet"                : ["um2lfric-gadi-safe-aquaplanet",
+                                             "um2lfric-gadi-rigorous-aquaplanet",],
+"um2lfric-gadi-basicgal"                  : ["um2lfric-gadi-safe-basicgal",
+                                             "um2lfric-gadi-rigorous-basicgal",],
+
+"um2lfric-gadi-safe-aquaplanet-lam"       : ["um2lfric-gadi_ifort_gcc_safe-aquaplanet_lam",],
+"um2lfric-gadi-rigorous-aquaplanet-lam"   : ["um2lfric-gadi_ifort_gcc_rigorous-aquaplanet_lam",],
+"um2lfric-gadi-aquaplanet-lam"            : ["um2lfric-gadi-safe-aquaplanet-lam",
+                                             "um2lfric-gadi-rigorous-aquaplanet-lam",],
 
 "lfric2um-spice-safe-aquaplanet"          : ["lfric2um-spice_gfortran_gcc_safe-aquaplanet_C48L38_N48L38",
                                              "lfric2um-spice_ifort_gcc_safe-aquaplanet_C48L38_N48L38"],

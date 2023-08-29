@@ -3,7 +3,11 @@
 {% for config in um2lfric_configs %}
 
     [[generate_weights-um2lfric-{{config}}]]
+{% if SITE=='nci' %}
+        inherit = nci-gadi_weights
+{% else %}
         inherit = x86_weights
+{% endif %}
         script = rose task-run --app-key=generate_weights
         [[[environment]]]
             MPIRUN_N_JOBS = 8
@@ -16,15 +20,24 @@
             GRID_TYPE_UM = {{um2lfric_configs[config]["source_grid_type"]}}
             GRID_TYPE_LFRIC = {{um2lfric_configs[config]["target_grid_type"]}}
         [[[directives]]]
+{% if SITE=='nci' %}
+            -l mem=16GB
+            -l ncpus=8
+{% else %}
             --mem=16384
             --ntasks=8
+{% endif %}
 
 {% endfor %}
 
 {% for config in lfric2um_configs %}
 
     [[generate_weights-lfric2um-{{config}}]]
+{% if SITE=='nci' %}
+        inherit = nci-gadi_weights
+{% else %}
         inherit = x86_weights
+{% endif %}
         script = rose task-run --app-key=generate_weights
         [[[environment]]]
             MPIRUN_N_JOBS = 8
@@ -37,7 +50,12 @@
             GRID_TYPE_UM = {{lfric2um_configs[config]["target_grid_type"]}}
             GRID_TYPE_LFRIC = {{lfric2um_configs[config]["source_grid_type"]}}
         [[[directives]]]
+{% if SITE=='nci' %}
+            -l mem=16GB
+            -l ncpus=8
+{% else %}
             --mem=16384
             --ntasks=8
+{% endif %}
 
 {% endfor %}

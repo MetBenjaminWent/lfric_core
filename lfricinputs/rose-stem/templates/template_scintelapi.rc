@@ -21,7 +21,7 @@
   {% include "templates/template_builds.rc" %}
 
     [[scintelapi-{{build}}-{{config}}]]
-        inherit = {{build_family}}, {{queue_fam}}, METO_{{platform_fam}}_{{num_tasks}}_TASKS, {{platform_fam}}
+        inherit = {{build_family}}, {{queue_fam}}, {{SITE|upper}}_{{platform_fam}}_{{num_tasks}}_TASKS, {{platform_fam}}
         env-script = "eval $(rose task-env)"
         script = "{{TASK_RUN}} --path= --path='share/fcm_make-scintelapi-{{build}}/build/bin'"
 	post-script = """
@@ -40,7 +40,7 @@
 
     {% set task_name = "scintelapi-" + build + "-" + config %}
     [[rose_ana-scintelapi-{{build}}-{{config}}]]
-        inherit = {{rose_ana_family}}, METO_{{platform_fam}}_1_TASKS, {{platform_fam}}
+        inherit = {{rose_ana_family}}, {{SITE|upper}}_{{platform_fam}}_1_TASKS, {{platform_fam}}
         [[[environment]]]
             SUITE_DIR=../scintelapi-{{build}}-{{config}}
             KGO_DIR={{kgo_dir_base}}/{{task_name}}/{{KGO_DIRS[task_name]|default("no_kgo_var")}}

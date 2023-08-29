@@ -27,6 +27,25 @@
             execution time limit = PT45M
 {% endif %}
 
+    [[GADI]]
+        [[[environment]]]
+            FASTMEM         = \$TMPDIR
+            BIG_DATA_DIR    = /g/data/access/projects/access/lfric/data
+            CANNED_MESH_DIR = $BIG_DATA_DIR/meshes/HEAD
+            UMDIR = /g/data/access/projects/access/umdir
+        [[[remote]]]
+            host = {{ ROSE_ORIG_HOST }}
+        [[[job]]]
+            batch system = pbs
+            execution time limit = PT45M
+        [[[directives]]]
+            -l mem=40GB
+            -l walltime=00:30:00
+            -l storage=gdata/access+gdata/hr22+gdata/ki32+scratch/access+gdata/{{environ.get('PROJECT','NO_PROJECT')}}
+
+            -q=normal
+            -W umask=0022
+
 {% for tasks in [1, 2, 6, 12, 18, 24] %}
     [[METO_LINUX_{{tasks}}_TASKS]]
         [[[directives]]]
@@ -42,6 +61,19 @@
         [[[environment]]]
             OMP_NUM_THREADS = 1
             OMP_STACKSIZE   = 1g
+
+{% for tasks in [1, 2, 6, 12, 18, 24] %}
+    [[NCI_GADI_{{tasks}}_TASKS]]
+        [[[directives]]]
+            -l ncpus={{tasks}}
+    {% if tasks > 20 %}
+            -l mem=96GB
+    {% endif %}
+        [[[environment]]]
+            ROSE_LAUNCHER_PREOPTS = -n {{tasks}}
+{% endfor %}
+
+    [[NCI_GADI_NORMAL_QUEUE]]
 
     [[meto-x86-ifort-gcc]]
         inherit = PLATFORM_X86
@@ -80,6 +112,37 @@
                      module load um_tools
                      module list 2>&1
                      """
+
+    [[rose_ana_nci-gadi]]
+        pre-script = """
+                     module use /g/data/access/ngm/modules
+                     module use /g/data/access/projects/access/modules
+                     module use /g/data/hr22/modulefiles
+                     module load cylc7/23.03
+                     module load rose-picker
+                     module load analysis3/21.10
+                     module load ants/0.18.0
+                     module list 2>&1
+                     """
+
+    [[nci-gadi-ifort-gcc]]
+        pre-script = """
+                     umask 0022
+                     module purge
+                     module use /g/data/access/ngm/modules
+                     module use /g/data/access/projects/access/modules
+                     module use /g/data/hr22/modulefiles
+                     module load cylc7/23.03
+                     module load /g/data/access/ngm/modules/envs/lfric/0/intel-openmpi
+                     module list 2>&1
+                     """
+       post-script = """
+                     module purge
+                     """
+        [[[remote]]]
+            host = $(rose host-select gadi.nci.org.au)
+        [[[job]]]
+            batch system = pbs
 
     [[XC40]]
         [[[environment]]]
@@ -195,3 +258,25 @@
         [[[directives]]]
             --partition=rhel7
 {% endif %}
+
+    [[nci-gadi_weights]]
+        inherit = GADI
+        pre-script = """
+                     module purge
+                     module use /g/data/access/ngm/modules
+                     module use /g/data/access/projects/access/modules
+                     module use /g/data/hr22/modulefiles
+                     module load /g/data/access/ngm/modules/envs/lfric/0/intel-openmpi
+                     module load cylc7/23.03
+                     module load rose-picker
+                     module load analysis3/21.10
+                     module load ants/0.18.0
+                     module list 2>&1
+                     """
+       post-script = """
+                     module purge
+                     """
+        [[[remote]]]
+            host = $(rose host-select gadi.nci.org.au)
+        [[[job]]]
+            batch system = pbs
