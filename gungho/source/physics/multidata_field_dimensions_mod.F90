@@ -8,17 +8,63 @@
 
 module multidata_field_dimensions_mod
 
-  use constants_mod,             only: i_def
+  use constants_mod,             only: i_def, l_def
   use io_config_mod,             only: use_xios_io
-  use lfric_xios_diag_mod,       only: get_axis_dimension
+  use lfric_xios_diag_mod,       only: set_axis_dimension, &
+                                       get_axis_dimension
 
   implicit none
 
   private
 
-  public :: get_multidata_field_dimension
+#ifdef UM_PHYSICS
+      character(30), parameter :: multidata_items(23) = &
+            [character(30) ::                           &
+                        'plant_types',                  &
+                        'sea_ice_tiles',                &
+                        'land_tiles',                   &
+                        'surface_tiles',                &
+                        'surface_regrid_vars',          &
+                        'snow_layers_and_tiles',        &
+                        'soil_levels',                  &
+                        'soil_levels_and_tiles',        &
+                        'land_tile_rad_band',           &
+                        'monthly_climatology',          &
+                        'boundary_layer_types',         &
+                        'entrainment_levels',           &
+                        'dust_divisions',               &
+                        'radiation_levels',             &
+                        'aero_modes',                   &
+                        'sw_bands_aero_modes',          &
+                        'lw_bands_aero_modes',          &
+                        'cloud_subcols',                &
+                        'isccp_ctp_tau_bins',           &
+                        'cloudsat_levels',              &
+                        'csat_lvls_atb_bins',           &
+                        'horiz_angle',                  &
+                        'horiz_aspect'                  &
+           ]
+#endif
+
+  public :: get_multidata_field_dimension, sync_multidata_field_dimensions
 
 contains
+
+!> @brief Synchronise XIOS axis dimensions with multidata field
+!> dimensions sourced from configuration
+subroutine sync_multidata_field_dimensions()
+      implicit none
+      logical(l_def), parameter :: tolerate_missing_axes = .true.
+#ifdef UM_PHYSICS
+      integer(i_def) :: i
+      do i=1,size(multidata_items)
+            call set_axis_dimension(                                          &
+                  multidata_items(i),                                         &
+                  get_multidata_field_dimension(multidata_items(i)),          &
+                  tolerate_missing_axes)
+      end do
+#endif
+end subroutine sync_multidata_field_dimensions
 
   !> @brief Fetches the configuration data of the number of multidata entries.
   !> @details The function get_multidata_field_dimension returns

@@ -59,7 +59,7 @@ source/kernel/stph/spt_levels_cap_kernel_mod.F90
 source/kernel/stph/skeb_levels_cap_kernel_mod.F90
 source/kernel/stph/skeb_conv_disp_kernel_mod.F90
 source/kernel/stph/scale_by_cos_lat_kernel_mod.F90
-source/algorithm/um_control_init_mod.x90
+source/algorithm/um_control_init_mod.f90
 source/algorithm/locate_tropopause_alg_mod.x90
 source/algorithm/strat_aerosol_alg_mod.x90
 source/algorithm/pc2_rad_response_alg_mod.x90

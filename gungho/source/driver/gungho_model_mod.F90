@@ -108,9 +108,10 @@ module gungho_model_mod
   use illuminate_alg_mod,          only : illuminate_alg
   use um_clock_init_mod,           only : um_clock_init
   use um_control_init_mod,         only : um_control_init
+  use um_domain_init_mod,          only : um_domain_init
+  use um_domain_init_mod,          only : um_domain_init
   use um_sizes_init_mod,           only : um_sizes_init
-  use um_physics_init_mod,         only : um_physics_init, &
-                                          um_physics_pre_io_init
+  use um_physics_init_mod,         only : um_physics_init
   use um_radaer_lut_init_mod,      only : um_radaer_lut_init
   use um_ukca_init_mod,            only : um_ukca_init
 #endif
@@ -140,7 +141,7 @@ module gungho_model_mod
 contains
   !> @brief  Initialise processor object for enabling checkpointing
   !> @param[in]   self      Enabler object
-  !> @param[in]   spec      Model clock
+  !> @param[in]   clock     Model clock
   subroutine enabler_init(self, clock)
     implicit none
     class(enabler_type),       intent(inout) :: self
@@ -170,9 +171,11 @@ contains
     ! empty
   end subroutine enabler_dtor
 
-  !> @brief Enable active state fields for checkpointing
+  !> @brief Enable active state fields for checkpointing; sync xios axis dimensions
   !> @param[in] clock        The clock providing access to time information
   subroutine before_context_close(clock)
+    use multidata_field_dimensions_mod, only: sync_multidata_field_dimensions
+
     implicit none
     class(clock_type), intent(in) :: clock
 
@@ -183,8 +186,57 @@ contains
     if (use_physics) then
       call enabler%init(clock)
       call process_physics_prognostics(enabler)
+      call sync_multidata_field_dimensions()
     end if
   end subroutine before_context_close
+
+  !> @brief Initialisations that depend only on loaded namelists.
+  !> @details To be called before the IO context opens so that the
+  !> multidata dimensions are completely defined when the XIOS
+  !> axis dimensions are being synched.
+  !> @param[in] model_clock     The clock providing access to time information
+  subroutine basic_initialisations(model_clock)
+    implicit none
+
+    class(model_clock_type), intent(inout) :: model_clock
+
+#ifdef UM_PHYSICS
+    integer(i_def) :: ncells
+
+    ! Set derived planet constants and presets
+    call set_planet_constants()
+
+    ! Initialise UM to run in columns
+    ncells = 1_i_def
+
+    if ( use_physics ) then
+
+      if (radiation == radiation_socrates) then
+        ! Initialisation for the Socrates radiation scheme
+        call socrates_init()
+      end if
+      ! Initialisation of UM high-level variables
+      call um_control_init()
+      call um_sizes_init(ncells)
+      ! Initialisation of UM clock
+      call um_clock_init(model_clock)
+
+      ! Initialisation of UM physics variables
+      call um_physics_init()
+      ! Read all the radaer lut namelist files
+      call um_radaer_lut_init()
+      ! Initialisation of Jules high-level variables
+      call jules_control_init()
+      if (surface == surface_jules) then
+        ! Initialisation of Jules physics variables
+        call jules_physics_init()
+      end if
+      ! Initialisation of UKCA physics variables
+      call um_ukca_init()
+
+    end if
+#endif
+  end subroutine basic_initialisations
 
   !> @brief Initialises the infrastructure and sets up constants used by the
   !>        model.
@@ -431,13 +483,7 @@ contains
     ! Initialise aspects of output
     !-------------------------------------------------------------------------
 
-    if ( use_physics ) then
-#ifdef UM_PHYSICS
-        ! Initialisation of UM physics configuration needed
-        ! when callback below executes.
-        call um_physics_pre_io_init()
-#endif
-    end if
+    call basic_initialisations( model_clock )
 
     call log_event("Initialising I/O context", LOG_LEVEL_INFO)
 
@@ -499,14 +545,7 @@ contains
                                    chi_inventory,      &
                                    panel_id_inventory, &
                                    model_clock )
-
 #ifdef UM_PHYSICS
-    ! Set derived planet constants and presets
-    call set_planet_constants()
-
-    ! Initialise UM to run in columns
-    ncells = 1_i_def
-
     if ( use_physics ) then
 
       ! Initialise time-varying trace gases
@@ -514,32 +553,15 @@ contains
 
       if (radiation == radiation_socrates) then
         ! Initialisation for the Socrates radiation scheme
-        call socrates_init()
         call illuminate_alg( model_data%radiation_fields, &
                              model_clock%get_step(),      &
                              model_clock%get_seconds_per_step())
       end if
-      ! Initialisation of UM high-level variables
-      call um_control_init(mesh)
-      call um_sizes_init(ncells)
-      ! Initialisation of UM clock
-      call um_clock_init(model_clock)
+      ! Initialisation of UM variables related to the mesh
+      call um_domain_init(mesh)
 
-      ! Initialisation of UM physics variables
-      call um_physics_init()
-      !Read all the radaer lut namelist files
-      call um_radaer_lut_init()
-      ! Initialisation of Jules high-level variables
-      call jules_control_init()
-      if (surface == surface_jules) then
-        ! Initialisation of Jules physics variables
-        call jules_physics_init()
-      end if
-      ! Initialisation of UKCA physics variables
-      call um_ukca_init()
     end if
 #endif
-
     nullify(mesh, twod_mesh, shifted_mesh, double_level_mesh, chi, &
             chi_inventory, panel_id_inventory, files_init_ptr,     &
             orography_mesh, orography_twod_mesh)

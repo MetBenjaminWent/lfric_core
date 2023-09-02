@@ -20,6 +20,8 @@ module lfric_xios_diag_mod
                                         xios_set_field_attr,                  &
                                         xios_field_is_active,                 &
                                         xios_get_axis_attr,                   &
+                                        xios_set_axis_attr,                   &
+                                        xios_is_valid_axis,                   &
                                         lfric_xios_mock_pull_in
 #else
   use lfric_xios_mock_mod,            only: lfric_xios_mock_pull_in
@@ -32,8 +34,9 @@ module lfric_xios_diag_mod
                                         xios_get_field_attr,                  &
                                         xios_set_field_attr,                  &
                                         xios_field_is_active,                 &
-                                        xios_get_axis_attr
-
+                                        xios_get_axis_attr,                   &
+                                        xios_set_axis_attr,                   &
+                                        xios_is_valid_axis
 #endif
 
   use log_mod,                         only:                                  &
@@ -58,7 +61,8 @@ module lfric_xios_diag_mod
     get_field_grid_ref,                                                        &
     get_field_domain_ref,                                                      &
     get_field_axis_ref,                                                        &
-    get_axis_dimension
+    get_axis_dimension,                                                        &
+    set_axis_dimension
 
 contains
 
@@ -263,5 +267,28 @@ contains
     integer(i_def) :: dim
     call xios_get_axis_attr(unique_id, n_glo=dim)
   end function get_axis_dimension
+
+  !> @brief Set the dimension of an XIOS axis object.
+  !> @param[in]    unique_id    XIOS id of the axis
+  !> @param[in]    dim          Dimension value to be set
+  !> @param[in]    tolerant     Ignore missing axes?
+  subroutine set_axis_dimension(unique_id, dim, tolerant)
+    implicit none
+    character(*), intent(in) :: unique_id
+    integer(i_def), intent(in) :: dim
+    logical(l_def), optional, intent(in) :: tolerant
+    logical(l_def) :: strict
+    strict = .true.
+    if (present(tolerant)) strict = .not. tolerant
+    if (xios_is_valid_axis(unique_id)) then
+      call xios_set_axis_attr(unique_id, n_glo=dim)
+    else
+      if (strict) then
+        write(log_scratch_space, '(A, A)')                                    &
+        'Invalid XIOS axis:', unique_id
+        call log_event(log_scratch_space, LOG_LEVEL_ERROR)
+      end if
+    end if
+  end subroutine set_axis_dimension
 
 end module lfric_xios_diag_mod

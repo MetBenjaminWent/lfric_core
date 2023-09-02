@@ -28,7 +28,7 @@ module skeb_main_alg_mod
     use initialise_diagnostics_mod,    only: init_diag => init_diagnostic_field
     ! configs
     use stochastic_physics_config_mod, only: skeb_level_bottom, skeb_level_top
-    use um_physics_init_mod,           only: level2km
+    use um_domain_init_mod,            only: level2km
     use planet_constants_mod,          only: g
     use geometric_constants_mod,       only: get_da_at_w2
     use set_any_dof_kernel_mod,        only: set_any_dof_kernel_type

@@ -157,7 +157,6 @@ module um_physics_init_mod
   ! UM modules used
   use cderived_mod,         only : delta_lambda, delta_phi
   use nlsizes_namelist_mod, only : bl_levels, model_levels
-  use level_heights_mod,    only : eta_theta_levels
 
   implicit none
 
@@ -165,34 +164,12 @@ module um_physics_init_mod
   integer(i_def), protected :: mode_dimen
   integer(i_def), protected :: sw_band_mode
   integer(i_def), protected :: lw_band_mode
-  integer(i_def), protected :: level2km
 
   private
-  public :: um_physics_init, um_physics_pre_io_init,                           &
-            n_aer_mode, mode_dimen, sw_band_mode, lw_band_mode, level2km
+  public :: um_physics_init, &
+            n_aer_mode, mode_dimen, sw_band_mode, lw_band_mode
 
 contains
-
-  !>@brief Initialise UM physics variables required before IO initialisation
-  subroutine um_physics_pre_io_init()
-
-    use cv_run_mod, only: l_conv_prog_precip, l_conv_prog_dtheta, l_conv_prog_dq
-
-    implicit none
-
-    if ( convection == convection_um ) then
-
-      if ( cv_scheme == cv_scheme_gregory_rowntree ) then
-
-        l_conv_prog_precip  = .true.
-        l_conv_prog_dtheta  = .true.
-        l_conv_prog_dq      = .true.
-
-      end if
-
-    end if
-
-  end subroutine um_physics_pre_io_init
 
   !>@brief Initialise UM physics variables which are either fixed in LFRic
   !>        or derived from LFRic inputs or JULES variables
@@ -212,7 +189,7 @@ contains
          sg_orog_mixing, fric_heating, idyndiag,                           &
          zhloc_depth_fac, flux_grad, entr_smooth_dec,                      &
          relax_sc_over_cu, bl_res_inv, blending_option,                    &
-         a_ent_shr_nml, alpha_cd, puns, pstb, nl_bl_levels, kprof_cu,      &
+         a_ent_shr_nml, alpha_cd, puns, pstb, kprof_cu,                    &
          non_local_bl, flux_bc_opt, i_bl_vn_9c, sharp_sea_mes_land,        &
          lem_conven, to_sharp_across_1km, off, on, DynDiag_Ribased,        &
          DynDiag_ZL_corrn, blend_allpoints, ng_stress, lem_std, lem_adjust,&
@@ -258,6 +235,7 @@ contains
          cpress_term, pr_melt_frz_opt, llcs_opt_crit_condens,              &
          llcs_detrain_coef, l_prog_pert, md_pert_opt, l_jules_flux,        &
          l_reset_neg_delthvu,                                              &
+         l_conv_prog_precip, l_conv_prog_dtheta, l_conv_prog_dq,           &
          adv_conv_prog_dtheta, adv_conv_prog_dq,                           &
          tau_conv_prog_precip, tau_conv_prog_dtheta, tau_conv_prog_dq,     &
          prog_ent_grad, prog_ent_int, prog_ent_max, prog_ent_min
@@ -338,7 +316,6 @@ contains
 
     implicit none
 
-    integer(i_def) :: k
     logical(l_def) :: l_fix_nacl_density
     logical(l_def) :: l_fix_ukca_hygroscopicities
     logical(l_def) :: dust_loaded = .false.
@@ -537,12 +514,6 @@ contains
           sg_orog_mixing = sg_shear_enh_lambda
       end select
 
-      k = 1
-      do while ( k < bl_levels .and. &
-        domain_top * eta_theta_levels(k) < 6000.0_r_def )
-        k = k+1
-      end do
-      nl_bl_levels = k
       ! Switch for alternative TKE and variance diagnostics
       var_diags_opt = split_tke_and_inv
       tke_diag_fac  = 1.0_r_bl
@@ -643,6 +614,9 @@ contains
         l_anvil             = .true.
         l_ccrad             = .true.
         l_cmt_heating       = .true.
+        l_conv_prog_precip  = .true.
+        l_conv_prog_dtheta  = .true.
+        l_conv_prog_dq      = .true.
         l_cv_conserve_check = .true.
         l_fcape             = .true.
         l_mom               = .true.
@@ -1210,21 +1184,6 @@ contains
     ! Leonard terms on or off
     !-----------------------------------------------------------------------
     l_leonard_term = leonard_term
-
-    !-----------------------------------------------------------------------
-    ! Stochastic physics (SKEB) - identify 1st model level above 2km
-    !-----------------------------------------------------------------------
-
-    k = 1
-    do while ( domain_top * eta_theta_levels(k) < 2000.0_r_def)
-      k = k+1
-      if ( k > size( eta_theta_levels ) )then
-        write( log_scratch_space, '(A)' )                                   &
-           'Top level must be above 2km for SKEB scheme.'
-        call log_event( log_scratch_space, LOG_LEVEL_ERROR )
-      end if
-    end do
-    level2km = k
 
   end subroutine um_physics_init
 

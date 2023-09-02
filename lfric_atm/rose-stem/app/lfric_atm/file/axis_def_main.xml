@@ -2,23 +2,27 @@
 <axis_definition>
   <axis id="vert_axis_half_levels" name="half_levels"/>
   <axis id="vert_axis_full_levels" name="full_levels"/>
+  <axis id="land_tiles" name="land_tiles" />
+  <axis id="surface_tiles" name="surface_tiles" />
+  <axis id="snow_layers_and_tiles" name="snow_layers_and_tiles" />
+  <axis id="land_tile_rad_band" name="land_tile_rad_band" />
   <axis id="radiation_levels" name="radiation_levels"/>
   <axis id="horizon_angles" name="horizon_angles" n_glo="16"/>
   <axis id="horizon_aspects" name="horizon_aspects" n_glo="16"/>
-  <axis id="aero_modes" name="aero_modes" n_glo="6"/>
-  <axis id="sw_bands_aero_modes" name="sw_bands_aero_modes" n_glo="36"/>
-  <axis id="lw_bands_aero_modes" name="lw_bands_aero_modes" n_glo="54"/>
-  <axis id="dust_divisions" name="dust_divisions" n_glo="6"/>
-  <axis id="soil_levels" name="soil_levels" n_glo="4"/>
+  <axis id="aero_modes" name="aero_modes" />
+  <axis id="sw_bands_aero_modes" name="sw_bands_aero_modes" />
+  <axis id="lw_bands_aero_modes" name="lw_bands_aero_modes" />
+  <axis id="dust_divisions" name="dust_divisions" />
+  <axis id="soil_levels" name="soil_levels" />
   <axis id="plant_func_types" name="plant_func_types" n_glo="5"/>
   <axis id="sea_ice_categories" name="sea_ice_categories" n_glo="1"/>
   <axis id="bl_types" name="bl_types" n_glo="7"/>
-  <axis id="entrainment_levels" name="entrainment_levels" n_glo="3"/>
-  <axis id="monthly_climatology" name="monthly_climatology" n_glo="12"/>
+  <axis id="entrainment_levels" name="entrainment_levels" />
+  <axis id="monthly_climatology" name="monthly_climatology" />
   <axis id="lbc_axis" name="lbc_axis" n_glo="7"/>
   <axis id="reynolds_timeseries" name="reynolds_timeseries" n_glo="14001"/>
-  <axis id="isccp_ctp_tau_bins" name="isccp_ctp_tau_bins" n_glo="49"/>
-  <axis id="cloudsat_levels" name="cloudsat_levels" n_glo="40"/>
-  <axis id="csat_lvls_atb_bins" name="csat_lvls_atb_bins" n_glo="600"/>
-  <axis id="cloud_subcols" name="cloud_subcols" n_glo="64"/>
+  <axis id="isccp_ctp_tau_bins" name="isccp_ctp_tau_bins" />
+  <axis id="cloudsat_levels" name="cloudsat_levels" />
+  <axis id="csat_lvls_atb_bins" name="csat_lvls_atb_bins" />
+  <axis id="cloud_subcols" name="cloud_subcols" />
 </axis_definition>

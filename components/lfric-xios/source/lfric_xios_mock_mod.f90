@@ -23,6 +23,8 @@ module lfric_xios_mock_mod
             xios_send_field,      &
             xios_get_domain_attr, &
             xios_get_axis_attr,   &
+            xios_set_axis_attr,   &
+            xios_is_valid_axis,   &
             xios_get_field_attr,  &
             xios_set_field_attr,  &
             xios_field_is_active, &
@@ -119,6 +121,30 @@ type(xios_mock_data_type), public :: mock_xios_data
     end if
 
   end subroutine xios_get_axis_attr
+
+  !> Mock implementation for XIOS setter
+  !> @param[in] axis_id The ID of the axis to be tested
+  !> @param[in] n_glo   The size of the test axis
+  subroutine xios_set_axis_attr(axis_id, n_glo)
+
+    implicit none
+
+    character(len=*),       intent(in) :: axis_id
+    integer(i_def),         intent(in) :: n_glo
+
+    ! intentionally left blank
+  end subroutine xios_set_axis_attr
+
+  !> Mockf implementation for XIOS checker
+  !> @param[in] axis_id The ID of the axis to be tested
+  function xios_is_valid_axis(axis_id) result(status)
+
+    implicit none
+
+    character(len=*),       intent(in)    :: axis_id
+    logical(l_def) status
+    status = .true.
+  end function xios_is_valid_axis
 
   !> Accept values for field attributes based on the field ID
   !> @param[in]    field_id   The ID of the field to be tested

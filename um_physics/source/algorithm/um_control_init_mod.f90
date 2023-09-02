@@ -12,12 +12,6 @@ module um_control_init_mod
   use extrusion_config_mod,        only : number_of_layers
   use timestepping_config_mod,     only : outer_iterations
 
-  ! Other modules used
-  use constants_mod,               only : i_um, r_um, rmdi, i_def, r_def
-  use physical_op_constants_mod,   only : get_delta_at_wtheta
-  use field_mod,                   only : field_type
-  use planet_config_mod,           only : radius
-
   implicit none
 
   private
@@ -33,28 +27,16 @@ contains
   !>          of LFRic (but cannot be made a parameter because it is required
   !>          to be variable in the UM and therefore declared as such in the
   !>          UM modules which contains it).
-  !> @param[in] mesh    Mesh
-  subroutine um_control_init( mesh )
+  subroutine um_control_init()
 
     ! UM modules containing things that need setting
-    use cderived_mod, only: delta_lambda, delta_phi
     use dynamics_input_mod, only: numcycles
     use gen_phys_inputs_mod, only: l_mr_physics
-    use level_heights_mod, only: eta_theta_levels
     use model_domain_mod, only: model_type, mt_single_column
     use nlsizes_namelist_mod, only: model_levels, cloud_levels, n_cca_lev, &
          tr_vars
-    use mesh_mod, only: mesh_type
 
     implicit none
-
-    type(mesh_type),  intent(in), pointer :: mesh
-
-    ! Local variables
-    type(field_type), pointer       :: delta => null() ! Horizontal edge length
-    type(field_type)                :: ones
-
-    real(r_def) :: sum_delta, sum_ones
 
     ! ----------------------------------------------------------------
     ! Model dimensions - contained in UM module nlsizes_namelist_mod
@@ -82,29 +64,6 @@ contains
     ! Mixing ratio flag - contained in UM gen_phys_inputs.
     ! Set to true as LFRic only supports mixing ratios.
     l_mr_physics = .true.
-
-    ! The following 3D arrays are used direct from level_heights_mod
-    ! throughout the UM code.
-    ! We must initialise them here so that they are always available.
-    ! But they must be set to appropriate values for the current column
-    ! in any kernel whos external code uses the variables.
-    ! Ideally the UM code will be changed so that they are passed in
-    ! through the argument list.
-    allocate(eta_theta_levels(0:number_of_layers), source=rmdi)
-    call mesh%get_eta(eta_theta_levels)
-
-    ! This is a temporary method of calculating
-    ! the global mean of a field - once psyclone#489 is live,
-    ! it should be changed to use the built-in function
-
-    delta => get_delta_at_wtheta( mesh%get_id() )
-    call delta%copy_field_properties(ones)
-    call invoke( setval_c(ones, 1.0_r_def), &
-                 sum_X(sum_delta, delta)  , &
-                 sum_X(sum_ones,  ones)     )
-
-    delta_lambda = sum_delta / ( sum_ones * radius )
-    delta_phi    = delta_lambda
 
   end subroutine um_control_init
 
