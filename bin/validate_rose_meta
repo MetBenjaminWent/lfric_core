@@ -34,7 +34,7 @@
 
 default_project_names=( infrastructure   \
                         lfric-xios       \
-                        lfric-da         \
+                        jedi-lfric       \
                         driver           \
                         gungho           \
                         gungho_model     \
@@ -44,7 +44,7 @@ default_project_names=( infrastructure   \
                         linear_model     \
                         simple_diffusion \
                         skeleton         \
-                        da_dev           \
+                        jedi_lfric_tests \
                         diagnostics      \
                         gravity_wave     \
                         io_dev           \
@@ -55,7 +55,7 @@ default_project_names=( infrastructure   \
 
 default_app_names=( infrastructure:none               \
                     lfric-xios:none                   \
-                    lfric-da:none                     \
+                    jedi-lfric:none                   \
                     driver:none                       \
                     gungho:none                       \
                     gungho_model:gungho_model         \
@@ -66,7 +66,7 @@ default_app_names=( infrastructure:none               \
                     linear_model:linear_model         \
                     simple_diffusion:simple_diffusion \
                     skeleton:skeleton                 \
-                    da_dev:da_dev                     \
+                    jedi_lfric_tests:jedi_lfric_tests \
                     diagnostics:diagnostics           \
                     gravity_wave:gravity_wave         \
                     io_dev:io_dev                     \
@@ -109,7 +109,7 @@ fi
 project_folder_location=(                      \
   [infrastructure]=infrastructure              \
   [lfric-xios]=components/lfric-xios           \
-  [lfric-da]=components/lfric-da               \
+  [jedi-lfric]=components/jedi-lfric           \
   [driver]=components/driver                   \
   [gungho]=gungho                              \
   [gungho_model]=miniapps/gungho_model         \
@@ -119,7 +119,7 @@ project_folder_location=(                      \
   [linear_model]=miniapps/linear_model         \
   [simple_diffusion]=miniapps/simple_diffusion \
   [skeleton]=miniapps/skeleton                 \
-  [da_dev]=miniapps/da_dev                     \
+  [jedi_lfric_tests]=miniapps/jedi_lfric_tests \
   [diagnostics]=miniapps/diagnostics           \
   [gravity_wave]=miniapps/gravity_wave         \
   [io_dev]=miniapps/io_dev                     \
@@ -133,7 +133,7 @@ declare -A project_primary_app
 project_primary_app=(                 \
   [infrastructure]=none               \
   [lfric-xios]=none                   \
-  [lfric-da]=none                     \
+  [jedi-lfric]=none                   \
   [driver]=none                       \
   [gungho]=none                       \
   [gungho_model]=gungho_model         \
@@ -143,7 +143,7 @@ project_primary_app=(                 \
   [linear_model]=linear_model         \
   [simple_diffusion]=simple_diffusion \
   [skeleton]=skeleton                 \
-  [da_dev]=da_dev                     \
+  [jedi_lfric_tests]=jedi_lfric_tests \
   [diagnostics]=diagnostics           \
   [gravity_wave]=gravity_wave         \
   [io_dev]=io_dev                     \

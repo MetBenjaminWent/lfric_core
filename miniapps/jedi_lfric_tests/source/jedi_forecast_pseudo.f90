@@ -1,0 +1,98 @@
+!-----------------------------------------------------------------------------
+! (C) Crown copyright 2022 Met Office. All rights reserved.
+! The file LICENCE, distributed with this code, contains details of the terms
+! under which the code may be used.
+!-----------------------------------------------------------------------------
+
+!> @page jedi_forecast_pseudo program
+
+!> @brief Main program for running pseudo model forecast with jedi emulator
+!>        objects.
+
+!> @details Setup and run a pseudo model forecast using the jedi emulator
+!>          objects. The jedi objects are constructed via an initialiser call
+!>          and the forecast is handled by the model object.
+!>
+program jedi_forecast_pseudo
+
+  use constants_mod,           only : PRECISION_REAL, i_native
+  use log_mod,                 only : log_event, log_scratch_space, &
+                                      LOG_LEVEL_ALWAYS
+
+  ! Data types and methods to get/store configurations
+  use jedi_state_config_mod,        only : jedi_state_config_type
+  use jedi_pseudo_model_config_mod, only : jedi_pseudo_model_config_type
+  use cli_mod,                      only : get_initial_filename
+
+  ! Jedi emulator objects
+  use jedi_checksum_mod,       only : output_checksum
+  use jedi_lfric_duration_mod, only : jedi_duration_type
+  use jedi_run_mod,            only : jedi_run_type
+  use jedi_geometry_mod,       only : jedi_geometry_type
+  use jedi_state_mod,          only : jedi_state_type
+  use jedi_pseudo_model_mod,   only : jedi_pseudo_model_type
+
+
+  implicit none
+
+  ! Jedi objects
+  type(jedi_geometry_type)     :: jedi_geometry
+  type(jedi_state_type)        :: jedi_state
+  type(jedi_pseudo_model_type) :: jedi_psuedo_model
+  type(jedi_run_type)          :: jedi_run
+
+  ! Emulator configs
+  type(jedi_state_config_type)        :: jedi_state_config
+  type(jedi_pseudo_model_config_type) :: jedi_pseudo_model_config
+  type(jedi_duration_type)            :: datetime_duration
+
+  ! Local
+  character(:), allocatable :: filename
+  integer( kind=i_native )  :: model_communicator
+  character(*), parameter   :: program_name = "jedi_forecast_pseudo"
+
+  call log_event( 'Running ' // program_name // ' ...', LOG_LEVEL_ALWAYS )
+  write(log_scratch_space,'(A)')                        &
+        'Application built with '//trim(PRECISION_REAL)// &
+        '-bit real numbers'
+  call log_event( log_scratch_space, LOG_LEVEL_ALWAYS )
+
+  ! Infrastructure config
+  call get_initial_filename( filename )
+
+  ! Run object - handles initialization and finalization of required infrastructure
+  ! Initialize external libraries such as XIOS
+  call jedi_run%initialise( program_name, model_communicator )
+
+  ! Ensemble applications would split the communicator here
+
+  ! Initialize LFRic infrastructure
+  call jedi_run%initialise_infrastructure( filename, model_communicator )
+
+  ! Config for the jedi emulator objects
+  ! State config
+  call jedi_state_config%initialise( use_pseudo_model = .true. )
+
+  ! Model config
+  call jedi_pseudo_model_config%initialise()
+
+  ! Forecast config - duration of forecast / seconds
+  call datetime_duration%init( 5 )
+
+  ! Geometry
+  call jedi_geometry%initialise()
+
+  ! State
+  call jedi_state%initialise( program_name, jedi_geometry, jedi_state_config )
+
+  ! Model
+  call jedi_psuedo_model%initialise( jedi_pseudo_model_config )
+
+  ! Run app via model class
+  call jedi_psuedo_model%forecast( jedi_state, datetime_duration )
+
+  call log_event( 'Finalising ' // program_name // ' ...', LOG_LEVEL_ALWAYS )
+  ! To provide KGO
+  call output_checksum( program_name, jedi_state%io_collection )
+
+end program jedi_forecast_pseudo

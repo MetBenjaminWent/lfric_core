@@ -22,7 +22,7 @@ OPERATE_ON ?= lfric_atm                                  \
               components/science                         \
               components/driver                          \
               components/lfric-xios                      \
-              components/lfric-da                        \
+              components/jedi-lfric                      \
               components/coupler-oasis                   \
               components/diagnostics_infrastructure      \
               components/inventory                       \
@@ -31,7 +31,7 @@ OPERATE_ON ?= lfric_atm                                  \
               miniapps/gungho_model                      \
               miniapps/linear_model                      \
               miniapps/skeleton                          \
-              miniapps/da_dev                            \
+              miniapps/jedi_lfric_tests                  \
               miniapps/diagnostics                       \
               miniapps/gravity_wave                      \
               miniapps/simple_diffusion                  \
