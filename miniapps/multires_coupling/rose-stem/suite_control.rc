@@ -83,7 +83,8 @@
     'api_documentation_graph(publish=True)',
     'run_application("multires_coupling", "coupling_test", checkkgo=False, resolutions=[("C24",)])',
     'run_application("multires_coupling", "coupling_test_coarse", checkkgo=False, resolutions=[("C24_C12",)])',
-    'run_application("multires_coupling", "coupling_test_fine", checkkgo=False, resolutions=[("C24_C12",)])'],
+    'run_application("multires_coupling", "coupling_test_fine", checkkgo=False, resolutions=[("C24_C12",)])',
+    'canned_test("multires_coupling")'],
 'nightly': [
     'null_task_graph()' ]
  } %}
