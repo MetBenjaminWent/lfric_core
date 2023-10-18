@@ -448,7 +448,7 @@ contains
     use jules_surface_types_mod, only: npft, ntype, ncpft, nnpft, soil
     use jules_urban_mod, only: l_moruses
     use jules_vegetation_mod, only: l_crop, l_triffid, l_phenol, l_use_pft_psi,&
-         can_rad_mod, l_acclim
+         can_rad_mod, l_acclim, l_sugar
     use nlsizes_namelist_mod, only: sm_levels, ntiles, bl_levels
     use planet_constants_mod, only: p_zero, kappa, planet_radius, cp, g, grcp, &
          c_virtual, repsilon, r, lcrcp, lsrcp, vkman
@@ -814,7 +814,7 @@ contains
                            dim_ch4layer, nice_use, nice_use, soil_bgc_model,   &
                            soil_model_ecosse, l_layeredc, l_triffid, l_phenol, &
                            l_bedrock, l_veg3, nmasst, nnpft, l_acclim,         &
-                           progs_data)
+                           l_sugar, progs_data)
     call prognostics_assoc(progs,progs_data)
 
     call psparms_alloc(land_field, seg_len, 1, nsoilt, sm_levels, dim_cslayer, &

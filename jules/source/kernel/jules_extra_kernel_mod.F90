@@ -284,7 +284,7 @@ contains
     use jules_urban_mod,          only: l_moruses
     use jules_vegetation_mod,     only: l_crop, l_triffid,                     &
                                         l_phenol, l_use_pft_psi, can_rad_mod,  &
-                                        l_acclim
+                                        l_acclim, l_sugar
     use theta_field_sizes,        only: t_i_length, t_j_length, u_i_length,    &
                                         u_j_length, v_i_length, v_j_length
     use jules_surface_types_mod,  only: ncpft, nnpft
@@ -589,7 +589,7 @@ contains
                       dim_cslayer, dim_cs1, dim_ch4layer,                     &
                       nice, nice_use, soil_bgc_model, soil_model_ecosse,      &
                       l_layeredc, l_triffid, l_phenol, l_bedrock, l_veg3,     &
-                      nmasst, nnpft, l_acclim, progs_data)
+                      nmasst, nnpft, l_acclim, l_sugar, progs_data)
     call prognostics_assoc(progs,progs_data)
 
     call fire_vars_alloc(land_pts,npft, fire_vars_data)

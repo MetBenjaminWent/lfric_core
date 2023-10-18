@@ -315,7 +315,7 @@ contains
          soil
     use jules_surface_mod, only: l_flake_model
     use jules_vegetation_mod, only: can_model, l_crop, l_triffid, l_phenol,    &
-                                    can_rad_mod, l_acclim
+                                    can_rad_mod, l_acclim, l_sugar
     use jules_radiation_mod, only: l_albedo_obs
     use jules_soil_mod, only: ns_deep, l_bedrock
     use jules_soil_biogeochem_mod, only: dim_ch4layer, soil_bgc_model,         &
@@ -577,7 +577,7 @@ contains
                       dim_cslayer, dim_cs1, dim_ch4layer,                     &
                       nice, nice_use, soil_bgc_model, soil_model_ecosse,      &
                       l_layeredc, l_triffid, l_phenol, l_bedrock, l_veg3,     &
-                      nmasst, nnpft, l_acclim, progs_data)
+                      nmasst, nnpft, l_acclim, l_sugar, progs_data)
     call prognostics_assoc(progs,progs_data)
 
     call jules_vars_alloc(land_field,ntype,nsurft,rad_nband,nsoilt,sm_levels, &
