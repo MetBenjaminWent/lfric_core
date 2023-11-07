@@ -45,7 +45,6 @@ default_project_names=( infrastructure   \
                         simple_diffusion \
                         skeleton         \
                         jedi_lfric_tests \
-                        diagnostics      \
                         gravity_wave     \
                         io_dev           \
                         shallow_water    \
@@ -53,29 +52,32 @@ default_project_names=( infrastructure   \
                         transport        \
                         multires_coupling  )
 
-default_app_names=( infrastructure:none               \
-                    lfric-xios:none                   \
-                    jedi-lfric:none                   \
-                    driver:none                       \
-                    gungho:none                       \
-                    gungho_model:gungho_model         \
-                    gungho_model:mesh                 \
-                    lfric_atm:lfric_atm               \
-                    mesh_tools:mesh                   \
-                    linear:none                       \
-                    linear_model:linear_model         \
-                    simple_diffusion:simple_diffusion \
-                    skeleton:skeleton                 \
-                    jedi_lfric_tests:jedi_lfric_tests \
-                    diagnostics:diagnostics           \
-                    gravity_wave:gravity_wave         \
-                    io_dev:io_dev                     \
-                    shallow_water:shallow_water       \
-                    shallow_water:mesh                \
-                    solver_miniapp:solver_miniapp     \
-                    transport:transport               \
-                    transport:mesh                    \
-                    multires_coupling:multires_coupling )
+default_app_names=( \
+    infrastructure:none               \
+    lfric-xios:none                   \
+    jedi-lfric:none                   \
+    driver:none                       \
+    gungho:none                       \
+    gungho_model:gungho_model         \
+    gungho_model:mesh                 \
+    lfric_atm:lfric_atm               \
+    mesh_tools:mesh                   \
+    linear:none                       \
+    linear_model:linear_model         \
+    simple_diffusion:simple_diffusion \
+    skeleton:skeleton                 \
+    jedi_lfric_tests:jedi_lfric_tests \
+    jedi_lfric_tests:jedi_forecast    \
+    jedi_lfric_tests:jedi_tlm_forecast_tl \
+    jedi_lfric_tests:jedi_forecast_pseudo \
+    gravity_wave:gravity_wave         \
+    io_dev:io_dev                     \
+    shallow_water:shallow_water       \
+    shallow_water:mesh                \
+    solver_miniapp:solver_miniapp     \
+    transport:transport               \
+    transport:mesh                    \
+    multires_coupling:multires_coupling )
 
 while getopts "?" OPTION; do
   case $OPTION in
@@ -120,7 +122,6 @@ project_folder_location=(                      \
   [simple_diffusion]=miniapps/simple_diffusion \
   [skeleton]=miniapps/skeleton                 \
   [jedi_lfric_tests]=miniapps/jedi_lfric_tests \
-  [diagnostics]=miniapps/diagnostics           \
   [gravity_wave]=miniapps/gravity_wave         \
   [io_dev]=miniapps/io_dev                     \
   [shallow_water]=miniapps/shallow_water       \
@@ -144,7 +145,6 @@ project_primary_app=(                 \
   [simple_diffusion]=simple_diffusion \
   [skeleton]=skeleton                 \
   [jedi_lfric_tests]=jedi_lfric_tests \
-  [diagnostics]=diagnostics           \
   [gravity_wave]=gravity_wave         \
   [io_dev]=io_dev                     \
   [shallow_water]=shallow_water       \
