@@ -15,14 +15,14 @@ jobs:
       id-token: write
     steps:
     - id: setup environment
-      uses: setup-python@v4
+      uses: actions/setup-python@v4
       with:
         python_version: 3.12
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install sphinx
     - id: extract
-      uses: checkout@v4
+      uses: actions/checkout@v4
     - id: sphinx
       run: |
         cd documentation
