@@ -16,7 +16,7 @@ contains
 
   !----------------------------------------------------------------------------
   subroutine invoke_convert_cart2sphere_vector( field, coords)
-    use coord_transform_mod, only: cart2sphere_vector
+    use coord_transform_mod, only: cart2sphere_scalar
     implicit none
     type(field_type), intent(inout) :: field(3)
     type(field_type), intent(in)    :: coords(3)
@@ -24,7 +24,6 @@ contains
     type(field_proxy_type) :: f_p(3), x_p(3)
 
     integer :: i, df, undf
-    real(kind=r_def) :: vector_out(3)
 
     do i = 1,3
       f_p(i) = field(i)%get_proxy()
@@ -35,19 +34,16 @@ contains
 
 !Please see PSyclone issues #1351 regarding this implementation
 !$omp parallel default(none)                                                   &
-!$omp private(df,vector_out)                                                   &
+!$omp private(df)                                                              &
 !$omp shared(undf,f_p,x_p)
 !$omp do schedule(static)
     do df = 1, undf
-      vector_out(:) = cart2sphere_vector(                                      &
-                      (/ x_p(1)%data(df), x_p(2)%data(df), x_p(3)%data(df) /), &
-                      (/ f_p(1)%data(df), f_p(2)%data(df), f_p(3)%data(df) /))
-      f_p(1)%data(df) = vector_out(1)
-      f_p(2)%data(df) = vector_out(2)
-      f_p(3)%data(df) = vector_out(3)
+        call cart2sphere_scalar(                                               &
+           x_p(1)%data(df), x_p(2)%data(df), x_p(3)%data(df) ,                 &
+           f_p(1)%data(df), f_p(2)%data(df), f_p(3)%data(df) )
     end do
-!$OMP end do
-!$OMP end parallel
+!$omp end do
+!$omp end parallel
 
     call f_p(1)%set_dirty()
     call f_p(2)%set_dirty()

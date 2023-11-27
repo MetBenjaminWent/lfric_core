@@ -29,6 +29,7 @@ public :: spherical_distance
 public :: cartesian_distance
 public :: sphere2cart_vector
 public :: cart2sphere_vector
+public :: cart2sphere_scalar
 public :: central_angle
 public :: rodrigues_rotation
 public :: identify_panel
@@ -477,6 +478,65 @@ pure function cart2sphere_vector(x_vec, cartesian_vec) result ( spherical_vec )
   spherical_vec(2) = spherical_vec(2)*r
 
 end function cart2sphere_vector
+
+!-------------------------------------------------------------------------------
+!> @brief Converts a flux vector in Cartesian coordinates (x,y,z)
+!> to one in spherical polar coordinates (lambda,phi,r)
+!>
+!> Converts 3d Cartesian velocity u = (u1,u2,u3) in Cartesian coordinates at
+!> (x,y,z) to spherical velocity v = (v1,v2,v3) (in m/s) in spherical
+!> coordinates at (lambda,phi,r)
+!>
+!> This is recieved as 6 scalars, the first 3 regarding Cartesian velocity u
+!> The next 3, are in as a Cartesian_vec, and out as spherical_vec (again as
+!> 3 scalars to represent a vector). This more convenient for the routine
+!> calling it, removing the creation of a private array.
+!>
+!> @param[in] vector_x component x of vector (x,y,z) location
+!>                in Cartesian coodinates
+!> @param[in] vector_y component y of vector (x,y,z) location
+!>                in Cartesian coodinates
+!> @param[in] vector_z component z of vector (x,y,z) location
+!>                in Cartesian coodinates
+!> @param[inout] spherical_u Component u of a flux vector (u,v,w)
+!>                            in Cartesian coordinates, out as flux vector
+!>                            in (lon,lat,r) coordinates
+!> @param[inout] spherical_v Component v of a flux vector (u,v,w)
+!>                            in Cartesian coordinates, out as flux vector
+!>                            in (lon,lat,r) coordinates
+!> @param[inout] spherical_w Component w of a flux vector (u,v,w)
+!>                            in Cartesian coordinates, out as flux vector
+!>                            in (lon,lat,r) coordinates
+!>
+!-------------------------------------------------------------------------------
+subroutine cart2sphere_scalar(vector_x, vector_y, vector_z, spherical_u, spherical_v, spherical_w)
+
+  implicit none
+
+  real(kind=r_def), intent(in)     :: vector_x, vector_y, vector_z
+  real(kind=r_def), intent(inout)  :: spherical_u, spherical_v, spherical_w
+  real(kind=r_def)                 :: spherical_vec(2)
+
+  real(kind=r_def)              :: r, t, phi
+
+  t = vector_x**2 + vector_y**2
+  r = sqrt(t + vector_z**2)
+
+  spherical_vec(1) = (- vector_y*spherical_u &
+                      + vector_x*spherical_v ) / t
+  spherical_vec(2) = (- vector_x*vector_z*spherical_u &
+                      - vector_y*vector_z*spherical_v &
+                      + t*spherical_w)/(r*r*sqrt(t))
+  spherical_w = (  vector_x*spherical_u &
+                      + vector_y*spherical_v &
+                      + vector_z*spherical_w) / r
+
+  ! Convert from (dlambda/dt,dphi/dt,dr/dt) to (u,v,w) in m/s
+  phi = 0.5_r_def*PI - acos(vector_z/r)
+  spherical_u = spherical_vec(1)*r*cos(phi)
+  spherical_v = spherical_vec(2)*r
+
+end subroutine cart2sphere_scalar
 
 !-------------------------------------------------------------------------------
 !> @brief Rotate a vector x_vec through an angle alpha around an
