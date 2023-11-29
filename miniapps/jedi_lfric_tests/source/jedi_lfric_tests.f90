@@ -16,14 +16,13 @@ program jedi_lfric_tests
 
   use cli_mod,                only: get_initial_filename
   use gungho_mod,             only: gungho_required_namelists
-  use jedi_lfric_linear_driver_mod, &
-                              only: initialise, step, finalise
+  use linear_driver_mod,      only: initialise, step, finalise
   use driver_collections_mod, only: init_collections, final_collections
   use driver_comm_mod,        only: init_comm, final_comm
   use driver_config_mod,      only: init_config, final_config
   use driver_log_mod,         only: init_logger, final_logger
   use gungho_modeldb_mod,     only: modeldb_type
-  use driver_time_mod,        only: init_time
+  use driver_time_mod,        only: init_time, get_calendar
   use constants_mod,          only: i_def
   use log_mod,                only: log_event, log_level_trace
   use mpi_mod,                only: global_mpi
@@ -57,15 +56,15 @@ program jedi_lfric_tests
 
   call log_event( 'Initialising ' // program_name // ' ...', log_level_trace )
   call init_time( modeldb%clock )
-  call initialise( program_name, modeldb )
+  call initialise( modeldb, get_calendar() )
 
   call log_event( 'Running ' // program_name // ' ...', log_level_trace )
   do while ( modeldb%clock%tick() )
-    call step( modeldb, modeldb%clock )
+    call step( modeldb )
   end do
 
   call log_event( 'Finalising ' // program_name // ' ...', log_level_trace )
-  call finalise( program_name, modeldb, modeldb%clock )
+  call finalise( program_name, modeldb )
 
   call final_collections()
   call final_logger( program_name )

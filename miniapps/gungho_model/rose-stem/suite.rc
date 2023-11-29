@@ -88,7 +88,7 @@
     [[events]]
         mail events = timeout
         abort on timeout = True
-{%- if 'nightly' in groupsToRun %}
+{%- if 'nightly' in groupsToRun or 'nightly-full-debug' in groupsToRun %}
         abort on stalled = True
 {%- endif %}
         timeout = PT3H
@@ -340,6 +340,8 @@
     [[{{compiler_family}}]]
         [[[environment]]]
             BIN_DIR               = $OUTPUT_ROOT/{{compiler_label}}/bin
+            LIB_DIR               = $OUTPUT_ROOT/{{compiler_label}}/lib
+            MOD_DIR               = $OUTPUT_ROOT/{{compiler_label}}/mod
             COMPILER              = {{compiler}}
             DESTINATION_DIRECTORY = $OUTPUT_ROOT/{{compiler_label}}
             SOURCE_DIRECTORY      = $SOURCE_ROOT/{{appPathFragment}}{{projectName}}
@@ -354,6 +356,8 @@
 
         [[[environment]]]
             BIN_DIR               = $OUTPUT_ROOT/{{label}}/bin
+            LIB_DIR               = $OUTPUT_ROOT/{{label}}/lib
+            MOD_DIR               = $OUTPUT_ROOT/{{label}}/mod
             DESTINATION_DIRECTORY = $OUTPUT_ROOT/{{label}}
 
 {%-       if 'compile_' + projectName + '_with_' + label in scheduledTasks %}
@@ -777,6 +781,7 @@ echo $RELATIVE_LOG_ROOT > $DESTINATION_DIRECTORY/'+pathFragment+'/run.log.path
             RESTART_STOP  = $(echo $[$RESTART_NO*$RESTART_NTS + $RESTART_NTS])
             RESTART_READ  = $(if [[ $RESTART ]]; then echo ".true."; else echo ".false."; fi)
             RESTART_WRITE = $(if [ $CRUN_LENGTH -gt $CYLC_TASK_CYCLE_POINT ]; then echo ".true."; else echo ".false."; fi)
+            RESOLUTION    = {{res_value|replace("_MG","")}}
 
         [[[directives]]]
 {%-                   for DIRECTIVE in run_batcher %}
@@ -832,6 +837,27 @@ echo $RELATIVE_LOG_ROOT > $DESTINATION_DIRECTORY/'+pathFragment+'/run.log.path
             {{DIRECTIVE}}
 {%-                   endfor %}
 {%-                 endif %}
+
+{#- ######################################################################## #}
+{#- CHECK THE APP OUTPUT AGAINST A RESTART RUN                               #}
+{%-                 if 'compare_' ~ configuration_label_res ~ '_with_restart'
+                       in scheduledTasks %}
+    [[compare_{{configuration_label_res}}_with_restart]]
+        inherit = {{appLabel|upper}}_WITH_RESTART_{{label|upper}}, TARGET
+
+        script = rose task-run --app-key=compare_application_restart
+
+        [[[environment]]]
+            APP_NAME   = {{appName}}
+            TARGET_OPT = {{TARGET_OPT}}
+            CONFIG     = {{configuration}}
+            RES        = {{res_value}}{{dt_labels[i]}}
+            RES_LABEL  = {{res_label}}{{dt_labels[i]}}
+
+{{                    directives(PRIMARY_TARGET, 'tech') }}
+{%-                 endif %}
+
+{#- ######################################################################## #}
 
 {# #############################################################################}
 {# PLOT THE APP OUTPUT #}

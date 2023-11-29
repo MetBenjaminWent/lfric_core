@@ -73,8 +73,7 @@
                                        'jedi_forecast_pseudo' : ['default', 'pseudomodel'],
                                        'jedi_tlm_forecast_tl' : ['default']} %}
 
-{%- set canned_configurations = ['jedi_lfric_tests', 'jedi_forecast',
-                                 'jedi_forecast_pseudo', 'jedi_tlm_forecast_tl'] %}
+{%- set canned_configurations = [] %}
 
 {%- set groups = {
 'developer': [
@@ -89,8 +88,10 @@
     
     'run_application("jedi_lfric_tests", "runge-kutta",
                         resolutions=[("C12",1.0)], env={"nrun":20})',
-    'check_compilers("fast-debug")',
-    'check_compilers("full-debug")',
+    'check_compilers("jedi_lfric_tests", "runge-kutta", "all", "fast-debug",
+                        resolution=("C12",1.0), publish=True )',
+    'check_compilers("jedi_lfric_tests", "runge-kutta", "gnu", "full-debug",
+                        resolution=("C12",1.0), publish=True )',
     'validate_rose_meta_graph("jedi_forecast",appName="jedi_forecast")',
     'run_application("jedi_forecast", "default", resolutions=[("C12",)],
                         env={"nrun":7})',
@@ -104,10 +105,24 @@
                         env={"nrun":7})',
     'validate_rose_meta_graph("jedi_tlm_forecast_tl",appName="jedi_tlm_forecast_tl")',
     'run_application("jedi_tlm_forecast_tl", "default", resolutions=[("C12",)],
-                        env={"nrun":7})'],
-'nightly': [
-    'null_task_graph()' ]
-    } %}
+                        env={"nrun":7})',
+    'check_compilers("jedi_forecast", "default", "all", "fast-debug",
+                        resolution=("C12",), publish=True )',
+    'check_compilers("jedi_forecast", "default", "gnu", "full-debug",
+                        resolution=("C12",), publish=True )',
+    'check_compilers("jedi_forecast_pseudo", "pseudomodel", "all", "fast-debug",
+                        resolution=("C12",), publish=True )',
+    'check_compilers("jedi_forecast_pseudo", "pseudomodel", "gnu", "full-debug",
+                        resolution=("C12",), publish=True )',
+    'check_compilers("jedi_tlm_forecast_tl", "default", "all", "fast-debug",
+                        resolution=("C12",), publish=True )',
+    'check_compilers("jedi_tlm_forecast_tl", "default", "all", "full-debug",
+                        resolution=("C12",), publish=True )'
+  ],
+  'nightly': [
+    'publish_commit'
+    ]
+} %}
     
 #########################################################################################
 

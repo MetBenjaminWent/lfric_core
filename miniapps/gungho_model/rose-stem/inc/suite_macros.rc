@@ -31,7 +31,8 @@
 {%-   set appLabel = appName + '_' + configuration %}
 
 {%-   if appLabel not in appConfigsCompilerRuns.keys() %}
-{%-     do appConfigsCompilerRuns.update({appLabel : run_with_compilers}) %}
+{%-     do appConfigsCompilerRuns.update({appLabel : []}) %}
+{%-     do appConfigsCompilerRuns[appLabel].extend(run_with_compilers) %}
 {%-   else %}
 {%-     do appConfigsCompilerRuns[appLabel].extend(run_with_compilers) %}
 {%-   endif %}
@@ -328,7 +329,8 @@
 
 {%-   set run_with_compilers = perform_run | reject("==", "none") %}
 {%-   if appLabel not in appConfigsCompilerRuns.keys() %}
-{%-     do appConfigsCompilerRuns.update({appLabel : run_with_compilers})%}
+{%-     do appConfigsCompilerRuns.update({appLabel : []}) %}
+{%-     do appConfigsCompilerRuns[appLabel].extend(run_with_compilers) %}
 {%-   else %}
 {%-     set difference = run_with_compilers | reject("in", appConfigsCompilerRuns[appLabel]) %}
 {%-     do appConfigsCompilerRuns[appLabel].extend(difference) %}
@@ -345,30 +347,6 @@
 
 {{        unit_tests_graph( compiler, precision ) }}
 {{        integration_tests_graph( compiler, precision ) }}
-
-            export_source => compile_{{projectName}}_with_{{label}}
-            export_source => compile_mesh_tools_with_{{mesh_label}}
-{%-       if publish %}
-            compile_{{projectName}}_with_{{label}}:finish => publish_{{label}}_compile
-            publish_{{label}}_compile:finish => publish_node
-{%-       endif %}
-
-{%-       if compiler in perform_run %}
-{%-         set res_value, dt_values, res_label, dt_labels, res_opt = resolution | get_resolution_labels() %}
-{%-         for i in range(0, dt_values|length) %}
-{%-           set appLabel_res = appLabel ~ res_label ~ dt_labels[i] %}
-            compile_mesh_tools_with_{{mesh_label}} => generate_mesh{{res_label}}_{{mesh_label}}
-            generate_mesh{{res_label}}_{{mesh_label}} => run_{{appLabel_res}}_{{label}}
-            compile_{{projectName}}_with_{{label}} => run_{{appLabel_res}}_{{label}}
-{%-           if publish %}
-            run_{{appLabel_res}}_{{label}}:finish => publish_{{appLabel_res}}_{{label}}_run
-            publish_{{appLabel_res}}_{{label}}_run:finish => publish_node
-{%-           endif %}
-{%-           if compiler in TARGET_PERFORM_KGO_TESTS %}
-            run_{{appLabel_res}}_{{label}} => check_{{appLabel_res}}_{{label}}
-{%-           endif %}
-{%-         endfor %} {# i #}
-{%-       endif %}
 
 {%-     endfor %} {# rdef_precision #}
 {%-   endfor %} {# compiler #}
