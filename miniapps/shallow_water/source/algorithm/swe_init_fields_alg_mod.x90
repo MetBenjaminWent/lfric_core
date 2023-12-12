@@ -39,6 +39,7 @@ module swe_init_fields_alg_mod
   use initial_surface_geopot_kernel_mod,  only: initial_surface_geopot_kernel_type
   use initial_swe_buoyancy_kernel_mod,    only: initial_swe_buoyancy_kernel_type
   use initial_swe_streamfunc_kernel_mod,  only: initial_swe_streamfunc_kernel_type
+  use initial_swe_tracer_kernel_mod,      only: initial_swe_tracer_kernel_type
   use initial_swe_u_kernel_mod,           only: initial_swe_u_kernel_type
   use initial_vorticity_v2_kernel_mod,    only: initial_vorticity_v2_kernel_type
   use mass_matrix_solver_alg_mod,         only: mass_matrix_solver_alg
@@ -77,10 +78,13 @@ contains
     type( field_collection_type ), intent(inout) :: prognostics
 
     ! Individual fields from prognostics
-    type( field_type ), pointer           :: wind     => null()
-    type( field_type ), pointer           :: geopot   => null()
-    type( field_type ), pointer           :: buoyancy => null()
-    type( field_type ), pointer           :: q        => null()
+    type( field_type ), pointer :: wind     => null()
+    type( field_type ), pointer :: geopot   => null()
+    type( field_type ), pointer :: buoyancy => null()
+    type( field_type ), pointer :: q        => null()
+    type( field_type ), pointer :: tracer_const => null()
+    type( field_type ), pointer :: tracer_pv    => null()
+    type( field_type ), pointer :: tracer_step  => null()
 
     ! Quadrature
     type( quadrature_xyoz_type )          :: qr
@@ -104,6 +108,9 @@ contains
     call prognostics%get_field("buoyancy", buoyancy)
     call prognostics%get_field("geopot", geopot)
     call prognostics%get_field("q", q)
+    call prognostics%get_field("tracer_const", tracer_const)
+    call prognostics%get_field("tracer_pv", tracer_pv)
+    call prognostics%get_field("tracer_step", tracer_step)
 
     ! Get coordinates and set up quadrature
     chi => get_coordinates(mesh%get_id())
@@ -157,6 +164,15 @@ contains
 
     ! Initialise vorticity
     call swe_init_vorticity_alg( wind, geopot, q )
+
+    ! Set tracer_const to be one
+    call invoke( setval_c(tracer_const, 1.0_r_def) )
+
+    ! Set tracer_pv equal to q
+    call invoke( setval_X(tracer_pv, q) )
+
+    ! Set tracer_step to a step function
+    call invoke( initial_swe_tracer_kernel_type(tracer_step, chi, panel_id, domain_size_x) )
 
     nullify( chi, panel_id, w1_fs )
 

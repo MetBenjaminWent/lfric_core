@@ -58,6 +58,7 @@ module swe_timestep_alg_mod
   use swe_rhs_alg_mod,                only: swe_rhs_alg
   use swe_transport_control_alg_mod,  only: swe_transport_control_alg_init, &
                                             swe_transport_control_alg_step, &
+                                            swe_tracer_transport_alg,       &
                                             swe_transport_control_alg_final
 
   ! Preconditioner and Solver
@@ -380,16 +381,22 @@ contains
   !!          time level n terms. It then loops over the outer iterations and
   !!          calculates the advection terms, and loops over the inner iterations
   !!          and calls the solver. Finally, the prognostic variables are updated.
-  !> @param[in,out] wind     The wind field
-  !> @param[in,out] geopot   The geopotential field
-  !> @param[in,out] buoyancy The buoyancy field
-  !> @param[in,out] q        The potential vorticity field
-  !> @param[in]     s_geopot The surface geopotential field
-  subroutine swe_timestep_alg_si( model_clock, &
-                                  wind,        &
-                                  geopot,      &
-                                  buoyancy,    &
-                                  q,           &
+  !> @param[in,out] wind         The wind field
+  !> @param[in,out] geopot       The geopotential field
+  !> @param[in,out] buoyancy     The buoyancy field
+  !> @param[in,out] q            The potential vorticity field
+  !> @param[in,out] tracer_const The constant tracer field
+  !> @param[in,out] tracer_pv    The PV tracer field
+  !> @param[in,out] tracer_step  The step tracer field
+  !> @param[in]     s_geopot     The surface geopotential field
+  subroutine swe_timestep_alg_si( model_clock,  &
+                                  wind,         &
+                                  geopot,       &
+                                  buoyancy,     &
+                                  q,            &
+                                  tracer_const, &
+                                  tracer_pv,    &
+                                  tracer_step,  &
                                   s_geopot)
 
     use swe_rhs_alg_mod,   only: swe_rhs_alg
@@ -402,11 +409,18 @@ contains
     type(field_type), intent(inout) :: geopot
     type(field_type), intent(inout) :: buoyancy
     type(field_type), intent(inout) :: q
+    type(field_type), intent(inout) :: tracer_const
+    type(field_type), intent(inout) :: tracer_pv
+    type(field_type), intent(inout) :: tracer_step
     type(field_type), intent(in)    :: s_geopot
 
     ! FV transport increments (for cheap transport update)
     type(field_type) :: wind_fv_inc
     type(field_type) :: buoyancy_fv_inc
+
+    ! FV transport for tracers
+    type(field_type) :: mass_n
+    type(field_type) :: mass_np1
 
     ! Loop indices
     integer(kind=i_def) :: outer
@@ -448,6 +462,11 @@ contains
     ! Set predictors for transport
     call swe_predictors_alg( adv_fields, state_n%vector(isw_u), rhs_n%vector(isw_u), beta_dt )
 
+    ! Set up mass variable for tracer transport
+    call mass_n%initialise(vector_space = geopot%get_function_space())
+    call mass_np1%initialise(vector_space = geopot%get_function_space())
+    call invoke( setval_X(mass_n, adv_fields%vector(isw_g)) )
+
     ! Initialise transported RHS and the previous wind for the cheap transport update
     call rhs_adv%set_scalar(0.0_r_def)
     call wind_prev%initialise(vector_space = wind%get_function_space())
@@ -486,9 +505,19 @@ contains
                                     adv_fields%vector(isw_q))
       end if
 
-      ! Vorticity solved for in advection alg, does not appear in mixed solve
+      ! Vorticity solved for in transport_control alg, does not appear in mixed solve
       call invoke( setval_X(state%vector(isw_q), rhs_adv%vector(isw_q)), &
                    setval_c(rhs_adv%vector(isw_q), 0.0_r_def) )
+
+      ! Tracer transport
+      if ( outer == outer_iterations) then
+        ! Get transported mass for tracer transport
+        call invoke( X_plus_Y(mass_np1, mass_n, rhs_adv%vector(isw_g)) )
+        ! Transport tracers
+        call swe_tracer_transport_alg(tracer_const, tracer_pv, tracer_step,    &
+                                      mass_n, mass_np1, state_n%vector(isw_u), &
+                                      state%vector(isw_u), model_clock)
+      end if
 
       !============================================================================
       ! Start the inner loop

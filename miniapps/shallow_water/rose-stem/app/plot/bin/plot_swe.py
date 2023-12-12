@@ -85,7 +85,8 @@ def make_figures(datapath, plotpath, nx, field_list, ts_list):
         for frame, ts in enumerate(ts_list):
             # Find data and interpolate it onto meshgrid for each frame
             filestem = datapath + fieldname + "_" + ts + "*"
-            if field == 'geopot' or field == 'depth':
+            if field in ['geopot', 'depth', 'tracer_const',
+                         'tracer_pv', 'tracer_step']:
                 data = read_nodal_data(filestem, 1, 1)
                 val_col = 'c1'
             elif field == 'buoyancy':
@@ -257,7 +258,8 @@ if __name__ == "__main__":
     extend_components_q, extend_components_wind = None, None
     field_list = fields.split(':')
     for field in field_list:
-        if field not in ['depth', 'geopot', 'buoyancy', 'wind', 'q']:
+        if field not in ['depth', 'geopot', 'buoyancy', 'wind', 'q',
+                         'tracer_const', 'tracer_pv', 'tracer_step']:
             raise IOError('Must choose fields from geopot, buoyancy, wind, and q')
         if field == 'wind':
             extend_components_wind = True

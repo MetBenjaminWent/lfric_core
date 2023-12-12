@@ -67,12 +67,16 @@ module create_shallow_water_prognostics_mod
     type(field_type) :: geopot
     type(field_type) :: q
     type(field_type) :: s_geopot
+    type(field_type) :: tracer_const
+    type(field_type) :: tracer_pv
+    type(field_type) :: tracer_step
 
     type(field_type), pointer                 :: tmp_field_ptr => null()
     class(pure_abstract_field_type), pointer  :: tmp_ptr => null()
 
     integer(i_def) :: buoyancy_space
     integer(i_def) :: vorticity_space
+    integer(i_def) :: tracer_space
 
     procedure(write_interface),            pointer :: tmp_write_ptr
     procedure(checkpoint_write_interface), pointer :: tmp_checkpoint_write_ptr => null()
@@ -83,22 +87,33 @@ module create_shallow_water_prognostics_mod
     call log_event( 'shallow_water: Using V2 for buoyancy', LOG_LEVEL_INFO )
     vorticity_space = W3
     call log_event( 'shallow_water: Using V2 for vorticity', LOG_LEVEL_INFO )
+    tracer_space = W3
+    call log_event( 'shallow_water: Using V2 for tracers', LOG_LEVEL_INFO )
 
-    call wind%initialise( vector_space =                                                &
-                          function_space_collection%get_fs(mesh, element_order, W2), &
+    call wind%initialise( vector_space =                                                             &
+                          function_space_collection%get_fs(mesh, element_order, W2),                 &
                           name="wind" )
-    call buoyancy%initialise( vector_space =                                                            &
+    call buoyancy%initialise( vector_space =                                                         &
                               function_space_collection%get_fs(mesh, element_order, buoyancy_space), &
                               name="buoyancy" )
-    call geopot%initialise( vector_space =                                                &
-                            function_space_collection%get_fs(mesh, element_order, W3), &
+    call geopot%initialise( vector_space =                                                           &
+                            function_space_collection%get_fs(mesh, element_order, W3),               &
                             name="geopot" )
-    call q%initialise( vector_space =                                                             &
-                       function_space_collection%get_fs(mesh, element_order, vorticity_space), &
+    call q%initialise( vector_space =                                                                &
+                       function_space_collection%get_fs(mesh, element_order, vorticity_space),       &
                        name="q")
-    call s_geopot%initialise( vector_space =                                                &
-                              function_space_collection%get_fs(mesh, element_order, W3), &
+    call s_geopot%initialise( vector_space =                                                         &
+                              function_space_collection%get_fs(mesh, element_order, W3),             &
                               name="s_geopot" )
+    call tracer_const%initialise( vector_space =                                                     &
+                       function_space_collection%get_fs(mesh, element_order, tracer_space),          &
+                       name="tracer_const")
+    call tracer_pv%initialise( vector_space =                                                        &
+                       function_space_collection%get_fs(mesh, element_order, tracer_space),          &
+                       name="tracer_pv")
+    call tracer_step%initialise( vector_space =                                                      &
+                       function_space_collection%get_fs(mesh, element_order, tracer_space),          &
+                       name="tracer_step")
 
     ! Set I/O behaviours for diagnostic output
     if (write_diag .and. use_xios_io) then
@@ -108,6 +123,9 @@ module create_shallow_water_prognostics_mod
        call geopot%set_write_behaviour(tmp_write_ptr)
        call buoyancy%set_write_behaviour(tmp_write_ptr)
        call q%set_write_behaviour(tmp_write_ptr)
+       call tracer_const%set_write_behaviour(tmp_write_ptr)
+       call tracer_pv%set_write_behaviour(tmp_write_ptr)
+       call tracer_step%set_write_behaviour(tmp_write_ptr)
     end if
 
     ! Set I/O behaviours for checkpoint / restart
@@ -129,12 +147,18 @@ module create_shallow_water_prognostics_mod
       call buoyancy%set_checkpoint_write_behaviour(tmp_checkpoint_write_ptr)
       call q%set_checkpoint_write_behaviour(tmp_checkpoint_write_ptr)
       call s_geopot%set_checkpoint_write_behaviour(tmp_checkpoint_write_ptr)
+      call tracer_const%set_checkpoint_write_behaviour(tmp_checkpoint_write_ptr)
+      call tracer_pv%set_checkpoint_write_behaviour(tmp_checkpoint_write_ptr)
+      call tracer_step%set_checkpoint_write_behaviour(tmp_checkpoint_write_ptr)
 
       call wind%set_checkpoint_read_behaviour(tmp_checkpoint_read_ptr)
       call geopot%set_checkpoint_read_behaviour(tmp_checkpoint_read_ptr)
       call buoyancy%set_checkpoint_read_behaviour(tmp_checkpoint_read_ptr)
       call q%set_checkpoint_read_behaviour(tmp_checkpoint_read_ptr)
       call s_geopot%set_checkpoint_write_behaviour(tmp_checkpoint_write_ptr)
+      call tracer_const%set_checkpoint_read_behaviour(tmp_checkpoint_read_ptr)
+      call tracer_pv%set_checkpoint_read_behaviour(tmp_checkpoint_read_ptr)
+      call tracer_step%set_checkpoint_read_behaviour(tmp_checkpoint_read_ptr)
 
     end if
 
@@ -144,6 +168,9 @@ module create_shallow_water_prognostics_mod
     call depository%add_field(buoyancy)
     call depository%add_field(q)
     call depository%add_field(s_geopot)
+    call depository%add_field(tracer_const)
+    call depository%add_field(tracer_pv)
+    call depository%add_field(tracer_step)
 
     ! Put pointers to the prognostic fields into the prognostic collection
     call depository%get_field('wind', tmp_field_ptr)
@@ -159,6 +186,15 @@ module create_shallow_water_prognostics_mod
     tmp_ptr => tmp_field_ptr
     call prognostics%add_reference_to_field(tmp_ptr)
     call depository%get_field('s_geopot', tmp_field_ptr)
+    tmp_ptr => tmp_field_ptr
+    call prognostics%add_reference_to_field(tmp_ptr)
+    call depository%get_field('tracer_const', tmp_field_ptr)
+    tmp_ptr => tmp_field_ptr
+    call prognostics%add_reference_to_field(tmp_ptr)
+    call depository%get_field('tracer_pv', tmp_field_ptr)
+    tmp_ptr => tmp_field_ptr
+    call prognostics%add_reference_to_field(tmp_ptr)
+    call depository%get_field('tracer_step', tmp_field_ptr)
     tmp_ptr => tmp_field_ptr
     call prognostics%add_reference_to_field(tmp_ptr)
 

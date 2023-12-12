@@ -60,6 +60,7 @@ module swe_transport_control_alg_mod
   ! Contained suroutines
   public :: swe_transport_control_alg_init
   public :: swe_transport_control_alg_step
+  public :: swe_tracer_transport_alg
   public :: swe_transport_control_alg_final
 
 contains
@@ -380,6 +381,10 @@ contains
       ! We don't change advection_inc%vector(isw_u) as wind_transport_alg
       ! already returns weak increment
 
+    case default
+        call log_event('Unrecognised form of momentum equations', &
+                        LOG_LEVEL_ERROR)
+
     end select    ! momentum_form
 
     ! If cheap update we need to add the previous iteration state increments
@@ -401,6 +406,155 @@ contains
     if ( subroutine_timers ) call timer('swe_transport_control_alg_step')
 
   end subroutine swe_transport_control_alg_step
+
+
+  !=============================================================================
+  !> @brief Advection of tracer variables for the shallow water miniapp.
+  !> @param[in,out] tracer_const    Constant tracer to be transported
+  !> @param[in,out] tracer_pv       PV tracer to be transported
+  !> @param[in,out] tracer_step     Step function tracer to be transported
+  !> @param[in]     mass_n          Mass field at time n for conservative transport
+  !> @param[in]     mass_np1        Mass field at time n+1 for conservative transport
+  !> @param[in]     wind_n          Wind field at time n
+  !> @param[in]     wind_np1        Wind field at time n+1
+  !> @param[in]     model_clock     Time within the model
+
+  subroutine swe_tracer_transport_alg( tracer_const, &
+                                       tracer_pv,    &
+                                       tracer_step,  &
+                                       mass_n,       &
+                                       mass_np1,     &
+                                       wind_n,       &
+                                       wind_np1,     &
+                                       model_clock )
+
+    use transport_field_mod,             only: transport_field
+    use io_config_mod,                   only: subroutine_timers
+    use timer_mod,                       only: timer
+    use transport_enumerated_types_mod,  only: equation_form_conservative, &
+                                               equation_form_advective,    &
+                                               equation_form_consistent
+
+    implicit none
+
+    ! Arguments
+    type(field_type),        intent(inout) :: tracer_const
+    type(field_type),        intent(inout) :: tracer_pv
+    type(field_type),        intent(inout) :: tracer_step
+    type(field_type),        intent(in)    :: mass_np1
+    type(field_type),        intent(in)    :: mass_n
+    type(field_type),        intent(in)    :: wind_np1
+    type(field_type),        intent(in)    :: wind_n
+    class(model_clock_type), intent(in)    :: model_clock
+
+    ! Fields updated during transport
+    type(field_type) :: tracer_np1
+    type(field_type) :: tracer_n
+
+    ! Transport metadata
+    type(transport_metadata_type), pointer :: transport_metadata => null()
+
+    ! Transport time step
+    real(r_def) :: cast_dt
+
+    ! Parameters for transport runtime
+    integer(i_def), parameter :: outer = 1
+    logical(l_def), parameter :: cheap_update_flag = .false.
+
+    if ( subroutine_timers ) call timer('swe_transport_control_alg_step')
+
+    ! Create transport_runtime object
+    cast_dt = real( model_clock%get_seconds_per_step(), r_def )
+    call set_transport_runtime(wind_n, wind_np1, model_clock, outer, cheap_update_flag)
+
+    ! Initialise transported variables
+    call tracer_np1%initialise(vector_space = tracer_const%get_function_space())
+    call tracer_n%initialise(vector_space = tracer_const%get_function_space())
+
+    ! ------------------------------------------------------------------------ !
+    ! Transport tracer_const
+    call log_event( "Transporting constant tracer...", LOG_LEVEL_INFO)
+    transport_metadata => transport_metadata_collection%get_transport_metadata('tracer_const')
+    ! Form of transport equation
+    select case ( transport_metadata%get_equation_form() )
+    case ( equation_form_conservative )
+      call invoke( X_times_Y(tracer_n, tracer_const, mass_n) )
+    case ( equation_form_advective )
+      call invoke( setval_X(tracer_n, tracer_const) )
+    case ( equation_form_consistent )
+      call log_event('Consistent tracer transport not available in shallow water miniapp', &
+                      LOG_LEVEL_ERROR)
+    case default
+        call log_event('Unrecognised constant tracer transport equation', &
+                        LOG_LEVEL_ERROR)
+    end select
+    ! Transport field
+    call transport_field( tracer_np1, tracer_n, &
+                          cast_dt, transport_metadata )
+    ! Divide by mass if conservative
+    if (transport_metadata%get_equation_form() == equation_form_conservative) then
+      call invoke( inc_X_divideby_Y(tracer_np1, mass_np1))
+    end if
+    call invoke( setval_X(tracer_const, tracer_np1 ) )
+
+    ! ------------------------------------------------------------------------ !
+    ! Transport tracer_pv
+    call log_event( "Transporting tracer PV...", LOG_LEVEL_INFO)
+    transport_metadata => transport_metadata_collection%get_transport_metadata('tracer_pv')
+    ! Form of transport equation
+    select case ( transport_metadata%get_equation_form() )
+    case ( equation_form_conservative )
+      call invoke( X_times_Y(tracer_n, tracer_pv, mass_n) )
+    case ( equation_form_advective )
+      call invoke( setval_X(tracer_n, tracer_pv) )
+    case ( equation_form_consistent )
+      call log_event('Consistent tracer transport not available in shallow water miniapp', &
+                      LOG_LEVEL_ERROR)
+    case default
+        call log_event('Unrecognised PV tracer transport equation', &
+                        LOG_LEVEL_ERROR)
+    end select
+    ! Transport field
+    call transport_field( tracer_np1, tracer_n, &
+                          cast_dt, transport_metadata )
+    ! Divide by mass if conservative
+    if (transport_metadata%get_equation_form() == equation_form_conservative) then
+      call invoke( inc_X_divideby_Y(tracer_np1, mass_np1))
+    end if
+    call invoke( setval_X(tracer_pv, tracer_np1 ) )
+
+    ! ------------------------------------------------------------------------ !
+    ! Transport tracer_step
+    call log_event( "Transporting step function tracer...", LOG_LEVEL_INFO)
+    transport_metadata => transport_metadata_collection%get_transport_metadata('tracer_step')
+    ! Form of transport equation
+    select case ( transport_metadata%get_equation_form() )
+    case ( equation_form_conservative )
+      call invoke( X_times_Y(tracer_n, tracer_step, mass_n) )
+    case ( equation_form_advective )
+      call invoke( setval_X(tracer_n, tracer_step) )
+    case ( equation_form_consistent )
+      call log_event('Consistent tracer transport not available in shallow water miniapp', &
+                      LOG_LEVEL_ERROR)
+    case default
+        call log_event('Unrecognised step tracer transport equation', &
+                        LOG_LEVEL_ERROR)
+    end select
+    ! Transport field
+    call transport_field( tracer_np1, tracer_n, &
+                          cast_dt, transport_metadata )
+    ! Divide by mass if conservative
+    if (transport_metadata%get_equation_form() == equation_form_conservative) then
+      call invoke( inc_X_divideby_Y(tracer_np1, mass_np1))
+    end if
+    call invoke( setval_X(tracer_step, tracer_np1 ) )
+
+    nullify( transport_metadata )
+
+    if ( subroutine_timers ) call timer('swe_tracer_transport_alg')
+
+  end subroutine swe_tracer_transport_alg
+
 
   !=============================================================================
   !> @brief Calls finalising routines for shallow water transport.

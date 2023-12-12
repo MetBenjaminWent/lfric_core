@@ -56,6 +56,9 @@
        <field id="checkpoint_buoyancy" name="buoyancy" long_name="buoyancy" unit="kg m s-2" domain_ref="checkpoint_Wtheta" />
        <field id="checkpoint_q" name="q" long_name="potential vorticity" standard_name="potential vorticity" unit="m-1 s-1" domain_ref="checkpoint_W3" />
        <field id="checkpoint_wind" name="wind" long_name="wind" unit="m s-1" domain_ref="checkpoint_W2" />
+       <field id="checkpoint_tracer_const" name="tracer_const" long_name="tracer constant" unit="kg kg-1" domain_ref="checkpoint_W3" />
+       <field id="checkpoint_tracer_pv" name="tracer_pv" long_name="tracer potential vorticity" unit="kg kg-1" domain_ref="checkpoint_W3" />
+       <field id="checkpoint_tracer_step" name="tracer_step" long_name="tracer step function" unit="kg kg-1" domain_ref="checkpoint_W3" />
      </field_group>
 
      <!-- Main diagnostic group -->
@@ -68,6 +71,9 @@
        <field id="q3" name="q3" long_name="potential vorticity3" standard_name="potential vorticity3" unit="m-1 s-1" grid_ref="half_level_face_grid" />
        <field id="geopot" name="geopot" long_name="fluid_geopotential" standard_name="geopotential" unit="m2 s-2" grid_ref="half_level_face_grid" />
        <field id="buoyancy" name="buoyancy" long_name="buoyancy" unit="kg m s-2" grid_ref="full_level_face_grid" />
+       <field id="tracer_const" name="tracer_const" long_name="tracer constant" unit="kg kg-1" grid_ref="full_level_face_grid" />
+       <field id="tracer_pv" name="tracer_pv" long_name="tracer potential vorticity" unit="kg kg-1" grid_ref="full_level_face_grid" />
+       <field id="tracer_step" name="tracer_step" long_name="tracer step function" unit="kg kg-1" grid_ref="full_level_face_grid" />
      </field_group>
 
       <!-- Initial conditions group -->
@@ -80,6 +86,9 @@
        <field id="init_q3" name="q3" long_name="potential vorticity3" standard_name="potential vorticity3" unit="m-1 s-1" grid_ref="half_level_face_grid" />
        <field id="init_geopot" name="geopot" long_name="fluid_geopotential" standard_name="geopotential" unit="m2 s-2" grid_ref="half_level_face_grid" />
        <field id="init_buoyancy" name="buoyancy" long_name="buoyancy" unit="kg m s-2" grid_ref="full_level_face_grid" />
+       <field id="init_tracer_const" name="tracer_const" long_name="tracer constant" unit="kg kg-1" grid_ref="full_level_face_grid" />
+       <field id="init_tracer_pv" name="tracer_pv" long_name="tracer potential vorticity" unit="kg kg-1" grid_ref="full_level_face_grid" />
+       <field id="init_tracer_step" name="tracer_step" long_name="tracer step function" unit="kg kg-1" grid_ref="full_level_face_grid" />
      </field_group>
 
    </field_definition>
@@ -97,6 +106,9 @@
         <field field_ref="checkpoint_buoyancy"/>
         <field field_ref="checkpoint_wind"/>
         <field field_ref="checkpoint_q"/>
+        <field field_ref="checkpoint_tracer_const"/>
+        <field field_ref="checkpoint_tracer_pv"/>
+        <field field_ref="checkpoint_tracer_step"/>
       </file>
 
        <!-- file definition for checkpoint read -->
@@ -105,6 +117,9 @@
        <field id="restart_buoyancy" name="buoyancy" long_name="buoyancy" unit="kg m s-2" operation="instant" domain_ref="checkpoint_Wtheta" />
        <field id="restart_wind" name="wind" long_name="wind" unit="m s-1" operation="instant" domain_ref="checkpoint_W2" />
        <field id="restart_q" name="q" long_name="potential vorticity" standard_name="potential vorticity" unit="m-1 s-1" operation="instant" domain_ref="checkpoint_W3" />
+       <field id="restart_tracer_const" name="tracer_const" long_name="tracer constant" unit="kg kg-1" operation="instant" domain_ref="checkpoint_W3" />
+       <field id="restart_tracer_pv" name="tracer_pv" long_name="tracer potential vorticity" unit="kg kg-1" operation="instant" domain_ref="checkpoint_W3" />
+       <field id="restart_tracer_step" name="tracer_step" long_name="tracer step function" unit="kg kg-1" operation="instant" domain_ref="checkpoint_W3" />
       </file>
 
       <file id="lfric_diag" name="lfric_swe_diag" output_freq="10ts" convention="UGRID" enabled=".TRUE.">
@@ -116,6 +131,9 @@
         <field field_ref="q1"/>
         <field field_ref="q2"/>
         <field field_ref="q3"/>
+        <field field_ref="tracer_const"/>
+        <field field_ref="tracer_pv"/>
+        <field field_ref="tracer_step"/>
       </file>
 
       <file id="lfric_initial" name="lfric_swe_initial" output_freq="1ts" convention="UGRID" enabled=".TRUE.">
@@ -127,6 +145,9 @@
         <field field_ref="init_q1"/>
         <field field_ref="init_q2"/>
         <field field_ref="init_q3"/>
+        <field field_ref="init_tracer_const"/>
+        <field field_ref="init_tracer_pv"/>
+        <field field_ref="init_tracer_step"/>
       </file>
 
     </file_definition>

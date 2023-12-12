@@ -55,6 +55,9 @@ module shallow_water_step_mod
     type(field_type), pointer :: geopot => null()
     type(field_type), pointer :: buoyancy => null()
     type(field_type), pointer :: q => null()
+    type(field_type), pointer :: tracer_const => null()
+    type(field_type), pointer :: tracer_pv => null()
+    type(field_type), pointer :: tracer_step => null()
     type(field_type), pointer :: s_geopot => null()
 
     prognostic_fields => modeldb%fields%get_field_collection("prognostics")
@@ -64,6 +67,9 @@ module shallow_water_step_mod
     call prognostic_fields%get_field('buoyancy', buoyancy)
     call prognostic_fields%get_field('q', q)
     call prognostic_fields%get_field('s_geopot', s_geopot)
+    call prognostic_fields%get_field('tracer_const', tracer_const)
+    call prognostic_fields%get_field('tracer_pv', tracer_pv)
+    call prognostic_fields%get_field('tracer_step', tracer_step)
 
     write( log_scratch_space, &
            '(A,I0)' ) 'Start of timestep ', modeldb%clock%get_step()
@@ -72,10 +78,11 @@ module shallow_water_step_mod
     select case( time_scheme )
 
     case( time_scheme_semi_implicit )
-      call swe_timestep_alg_si( modeldb%clock,       &
-                                wind,                &
-                                geopot, buoyancy, q, &
-                                s_geopot )
+      call swe_timestep_alg_si( modeldb%clock,           &
+                                wind,                    &
+                                geopot, buoyancy, q,     &
+                                tracer_const, tracer_pv, &
+                                tracer_step, s_geopot )
     case ( time_scheme_ssprk3 )
       call swe_timestep_alg_ssprk3( modeldb%clock,       &
                                     wind,                &

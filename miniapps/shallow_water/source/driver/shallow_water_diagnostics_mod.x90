@@ -61,6 +61,9 @@ contains
     type(field_type), pointer :: buoyancy => null()
     type(field_type), pointer :: geopot => null()
     type(field_type), pointer :: q => null()
+    type(field_type), pointer :: tracer_const => null()
+    type(field_type), pointer :: tracer_pv => null()
+    type(field_type), pointer :: tracer_step => null()
     type(field_type), pointer :: s_geopot
     type(field_type)          :: total_geopot
     type(field_type)          :: surface_geopot
@@ -75,6 +78,9 @@ contains
     call prognostic_fields%get_field('buoyancy', buoyancy)
     call prognostic_fields%get_field('geopot', geopot)
     call prognostic_fields%get_field('q', q)
+    call prognostic_fields%get_field('tracer_const', tracer_const)
+    call prognostic_fields%get_field('tracer_pv', tracer_pv)
+    call prognostic_fields%get_field('tracer_step', tracer_step)
     call prognostic_fields%get_field('s_geopot', s_geopot)
 
     ! Calculation and output of diagnostics
@@ -100,6 +106,14 @@ contains
                                   modeldb%clock, mesh, nodal_output_on_w3)
     end if
     call write_scalar_diagnostic('q', q, &
+                                 modeldb%clock, mesh, nodal_output_on_w3)
+
+    ! Output tracers
+    call write_scalar_diagnostic('tracer_const', tracer_const, &
+                                 modeldb%clock, mesh, nodal_output_on_w3)
+    call write_scalar_diagnostic('tracer_pv', tracer_pv, &
+                                 modeldb%clock, mesh, nodal_output_on_w3)
+    call write_scalar_diagnostic('tracer_step', tracer_step, &
                                  modeldb%clock, mesh, nodal_output_on_w3)
 
   end subroutine shallow_water_diagnostics

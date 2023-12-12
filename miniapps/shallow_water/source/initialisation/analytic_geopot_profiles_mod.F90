@@ -41,9 +41,10 @@ module analytic_geopot_profiles_mod
 
 contains
 
+  !============================================================================
   !> @brief Compute an analytic geopotential field for the shallow water miniapp.
-  !> @param[in] chi    Position in physical coordinates
-  !> @param[in] choice
+  !> @param[in] chi      Position in physical coordinates
+  !> @param[in] choice   Which test to set up
   !> @param[in] domain_x Domain size in x-direction.
   !> @result    geopot The result geopotential field
   function analytic_geopot(chi, choice, domain_x) result(geopot)
@@ -129,6 +130,7 @@ contains
 
   end function analytic_geopot
 
+  !============================================================================
   !> @brief Compute an analytic surface geopotential field for the shallow water miniapp.
   !> @param[in] chi      Position in physical coordinates
   !> @result    s_geopot The result surcace geopotential field
@@ -164,6 +166,38 @@ contains
 
     end select
 
-end function
+  end function analytic_surface_geopot
+
+  !============================================================================
+  !> @brief Compute an analytic tracer field for the shallow water miniapp.
+  !> @param[in] chi    Position in physical coordinates
+  !> @param[in] domain_x Domain size in x-direction.
+  !> @result    tracer The result tracer field
+  function analytic_tracer(chi, domain_x) result(tracer)
+
+    implicit none
+
+    real(kind=r_def), intent(in) :: chi(3)
+    real(kind=r_def), intent(in) :: domain_x
+
+    real(kind=r_def)             :: tracer
+    real(kind=r_def)             :: long, lat
+
+    if ( geometry == geometry_spherical ) then
+      call xyz2ll(chi(1),chi(2),chi(3),long,lat)
+      if ( abs(lat-pi/4.0_r_def) < pi/16.0_r_def ) then
+        tracer = 1.0_r_def
+      else
+        tracer = 0.0_r_def
+      end if
+    else
+      if ( abs(chi(2)) < domain_x/16.0_r_def ) then
+        tracer = 1.0_r_def
+      else
+        tracer = 0.0_r_def
+      end if
+    end if
+
+  end function analytic_tracer
 
 end module analytic_geopot_profiles_mod
