@@ -16,7 +16,7 @@ use argument_mod,       only : arg_type,              &
                                GH_FIELD, GH_REAL,     &
                                GH_READ, GH_WRITE,     &
                                GH_SCALAR, CELL_COLUMN
-use fs_continuity_mod,  only : W2v
+use fs_continuity_mod,  only : W2v, W3
 use constants_mod,      only : r_tran, i_def, EPS_R_TRAN
 use kernel_mod,         only : kernel_type
 
@@ -33,7 +33,7 @@ type, public, extends(kernel_type) :: fractional_vertical_wind_kernel_type
   type(arg_type) :: meta_args(4) = (/                  &
        arg_type(GH_FIELD,  GH_REAL,    GH_WRITE, W2v), & ! frac_wind
        arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W2v), & ! dep_pts
-       arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W2v), & ! detj
+       arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W3),  & ! detj
        arg_type(GH_SCALAR, GH_REAL,    GH_READ)        & ! dt
        /)
   integer :: operates_on = CELL_COLUMN
@@ -52,11 +52,14 @@ contains
   !> @param[in]     nlayers   Number of layers
   !> @param[in,out] frac_wind The fractional vertical wind
   !> @param[in]     dep_pts   The vertical departure distance
-  !> @param[in]     detj      Det(J) at vertical W2v points
+  !> @param[in]     detj      Det(J) at W3 points
   !> @param[in]     dt        The time step
   !> @param[in]     ndf_w2v   Number of degrees of freedom for W2v per cell
   !> @param[in]     undf_w2v  Number of unique degrees of freedom for W2v
   !> @param[in]     map_w2v   The dofmap for the W2v cell at the base of the column
+  !> @param[in]     ndf_w3    Number of degrees of freedom for W3 per cell
+  !> @param[in]     undf_w3   Number of unique degrees of freedom for W3
+  !> @param[in]     map_w3    Map for W3
   subroutine fractional_vertical_wind_code( nlayers,   &
                                             frac_wind, &
                                             dep_pts,   &
@@ -64,7 +67,10 @@ contains
                                             dt,        &
                                             ndf_w2v,   &
                                             undf_w2v,  &
-                                            map_w2v )
+                                            map_w2v,   &
+                                            ndf_w3,    &
+                                            undf_w3,   &
+                                            map_w3 )
 
     implicit none
 
@@ -72,17 +78,22 @@ contains
     integer(kind=i_def), intent(in)    :: nlayers
     integer(kind=i_def), intent(in)    :: undf_w2v
     integer(kind=i_def), intent(in)    :: ndf_w2v
+    integer(kind=i_def), intent(in)    :: undf_w3
+    integer(kind=i_def), intent(in)    :: ndf_w3
     real(kind=r_tran),   intent(inout) :: frac_wind(undf_w2v)
     real(kind=r_tran),   intent(in)    :: dep_pts(undf_w2v)
-    real(kind=r_tran),   intent(in)    :: detj(undf_w2v)
+    real(kind=r_tran),   intent(in)    :: detj(undf_w3)
     integer(kind=i_def), intent(in)    :: map_w2v(ndf_w2v)
+    integer(kind=i_def), intent(in)    :: map_w3(ndf_w3)
     real(kind=r_tran),   intent(in)    :: dt
 
     ! Internal variables
-    integer(kind=i_def) :: k, df
+    integer(kind=i_def) :: k, df, km, kp
 
     real(kind=r_tran)   :: departure_dist
     real(kind=r_tran)   :: fractional_distance
+    real(kind=r_tran)   :: upwind_detj
+    integer(kind=i_def) :: int_dist
 
     ! Wind at surface and model top should be zero
     frac_wind(map_w2v(1)) = 0.0_r_tran
@@ -95,11 +106,20 @@ contains
       ! Get departure distance
       departure_dist = dep_pts(map_w2v(df)+k)
 
-      ! Get fractional part
+      ! Get integer and fractional part
       fractional_distance = departure_dist - int(departure_dist)
+      int_dist = int(departure_dist)
+
+      ! Get indices
+      km = max( 0_i_def, min(k - int_dist, nlayers-1) )
+      kp = max( 0_i_def, min(k + 1 - int_dist, nlayers-1) )
+
+      ! Compute upwind Det(J)
+      upwind_detj = ( 0.5_r_tran + sign(0.5_r_tran, departure_dist) ) * detj(map_w3(1) + km) + &
+                    ( 0.5_r_tran - sign(0.5_r_tran, departure_dist) ) * detj(map_w3(1) + kp)
 
       ! Fractional wind is fractional_departure_distance * Det(J) / timestep
-      frac_wind(map_w2v(df)+k) = fractional_distance*detj(map_w2v(df)+k)/dt
+      frac_wind(map_w2v(df)+k) = fractional_distance * upwind_detj / dt
     end do
 
   end subroutine fractional_vertical_wind_code

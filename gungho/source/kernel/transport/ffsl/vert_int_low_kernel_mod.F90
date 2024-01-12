@@ -37,14 +37,13 @@ private
 !> The type declaration for the kernel. Contains the metadata needed by the Psy layer
 type, public, extends(kernel_type) :: vert_int_low_kernel_type
   private
-  type(arg_type) :: meta_args(8) = (/                  &
+  type(arg_type) :: meta_args(7) = (/                  &
        arg_type(GH_FIELD,  GH_REAL,    GH_WRITE, W2v), & ! flux_low
        arg_type(GH_FIELD,  GH_REAL,    GH_WRITE, W2v), & ! flux_int
        arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W2v), & ! frac_wind
        arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W2v), & ! dep_pts
-       arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W2v), & ! detj
+       arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W3),  & ! detj
        arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W3),  & ! field
-       arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W3),  & ! dz
        arg_type(GH_SCALAR, GH_REAL,    GH_READ)        & ! dt
        /)
   integer :: operates_on = CELL_COLUMN
@@ -65,9 +64,8 @@ contains
 !> @param[in,out] flux_int  The integer mass flux
 !> @param[in]     frac_wind The fractional vertical wind
 !> @param[in]     dep_pts   The vertical departure points
-!> @param[in]     detj      Det(J) at vertical W2v points
+!> @param[in]     detj      Det(J) at W3 points
 !> @param[in]     field     The field to construct the flux
-!> @param[in]     dz        Vertical length of the W3 cell
 !> @param[in]     ndf_w2v   Number of degrees of freedom for W2v per cell
 !> @param[in]     undf_w2v  Number of unique degrees of freedom for W2v
 !> @param[in]     map_w2v   The dofmap for the W2v cell at the base of the column
@@ -81,7 +79,6 @@ subroutine vert_int_low_code( nlayers,   &
                               dep_pts,   &
                               detj,      &
                               field,     &
-                              dz,        &
                               dt,        &
                               ndf_w2v,   &
                               undf_w2v,  &
@@ -103,8 +100,7 @@ subroutine vert_int_low_code( nlayers,   &
   real(kind=r_tran),   intent(in)    :: field(undf_w3)
   real(kind=r_tran),   intent(in)    :: frac_wind(undf_w2v)
   real(kind=r_tran),   intent(in)    :: dep_pts(undf_w2v)
-  real(kind=r_tran),   intent(in)    :: detj(undf_w2v)
-  real(kind=r_tran),   intent(in)    :: dz(undf_w3)
+  real(kind=r_tran),   intent(in)    :: detj(undf_w3)
   integer(kind=i_def), intent(in)    :: map_w3(ndf_w3)
   integer(kind=i_def), intent(in)    :: map_w2v(ndf_w2v)
   real(kind=r_tran),   intent(in)    :: dt
@@ -120,7 +116,7 @@ subroutine vert_int_low_code( nlayers,   &
   real(kind=r_tran)   :: reconstruction_low
   real(kind=r_tran)   :: mass_from_whole_cells
   real(kind=r_tran)   :: field_1d(0:nlayers-1)
-  real(kind=r_tran)   :: dz_1d(0:nlayers-1)
+  real(kind=r_tran)   :: detj_1d(0:nlayers-1)
 
   nz = nlayers
 
@@ -139,7 +135,7 @@ subroutine vert_int_low_code( nlayers,   &
   ! Local field array
   do k=0,nlayers-1
     field_1d(k) = field(map_w3(1) + k)
-    dz_1d(k) = dz(map_w3(1) + k)
+    detj_1d(k)  = detj(map_w3(1) + k)
   end do
 
   do k=0,nlayers-2
@@ -158,12 +154,12 @@ subroutine vert_int_low_code( nlayers,   &
     if (departure_dist >= 0.0_r_tran) then
       nc = k-(n_cells_to_sum-1)
       do ii = 1, n_cells_to_sum-1
-        mass_from_whole_cells = mass_from_whole_cells + field_1d(k-ii+1)*dz_1d(k-ii+1)/dz_1d(k)
+        mass_from_whole_cells = mass_from_whole_cells + field_1d(k-ii+1)*detj_1d(k-ii+1)
       end do
     else
       nc = k+(n_cells_to_sum-1)+1
       do ii = 1, n_cells_to_sum-1
-        mass_from_whole_cells = mass_from_whole_cells + field_1d(k+ii)*dz_1d(k+ii)/dz_1d(k+1)
+        mass_from_whole_cells = mass_from_whole_cells + field_1d(k+ii)*detj_1d(k+ii)
       end do
     end if
 
@@ -172,8 +168,7 @@ subroutine vert_int_low_code( nlayers,   &
 
     ! Set low order fractional mass flux and integer flux
     flux_low(map_w2v(df)+k) = frac_wind(map_w2v(df)+k)*reconstruction_low
-    flux_int(map_w2v(df)+k) = sign(1.0_r_tran,departure_dist)*mass_from_whole_cells/dt &
-                              * detj(map_w2v(df)+k)
+    flux_int(map_w2v(df)+k) = sign(1.0_r_tran,departure_dist)*mass_from_whole_cells/dt
 
   end do
 

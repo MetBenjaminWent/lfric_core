@@ -39,20 +39,16 @@ contains
     real(kind=r_tran) :: answer, use_tol
 
     integer(kind=i_def), parameter :: nlayers = 1
-    integer(kind=i_def), parameter :: ndf_w2 = 4
-    integer(kind=i_def), parameter :: undf_w2 = ndf_w2*nlayers
     integer(kind=i_def), parameter :: ndf_w2h = 4
     integer(kind=i_def), parameter :: undf_w2h = ndf_w2h*nlayers
 
-    integer(kind=i_def), dimension(ndf_w2)   :: map_w2
     integer(kind=i_def), dimension(ndf_w2h)  :: map_w2h
     real(kind=r_tran),   dimension(undf_w2h) :: dep_pts_x
     real(kind=r_tran),   dimension(undf_w2h) :: dep_pts_y
-    real(kind=r_tran),   dimension(undf_w2)  :: wind
+    real(kind=r_tran),   dimension(undf_w2h) :: wind
     real(kind=r_tran)                        :: dt
 
     ! Set up maps
-    map_w2(:)  = (/ 1, 2, 3, 4 /)
     map_w2h(:) = (/ 1, 2, 3, 4 /)
 
     ! Initialise output to zero
@@ -69,10 +65,7 @@ contains
                               dt,        &
                               ndf_w2h,   &
                               undf_w2h,  &
-                              map_w2h,   &
-                              ndf_w2,    &
-                              undf_w2,   &
-                              map_w2 )
+                              map_w2h )
     ! Get correct tolerance
     if ( r_tran == real64 ) then
       use_tol = tol
@@ -102,10 +95,7 @@ contains
                               dt,        &
                               ndf_w2h,   &
                               undf_w2h,  &
-                              map_w2h,   &
-                              ndf_w2,    &
-                              undf_w2,   &
-                              map_w2 )
+                              map_w2h )
     answer = 0.08_r_tran
     @assertEqual(answer, dep_pts_x(1), use_tol)
     answer = -0.24_r_tran

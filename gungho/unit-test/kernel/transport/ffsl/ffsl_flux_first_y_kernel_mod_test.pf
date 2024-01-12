@@ -56,7 +56,7 @@ contains
     real(kind=r_tran), dimension(undf_w3) :: field
     real(kind=r_tran), dimension(undf_w2) :: dep_pts
     real(kind=r_tran), dimension(undf_w2) :: flux
-    real(kind=r_tran), dimension(undf_w2) :: detj
+    real(kind=r_tran), dimension(undf_w3) :: detj
 
     real(kind=r_tran)   :: dt
     integer(kind=i_def) :: monotone
@@ -90,6 +90,8 @@ contains
                                  stencil_map,    &
                                  dep_pts,        &
                                  detj,           &
+                                 stencil_size,   &
+                                 stencil_map,    &
                                  order,          &
                                  monotone,       &
                                  stencil_extent, &
@@ -122,6 +124,8 @@ contains
                                  stencil_map,    &
                                  dep_pts,        &
                                  detj,           &
+                                 stencil_size,   &
+                                 stencil_map,    &
                                  order,          &
                                  monotone,       &
                                  stencil_extent, &
@@ -148,6 +152,8 @@ contains
                                  stencil_map,    &
                                  dep_pts,        &
                                  detj,           &
+                                 stencil_size,   &
+                                 stencil_map,    &
                                  order,          &
                                  monotone,       &
                                  stencil_extent, &

@@ -123,7 +123,7 @@ contains
     ndf_w2v = 2
     map_w2v = (/ 1,2,3,4,5,6 /)
 
-    allocate(u_field(1:undf_w2))
+    allocate(u_field(1:undf_w2v))
     allocate(dep_pts(1:undf_w2v))
     allocate(heights(1:undf_w2))
     allocate(cfl(1:undf_w2))
@@ -137,13 +137,12 @@ contains
     heights(26) = 5.0_r_def
 
     ! Assume a constant wind field with departure distances less than one.
-    u_field(:)  = 0.0_r_tran
-    u_field(21) = 0.0_r_tran
-    u_field(22) = 0.8_r_tran
-    u_field(23) = 0.8_r_tran
-    u_field(24) = 0.8_r_tran
-    u_field(25) = 0.8_r_tran
-    u_field(26) = 0.0_r_tran
+    u_field(1) = 0.0_r_tran
+    u_field(2) = 0.8_r_tran
+    u_field(3) = 0.8_r_tran
+    u_field(4) = 0.8_r_tran
+    u_field(5) = 0.8_r_tran
+    u_field(6) = 0.0_r_tran
 
     ! Initialise dep_pts and CFL to zero
     dep_pts(:)  = 0.0_r_tran
@@ -180,13 +179,12 @@ contains
     @assertEqual( 0.0_r_tran, cfl(26), tol)
 
     ! Assume a varying wind field with departure distances greater than one.
-    u_field(:) =  0.0_r_tran
-    u_field(21) = 0.0_r_tran
-    u_field(22) = 0.8_r_tran
-    u_field(23) = 1.6_r_tran
-    u_field(24) = 1.6_r_tran
-    u_field(25) = 0.8_r_tran
-    u_field(26) = 0.0_r_tran
+    u_field(1) = 0.0_r_tran
+    u_field(2) = 0.8_r_tran
+    u_field(3) = 1.6_r_tran
+    u_field(4) = 1.6_r_tran
+    u_field(5) = 0.8_r_tran
+    u_field(6) = 0.0_r_tran
 
     call vertical_deppt_code( nlayers,              &
                               dep_pts,              &

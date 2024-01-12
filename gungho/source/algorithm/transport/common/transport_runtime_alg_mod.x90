@@ -89,8 +89,6 @@ module transport_runtime_alg_mod
     type(r_tran_field_type),    allocatable, dimension(:)   :: advecting_wind
     type(r_tran_field_type),    allocatable, dimension(:)   :: horizontal_advecting_wind
     type(r_tran_field_type),    allocatable, dimension(:)   :: vertical_advecting_wind
-    type(r_tran_field_type),    allocatable, dimension(:)   :: detj_at_w2h_transport
-    type(r_tran_field_type),    allocatable, dimension(:)   :: detj_at_w2v_transport
     type(r_tran_field_type),    allocatable, dimension(:)   :: departure_points_x_w2
     type(r_tran_field_type),    allocatable, dimension(:)   :: departure_points_y_w2
     type(r_tran_field_type),    allocatable, dimension(:)   :: departure_points_z_w2
@@ -177,7 +175,6 @@ module transport_runtime_alg_mod
     procedure, public  :: get_directional_advecting_wind
     procedure, public  :: get_horizontal_advecting_wind
     procedure, public  :: get_vertical_advecting_wind
-    procedure, public  :: get_detj_at_w2_transport
     procedure, public  :: get_departure_points_x_w2
     procedure, public  :: get_departure_points_y_w2
     procedure, public  :: get_departure_points_z_w2
@@ -258,13 +255,12 @@ contains
 
     use calc_dep_pts_alg_mod,          only: calc_vert_dep_pts, &
                                              calc_hori_dep_pts, &
-                                             select_detj_at_w2
+                                             select_detj_at_w2, &
+                                             calc_frac_vert_wind_alg
     use compute_sl_coefficients_alg_mod, &
                                        only: compute_vert_quintic_coefficients_alg, &
                                              compute_vert_cubic_coefficients_alg
     use ffsl_unity_transport_alg_mod,  only: ffsl_unity_transport_alg
-    use fractional_vertical_wind_kernel_mod, &
-                                       only: fractional_vertical_wind_kernel_type
     use split_w2_field_kernel_mod,     only: split_w2_field_kernel_type
     use transport_config_mod,          only: max_vert_cfl_calc,           &
                                              max_vert_cfl_calc_dep_point, &
@@ -411,8 +407,6 @@ contains
                 self%advecting_wind(self%n_meshes),             &
                 self%horizontal_advecting_wind(self%n_meshes),  &
                 self%vertical_advecting_wind(self%n_meshes),    &
-                self%detj_at_w2h_transport(self%n_meshes),      &
-                self%detj_at_w2v_transport(self%n_meshes),      &
                 self%departure_points_x_w2(self%n_meshes),      &
                 self%departure_points_y_w2(self%n_meshes),      &
                 self%departure_points_z_w2(self%n_meshes),      &
@@ -501,8 +495,6 @@ contains
       call self%advecting_wind(mesh_idx)%initialise( w2_fs )
       call self%horizontal_advecting_wind(mesh_idx)%initialise( w2h_fs )
       call self%vertical_advecting_wind(mesh_idx)%initialise( w2v_fs )
-      call self%detj_at_w2h_transport(mesh_idx)%initialise( w2h_fs )
-      call self%detj_at_w2v_transport(mesh_idx)%initialise( w2v_fs )
       call self%departure_points_z_w2(mesh_idx)%initialise( w2v_fs )
       call self%departure_points_z_half_w2(mesh_idx)%initialise( w2v_fs )
       call self%departure_points_x_w2(mesh_idx)%initialise( w2h_fs )
@@ -567,9 +559,6 @@ contains
       w2_fs => function_space_collection%get_fs(tmp_mesh, element_order, W2)
       call detj_at_w2_transport%initialise( w2_fs )
       call select_detj_at_w2( wind_n, detj_at_w2_transport )
-      call invoke( split_w2_field_kernel_type(self%detj_at_w2h_transport(mesh_idx), &
-                                              self%detj_at_w2v_transport(mesh_idx), &
-                                              detj_at_w2_transport) )
 
       ! Set winds for computing departure points based on cheap update flag
       if (any_vert_dep_pts .OR. any_horz_dep_pts) then
@@ -604,30 +593,24 @@ contains
                                   cfl_dep_half,                              &
                                   dep_pt_wind_n,                             &
                                   dep_pt_wind_np1,                           &
-                                  detj_at_w2_transport,                      &
                                   half_dt )
           ! Multiply CFL by 2 to get full CFL
-          call invoke( a_times_X(cfl_dep, 2.0_r_tran, cfl_dep_half),         &
+          call invoke( a_times_X(cfl_dep, 2.0_r_tran, cfl_dep_half) )
           ! Compute fractional wind with half time step
-                       fractional_vertical_wind_kernel_type(                 &
-                                  self%frac_wind_z_half(mesh_idx),           &
-                                  self%departure_points_z_half_w2(mesh_idx), &
-                                  self%detj_at_w2v_transport(mesh_idx),      &
-                                  half_dt ) )
+          call calc_frac_vert_wind_alg( self%frac_wind_z_half(mesh_idx),           &
+                                        self%departure_points_z_half_w2(mesh_idx), &
+                                        half_dt )
         else
           ! If splitting is not VHV then compute full departure points
           call calc_vert_dep_pts( self%departure_points_z_w2(mesh_idx), &
                                   cfl_dep,                              &
                                   dep_pt_wind_n,                        &
                                   dep_pt_wind_np1,                      &
-                                  detj_at_w2_transport,                 &
                                   cast_dt )
           ! Compute fractional wind
-          call invoke( fractional_vertical_wind_kernel_type(            &
-                                  self%frac_wind_z(mesh_idx),           &
-                                  self%departure_points_z_w2(mesh_idx), &
-                                  self%detj_at_w2v_transport(mesh_idx), &
-                                  cast_dt ) )
+          call calc_frac_vert_wind_alg( self%frac_wind_z(mesh_idx),           &
+                                        self%departure_points_z_w2(mesh_idx), &
+                                        cast_dt )
         end if
 
       end if
@@ -638,7 +621,6 @@ contains
                                 self%departure_points_y_w2(mesh_idx),  &
                                 dep_pt_wind_n,                         &
                                 dep_pt_wind_np1,                       &
-                                detj_at_w2_transport,                  &
                                 cast_dt )
 
         ! Get the required stencil size from the departure points
@@ -722,8 +704,6 @@ contains
                                        self%departure_points_y_w2(mesh_idx),      &
                                        self%departure_points_z_w2(mesh_idx),      &
                                        self%departure_points_z_half_w2(mesh_idx), &
-                                       self%detj_at_w2h_transport(mesh_idx),      &
-                                       self%detj_at_w2v_transport(mesh_idx),      &
                                        self%dep_stencil_extent_x(mesh_idx),       &
                                        self%dep_stencil_extent_y(mesh_idx),       &
                                        cast_dt,                                   &
@@ -931,8 +911,6 @@ contains
     if ( allocated( self%advecting_wind ) )            deallocate( self%advecting_wind )
     if ( allocated( self%horizontal_advecting_wind ) ) deallocate( self%horizontal_advecting_wind )
     if ( allocated( self%vertical_advecting_wind ) )   deallocate( self%vertical_advecting_wind )
-    if ( allocated( self%detj_at_w2h_transport ) )     deallocate( self%detj_at_w2h_transport )
-    if ( allocated( self%detj_at_w2v_transport ) )     deallocate( self%detj_at_w2v_transport )
     if ( allocated( self%departure_points_x_w2 ) )     deallocate( self%departure_points_x_w2 )
     if ( allocated( self%departure_points_y_w2 ) )     deallocate( self%departure_points_y_w2 )
     if ( allocated( self%departure_points_z_w2 ) )     deallocate( self%departure_points_z_w2 )
@@ -1958,35 +1936,6 @@ contains
     call check_initialised_field(advecting_wind, field_name, mesh_id)
 
   end function get_vertical_advecting_wind
-
-  !> @brief Returns a pointer to det(J) at W2 DoFs
-  !> @param[in] mesh_id The ID of the mesh to get the object for
-  !> @param[in] direction Integer indicating direction (horizontal or vertical)
-  !> @return det(J) evaluated at W2 DoFs
-  function get_detj_at_w2_transport(self, mesh_id, direction) result(detj_at_w2_transport)
-
-    implicit none
-
-    class(transport_runtime_type), target, intent(in) :: self
-    integer(kind=i_def),                   intent(in) :: mesh_id
-    integer(kind=i_def),                   intent(in) :: direction
-    type(r_tran_field_type),               pointer    :: detj_at_w2_transport
-    character(str_def)                                :: field_name
-
-    select case (direction)
-    case (direction_v)
-      field_name = 'detj_at_w2v_transport'
-      detj_at_w2_transport => self%detj_at_w2v_transport(self%idx_from_mesh_id(mesh_id))
-      call check_initialised_field(detj_at_w2_transport, field_name, mesh_id)
-    case (direction_h)
-      field_name = 'detj_at_w2h_transport'
-      detj_at_w2_transport => self%detj_at_w2h_transport(self%idx_from_mesh_id(mesh_id))
-      call check_initialised_field(detj_at_w2_transport, field_name, mesh_id)
-    case default
-      call log_event('DetJ at W2 not implemented for this direction', LOG_LEVEL_ERROR)
-    end select
-
-  end function get_detj_at_w2_transport
 
   !> @brief Returns a pointer to the x departure points at W2h DoFs
   !> @param[in] mesh_id The ID of the mesh to get the object for

@@ -238,7 +238,7 @@ contains
     type(mesh_type),              pointer :: mesh => null()
     type(r_tran_field_type),      pointer :: dep_pts_x => null()
     type(r_tran_field_type),      pointer :: dep_pts_y => null()
-    type(r_tran_field_type),      pointer :: detj_at_w2h => null()
+    type(r_tran_field_type),      pointer :: detj_at_w3 => null()
     type(field_type),             pointer :: panel_id => null()
     type(r_tran_field_type),      pointer :: adv_one_x => null()
     type(r_tran_field_type),      pointer :: adv_one_y => null()
@@ -288,7 +288,7 @@ contains
     ! Get pre-computed fields
     dep_pts_x => transport_runtime%get_departure_points_x_w2(mesh_id)
     dep_pts_y => transport_runtime%get_departure_points_y_w2(mesh_id)
-    detj_at_w2h => transport_runtime%get_detj_at_w2_transport(mesh_id, direction_h)
+    detj_at_w3 => get_detj_at_w3_r_tran(mesh_id)
     panel_id => get_panel_id(mesh_id)
     dep_stencil_extent_x => transport_runtime%get_dep_stencil_extent_x(mesh_id)
     dep_stencil_extent_y => transport_runtime%get_dep_stencil_extent_y(mesh_id)
@@ -355,14 +355,16 @@ contains
     call invoke( setval_c(flux_x, 0.0_r_tran),                                 &
                  ffsl_flux_first_x_kernel_type(flux_x, field_ptr,              &
                                                stencil_extent_x, dep_pts_x,    &
-                                               detj_at_w2h, inner_order,       &
-                                               monotone, cfl_stencil_x, dt),   &
+                                               detj_at_w3, stencil_extent_x,   &
+                                               inner_order, monotone,          &
+                                               cfl_stencil_x, dt),             &
     ! Compute the mass fluxes: y-direction -------------------------------------
                  setval_c(flux_y, 0.0_r_tran),                                 &
                  ffsl_flux_first_y_kernel_type(flux_y, field_ptr,              &
                                                stencil_extent_y, dep_pts_y,    &
-                                               detj_at_w2h, inner_order,       &
-                                               monotone, cfl_stencil_y, dt) )
+                                               detj_at_w3, stencil_extent_y,   &
+                                               inner_order, monotone,          &
+                                               cfl_stencil_y, dt) )
 
     ! fluxes may need unifying to guarantee a unique flux for each face --------
     if ( extended_mesh ) then
@@ -391,7 +393,7 @@ contains
                  X_minus_Y(inc_part, field_n, divide_part),                    &
                  a_times_X(increment_y, one_over_dt, inc_part) )
 
-    nullify(transport_runtime, mesh, dep_pts_x, dep_pts_y, detj_at_w2h,        &
+    nullify(transport_runtime, mesh, dep_pts_x, dep_pts_y, detj_at_w3,         &
             panel_id, adv_one_x, adv_one_y, field_ptr, m3_inv, field_fs,       &
             dep_stencil_extent_x, dep_stencil_extent_y, w2h_fs, w2b_fs)
 
@@ -447,7 +449,6 @@ contains
     type(mesh_type),              pointer :: mesh => null()
     type(r_tran_field_type),      pointer :: dep_pts_x => null()
     type(r_tran_field_type),      pointer :: dep_pts_y => null()
-    type(r_tran_field_type),      pointer :: detj_at_w2h => null()
     type(r_tran_field_type),      pointer :: detj_at_w3 => null()
     type(field_type),             pointer :: panel_id => null()
     type(r_tran_field_type),      pointer :: adv_one_x => null()
@@ -534,11 +535,11 @@ contains
                        == consistent_ffsl_splitting_swift)
 
     ! Get pre-computed fields
+    detj_at_w3 => get_detj_at_w3_r_tran(mesh_id)
     panel_id => get_panel_id(mesh_id)
 
     if (equation_form == equation_form_consistent) then
       step = transport_runtime%get_tracer_step_ctr()
-      detj_at_w3 => get_detj_at_w3_r_tran(mesh_id)
       if (swift_splitting) then
         outer = .true.
         rho_d_x => transport_runtime%get_rho_d_ffsl_x(mesh_id, step)
@@ -560,7 +561,6 @@ contains
       cosmic_istart_y => transport_runtime%get_tracer_istart_y(mesh_id, step, outer)
       cosmic_iend_y => transport_runtime%get_tracer_iend_y(mesh_id, step, outer)
     else
-      detj_at_w2h => transport_runtime%get_detj_at_w2_transport(mesh_id, direction_h)
       dep_pts_x => transport_runtime%get_departure_points_x_w2(mesh_id)
       dep_pts_y => transport_runtime%get_departure_points_y_w2(mesh_id)
       dep_stencil_extent_x => transport_runtime%get_dep_stencil_extent_x(mesh_id)
@@ -687,7 +687,8 @@ contains
                                               field_x_ptr, stencil_extent_x,   &
                                               field_y_ptr, stencil_extent_x,   &
                                               cosmic_istart_y, cosmic_iend_y,  &
-                                              dep_pts_x, detj_at_w2h, order,   &
+                                              dep_pts_x, detj_at_w3,           &
+                                              stencil_extent_x, order,         &
                                               monotone, cfl_stencil_x, dt),    &
       ! Compute the mass fluxes: y-direction -----------------------------------
                    setval_c(flux_y_high, 0.0_r_tran),                          &
@@ -699,7 +700,8 @@ contains
                                               field_x_ptr, stencil_extent_y,   &
                                               field_y_ptr, stencil_extent_y,   &
                                               cosmic_istart_x, cosmic_iend_x,  &
-                                              dep_pts_y, detj_at_w2h, order,   &
+                                              dep_pts_y, detj_at_w3,           &
+                                              stencil_extent_y, order,         &
                                               monotone, cfl_stencil_y, dt),    &
       ! Combine integer and fractional fluxes ----------------------------------
                    X_plus_Y(flux_x, flux_x_high, flux_x_int),                  &
@@ -842,14 +844,17 @@ contains
 
         if ( to_compute_adv_inc ) then
           call log_event('Computation of advective increments for final ' // &
-                         'horizontal step of consistent FFSL is not ' // &
+                         'horizontal step of consistent FFSL is not ' //     &
                          'implemented', LOG_LEVEL_ERROR)
         end if
+
+      case default
+        call log_event( "ffsl_hori_final_alg: Unrecognized equation form", LOG_LEVEL_ERROR )
 
       end select
     end if
 
-    nullify(transport_runtime, mesh, dep_pts_x, dep_pts_y, detj_at_w2h,        &
+    nullify(transport_runtime, mesh, dep_pts_x, dep_pts_y, detj_at_w3,         &
             panel_id, adv_one_x, adv_one_y, field_x_ptr, field_y_ptr, m3_inv,  &
             cosmic_istart_x, cosmic_istart_y, cosmic_iend_x, cosmic_iend_y,    &
             dep_stencil_extent_x, dep_stencil_extent_y, field_fs, w2h_fs,      &

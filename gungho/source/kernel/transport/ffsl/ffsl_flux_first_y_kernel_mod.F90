@@ -40,7 +40,7 @@ module ffsl_flux_first_y_kernel_mod
          arg_type(GH_FIELD,  GH_REAL,    GH_WRITE, W2h),              & ! flux
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W3, STENCIL(Y1D)), & ! field
          arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W2h),              & ! dep_pts
-         arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W2h),              & ! detj
+         arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W3, STENCIL(Y1D)), & ! detj
          arg_type(GH_SCALAR, GH_INTEGER, GH_READ     ),               & ! order
          arg_type(GH_SCALAR, GH_INTEGER, GH_READ     ),               & ! monotone
          arg_type(GH_SCALAR, GH_INTEGER, GH_READ     ),               & ! extent_size
@@ -65,7 +65,9 @@ contains
   !> @param[in]     stencil_size      Local length of field W3 stencil
   !> @param[in]     stencil_map       Dofmap for the field stencil
   !> @param[in]     dep_pts           Departure points in y
-  !> @param[in]     detj              Volume factor
+  !> @param[in]     detj              Volume factor at W3
+  !> @param[in]     stencil_size_d    Local length of Det(J) at W3 stencil
+  !> @param[in]     stencil_map_d     Dofmap for the Det(J) at W3 stencil
   !> @param[in]     order             Order of reconstruction
   !> @param[in]     monotone          Horizontal monotone option for FFSL
   !> @param[in]     extent_size       Stencil extent needed for the LAM edge
@@ -77,22 +79,24 @@ contains
   !> @param[in]     undf_w3           Number of unique degrees of freedom for W3
   !> @param[in]     map_w3            Map for W3
 
-  subroutine ffsl_flux_first_y_code( nlayers,      &
-                                     flux,         &
-                                     field,        &
-                                     stencil_size, &
-                                     stencil_map,  &
-                                     dep_pts,      &
-                                     detj,         &
-                                     order,        &
-                                     monotone,     &
-                                     extent_size,  &
-                                     dt,           &
-                                     ndf_w2h,      &
-                                     undf_w2h,     &
-                                     map_w2h,      &
-                                     ndf_w3,       &
-                                     undf_w3,      &
+  subroutine ffsl_flux_first_y_code( nlayers,        &
+                                     flux,           &
+                                     field,          &
+                                     stencil_size,   &
+                                     stencil_map,    &
+                                     dep_pts,        &
+                                     detj,           &
+                                     stencil_size_d, &
+                                     stencil_map_d,  &
+                                     order,          &
+                                     monotone,       &
+                                     extent_size,    &
+                                     dt,             &
+                                     ndf_w2h,        &
+                                     undf_w2h,       &
+                                     map_w2h,        &
+                                     ndf_w3,         &
+                                     undf_w3,        &
                                      map_w3 )
 
     use subgrid_rho_mod, only: horizontal_nirvana_recon, &
@@ -109,17 +113,19 @@ contains
     integer(kind=i_def), intent(in) :: undf_w2h
     integer(kind=i_def), intent(in) :: ndf_w2h
     integer(kind=i_def), intent(in) :: stencil_size
+    integer(kind=i_def), intent(in) :: stencil_size_d
 
     ! Arguments: Maps
     integer(kind=i_def), dimension(ndf_w3),  intent(in) :: map_w3
     integer(kind=i_def), dimension(ndf_w2h), intent(in) :: map_w2h
-    integer(kind=i_def), dimension(ndf_w3,stencil_size), intent(in) :: stencil_map
+    integer(kind=i_def), dimension(ndf_w3,stencil_size),   intent(in) :: stencil_map
+    integer(kind=i_def), dimension(ndf_w3,stencil_size_d), intent(in) :: stencil_map_d
 
     ! Arguments: Fields
     real(kind=r_tran), dimension(undf_w2h), intent(inout) :: flux
     real(kind=r_tran), dimension(undf_w3),  intent(in)    :: field
     real(kind=r_tran), dimension(undf_w2h), intent(in)    :: dep_pts
-    real(kind=r_tran), dimension(undf_w2h), intent(in)    :: detj
+    real(kind=r_tran), dimension(undf_w3),  intent(in)    :: detj
     integer(kind=i_def),                    intent(in)    :: order
     integer(kind=i_def),                    intent(in)    :: monotone
     integer(kind=i_def),                    intent(in)    :: extent_size
@@ -134,6 +140,7 @@ contains
 
     ! Local fields
     real(kind=r_tran)   :: field_local(1:stencil_size)
+    real(kind=r_tran)   :: detj_local(1:stencil_size_d)
 
     ! DOFs
     integer(kind=i_def) :: local_dofs(1:2)
@@ -203,9 +210,11 @@ contains
             ! Get local field values
             do jj = 1, stencil_half
               field_local(jj) = field(stencil_map(1,stencil_half+1-jj) + k)
+              detj_local(jj) = detj(stencil_map_d(1,stencil_half+1-jj) + k)
             end do
             do jj = stencil_half+1, stencil_size
               field_local(jj) = field(stencil_map(1,jj) + k)
+              detj_local(jj) = detj(stencil_map_d(1,jj) + k)
             end do
 
             ! Get cell index and build up whole cell part
@@ -213,12 +222,16 @@ contains
             if (departure_dist >= 0.0_r_tran ) then
               call get_index_positive(ind_lo,ind_hi,n_cells_to_sum,dof_iterator,stencil_size,stencil_half)
               do ii = 1, n_cells_to_sum-1
-                mass_from_whole_cells = mass_from_whole_cells + field_local(stencil_half - (2-dof_iterator) - (ii-1) )
+                mass_from_whole_cells = mass_from_whole_cells                                   &
+                                        + field_local(stencil_half - (2-dof_iterator) - (ii-1)) &
+                                        * detj_local(stencil_half - (2-dof_iterator) - (ii-1))
               end do
             else
               call get_index_negative(ind_lo,ind_hi,n_cells_to_sum,dof_iterator,stencil_size,stencil_half)
               do ii = 1, n_cells_to_sum-1
-                mass_from_whole_cells = mass_from_whole_cells + field_local(stencil_half + (dof_iterator-1) + (ii-1) )
+                mass_from_whole_cells = mass_from_whole_cells                                   &
+                                        + field_local(stencil_half + (dof_iterator-1) + (ii-1)) &
+                                        * detj_local(stencil_half + (dof_iterator-1) + (ii-1))
               end do
             end if
 
@@ -236,11 +249,10 @@ contains
             end if
 
             ! Get total flux, i.e. fractional part + whole cell part
-            mass_total = mass_from_whole_cells + abs(fractional_distance)*mass_frac
+            mass_total = mass_from_whole_cells + abs(fractional_distance) * mass_frac * detj_local(ind_lo+2)
 
-            ! Assign to flux variable and divide by dt to get the correct form, then multiply by Det(J)
-            flux(map_w2h(local_dofs(dof_iterator)) + k) = sign(1.0_r_tran,departure_dist) * mass_total / dt &
-                                                          * detj(map_w2h(local_dofs(dof_iterator)) + k)
+            ! Assign to flux variable and divide by dt to get the correct form
+            flux(map_w2h(local_dofs(dof_iterator)) + k) = sign(1.0_r_tran,departure_dist) * mass_total / dt
 
           end do ! vertical levels k
 

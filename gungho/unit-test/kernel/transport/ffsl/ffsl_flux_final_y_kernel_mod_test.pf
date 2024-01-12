@@ -63,7 +63,7 @@ contains
     real(kind=r_tran),   dimension(undf_w2) :: flux_int
     integer(kind=i_def), dimension(undf_wp) :: i_start
     integer(kind=i_def), dimension(undf_wp) :: i_end
-    real(kind=r_tran),   dimension(undf_w2) :: detj
+    real(kind=r_tran),   dimension(undf_w3) :: detj
 
     real(kind=r_tran)   :: dt
     integer(kind=i_def) :: monotone
@@ -112,6 +112,8 @@ contains
                                  i_end,          &
                                  dep_pts,        &
                                  detj,           &
+                                 stencil_size,   &
+                                 stencil_map,    &
                                  order,          &
                                  monotone,       &
                                  stencil_extent, &
@@ -162,6 +164,8 @@ contains
                                  i_end,          &
                                  dep_pts,        &
                                  detj,           &
+                                 stencil_size,   &
+                                 stencil_map,    &
                                  order,          &
                                  monotone,       &
                                  stencil_extent, &
@@ -202,6 +206,8 @@ contains
                                  i_end,          &
                                  dep_pts,        &
                                  detj,           &
+                                 stencil_size,   &
+                                 stencil_map,    &
                                  order,          &
                                  monotone,       &
                                  stencil_extent, &
@@ -242,6 +248,8 @@ contains
                                  i_end,          &
                                  dep_pts,        &
                                  detj,           &
+                                 stencil_size,   &
+                                 stencil_map,    &
                                  order,          &
                                  monotone,       &
                                  stencil_extent, &

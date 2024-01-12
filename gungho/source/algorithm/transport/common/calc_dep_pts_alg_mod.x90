@@ -25,11 +25,15 @@ module calc_dep_pts_alg_mod
   use vertical_uniform_deppt_kernel_mod, only: vertical_uniform_deppt_kernel_type
   use function_space_mod,                only: function_space_type
   use function_space_collection_mod,     only: function_space_collection
-  use fs_continuity_mod,                 only: W3, W2
+  use fs_continuity_mod,                 only: W2
   use finite_element_config_mod,         only: element_order
   use eulerian_deppt_kernel_mod,         only: eulerian_deppt_kernel_type
   use midpoint_deppt_kernel_mod,         only: midpoint_deppt_kernel_type
   use trapezoidal_deppt_kernel_mod,      only: trapezoidal_deppt_kernel_type
+  use calc_departure_wind_kernel_mod,    only: calc_departure_wind_kernel_type
+  use calc_vert_dep_wind_kernel_mod,     only: calc_vert_dep_wind_kernel_type
+  use fractional_vertical_wind_kernel_mod, &
+                                         only: fractional_vertical_wind_kernel_type
   use departure_points_config_mod,       only: method,                  &
                                                method_euler,            &
                                                method_timeaverage,      &
@@ -48,10 +52,10 @@ module calc_dep_pts_alg_mod
                                                calculate_detj_upwind
   use fem_constants_mod,                 only: get_detj_at_w2,          &
                                                get_detj_at_w2_above,    &
-                                               get_detj_at_w2_below
+                                               get_detj_at_w2_below,    &
+                                               get_detj_at_w3_r_tran
   use geometric_constants_mod,           only: get_height
   use log_mod,                           only: log_event,               &
-                                               LOG_LEVEL_INFO,          &
                                                LOG_LEVEL_TRACE,         &
                                                LOG_LEVEL_ERROR
   use mesh_mod,                          only: mesh_type
@@ -63,6 +67,7 @@ module calc_dep_pts_alg_mod
   public :: calc_hori_dep_pts
   public :: calc_vert_dep_pts
   public :: select_detj_at_w2
+  public :: calc_frac_vert_wind_alg
 
 contains
 
@@ -79,66 +84,70 @@ contains
   !> @param[in,out] dep_pts_y         Departure points in y direction, a W2h field
   !> @param[in]     wind_n            Wind field at timestep n
   !> @param[in]     wind_np1          Wind field at timestep n+1
-  !> @param[in]     detj_at_w2        Det(J) at W2 dofs
   !> @param[in]     dt                The model timestep length
   subroutine calc_hori_dep_pts( dep_pts_x,        &
                                 dep_pts_y,        &
                                 wind_n,           &
                                 wind_np1,         &
-                                detj_at_w2,       &
                                 dt )
 
     implicit none
 
+    ! Arguments
     type( r_tran_field_type ), intent(inout) :: dep_pts_x
     type( r_tran_field_type ), intent(inout) :: dep_pts_y
     type( r_tran_field_type ), intent(in)    :: wind_n
     type( r_tran_field_type ), intent(in)    :: wind_np1
-    type( r_tran_field_type ), intent(in)    :: detj_at_w2
     real( kind=r_tran ),       intent(in)    :: dt
 
+    ! Fields
     type( r_tran_field_type ) :: wind_adv
     type( r_tran_field_type ) :: dep_wind
-    type( r_tran_field_type ) :: dep_wind_n
     type( r_tran_field_type ) :: dep_wind_np1
 
+    ! Pointers and variables
     type( function_space_type ), pointer :: w2_fs => null()
+    type( function_space_type ), pointer :: w2h_fs => null()
+    type( r_tran_field_type ),   pointer :: detj_at_w3 => null()
     type(mesh_type), pointer ::  mesh => null()
     real( kind=r_tran ) :: max_hori_dep, min_hori_dep
 
     if ( subroutine_timers ) call timer( 'calc_hori_dep_pts' )
 
-    ! Get function space and mesh
-    w2_fs => wind_n%get_function_space()
-    mesh  => wind_n%get_mesh()
+    ! Get function space, mesh, and Det(J) at W3
+    w2_fs  => wind_n%get_function_space()
+    w2h_fs => dep_pts_x%get_function_space()
+    mesh   => wind_n%get_mesh()
+    detj_at_w3 => get_detj_at_w3_r_tran(mesh%get_id())
 
     call wind_adv%initialise( vector_space = w2_fs )
-    call dep_wind%initialise( vector_space = w2_fs )
-    call dep_wind_n%initialise( vector_space = w2_fs )
-    call dep_wind_np1%initialise( vector_space = w2_fs )
+    call dep_wind%initialise( vector_space = w2h_fs )
+    call dep_wind_np1%initialise( vector_space = w2h_fs )
 
     ! Initialise variables as zero
     call invoke( setval_c( dep_pts_x, 0.0_r_tran ),    &
                  setval_c( dep_pts_y, 0.0_r_tran ),    &
                  setval_c( wind_adv, 0.0_r_tran ),     &
-                 setval_c( dep_wind_n, 0.0_r_tran ),   &
                  setval_c( dep_wind_np1, 0.0_r_tran ), &
-                 setval_c( dep_wind, 0.0_r_tran )   )
+                 setval_c( dep_wind, 0.0_r_tran ) )
 
     ! Calculate the departure points based on Eulerian or Lagrangian approach
     select case ( method )
 
       case ( method_trapezoidal )
-        call invoke( X_divideby_Y(dep_wind_n, wind_n, detj_at_w2),                     &
-                     X_divideby_Y(dep_wind_np1, wind_np1, detj_at_w2),                 &
-                     trapezoidal_deppt_kernel_type( dep_pts_x, dep_pts_y,              &
-                                                    dep_wind_n, dep_pt_stencil_extent, &
+        call invoke( calc_departure_wind_kernel_type(dep_wind, wind_n,               &
+                                                     detj_at_w3, 1),                 &
+                     calc_departure_wind_kernel_type(dep_wind_np1, wind_np1,         &
+                                                     detj_at_w3, 1),                 &
+                     trapezoidal_deppt_kernel_type( dep_pts_x, dep_pts_y,            &
+                                                    dep_wind, dep_pt_stencil_extent, &
                                                     dep_wind_np1, n_dep_pt_iterations, dt ) )
 
       case ( method_midpoint )
-        call invoke( X_divideby_Y(dep_wind_n, wind_n, detj_at_w2),                  &
-                     midpoint_deppt_kernel_type( dep_pts_x, dep_pts_y,              &
-                                                 dep_wind_n, dep_pt_stencil_extent, &
+        call invoke( calc_departure_wind_kernel_type(dep_wind, wind_n,            &
+                                                     detj_at_w3, 1),              &
+                     midpoint_deppt_kernel_type( dep_pts_x, dep_pts_y,            &
+                                                 dep_wind, dep_pt_stencil_extent, &
                                                  n_dep_pt_iterations, dt ) )
 
       case ( method_euler, method_timeaverage)
@@ -148,9 +157,11 @@ contains
         else
           call invoke( aX_plus_bY(wind_adv, 0.5_r_tran, wind_n,0.5_r_tran, wind_np1) )
         end if
-        call invoke( X_divideby_Y(dep_wind, wind_adv, detj_at_w2),     &
-                     eulerian_deppt_kernel_type( dep_pts_x, dep_pts_y, &
-                                                 dep_wind, dt ) )
+
+        call invoke( calc_departure_wind_kernel_type(dep_wind, wind_adv, &
+                                                     detj_at_w3, 1),     &
+                     eulerian_deppt_kernel_type(dep_pts_x, dep_pts_y,    &
+                                                dep_wind, dt) )
 
         if ( horizontal_limit == horizontal_limit_cap) then
           ! Cap the horizontal departure points to lie within the stencil extent
@@ -170,7 +181,7 @@ contains
     call dep_pts_x%log_minmax( LOG_LEVEL_TRACE, 'dep_pts_x' )
     call dep_pts_y%log_minmax( LOG_LEVEL_TRACE, 'dep_pts_y' )
 
-    nullify( w2_fs, mesh )
+    nullify( w2_fs, w2h_fs, mesh, detj_at_w3 )
 
     if ( subroutine_timers ) call timer( 'calc_hori_dep_pts' )
 
@@ -189,83 +200,84 @@ contains
   !> @param[in,out] cfl               Vertical CFL from departure points
   !> @param[in]     wind_n            Wind field at timestep n
   !> @param[in]     wind_np1          Wind field at timestep n+1
-  !> @param[in]     detj_at_w2        Det(J) at W2 dofs
   !> @param[in]     dt                The model timestep length
   subroutine calc_vert_dep_pts( dep_pts_z,        &
                                 cfl,              &
                                 wind_n,           &
                                 wind_np1,         &
-                                detj_at_w2,       &
                                 dt )
 
     implicit none
 
+    ! Arguments
     type( r_tran_field_type ), intent(inout) :: dep_pts_z
     type( r_tran_field_type ), intent(inout) :: cfl
     type( r_tran_field_type ), intent(in)    :: wind_n
     type( r_tran_field_type ), intent(in)    :: wind_np1
-    type( r_tran_field_type ), intent(in)    :: detj_at_w2
     real( kind=r_tran ),       intent(in)    :: dt
 
-    type( r_tran_field_type ) :: departure_wind_n, departure_wind_np1
+    ! Variables
+    type( r_tran_field_type ) :: dep_wind_n, dep_wind_np1
 
-    type( field_type ), pointer :: height_w2_rdef => null()
-    type( r_tran_field_type )   :: height_w2
+    ! Height and volume
+    type( r_tran_field_type ), pointer :: detj_at_w3 => null()
+    type( field_type ),        pointer :: height_w2_rdef => null()
+    type( r_tran_field_type ) :: height_w2
 
-    type( function_space_type ), pointer :: w2_fs => null()
-    type( function_space_type ), pointer :: w3_fs => null()
-
+    ! Function space and mesh
+    type( function_space_type ), pointer :: w2v_fs => null()
     type( mesh_type ), pointer ::  mesh => null()
 
-    w2_fs => wind_n%get_function_space()
-    mesh  => wind_n%get_mesh()
-    w3_fs => function_space_collection%get_fs( mesh, element_order, W3 )
+    if ( subroutine_timers ) call timer( 'calc_vert_dep_pts' )
 
+    ! Get function spaces
+    w2v_fs => dep_pts_z%get_function_space()
+    mesh  => wind_n%get_mesh()
+
+    ! Get Det(J) at W3
+    detj_at_w3 => get_detj_at_w3_r_tran(mesh%get_id())
+
+    ! Get cell height
     height_w2_rdef => get_height(W2, mesh%get_id())
     call height_w2%initialise(vector_space = height_w2_rdef%get_function_space() )
     call invoke_copy_to_rtran(height_w2, height_w2_rdef )
 
+    ! Initialise departure wind function space
+    call dep_wind_n%initialise( vector_space = w2v_fs )
+    call dep_wind_np1%initialise( vector_space = w2v_fs )
 
-    call departure_wind_n%initialise( vector_space = w2_fs )
-    call departure_wind_np1%initialise( vector_space = w2_fs )
+    ! Calculate the departure winds by dividing the wind by upwind Det(J)
+    call invoke( setval_c( dep_pts_z, 0.0_r_tran ),                              &
+                 setval_c( cfl, 0.0_r_tran ),                                    &
+                 calc_vert_dep_wind_kernel_type(dep_wind_n, wind_n, detj_at_w3), &
+                 calc_vert_dep_wind_kernel_type(dep_wind_np1, wind_np1, detj_at_w3) )
 
-    if ( subroutine_timers ) call timer( 'calc_vert_dep_pts' )
-
-    ! Calculate vertical departure points and departure winds.
-    ! Currently the trapezoidal method has been choosen for calculating departure
-    ! points in the vertical.
-    ! *_n and *_np1 denotes fields at timestep n and timestep n+1 with density known
-    ! at timestep n.
-    call invoke( setval_c( dep_pts_z, 0.0_r_tran ),                       &
-                 setval_c( cfl, 0.0_r_tran ),                             &
-                 X_divideby_Y(departure_wind_n, wind_n, detj_at_w2),      &
-                 X_divideby_Y(departure_wind_np1, wind_np1, detj_at_w2) )
-
+    ! Calculate departure points based on the vertical grid
     select case(departure_grid)
 
     case(departure_grid_uniform)
       ! Assume uniform grid for departure point calculation
-      call invoke( vertical_uniform_deppt_kernel_type( dep_pts_z,                  &
-                                                       cfl,                        &
-                                                       departure_wind_n,           &
-                                                       departure_wind_np1,         &
-                                                       n_dep_pt_iterations,        &
+      call invoke( vertical_uniform_deppt_kernel_type( dep_pts_z,            &
+                                                       cfl,                  &
+                                                       dep_wind_n,           &
+                                                       dep_wind_np1,         &
+                                                       n_dep_pt_iterations,  &
                                                        vertical_method, dt )  )
 
     case default
       ! Use physical grid
-      call invoke( vertical_deppt_kernel_type( dep_pts_z,                  &
-                                               cfl,                        &
-                                               departure_wind_n,           &
-                                               departure_wind_np1,         &
-                                               height_w2,                  &
-                                               n_dep_pt_iterations,        &
+      call invoke( vertical_deppt_kernel_type( dep_pts_z,            &
+                                               cfl,                  &
+                                               dep_wind_n,           &
+                                               dep_wind_np1,         &
+                                               height_w2,            &
+                                               n_dep_pt_iterations,  &
                                                vertical_method, dt )  )
     end select
 
     call dep_pts_z%log_minmax( LOG_LEVEL_TRACE, 'dep_pts_z' )
 
-    nullify( w2_fs, mesh )
+    nullify( w2v_fs, mesh, detj_at_w3, height_w2_rdef )
 
     if ( subroutine_timers ) call timer( 'calc_vert_dep_pts' )
 
@@ -316,7 +328,7 @@ contains
       case (calculate_detj_upwind)
         ! Get Det(J) at W2 from cells above and below respectively
         detj_at_w2_above_rdef => get_detj_at_w2_above(mesh_id)
-        detj_at_w2_below_rdef  => get_detj_at_w2_below(mesh_id)
+        detj_at_w2_below_rdef => get_detj_at_w2_below(mesh_id)
 
         call detj_at_w2_above%initialise(vector_space = detj_at_w2_above_rdef%get_function_space() )
         call detj_at_w2_below%initialise(vector_space = detj_at_w2_below_rdef%get_function_space() )
@@ -339,5 +351,47 @@ contains
     nullify( detj_at_w2_above_rdef, detj_at_w2_below_rdef, detj_at_w2_ave_rdef )
 
   end subroutine select_detj_at_w2
+
+
+  !===========================================================================!
+  !> @brief   Compute the fractional vertical wind
+  !> @details The fractional vertical wind can be computed by splitting the
+  !!          the vertical Courant number into integer and fractional parts,
+  !!          then multiplying the fractional Courant number by the upwind Det(J)
+  !!          and dividing by the time step.
+  !!
+  !> @param[in,out] frac_vert_wind  Advecting wind to determine upwind direction
+  !> @param[in]     dep_pts_z       Vertical departure distance
+  !> @param[in]     dt              The timestep used for vertical transport
+  subroutine calc_frac_vert_wind_alg( frac_vert_wind, &
+                                      dep_pts_z,      &
+                                      dt )
+
+    implicit none
+
+    ! Arguments
+    type( r_tran_field_type ), intent(inout) :: frac_vert_wind
+    type( r_tran_field_type ), intent(in)    :: dep_pts_z
+    real( kind=r_tran ),       intent(in)    :: dt
+
+    ! Cell volume and mesh ID
+    type( r_tran_field_type ), pointer :: detj_at_w3 => null()
+    integer( kind=i_def ) ::  mesh_id
+
+    ! Get Mesh ID
+    mesh_id = dep_pts_z%get_mesh_id()
+
+    ! Get Det(J) at W3
+    detj_at_w3 => get_detj_at_w3_r_tran(mesh_id)
+
+    ! Compute fractional wind
+    call invoke( fractional_vertical_wind_kernel_type(frac_vert_wind, &
+                                                      dep_pts_z,      &
+                                                      detj_at_w3,     &
+                                                      dt ) )
+
+    nullify( detj_at_w3 )
+
+  end subroutine calc_frac_vert_wind_alg
 
 end module calc_dep_pts_alg_mod

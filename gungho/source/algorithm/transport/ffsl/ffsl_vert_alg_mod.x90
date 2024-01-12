@@ -17,6 +17,7 @@ module ffsl_vert_alg_mod
   use function_space_mod,               only: function_space_type
   use function_space_collection_mod,    only: function_space_collection
   use geometric_constants_mod,          only: get_dz_w3
+  use log_mod,                          only: log_event, LOG_LEVEL_ERROR
   use mesh_mod,                         only: mesh_type
   use operator_mod,                     only: operator_type
   use r_tran_field_mod,                 only: r_tran_field_type
@@ -218,6 +219,10 @@ contains
           call invoke( X_minus_Y(increment, field_n, field_np1),               &
                        inc_a_times_X(one_over_dt, increment) )
         end if
+
+      case default
+        call log_event( "ffsl_vert_transport_alg: Unrecognized equation form", LOG_LEVEL_ERROR )
+
       end select
     end if
 
@@ -254,7 +259,6 @@ contains
     type(mesh_type),              pointer :: mesh => null()
     type(r_tran_field_type),      pointer :: dep_pts_z => null()
     type(r_tran_field_type),      pointer :: frac_wind_or_flux => null()
-    type(r_tran_field_type),      pointer :: detj_at_w2v => null()
     type(r_tran_field_type),      pointer :: detj_at_w3 => null()
     type(r_tran_field_type),      pointer :: rho_d => null()
     type(field_type),             pointer :: dz_w3_rdef => null()
@@ -287,7 +291,7 @@ contains
     transport_runtime => get_transport_runtime(mesh)
 
     ! Get pre-computed fields
-    detj_at_w2v => transport_runtime%get_detj_at_w2_transport(mesh_id, direction_v)
+    detj_at_w3 => get_detj_at_w3_r_tran(mesh_id)
     dz_w3_rdef => get_dz_w3(mesh_id)
 
     ! Function spaces
@@ -314,7 +318,6 @@ contains
       step = transport_runtime%get_tracer_step_ctr()
       dep_pts_z => transport_runtime%get_tracer_dep_pts_z(mesh_id, step)
       frac_wind_or_flux => transport_runtime%get_dry_frac_flux_z(mesh_id, step)
-      detj_at_w3 => get_detj_at_w3_r_tran(mesh_id)
       rho_d => transport_runtime%get_rho_d(mesh_id, step)
 
     else
@@ -337,9 +340,8 @@ contains
                                             mass_flux_int,     &
                                             frac_wind_or_flux, &
                                             dep_pts_z,         &
-                                            detj_at_w2v,       &
+                                            detj_at_w3,        &
                                             field_n,           &
-                                            dz_w3,             &
                                             step_dt) )
     case ( equation_form_consistent )
       call invoke( consist_vert_int_low_kernel_type(mass_flux_low,     &
@@ -350,6 +352,8 @@ contains
                                                     field_n,           &
                                                     rho_d,             &
                                                     step_dt) )
+    case default
+      call log_event( "ffsl_1d_vert_flux_alg: Unrecognized equation form", LOG_LEVEL_ERROR )
     end select
 
     ! Compute high order fractional flux ---------------------------------------
@@ -432,7 +436,7 @@ contains
     ! Combine integer and fractional fluxes
     call invoke( X_plus_Y(mass_flux, mass_flux_high, mass_flux_int) )
 
-    nullify( dep_pts_z, detj_at_w2v, field_fs,  w2v_fs, dz_w3_rdef,            &
+    nullify( dep_pts_z, detj_at_w3, field_fs,  w2v_fs, dz_w3_rdef,            &
              frac_wind_or_flux, transport_runtime, mesh )
 
   end subroutine ffsl_1d_vert_flux_alg

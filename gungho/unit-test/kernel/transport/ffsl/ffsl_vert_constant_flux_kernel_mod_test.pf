@@ -21,7 +21,7 @@ module ffsl_vert_constant_flux_kernel_mod_test
   @TestCase
   type, extends(TestCase) :: ffsl_vert_constant_flux_test_type
     private
-    real(kind=r_tran), allocatable :: dep_pts(:), rho(:), detj(:), dz(:)
+    real(kind=r_tran), allocatable :: dep_pts(:), rho(:), detj(:)
     real(kind=r_tran), allocatable :: flux_high(:), flux_low(:), flux_int(:)
     integer(i_def) :: map_w2(1:6)
   contains
@@ -54,15 +54,13 @@ contains
     allocate( this%flux_low(1:undf_w2) )
     allocate( this%flux_int(1:undf_w2) )
     allocate( this%rho(1:undf_w3) )
-    allocate( this%detj(1:undf_w2) )
-    allocate( this%dz(1:undf_w2) )
+    allocate( this%detj(1:undf_w3) )
 
     this%flux_high(:) = 0.0_r_tran
     this%flux_low(:) = 0.0_r_tran
     this%flux_int(:) = 0.0_r_tran
     this%rho(:) = (/ 1.0_r_tran, 2.0_r_tran, 3.0_r_tran, 4.0_r_tran, 5.0_r_tran /)
     this%detj(:) = 2.0_r_tran
-    this%dz(:) = 1.0_r_tran
 
   end subroutine setUp
 
@@ -79,7 +77,6 @@ contains
     deallocate( this%flux_int )
     deallocate( this%dep_pts )
     deallocate( this%detj )
-    deallocate( this%dz )
 
   end subroutine tearDown
 
@@ -109,13 +106,11 @@ contains
                          0.0_r_tran /)
 
     call ffsl_vert_constant_flux_code( nlayers,        &
-                                       this%flux_high, &
                                        this%flux_low,  &
                                        this%flux_int,  &
                                        this%dep_pts,   &
                                        this%detj,      &
                                        this%rho,       &
-                                       this%dz,        &
                                        deltaT,         &
                                        ndf_w2,         &
                                        undf_w2,        &
@@ -127,13 +122,6 @@ contains
     ! The rho values for the 5 layers are (1.0,2.0,3.0,4.0,5.0)
     ! As the departure distance is 0.5, the reconstruction is constant,
     ! and Det(J) is 2, the flux should be rho except at the boundaries
-    @assertEqual(0.0_r_tran, this%flux_high(1), tol)
-    @assertEqual(1.0_r_tran, this%flux_high(2), tol)
-    @assertEqual(2.0_r_tran, this%flux_high(3), tol)
-    @assertEqual(3.0_r_tran, this%flux_high(4), tol)
-    @assertEqual(4.0_r_tran, this%flux_high(5), tol)
-    @assertEqual(0.0_r_tran, this%flux_high(6), tol)
-    ! Low order flux should equal high_order flux
     @assertEqual(0.0_r_tran, this%flux_low(1), tol)
     @assertEqual(1.0_r_tran, this%flux_low(2), tol)
     @assertEqual(2.0_r_tran, this%flux_low(3), tol)
@@ -154,13 +142,11 @@ contains
                          0.0_r_tran /)
 
     call ffsl_vert_constant_flux_code( nlayers,        &
-                                       this%flux_high, &
                                        this%flux_low,  &
                                        this%flux_int,  &
                                        this%dep_pts,   &
                                        this%detj,      &
                                        this%rho,       &
-                                       this%dz,        &
                                        deltaT,         &
                                        ndf_w2,         &
                                        undf_w2,        &
@@ -181,12 +167,12 @@ contains
     @assertEqual(0.0_r_tran,  this%flux_int(5), tol)
     @assertEqual(0.0_r_tran,  this%flux_int(6), tol)
     ! For the fractional part it is that fraction*rho*Det(j)
-    @assertEqual(0.0_r_tran,  this%flux_high(1), tol)
-    @assertEqual(1.6_r_tran,  this%flux_high(2), tol)
-    @assertEqual(1.0_r_tran,  this%flux_high(3), tol)
-    @assertEqual(-2.0_r_tran, this%flux_high(4), tol)
-    @assertEqual(-5.0_r_tran, this%flux_high(5), tol)
-    @assertEqual(0.0_r_tran,  this%flux_high(6), tol)
+    @assertEqual(0.0_r_tran,  this%flux_low(1), tol)
+    @assertEqual(1.6_r_tran,  this%flux_low(2), tol)
+    @assertEqual(1.0_r_tran,  this%flux_low(3), tol)
+    @assertEqual(-2.0_r_tran, this%flux_low(4), tol)
+    @assertEqual(-5.0_r_tran, this%flux_low(5), tol)
+    @assertEqual(0.0_r_tran,  this%flux_low(6), tol)
 
   end subroutine test_all
 

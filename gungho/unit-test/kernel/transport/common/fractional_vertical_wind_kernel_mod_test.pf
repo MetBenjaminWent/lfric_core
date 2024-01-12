@@ -40,30 +40,34 @@ contains
     integer(i_def), parameter :: nlayers   = 5
     integer(i_def), parameter :: ndf_w2v   = 2
     integer(i_def), parameter :: undf_w2v  = nlayers+1
+    integer(i_def), parameter :: ndf_w3   = 1
+    integer(i_def), parameter :: undf_w3  = nlayers
     integer(i_def), dimension(ndf_w2v) :: map_w2v
+    integer(i_def), dimension(ndf_w3) :: map_w3
 
     real(r_tran), dimension(undf_w2v) :: frac_wind
 
-    real(r_tran) :: dep_pts(6)
-    real(r_tran) :: detj(6)
+    real(r_tran) :: dep_pts(undf_w2v)
+    real(r_tran) :: detj(undf_w3)
     real(r_tran) :: dt
-    real(r_tran) :: answer(1:6)
+    real(r_tran) :: answer(undf_w2v)
 
     real(r_tran)   :: use_tol
     integer(i_def) :: k
 
     ! Set up maps
     map_w2v(:) = (/ 1, 2 /)
+    map_w3 = 1
 
     ! Set Det(J) and time step
-    detj = (/ 1.0_r_tran, 2.0_r_tran, 4.0_r_tran, 6.0_r_tran, 8.0_r_tran, 10.0_r_tran /)
+    detj = (/ 2.0_r_tran, 4.0_r_tran, 5.0_r_tran, 6.0_r_tran, 8.0_r_tran /)
     dt   = 2.0_r_tran
 
     ! Set departure points
     dep_pts = (/ 0.0_r_tran, 0.5_r_tran, 1.2_r_tran, -1.3_r_tran, -0.8_r_tran, 0.0_r_tran /)
 
-    ! Answer is fractional_departure_distance * Det(j) / dt
-    answer = (/ 0.0_r_tran,  0.5_r_tran,  0.4_r_tran,  -0.9_r_tran,  -3.2_r_tran,  0.0_r_tran /)
+    ! Answer is fractional_departure_distance * upwind Det(j) / dt
+    answer = (/ 0.0_r_tran,  0.5_r_tran,  0.2_r_tran,  -1.2_r_tran,  -3.2_r_tran,  0.0_r_tran /)
 
     call fractional_vertical_wind_code( nlayers,   &
                                         frac_wind, &
@@ -72,13 +76,16 @@ contains
                                         dt,        &
                                         ndf_w2v,   &
                                         undf_w2v,  &
-                                        map_w2v  )
+                                        map_w2v,   &
+                                        ndf_w3,    &
+                                        undf_w3,   &
+                                        map_w3  )
 
     if ( r_tran == real64 ) then
       use_tol = tol
     else
       ! Set tolerance based on precision of field
-      use_tol = 10.0_r_tran*spacing( maxval(dep_pts(:)) )
+      use_tol = 10.0_r_tran*spacing( maxval(frac_wind(:)) )
     endif
 
     do k=1,nlayers+1

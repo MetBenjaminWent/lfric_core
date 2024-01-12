@@ -21,7 +21,8 @@ module ffsl_unity_transport_alg_mod
                                               check_vert_dep_pts, &
                                               check_any_splitting_vhv
   use constants_mod,                    only: r_tran, i_def, l_def
-  use fem_constants_mod,                only: get_inverse_w3_mass_matrix
+  use fem_constants_mod,                only: get_inverse_w3_mass_matrix, &
+                                              get_detj_at_w3_r_tran
   use ffsl_flux_first_x_kernel_mod,     only: ffsl_flux_first_x_kernel_type
   use ffsl_flux_first_y_kernel_mod,     only: ffsl_flux_first_y_kernel_type
   use ffsl_vert_constant_flux_kernel_mod, &
@@ -32,7 +33,7 @@ module ffsl_unity_transport_alg_mod
   use fv_divergence_x_kernel_mod,       only: fv_divergence_x_kernel_type
   use fv_divergence_y_kernel_mod,       only: fv_divergence_y_kernel_type
   use fv_divergence_z_kernel_mod,       only: fv_divergence_z_kernel_type
-  use geometric_constants_mod,          only: get_panel_id, get_dz_w3
+  use geometric_constants_mod,          only: get_panel_id
   use operator_mod,                     only: operator_type
   use psykal_lite_mod,                  only: invoke_copy_to_rtran
   use r_tran_field_mod,                 only: r_tran_field_type
@@ -61,8 +62,6 @@ contains
   !> @param[in]     dep_pts_y         Departure points in y
   !> @param[in]     dep_pts_z         Departure points in z
   !> @param[in]     dep_pts_z_half    Departure points in z with dt/2
-  !> @param[in]     detj_at_w2h       Det(J) at W2H dofs
-  !> @param[in]     detj_at_w2v       Det(J) at W2V dofs
   !> @param[in]     dep_stencil_x     Stencil extent due to departure points in x
   !> @param[in]     dep_stencil_y     Stencil extent due to departure points in y
   !> @param[in]     dt                The model timestep length
@@ -79,8 +78,6 @@ contains
                                        dep_pts_y,      &
                                        dep_pts_z,      &
                                        dep_pts_z_half, &
-                                       detj_at_w2h,    &
-                                       detj_at_w2v,    &
                                        dep_stencil_x,  &
                                        dep_stencil_y,  &
                                        dt,             &
@@ -98,8 +95,6 @@ contains
     type(r_tran_field_type), intent(in)    :: dep_pts_y
     type(r_tran_field_type), intent(in)    :: dep_pts_z
     type(r_tran_field_type), intent(in)    :: dep_pts_z_half
-    type(r_tran_field_type), intent(in)    :: detj_at_w2h
-    type(r_tran_field_type), intent(in)    :: detj_at_w2v
     integer(kind=i_def),     intent(in)    :: dep_stencil_x
     integer(kind=i_def),     intent(in)    :: dep_stencil_y
     real(kind=r_tran),       intent(in)    :: dt
@@ -112,8 +107,9 @@ contains
 
     ! Internal variables -------------------------------------------------------
     ! Pointers to existing objects
-    type(field_type),    pointer :: panel_id => null()
-    type(operator_type), pointer :: m3_inv => null()
+    type(field_type),        pointer :: panel_id => null()
+    type(operator_type),     pointer :: m3_inv => null()
+    type(r_tran_field_type), pointer :: detj_at_w3 => null()
 
     ! Function spaces
     type(function_space_type), pointer :: field_fs => null()
@@ -141,6 +137,7 @@ contains
     ! Get pre-computed objects and set pointers --------------------------------
     mesh_id = np1_x%get_mesh_id()
     half_dt = 0.5_r_tran * dt
+    detj_at_w3 => get_detj_at_w3_r_tran(mesh_id)
 
     ! Function spaces
     field_fs => np1_x%get_function_space()
@@ -156,8 +153,8 @@ contains
     ! Check if we need increment of unity in x and y directions ----------------
     if (any_horz_dep_pts) then
       w2h_fs => dep_pts_x%get_function_space()
-      panel_id => get_panel_id( ini_one%get_mesh_id() )
-      m3_inv => get_inverse_w3_mass_matrix(ini_one%get_mesh_id())
+      panel_id => get_panel_id(mesh_id)
+      m3_inv => get_inverse_w3_mass_matrix(mesh_id)
 
       call inc_one_x%initialise( vector_space = field_fs )
       call inc_one_y%initialise( vector_space = field_fs )
@@ -176,16 +173,16 @@ contains
       cfl_stencil_extent = stencil_extent
       call invoke( ffsl_flux_first_x_kernel_type(flux_x, ini_one,              &
                                                  stencil_extent, dep_pts_x,    &
-                                                 detj_at_w2h, order,           &
-                                                 hori_monotone,                &
+                                                 detj_at_w3, stencil_extent,   &
+                                                 order, hori_monotone,         &
                                                  cfl_stencil_extent, dt) )
       ! y-direction ------------------------------------------------------------
       stencil_extent = dep_stencil_y + 1_i_def + order
       cfl_stencil_extent = stencil_extent
       call invoke( ffsl_flux_first_y_kernel_type(flux_y, ini_one,              &
                                                  stencil_extent, dep_pts_y,    &
-                                                 detj_at_w2h, order,           &
-                                                 hori_monotone,                &
+                                                 detj_at_w3, stencil_extent,   &
+                                                 order, hori_monotone,         &
                                                  cfl_stencil_extent, dt ) )
       call invoke( fv_divergence_x_kernel_type( inc_one_x, flux_x, m3_inv ),   &
                    fv_divergence_y_kernel_type( inc_one_y, flux_y, m3_inv ),   &
@@ -205,12 +202,12 @@ contains
       ! TODO #4160: this assumes that if any_splitting_vhv=.true. then all transport uses VHV splitting
       if (any_splitting_vhv) then
         call ffsl_vert_unity_transport_alg( dep_pts_z_half, &
-                                            detj_at_w2v,    &
+                                            detj_at_w3,     &
                                             half_dt,        &
                                             np1_half_z )
       else
         call ffsl_vert_unity_transport_alg( dep_pts_z,   &
-                                            detj_at_w2v, &
+                                            detj_at_w3,  &
                                             dt,          &
                                             np1_z )
       end if
@@ -226,19 +223,19 @@ contains
   !!          the FFSL scheme. This is required for advective form FFSL transport.
   !!
   !> @param[in]     dep_pts_z         Departure points in z
-  !> @param[in]     detj_at_w2v       Det(J) at W2V dofs
+  !> @param[in]     detj_at_w3        Det(J) at W3 dofs
   !> @param[in]     dt                The timestep length
   !> @param[in,out] np1_z             Conservative transport of unity in z
-  subroutine ffsl_vert_unity_transport_alg( dep_pts_z,      &
-                                            detj_at_w2v,    &
-                                            dt,             &
+  subroutine ffsl_vert_unity_transport_alg( dep_pts_z,  &
+                                            detj_at_w3, &
+                                            dt,         &
                                             np1_z )
 
     implicit none
 
     ! Arguments ----------------------------------------------------------------
     type(r_tran_field_type), intent(in)    :: dep_pts_z
-    type(r_tran_field_type), intent(in)    :: detj_at_w2v
+    type(r_tran_field_type), intent(in)    :: detj_at_w3
     real(kind=r_tran),       intent(in)    :: dt
     type(r_tran_field_type), intent(inout) :: np1_z
 
@@ -246,14 +243,12 @@ contains
     type(r_tran_field_type) :: inc_one_z
     type(r_tran_field_type) :: ini_one
     type(r_tran_field_type) :: flux_z
-    type(r_tran_field_type) :: flux_z_high, flux_z_low, flux_z_int
-    type(r_tran_field_type) :: dz_w3
+    type(r_tran_field_type) :: flux_z_int
 
     ! Function spaces, height and volume pointers
     type(function_space_type), pointer :: field_fs => null()
     type(function_space_type), pointer :: w2v_fs => null()
     type(operator_type),       pointer :: m3_inv => null()
-    type(field_type),          pointer :: dz_w3_rdef => null()
 
     ! Function spaces
     field_fs => np1_z%get_function_space()
@@ -262,40 +257,32 @@ contains
     ! Initialise fields
     call ini_one%initialise( vector_space = field_fs )
     call inc_one_z%initialise( vector_space = field_fs )
-    call dz_w3%initialise( vector_space = field_fs )
     call flux_z%initialise( vector_space = w2v_fs )
-    call flux_z_high%initialise( vector_space = w2v_fs )
-    call flux_z_low%initialise( vector_space = w2v_fs )
     call flux_z_int%initialise( vector_space = w2v_fs )
 
     ! Set up fields for vertical unity transport
-    dz_w3_rdef => get_dz_w3(np1_z%get_mesh_id())
     m3_inv => get_inverse_w3_mass_matrix(np1_z%get_mesh_id())
 
-    ! Copy vertical spacing to r_tran precision
-    call invoke_copy_to_rtran(dz_w3, dz_w3_rdef)
-
     ! Set initial values to zero (except from unity field)
-    call invoke( setval_c(inc_one_z, 0.0_r_tran), &
-                 setval_c(ini_one,   1.0_r_tran), &
-                 setval_c(flux_z,    0.0_r_tran)  )
+    call invoke( setval_c(inc_one_z,  0.0_r_tran), &
+                 setval_c(ini_one,    1.0_r_tran), &
+                 setval_c(flux_z,     0.0_r_tran), &
+                 setval_c(flux_z_int, 0.0_r_tran)  )
 
     ! Compute unity fluxes
-    call invoke( ffsl_vert_constant_flux_kernel_type(flux_z_high, flux_z_low, &
-                                                     flux_z_int, dep_pts_z,   &
-                                                     detj_at_w2v, ini_one,    &
-                                                     dz_w3, dt) )
+    call invoke( ffsl_vert_constant_flux_kernel_type(flux_z, flux_z_int,    &
+                                                     dep_pts_z, detj_at_w3, &
+                                                     ini_one, dt) )
     ! Combine integer and fractional fluxes
-    call invoke( X_plus_Y(flux_z, flux_z_high, flux_z_int) )
+    call invoke( inc_X_plus_Y(flux_z, flux_z_int) )
 
     ! Take divergence of mass flux and multiply by inverse mass matrix to get increment
     call invoke( fv_divergence_z_kernel_type(inc_one_z, flux_z, m3_inv),      &
                  ! Get the updated unity values: np1 = 1 - dt * F(1)
                  X_minus_bY(np1_z, ini_one, dt, inc_one_z) )
 
-    nullify( field_fs, w2v_fs, m3_inv, dz_w3_rdef )
+    nullify( field_fs, w2v_fs, m3_inv )
 
   end subroutine ffsl_vert_unity_transport_alg
-
 
 end module ffsl_unity_transport_alg_mod

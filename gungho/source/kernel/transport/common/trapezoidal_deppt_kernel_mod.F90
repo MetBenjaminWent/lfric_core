@@ -21,7 +21,7 @@ module trapezoidal_deppt_kernel_mod
                                 GH_INTEGER, STENCIL,   &
                                 CROSS
   use constants_mod,     only : r_tran, i_def
-  use fs_continuity_mod, only : W2, W2h
+  use fs_continuity_mod, only : W2h
   use kernel_mod,        only : kernel_type
 
   implicit none
@@ -37,8 +37,8 @@ module trapezoidal_deppt_kernel_mod
     type(arg_type) :: meta_args(6) = (/                                  &
          arg_type(GH_FIELD,  GH_REAL,    GH_WRITE, W2h),                 & ! dep pt x
          arg_type(GH_FIELD,  GH_REAL,    GH_WRITE, W2h),                 & ! dep pt y
-         arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W2, STENCIL(CROSS)),  & ! wind_n
-         arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W2),                  & ! wind_np1
+         arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W2h, STENCIL(CROSS)), & ! wind_n
+         arg_type(GH_FIELD,  GH_REAL,    GH_READ,  W2h),                 & ! wind_np1
          arg_type(GH_SCALAR, GH_INTEGER, GH_READ),                       & ! n_iterations
          arg_type(GH_SCALAR, GH_REAL,    GH_READ)                        & ! dt
          /)
@@ -74,9 +74,6 @@ contains
   !> @param[in]     ndf_w2h           Number of degrees of freedom for W2h per cell
   !> @param[in]     undf_w2h          Number of unique degrees of freedom for W2h
   !> @param[in]     map_w2h           Map for W2h
-  !> @param[in]     ndf_w2            Number of degrees of freedom for W2 per cell
-  !> @param[in]     undf_w2           Number of unique degrees of freedom for W2
-  !> @param[in]     map_w2            Map for W2
 
   subroutine trapezoidal_deppt_code( nlayers,      &
                                      dep_pts_x,    &
@@ -89,10 +86,7 @@ contains
                                      dt,           &
                                      ndf_w2h,      &
                                      undf_w2h,     &
-                                     map_w2h,      &
-                                     ndf_w2,       &
-                                     undf_w2,      &
-                                     map_w2 )
+                                     map_w2h )
 
     use departure_points_mod, only : interpolate_u_to_x
 
@@ -100,20 +94,17 @@ contains
 
     ! Arguments
     integer(kind=i_def), intent(in) :: nlayers
-    integer(kind=i_def), intent(in) :: undf_w2
-    integer(kind=i_def), intent(in) :: ndf_w2
     integer(kind=i_def), intent(in) :: undf_w2h
     integer(kind=i_def), intent(in) :: ndf_w2h
     integer(kind=i_def), intent(in) :: stencil_size
 
     ! Arguments: Maps
-    integer(kind=i_def), dimension(ndf_w2),  intent(in) :: map_w2
     integer(kind=i_def), dimension(ndf_w2h), intent(in) :: map_w2h
-    integer(kind=i_def), dimension(ndf_w2,stencil_size), intent(in) :: stencil_map
+    integer(kind=i_def), dimension(ndf_w2h,stencil_size), intent(in) :: stencil_map
 
     ! Arguments: Fields
-    real(kind=r_tran), dimension(undf_w2),  intent(in)    :: wind_n
-    real(kind=r_tran), dimension(undf_w2),  intent(in)    :: wind_np1
+    real(kind=r_tran), dimension(undf_w2h), intent(in)    :: wind_n
+    real(kind=r_tran), dimension(undf_w2h), intent(in)    :: wind_np1
     real(kind=r_tran), dimension(undf_w2h), intent(inout) :: dep_pts_x
     real(kind=r_tran), dimension(undf_w2h), intent(inout) :: dep_pts_y
     real(kind=r_tran),                      intent(in)    :: dt
@@ -181,10 +172,10 @@ contains
       ! x_d^{ind+1} = x_a - dt/2( u_np1(x_a) + u_n(x_d^{ind}) )
 
       ! Get local u_np1 at arrival point
-      u_np1_a_x_1 = wind_np1(map_w2(1) + k)
-      u_np1_a_x_3 = wind_np1(map_w2(3) + k)
-      u_np1_a_y_2 = -wind_np1(map_w2(2) + k)
-      u_np1_a_y_4 = -wind_np1(map_w2(4) + k)
+      u_np1_a_x_1 = wind_np1(map_w2h(1) + k)
+      u_np1_a_x_3 = wind_np1(map_w2h(3) + k)
+      u_np1_a_y_2 = -wind_np1(map_w2h(2) + k)
+      u_np1_a_y_4 = -wind_np1(map_w2h(4) + k)
 
       do ind = 1, n_iterations
         ! Interpolate u_n to the departure point

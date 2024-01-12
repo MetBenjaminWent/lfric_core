@@ -46,8 +46,8 @@ type, public, extends(kernel_type) :: vertical_deppt_kernel_type
   type(arg_type) :: meta_args(8) = (/               &
        arg_type(GH_FIELD,  GH_REAL, GH_WRITE, W2v), & ! dep_pts
        arg_type(GH_FIELD,  GH_REAL, GH_WRITE, W2),  & ! cfl
-       arg_type(GH_FIELD,  GH_REAL, GH_READ,  W2),  & ! u_n
-       arg_type(GH_FIELD,  GH_REAL, GH_READ,  W2),  & ! u_np1
+       arg_type(GH_FIELD,  GH_REAL, GH_READ,  W2v), & ! u_n
+       arg_type(GH_FIELD,  GH_REAL, GH_READ,  W2v), & ! u_np1
        arg_type(GH_FIELD,  GH_REAL, GH_READ,  W2),  & ! heights_w2
        arg_type(GH_SCALAR, GH_INTEGER, GH_READ),    & ! iterations
        arg_type(GH_SCALAR, GH_INTEGER, GH_READ),    & ! method
@@ -71,8 +71,8 @@ contains
 !> @param[in,out] dep_pts_z           The departure distances in the vertical
 !> @param[in,out] cfl                 The vertical CFL calculated via the
 !!                                    vertical departure points
-!> @param[in]     u_n                 The wind field at time level n
-!> @param[in]     u_np1               The wind field at time level n+1
+!> @param[in]     u_n                 The W2v wind field at time level n
+!> @param[in]     u_np1               The W2v wind field at time level n+1
 !> @param[in]     height_w2           Physical height of W2 dofs
 !> @param[in]     n_dep_pt_iterations The number of departure point iterations
 !> @param[in]     vertical_method     Enumerator for the vertical method to be
@@ -84,59 +84,64 @@ contains
 !> @param[in]     ndf_w2              The number of degrees of freedom per cell
 !> @param[in]     undf_w2             The number of unique degrees of freedom
 !> @param[in]     map_w2              The dofmap for the cell at the base of the column
-subroutine vertical_deppt_code(  nlayers,             &
-                                 dep_pts_z,           &
-                                 cfl,                 &
-                                 u_n,                 &
-                                 u_np1,               &
-                                 height_w2,           &
-                                 n_dep_pt_iterations, &
-                                 vertical_method,     &
-                                 dt,                  &
-                                 ndf_w2v,             &
-                                 undf_w2v,            &
-                                 map_w2v,             &
-                                 ndf_w2,              &
-                                 undf_w2,             &
-                                 map_w2 )
+subroutine vertical_deppt_code( nlayers,             &
+                                dep_pts_z,           &
+                                cfl,                 &
+                                u_n,                 &
+                                u_np1,               &
+                                height_w2,           &
+                                n_dep_pt_iterations, &
+                                vertical_method,     &
+                                dt,                  &
+                                ndf_w2v,             &
+                                undf_w2v,            &
+                                map_w2v,             &
+                                ndf_w2,              &
+                                undf_w2,             &
+                                map_w2 )
 
   use departure_points_mod, only : calc_vertical_dep_cfl, &
                                    vertical_increasing_check
 
   implicit none
 
+  ! Arguments - DOFs
+  integer(kind=i_def), intent(in) :: nlayers
+  integer(kind=i_def), intent(in) :: ndf_w2
+  integer(kind=i_def), intent(in) :: undf_w2
+  integer(kind=i_def), intent(in) :: ndf_w2v
+  integer(kind=i_def), intent(in) :: undf_w2v
+
+  ! Arguments - Maps
+  integer(kind=i_def), dimension(ndf_w2),  intent(in) :: map_w2
+  integer(kind=i_def), dimension(ndf_w2v), intent(in) :: map_w2v
+
   ! Arguments
-  integer(kind=i_def),                      intent(in)    :: nlayers
-  integer(kind=i_def),                      intent(in)    :: ndf_w2
-  integer(kind=i_def),                      intent(in)    :: undf_w2
-  integer(kind=i_def),                      intent(in)    :: ndf_w2v
-  integer(kind=i_def),                      intent(in)    :: undf_w2v
-  integer(kind=i_def),                      intent(in)    :: vertical_method
-  integer(kind=i_def), dimension(ndf_w2),   intent(in)    :: map_w2
-  integer(kind=i_def), dimension(ndf_w2v),  intent(in)    :: map_w2v
-  real(kind=r_tran),   dimension(undf_w2),  intent(in)    :: u_n
-  real(kind=r_tran),   dimension(undf_w2),  intent(in)    :: u_np1
-  real(kind=r_tran),   dimension(undf_w2),  intent(in)    :: height_w2
-  real(kind=r_tran),                        intent(in)    :: dt
   real(kind=r_tran),   dimension(undf_w2v), intent(inout) :: dep_pts_z
   real(kind=r_tran),   dimension(undf_w2),  intent(inout) :: cfl
+  real(kind=r_tran),   dimension(undf_w2v), intent(in)    :: u_n
+  real(kind=r_tran),   dimension(undf_w2v), intent(in)    :: u_np1
+  real(kind=r_tran),   dimension(undf_w2),  intent(in)    :: height_w2
+  integer(kind=i_def),                      intent(in)    :: n_dep_pt_iterations
+  integer(kind=i_def),                      intent(in)    :: vertical_method
+  real(kind=r_tran),                        intent(in)    :: dt
 
-  integer(kind=i_def), intent(in) :: n_dep_pt_iterations
-
+  ! Indices
   integer(kind=i_def) :: k
 
+  ! Local fields
   integer(kind=i_def) :: nCellEdges
-  real(kind=r_tran)    :: xArrival_comp
-  real(kind=r_tran)    :: xArrival_phys
-  real(kind=r_tran)    :: u_n_local(1:nlayers+1)
-  real(kind=r_tran)    :: u_np1_local(1:nlayers+1)
-  real(kind=r_tran)    :: u_dep(1:nlayers+1)
-  real(kind=r_tran)    :: height_local(1:nlayers+1)
-  real(kind=r_tran)    :: dz_local_m, dz_local_p
-  real(kind=r_tran)    :: upwind_dz_n
-  real(kind=r_tran)    :: upwind_dz_np1
-  real(kind=r_tran)    :: dep_local(1:nlayers-1)
-  real(kind=r_tran)    :: cfl_local
+  real(kind=r_tran)   :: xArrival_comp
+  real(kind=r_tran)   :: xArrival_phys
+  real(kind=r_tran)   :: u_n_local(1:nlayers+1)
+  real(kind=r_tran)   :: u_np1_local(1:nlayers+1)
+  real(kind=r_tran)   :: u_dep(1:nlayers+1)
+  real(kind=r_tran)   :: height_local(1:nlayers+1)
+  real(kind=r_tran)   :: dz_local_m, dz_local_p
+  real(kind=r_tran)   :: upwind_dz_n
+  real(kind=r_tran)   :: upwind_dz_np1
+  real(kind=r_tran)   :: dep_local(1:nlayers-1)
+  real(kind=r_tran)   :: cfl_local
 
   ! Number of cell edgs
   nCellEdges = nlayers+1
@@ -152,13 +157,13 @@ subroutine vertical_deppt_code(  nlayers,             &
     dz_local_m = height_w2(map_w2(6)+k-1) - height_w2(map_w2(5)+k-1)
     dz_local_p = height_w2(map_w2(6)+k)   - height_w2(map_w2(5)+k)
 
-    upwind_dz_n   = ( 0.5_r_tran + sign( 0.5_r_tran, u_n(map_w2(5)+k) ) ) * dz_local_m + &
-                    ( 0.5_r_tran - sign( 0.5_r_tran, u_n(map_w2(5)+k) ) ) * dz_local_p
-    upwind_dz_np1 = ( 0.5_r_tran + sign( 0.5_r_tran, u_np1(map_w2(5)+k) ) ) * dz_local_m + &
-                    ( 0.5_r_tran - sign( 0.5_r_tran, u_np1(map_w2(5)+k) ) ) * dz_local_p
-    u_dep(k+1)       = 0.5_r_tran * ( u_n(map_w2(5)+k) + u_np1(map_w2(5)+k) )
-    u_n_local(k+1)   = u_n(map_w2(5)+k) * upwind_dz_n
-    u_np1_local(k+1) = u_np1(map_w2(5)+k) * upwind_dz_np1
+    upwind_dz_n   = ( 0.5_r_tran + sign( 0.5_r_tran, u_n(map_w2v(1)+k) ) ) * dz_local_m + &
+                    ( 0.5_r_tran - sign( 0.5_r_tran, u_n(map_w2v(1)+k) ) ) * dz_local_p
+    upwind_dz_np1 = ( 0.5_r_tran + sign( 0.5_r_tran, u_np1(map_w2v(1)+k) ) ) * dz_local_m + &
+                    ( 0.5_r_tran - sign( 0.5_r_tran, u_np1(map_w2v(1)+k) ) ) * dz_local_p
+    u_dep(k+1)       = 0.5_r_tran * ( u_n(map_w2v(1)+k) + u_np1(map_w2v(1)+k) )
+    u_n_local(k+1)   = u_n(map_w2v(1)+k) * upwind_dz_n
+    u_np1_local(k+1) = u_np1(map_w2v(1)+k) * upwind_dz_np1
     height_local(k+1) = height_w2(map_w2(5)+k)
   end do
   ! Apply vertical boundary conditions
@@ -167,10 +172,9 @@ subroutine vertical_deppt_code(  nlayers,             &
   u_n_local(nCellEdges)    = 0.0_r_tran
   u_np1_local(nCellEdges)  = 0.0_r_tran
 
-
   ! Loop over all layers except the bottom layer.
   ! This code is hard-wired to work with 6 W2 dofs per cell where dof=5 is the
-  ! vertical dof at the bottom of the cell.
+  ! vertical dof at the bottom of the cell, and 2 W2v dofs per cell
   do k=1,nlayers-1
     xArrival_comp = real(k,r_tran)
     xArrival_phys = height_w2(map_w2(5)+k)
