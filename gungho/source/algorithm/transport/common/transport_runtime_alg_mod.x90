@@ -10,20 +10,21 @@
 
 module transport_runtime_alg_mod
 
-  use check_configuration_mod,        only: check_any_scheme_mol,        &
-                                            check_any_scheme_ffsl,       &
-                                            check_any_scheme_split,      &
-                                            check_any_scheme_slice,      &
-                                            check_any_hori_scheme_sl,    &
-                                            check_any_vert_scheme_sl,    &
-                                            check_any_reversible_sl,     &
-                                            check_any_shifted,           &
-                                            check_horz_dep_pts,          &
-                                            check_vert_dep_pts,          &
-                                            check_any_splitting_vhv,     &
-                                            check_any_eqn_consistent,    &
-                                            check_any_consistent_swift,  &
-                                            check_any_consistent_cosmic, &
+  use check_configuration_mod,        only: check_any_scheme_mol,            &
+                                            check_any_scheme_ffsl,           &
+                                            check_any_scheme_split,          &
+                                            check_any_scheme_slice,          &
+                                            check_any_horizontal_method_mol, &
+                                            check_any_hori_scheme_sl,        &
+                                            check_any_vert_scheme_sl,        &
+                                            check_any_reversible_sl,         &
+                                            check_any_shifted,               &
+                                            check_horz_dep_pts,              &
+                                            check_vert_dep_pts,              &
+                                            check_any_splitting_vhv,         &
+                                            check_any_eqn_consistent,        &
+                                            check_any_consistent_swift,      &
+                                            check_any_consistent_cosmic,     &
                                             get_required_stencil_depth
 
   use constants_mod,                  only: r_def, r_second, i_def, l_def,  &
@@ -1056,11 +1057,9 @@ contains
                       w2_fs_idx == W2H .or. w2_fs_idx == W2)
 
     if (extended_mesh .and. next_step_hori) then
-      if ( check_any_scheme_mol() ) then
+      if ( check_any_horizontal_method_mol() ) then
         remap_depth = get_required_stencil_depth()
-      end if
-
-      if ( check_any_scheme_ffsl() .or. check_any_hori_scheme_sl() ) then
+      else
         ! For consistent transport the cfl may be slightly higher than expected
         ! due to using the dry mass flux to compute departure points, therefore
         ! an extra + 1 is added to remap_depth for safety
@@ -1151,13 +1150,16 @@ contains
     end if
 
     if (extended_mesh) then
-      ! For consistent transport the cfl may be slightly higher than expected
-      ! due to using the dry mass flux to compute departure points, therefore
-      ! an extra + 1 is added to remap_depth for safety
-      remap_depth = max(self%get_dep_stencil_extent_x(self%mesh_ids(1)), &
-                        self%get_dep_stencil_extent_y(self%mesh_ids(1))) &
-                  + 2_i_def + max(inner_order, outer_order)
-
+      if ( check_any_horizontal_method_mol() ) then
+        remap_depth = get_required_stencil_depth()
+      else
+        ! For consistent transport the cfl may be slightly higher than expected
+        ! due to using the dry mass flux to compute departure points, therefore
+        ! an extra + 1 is added to remap_depth for safety
+        remap_depth = max(self%get_dep_stencil_extent_x(self%mesh_ids(1)), &
+                          self%get_dep_stencil_extent_y(self%mesh_ids(1))) &
+                    + 2_i_def + max(inner_order, outer_order)
+      end if
       call self%remap_on_extended_mesh(self%rho_d_ffsl_y(1,step), rho_d, &
                                        self%rho_monotone_remap,          &
                                        self%rho_enforce_minvalue,        &
@@ -1279,13 +1281,16 @@ contains
         end if
 
         if (extended_mesh) then
-          ! TODO: we should be able to get away with not doing all of these
-          ! remappings, based on the direction and last step
-          ! Restrict, then remap
-          remap_depth = max(self%get_dep_stencil_extent_x(self%mesh_ids(1)), &
-                            self%get_dep_stencil_extent_y(self%mesh_ids(1))) &
-                      + 1_i_def + max(inner_order, outer_order)
-
+          if ( check_any_horizontal_method_mol() ) then
+            remap_depth = get_required_stencil_depth()
+          else
+            ! TODO: we should be able to get away with not doing all of these
+            ! remappings, based on the direction and last step
+            ! Restrict, then remap
+            remap_depth = max(self%get_dep_stencil_extent_x(self%mesh_ids(1)), &
+                              self%get_dep_stencil_extent_y(self%mesh_ids(1))) &
+                        + 1_i_def + max(inner_order, outer_order)
+          end if
           call tmp_rho_d%initialise( vector_space = w3_fs )
           call invoke( restrict_scalar_weighted_kernel_type(tmp_rho_d,         &
                                                             source_rho_d,      &
@@ -1437,11 +1442,9 @@ contains
       w3_fs => function_space_collection%get_fs(shifted_mesh, 0, W3)
 
       if (extended_mesh) then
-        if ( check_any_scheme_mol() ) then
+        if ( check_any_horizontal_method_mol() ) then
           remap_depth = get_required_stencil_depth()
-        end if
-
-        if ( check_any_scheme_ffsl() .or. check_any_hori_scheme_sl() ) then
+        else
           ! For consistent transport the cfl may be slightly higher than expected
           ! due to using the dry mass flux to compute departure points, therefore
           ! an extra + 1 is added to remap_depth for safety
