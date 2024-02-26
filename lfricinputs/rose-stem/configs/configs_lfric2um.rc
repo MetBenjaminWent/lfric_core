@@ -15,4 +15,17 @@
                                "lfric_mesh"         : {"file":"$CANNED_MESH_DIR/mesh_C48.nc", "name":"dynamics"},
                              },
 
+"umlam_C48L70_N512L70" : {
+                               "app"                : "lfric2um",
+                               "opt_config"         : "um_lam",
+                               "source_grid_res"    : "C48",
+                               "source_grid_levs"   : "70",
+                               "source_grid_type"   : "global",
+                               "target_grid_res"    : "N512",
+                               "target_grid_levs"   : "70",
+                               "target_grid_type"   : "global",
+                               "source_dump"        : "$UMDIR/standard_jobs/lfricinputs/inputs/lfric2um_startdump_um-lam_C48L70.nc",
+                               "lfric_mesh"         : {"file":"$CANNED_MESH_DIR/mesh_C48.nc", "name":"dynamics"},
+                             },
+
 }) %}

@@ -183,8 +183,17 @@
 "lfric2um-spice-aquaplanet"               : ["lfric2um-spice-safe-aquaplanet",
                                              "lfric2um-spice-rigorous-aquaplanet",],
 
-"lfric2um-spice-safe"                     : ["lfric2um-spice-safe-aquaplanet",],
-"lfric2um-spice-rigorous"                 : ["lfric2um-spice-rigorous-aquaplanet",],
+"lfric2um-spice-safe-umlam"               : ["lfric2um-spice_gfortran_gcc_safe-umlam_C48L70_N512L70",
+                                             "lfric2um-spice_ifort_gcc_safe-umlam_C48L70_N512L70"],
+"lfric2um-spice-rigorous-umlam"           : ["lfric2um-spice_gfortran_gcc_rigorous-umlam_C48L70_N512L70",
+                                             "lfric2um-spice_ifort_gcc_rigorous-umlam_C48L70_N512L70",],
+"lfric2um-spice-umlam"                    : ["lfric2um-spice-safe-umlam",
+                                             "lfric2um-spice-rigorous-umlam",],
+
+"lfric2um-spice-safe"                     : ["lfric2um-spice-safe-aquaplanet",
+					     "lfric2um-spice-safe-umlam",],
+"lfric2um-spice-rigorous"                 : ["lfric2um-spice-rigorous-aquaplanet",
+					     "lfric2um-spice-rigorous-umlam",],
 "lfric2um-spice"                          : ["lfric2um-spice-safe",
                                              "lfric2um-spice-rigorous",],
 
@@ -195,13 +204,23 @@
 "lfric2um-xc40-aquaplanet"                : ["lfric2um-xc40-safe-aquaplanet",
                                              "lfric2um-xc40-rigorous-aquaplanet",],
 
-"lfric2um-xc40-safe"                      : ["lfric2um-xc40-safe-aquaplanet",],
-"lfric2um-xc40-rigorous"                  : ["lfric2um-xc40-rigorous-aquaplanet",],
+"lfric2um-xc40-safe-umlam"                : ["lfric2um-xc40_ifort_icc_safe-umlam_C48L70_N512L70",],
+"lfric2um-xc40-rigorous-umlam"            : ["lfric2um-xc40_ifort_icc_rigorous-umlam_C48L70_N512L70",],
+"lfric2um-xc40-umlam"                     : ["lfric2um-xc40-safe-umlam",
+                                             "lfric2um-xc40-rigorous-umlam",],
+
+"lfric2um-xc40-safe"                      : ["lfric2um-xc40-safe-aquaplanet",
+					     "lfric2um-xc40-safe-umlam",],
+"lfric2um-xc40-rigorous"                  : ["lfric2um-xc40-rigorous-aquaplanet",
+					     "lfric2um-xc40-rigorous-umlam",],
 "lfric2um-xc40"                           : ["lfric2um-xc40-safe",
                                              "lfric2um-xc40-rigorous",],
 
 "lfric2um-aquaplanet"                     : ["lfric2um-spice-aquaplanet",
                                              "lfric2um-xc40-aquaplanet",],
+
+"lfric2um-umlam"                          : ["lfric2um-spice-umlam",
+                                             "lfric2um-xc40-umlam",],
 
 "lfric2um-safe"                           : ["lfric2um-spice-safe",
                                              "lfric2um-xc40-safe",],
@@ -209,12 +228,15 @@
                                              "lfric2um-xc40-rigorous",],
 "lfric2um-developer"                      : ["lfric2um-spice-safe",
                                              "lfric2um-xc40_ifort_icc_safe-aquaplanet_C48L38_N48L38",
-                                             "lfric2um-spice_gfortran_gcc_rigorous-aquaplanet_C48L38_N48L38",],
+                                             "lfric2um-spice_gfortran_gcc_rigorous-aquaplanet_C48L38_N48L38",
+                                             "lfric2um-xc40_ifort_icc_rigorous-umlam_C48L70_N512L70",],
+
 "lfric2um"                                : ["lfric2um-safe",
                                              "lfric2um-rigorous",],
 
 "lfric2um-xc40-developer"                 : ["lfric2um-xc40-safe",
-                                             "lfric2um-xc40_crayftn_craycc_rigorous-aquaplanet_C48L38_N48L38",],
+                                             "lfric2um-xc40_crayftn_craycc_rigorous-aquaplanet_C48L38_N48L38",
+                                             "lfric2um-xc40_ifort_icc_rigorous-umlam_C48L70_N512L70",],
 
 
 "scintelapi-spice-safe-basic"             : ["scintelapi-spice_gfortran_gcc_safe-basic_C48L38_C48L38",

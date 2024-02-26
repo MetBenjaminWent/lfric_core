@@ -49,6 +49,10 @@
   "scintelapi-spice_gfortran_gcc_safe-basic_C48L38_C48L38"                          : BASE~"_t3787",
   "scintelapi-spice_ifort_gcc_rigorous-basic_C48L38_C48L38"                         : BASE~"_t3787",
   "scintelapi-spice_ifort_gcc_safe-basic_C48L38_C48L38"                             : BASE~"_t3787",
+  "lfric2um-spice_gfortran_gcc_safe-umlam_C48L70_N512L70"                           : BASE~"_t3791",
+  "lfric2um-spice_gfortran_gcc_rigorous-umlam_C48L70_N512L70"                       : BASE~"_t3791",
+  "lfric2um-spice_ifort_gcc_safe-umlam_C48L70_N512L70"                              : BASE~"_t3791",
+  "lfric2um-spice_ifort_gcc_rigorous-umlam_C48L70_N512L70"                          : BASE~"_t3791",
 
   "scintelapi-spice_gfortran_gcc_rigorous-basicgal_C12L70_mixingratio"              : BASE~"_t3614",
   "scintelapi-spice_gfortran_gcc_safe-basicgal_C12L70_mixingratio"                  : BASE~"_t3614",
@@ -99,6 +103,9 @@
   "lfric2um-xc40_crayftn_craycc_rigorous-aquaplanet_C48L38_N48L38"                  : BASE,
   "lfric2um-xc40_ifort_icc_safe-aquaplanet_C48L38_N48L38"                           : BASE~"_t2337",
   "lfric2um-xc40_ifort_icc_rigorous-aquaplanet_C48L38_N48L38"                       : BASE~"_t3693",
+
+  "lfric2um-xc40_ifort_icc_safe-umlam_C48L70_N512L70"                               : BASE~"_t3791",
+  "lfric2um-xc40_ifort_icc_rigorous-umlam_C48L70_N512L70"                           : BASE~"_t3791",
 
   "scintelapi-xc40_crayftn_craycc_safe-basic_C48L38_C48L38"                         : BASE,
   "scintelapi-xc40_crayftn_craycc_rigorous-basic_C48L38_C48L38"                     : BASE,
