@@ -16,4 +16,7 @@ integer, parameter :: gas_law           = 1 ! 1 + m_v / epsilon
 integer, parameter :: total_mass        = 2 ! 1 + sum (m_x)
 integer, parameter :: water             = 3 ! For future development
 
+character(10), parameter :: moist_dyn_names(num_moist_factors) = &
+  [character(10) :: 'gas_law', 'total_mass', 'water']
+
 end module moist_dyn_mod

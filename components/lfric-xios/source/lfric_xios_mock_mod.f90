@@ -393,7 +393,11 @@ real(real64), private :: var_var1
       field_id /= 'diag_field' .and.                                          &
       field_id /= 'diag_field_test_axis' .and.                                &
       field_id /= 'diag_field_test_domain' .and.                              &
-      field_id /= 'diag_field_test_grid') then
+      field_id /= 'diag_field_test_grid'  .and.                               &
+      field_id /= 'W0_field' .and.                                            &
+      field_id /= 'W2H_field' .and.                                           &
+      field_id /= 'WTheta_field' .and.                                        &
+      field_id /= 'W3_field') then
       call log_event('xios_is_defined_field_attr - unexpected field: '        &
         // field_id, log_level_error)
     end if

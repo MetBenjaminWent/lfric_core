@@ -12,7 +12,7 @@ module lfric_xios_read_mod
 
   use, intrinsic :: iso_fortran_env, only : real32, real64
 
-  use constants_mod,            only: i_def, str_def, r_def, rmdi, &
+  use constants_mod,            only: i_def, l_def, str_def, r_def, rmdi, &
                                       LARGE_REAL_NEGATIVE
   use lfric_xios_constants_mod, only: dp_xios
   use field_mod,                only: field_type, field_proxy_type
@@ -126,7 +126,7 @@ end subroutine post_read
 !>  @param[in]     field_proxy      A field proxy to be written
 !>
 subroutine read_field_generic(xios_field_name, field_proxy)
-
+  use lfric_xios_diag_mod,        only: get_field_domain_ref
   implicit none
 
   character(len=*),               intent(in)    :: xios_field_name
@@ -136,6 +136,7 @@ subroutine read_field_generic(xios_field_name, field_proxy)
   integer(i_def) :: hdim          ! horizontal dimension, domain size
   integer(i_def) :: vdim          ! vertical dimension
   real(dp_xios), allocatable :: xios_data(:)
+  logical(l_def) :: legacy
 
   undf = field_proxy%vspace%get_last_dof_owned() ! total dimension
 
@@ -143,8 +144,11 @@ subroutine read_field_generic(xios_field_name, field_proxy)
 
   hdim = undf/vdim
 
+  ! detect field with legacy checkpointing domain
+  legacy = (index(get_field_domain_ref(xios_field_name), 'checkpoint_') == 1)
+
   ! sanity check
-  if (.not. (hdim*vdim == undf)) then
+  if (.not. legacy .and. .not. (hdim*vdim == undf)) then
     call log_event('assertion failed for field ' // xios_field_name                &
       // ': hdim*vdim must equal undf', log_level_error)
   end if
@@ -154,7 +158,7 @@ subroutine read_field_generic(xios_field_name, field_proxy)
   ! receive the field data from XIOS
   call xios_recv_field(xios_field_name, xios_data)
   ! inverse of xios formatting
-  call inverse_format_field(xios_data, xios_field_name, field_proxy, vdim, hdim)
+  call inverse_format_field(xios_data, xios_field_name, field_proxy, vdim, hdim, legacy)
   ! deal with halo data
   call post_read(field_proxy)
 

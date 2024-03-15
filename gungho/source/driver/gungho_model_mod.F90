@@ -23,9 +23,8 @@ module gungho_model_mod
   use constants_mod,              only : i_def, r_def, l_def, &
                                          PRECISION_REAL, r_second, str_def
   use convert_to_upper_mod,       only : convert_to_upper
-  use create_gungho_prognostics_mod, only : &
-                                         enable_gungho_prognostics
-  use create_lbcs_mod,            only : enable_lbc_fields
+  use create_gungho_prognostics_mod, only : process_gungho_prognostics
+  use create_lbcs_mod,            only : process_lbc_fields
   use create_mesh_mod,            only : create_mesh
   use create_physics_prognostics_mod, only : &
                                          process_physics_prognostics
@@ -40,7 +39,8 @@ module gungho_model_mod
   use field_spec_mod,             only : field_spec_type, processor_type
   use field_parent_mod,           only : write_interface
   use field_collection_mod,       only : field_collection_type
-
+  use field_spec_mod,             only : field_spec_type, processor_type, &
+                                         space_has_xios_io
   use lfric_xios_diag_mod,        only : set_variable
   use geometric_constants_mod,    only : get_chi_inventory, get_panel_id_inventory
   use gungho_extrusion_mod,       only : create_extrusion
@@ -178,13 +178,13 @@ contains
     character(str_def), parameter :: ckp_inp_prefix = 'restart_'
     character(20), parameter :: operation = 'once'
 
-    if (spec%ckp) then
+    if (spec%ckp .and. space_has_xios_io(spec%space, spec%legacy)) then
       if (checkpoint_write) &
         call add_field(self%ckp_out, spec%name, ckp_out_prefix, operation, &
-          id_as_name=.true.)
+          id_as_name=.true., legacy=spec%legacy)
       if (checkpoint_read .or. init_option == init_option_checkpoint_dump) &
         call add_field(self%ckp_inp, spec%name, ckp_inp_prefix, operation, &
-          id_as_name=.true.)
+          id_as_name=.true., legacy=spec%legacy)
     end if
 
   end subroutine persistor_apply
@@ -215,10 +215,10 @@ contains
     DT = clock%get_seconds_per_step()
     call set_variable("DT", DT, tolerant=.true.)
 
-    call enable_gungho_prognostics()
-    if (limited_area) call enable_lbc_fields()
+    call persistor%init(clock)
+    call process_gungho_prognostics(persistor)
+    if (limited_area) call process_lbc_fields(persistor)
     if (use_physics) then
-      call persistor%init(clock)
       call process_physics_prognostics(persistor)
       call sync_multidata_field_dimensions()
       call sync_time_dimensions()

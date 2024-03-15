@@ -14,234 +14,152 @@ module create_lbcs_mod
                                          LOG_LEVEL_ERROR
   use field_mod,                  only : field_type
   use field_collection_mod,       only : field_collection_type
-  use fs_continuity_mod,          only : W0, W2, W3, Wtheta, W2h
+  use clock_mod,                  only : clock_type
+  use field_mapper_mod,           only : field_mapper_type
+  use field_maker_mod,            only : field_maker_type
+  use fs_continuity_mod,          only : W0, W2, W3, Wtheta, W2H, W2V
   use function_space_mod,         only : function_space_type
   use mesh_mod,                   only : mesh_type
   use mr_indices_mod,             only : nummr,                      &
                                          mr_names
-  use linked_list_mod,            only : linked_list_type
-  use lfric_xios_time_axis_mod,   only : time_axis_type
-  use init_time_axis_mod,         only : setup_field
+  use gungho_time_axes_mod,       only : gungho_time_axes_type
   use initialization_config_mod,  only : lbc_option,             &
                                          lbc_option_analytic,    &
                                          lbc_option_gungho_file, &
                                          lbc_option_um2lfric_file
-  use create_gungho_prognostics_mod, only: &
-                                         enable_checkpointing
 
   implicit none
 
-  public  :: create_lbc_fields, enable_lbc_fields
+  public  :: process_lbc_fields, create_lbc_fields
 
   contains
 
-    !> @brief   Enable LBC fields subject to checkpointing
-   subroutine enable_lbc_fields()
-
+   !> @brief Iterate over active lbc fields and apply an arbitrary
+   !> processor to the field specifiers.
+   !> @details To be used by create_lbc_fields to create fields and by
+   !> gungho_model_mod / initialise_infrastrucure to enable checkpoint fields.
+   !> These two operations have to be separate because they have to happen
+   !> at different times. The enabling of checkpoint fields has to happen
+   !> before the io context closes, and this is too early for field creation.
+   !> @param  proc Processor to be applied to selected field specifiers
+   subroutine process_lbc_fields(proc)
+      use field_spec_mod,             only : main => main_coll_dict,            &
+                                             axis => time_axis_dict,            &
+                                             processor_type,                    &
+                                             make_spec
       implicit none
 
-      integer(i_def)                             :: imr
+      class(processor_type) :: proc
 
-      call log_event( 'Enable LBC fields', LOG_LEVEL_INFO )
+      integer(i_def) :: imr
+      character(str_def) :: name
+      logical(l_def) :: legacy
 
-      if ( lbc_option  == lbc_option_analytic ) then
+      legacy = .true.
 
-         call enable_checkpointing("lbc_theta")
-         call enable_checkpointing("lbc_rho")
-         call enable_checkpointing("lbc_u")
-         call enable_checkpointing("lbc_rho")
-         call enable_checkpointing("lbc_exner")
-         call enable_checkpointing("boundary_u_diff")
-         call enable_checkpointing("boundary_u_driving")
+      select case( lbc_option )
 
-         do imr = 1, nummr
-            call enable_checkpointing( trim('lbc_' // adjustl(mr_names(imr))) )
-         enddo
+        case ( lbc_option_analytic )
 
-      end if
+          call proc%apply(make_spec('lbc_theta', main%lbc, Wtheta, ckp=.true., legacy=legacy))
+          call proc%apply(make_spec('lbc_u', main%lbc, W2, ckp=.true., legacy=legacy))
+          call proc%apply(make_spec('lbc_h_u', main%lbc, W2H, ckp=.true., legacy=legacy))
+          call proc%apply(make_spec('lbc_v_u', main%lbc, W2V, ckp=.true., legacy=legacy))
+          call proc%apply(make_spec('lbc_rho', main%lbc, W3, ckp=.true., legacy=legacy))
+          call proc%apply(make_spec('lbc_exner', main%lbc, W3, ckp=.true., legacy=legacy))
+          call proc%apply(make_spec('boundary_u_diff', main%lbc, W2, ckp=.true., legacy=legacy))
+          if (.not. legacy) then
+            call proc%apply(make_spec('boundary_h_u_diff', main%lbc, W2H, ckp=.true., legacy=.false.))
+            call proc%apply(make_spec('boundary_v_u_diff', main%lbc, W2V, ckp=.true., legacy=.false.))
+          end if
+          call proc%apply(make_spec('boundary_u_driving', main%lbc, W2, ckp=.true., legacy=legacy))
+          if (.not. legacy) then
+            call proc%apply(make_spec('boundary_h_u_driving', main%lbc, W2H, ckp=.true., legacy=.false.))
+            call proc%apply(make_spec('boundary_v_u_driving', main%lbc, W2V, ckp=.true., legacy=.false.))
+          end if
+          do imr = 1, nummr
+            name = trim('lbc_') // adjustl(mr_names(imr))
+            call proc%apply(make_spec(name, main%lbc, Wtheta, ckp=.true., legacy=legacy))
+          enddo
 
-   end subroutine enable_lbc_fields
+        case ( lbc_option_gungho_file )
 
-  !> @brief   Create and add LBC fields.
-  !> @details Create the lateral boundary condition field collection.
-  !!          On every timestep these fields will be updated and used by the
-  !!          limited area model.
-  !> @param[in]     mesh              The current 3d mesh.
-  !> @param[in,out] depository        Main collection of all fields in memory.
-  !> @param[in,out] prognostic_fields The prognostic variables in the model.
-  !> @param[in,out] lbc_fields        The lbc_fields used on every timestep.
-  subroutine create_lbc_fields( mesh, depository, prognostic_fields, &
-                                lbc_fields, lbc_times_list )
+          !------ Fields updated directly from LBC file-----------------
+          call proc%apply(make_spec('lbc_theta', main%lbc, Wtheta, time_axis=axis%lbc))
+          call proc%apply(make_spec('lbc_rho', main%lbc, W3, time_axis=axis%lbc))
+          call proc%apply(make_spec('lbc_exner', main%lbc, W3, time_axis=axis%lbc))
+          call proc%apply(make_spec('lbc_h_u', main%lbc, W2H, time_axis=axis%lbc))
+          call proc%apply(make_spec('lbc_v_u', main%lbc, Wtheta, time_axis=axis%lbc))
 
-    implicit none
+          !----- Fields derived from the fields in the LBC file---------
+          call proc%apply(make_spec('lbc_u', main%lbc, W2))
+          call proc%apply(make_spec('boundary_u_diff', main%lbc, W2))
+          call proc%apply(make_spec('boundary_u_driving', main%lbc, W2))
 
-    type(mesh_type), intent(in), pointer :: mesh
+        case ( lbc_option_um2lfric_file )
+          !------ Fields updated directly from LBC file-----------------
+          call proc%apply(make_spec('lbc_theta', main%lbc, Wtheta, time_axis=axis%lbc))
+          call proc%apply(make_spec('lbc_rho_r2', main%lbc, W3, time_axis=axis%lbc))
+          call proc%apply(make_spec('lbc_h_u', main%lbc, W2H, time_axis=axis%lbc))
+          call proc%apply(make_spec('lbc_v_u', main%lbc, Wtheta, time_axis=axis%lbc))
 
-    type(field_collection_type), intent(inout) :: depository
-    type(field_collection_type), intent(inout) :: prognostic_fields
-    type(field_collection_type), intent(inout) :: lbc_fields
-    type(linked_list_type),      intent(out)   :: lbc_times_list
+          ! Specific humidities (Initially these are read in, but
+          ! in the long run we should move to just use the mixing
+          ! ratios)
+          call proc%apply(make_spec('lbc_q', main%lbc, Wtheta, time_axis=axis%lbc))
+          call proc%apply(make_spec('lbc_qcl', main%lbc, Wtheta, time_axis=axis%lbc))
+          call proc%apply(make_spec('lbc_qcf', main%lbc, Wtheta, time_axis=axis%lbc))
+          call proc%apply(make_spec('lbc_qrain', main%lbc, Wtheta, time_axis=axis%lbc))
 
-    logical(l_def)                             :: checkpoint_restart_flag
+          !----- Fields derived from the fields in the LBC file---------
+          call proc%apply(make_spec('lbc_rho', main%lbc, W3))
+          call proc%apply(make_spec('lbc_exner', main%lbc, W3))
+          call proc%apply(make_spec('lbc_u', main%lbc, W2))
+          call proc%apply(make_spec('boundary_u_diff', main%lbc, W2))
+          call proc%apply(make_spec('boundary_u_driving', main%lbc, W2))
 
-    type(time_axis_type), save                 :: lbc_time_axis
-    logical(l_def),   parameter                :: cyclic=.false.
-    logical(l_def),   parameter                :: interp_flag=.true.
-    character(str_def)                         :: name
-    integer(i_def)                             :: imr
+          ! Mixing ratios
+          call proc%apply(make_spec('lbc_m_v', main%lbc, Wtheta))
+          call proc%apply(make_spec('lbc_m_cl', main%lbc, Wtheta))
+          call proc%apply(make_spec('lbc_m_ci', main%lbc, Wtheta))
+          call proc%apply(make_spec('lbc_m_r', main%lbc, Wtheta))
 
-    call log_event( 'Create LBC fields', LOG_LEVEL_INFO )
+        case default
+          call log_event( 'This lbc_option not available', LOG_LEVEL_ERROR )
+      end select
 
-    call lbc_fields%initialise( name='lbc_fields', table_len=100 )
+    end subroutine process_lbc_fields
 
-    select case( lbc_option )
+    !> @brief   Create and add LBC fields.
+    !> @details Create the lateral boundary condition field collection.
+    !>          On every timestep these fields will be updated and used by the
+    !>          limited area model.
+    !> @param[in]    mesh       The current 3d mesh
+    !> @param[in]    twod_mesh  The current 2d mesh (not used here)
+    !> @param[in]    mapper     Provides access to the field collections
+    !> @param[in]    clock      The model clock
+    subroutine create_lbc_fields(mesh, twod_mesh, mapper, clock)
+     implicit none
+     type(mesh_type), intent(in), pointer    :: mesh
+     type(mesh_type), intent(in), pointer    :: twod_mesh
+     type(field_mapper_type), intent(in)     :: mapper
+     class(clock_type), intent(in)           :: clock
 
-      case ( lbc_option_analytic )
+     type(gungho_time_axes_type), pointer    :: gungho_axes
 
-        checkpoint_restart_flag = .true.
+     type(field_maker_type) :: creator
 
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "lbc_theta", Wtheta, mesh, checkpoint_restart_flag )
+     call log_event('GungHo: Creating lbc fields...', LOG_LEVEL_INFO)
 
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "lbc_u", W2, mesh, checkpoint_restart_flag )
+     gungho_axes => mapper%get_gungho_axes()
+     if (lbc_option /= lbc_option_analytic) call gungho_axes%make_lbc_time_axis()
 
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "lbc_rho", W3, mesh, checkpoint_restart_flag )
+     call creator%init(mesh, twod_mesh, mapper, clock)
 
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "lbc_exner", W3, mesh, checkpoint_restart_flag )
+     call process_lbc_fields(creator)
 
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "boundary_u_diff", W2, mesh, checkpoint_restart_flag )
+     call gungho_axes%save_lbc_time_axis()
 
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "boundary_u_driving", W2, mesh, checkpoint_restart_flag )
-
-        do imr = 1, nummr
-          name = trim('lbc_' // adjustl(mr_names(imr)) )
-          call setup_field( lbc_fields, depository, prognostic_fields, &
-             name, wtheta, mesh, checkpoint_restart_flag )
-        enddo
-
-      case ( lbc_option_gungho_file )
-
-        checkpoint_restart_flag = .false.
-        call lbc_time_axis%initialise( "lbc_time", file_id="lbc", yearly=cyclic, &
-                                       interp_flag = interp_flag )
-
-        !------ Fields updated directly from LBC file-----------------
-
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "lbc_theta", Wtheta, mesh, checkpoint_restart_flag,    &
-            time_axis=lbc_time_axis )
-
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "lbc_rho", W3, mesh, checkpoint_restart_flag,          &
-            time_axis=lbc_time_axis )
-
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "lbc_exner", W3, mesh, checkpoint_restart_flag,        &
-            time_axis=lbc_time_axis )
-
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "lbc_h_u", W2h, mesh, checkpoint_restart_flag,         &
-            time_axis=lbc_time_axis )
-
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "lbc_v_u", Wtheta, mesh, checkpoint_restart_flag,      &
-            time_axis=lbc_time_axis )
-
-        call lbc_times_list%insert_item(lbc_time_axis)
-
-        !----- Fields derived from the fields in the LBC file---------
-
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "lbc_u", W2, mesh, checkpoint_restart_flag )
-
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "boundary_u_diff", W2, mesh, checkpoint_restart_flag )
-
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "boundary_u_driving", W2, mesh, checkpoint_restart_flag )
-
-      case ( lbc_option_um2lfric_file )
-
-        checkpoint_restart_flag = .false.
-
-        call lbc_time_axis%initialise( "lbc_time", file_id="lbc", yearly=cyclic, &
-                                       interp_flag = interp_flag )
-
-        !------ Fields updated directly from LBC file-----------------
-
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "lbc_theta", Wtheta, mesh, checkpoint_restart_flag,    &
-            time_axis=lbc_time_axis )
-
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "lbc_rho_r2", W3, mesh, checkpoint_restart_flag,       &
-            time_axis=lbc_time_axis )
-
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "lbc_h_u", W2h, mesh, checkpoint_restart_flag,         &
-            time_axis=lbc_time_axis  )
-
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "lbc_v_u", Wtheta, mesh, checkpoint_restart_flag,      &
-            time_axis=lbc_time_axis  )
-
-        ! Specific humidities (Initially these are read in, but
-        ! in the long run we should move to just use the mixing
-        ! ratios)
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           'lbc_q', wtheta, mesh, checkpoint_restart_flag,        &
-           time_axis=lbc_time_axis )
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           'lbc_qcl', wtheta, mesh, checkpoint_restart_flag,      &
-           time_axis=lbc_time_axis )
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           'lbc_qcf', wtheta, mesh, checkpoint_restart_flag,      &
-           time_axis=lbc_time_axis )
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           'lbc_qrain', wtheta, mesh, checkpoint_restart_flag,    &
-           time_axis=lbc_time_axis )
-
-        call lbc_times_list%insert_item(lbc_time_axis)
-
-        !----- Fields derived from the fields in the LBC file---------
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "lbc_rho", W3, mesh, checkpoint_restart_flag )
-
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "lbc_exner", W3, mesh, checkpoint_restart_flag )
-
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "lbc_u", W2, mesh, checkpoint_restart_flag )
-
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "boundary_u_diff", W2, mesh, checkpoint_restart_flag )
-
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-           "boundary_u_driving", W2, mesh, checkpoint_restart_flag )
-
-        ! Mixing ratios
-        name = trim('lbc_m_v')
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-             name, wtheta, mesh, checkpoint_restart_flag )
-        name = trim('lbc_m_cl')
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-             name, wtheta, mesh, checkpoint_restart_flag )
-        name = trim('lbc_m_ci')
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-             name, wtheta, mesh, checkpoint_restart_flag )
-        name = trim('lbc_m_r')
-        call setup_field( lbc_fields, depository, prognostic_fields, &
-             name, wtheta, mesh, checkpoint_restart_flag )
-
-      case default
-        call log_event( 'This lbc_option not available', LOG_LEVEL_ERROR )
-    end select
-
-  end subroutine create_lbc_fields
+    end subroutine create_lbc_fields
 
 end module create_lbcs_mod

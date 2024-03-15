@@ -218,12 +218,15 @@ contains
 
   !> @brief Return the interpolation order of a field.
   !> @param[in]    unique_id    XIOS id of the field
+  !> @param[in]    force_order  Override order with
   !> @return                    The interpolation order
-  function get_field_order(unique_id) result(order)
+  function get_field_order(unique_id, force_order) result(order)
    implicit none
    character(*), intent(in) :: unique_id
+   integer(i_def), optional, intent(in) :: force_order
    integer(i_def) :: order
    order = 0 ! FOR NOW, to be extracted from the field comment?
+   if (present(force_order)) order = force_order
   end function get_field_order
 
   !> @brief Return the XIOS grid reference of a field.

@@ -197,9 +197,12 @@ contains
   !> @param[in]           status           Field status (logging only)
   !> @param[in, optional] force_mesh       Override derived mesh
   !> @param[in, optional] force_rad_levels Override derived radiation levels
+  !> @param[in, optional] force_ndata      Override derived ndata
+  !> @param[in, optional] force_order      Override function space order
   !> @return                               Function space returned
   function space_from_metadata(                                               &
-        xios_id, status, force_mesh, force_rad_levels) result(vector_space)
+        xios_id, status, force_mesh, force_rad_levels,                        &
+        force_order, force_ndata) result(vector_space)
 
     implicit none
 
@@ -207,6 +210,8 @@ contains
     character(*),                       intent(in)  :: status
     type(mesh_type), pointer, optional, intent(in)  :: force_mesh
     integer(kind=i_def), optional,      intent(in)  :: force_rad_levels
+    integer(kind=i_def), optional,      intent(in)  :: force_order
+    integer(kind=i_def), optional,      intent(in)  :: force_ndata
 
     character(str_def)  :: grid_ref
     character(str_def)  :: domain_ref
@@ -239,7 +244,7 @@ contains
       ! no axis encoded in grid name - try to get it from XIOS
       axis_ref = get_field_axis_ref(xios_id)
     end if
-    order = get_field_order(xios_id)
+    order = get_field_order(xios_id, force_order)
 
     ! derive function space and flavour from metadata
     fsenum = get_field_fsenum(xios_id, grid_ref, domain_ref)
@@ -287,6 +292,18 @@ contains
     case default
       call log_event("unexpected flavour: " // flavour, log_level_error)
     end select
+
+    if (present(force_ndata)) then
+      ! we are pre-initialising a field with the time window size,
+      ! which is currently not supported for multidata fields;
+      ! should the need arise, one could multiply ndata with force_ndata
+      if (ndata /= 1) then
+        call log_event(                                                      &
+          "cannot override ndata for multidata field with a time window",    &
+        log_level_error)
+      end if
+      ndata = force_ndata
+    end if
 
     ! set up function space - needed by psyclone even for inactive fields
     vector_space => function_space_collection%get_fs(                         &

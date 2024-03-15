@@ -10,7 +10,7 @@
 module lfric_xios_write_mod
 
   use clock_mod,            only: clock_type
-  use constants_mod,        only: i_def, str_def, str_max_filename
+  use constants_mod,        only: i_def, l_def, str_def, str_max_filename
   use lfric_xios_constants_mod, &
                             only: dp_xios, xios_max_int
   use field_r32_mod,        only: field_r32_type, field_r32_proxy_type
@@ -60,6 +60,7 @@ contains
 !>  @param[in]     field_proxy      A field proxy to be written
 !>
 subroutine write_field_generic(field_name, field_proxy)
+  use lfric_xios_diag_mod,        only:  get_field_domain_ref
   implicit none
 
   character(len=*), optional,     intent(in) :: field_name
@@ -69,6 +70,7 @@ subroutine write_field_generic(field_name, field_proxy)
   integer(i_def) :: hdim          ! horizontal dimension, domain size
   integer(i_def) :: vdim          ! vertical dimension
   real(dp_xios), allocatable :: xios_data(:)
+  logical(l_def) :: legacy
 
   undf = field_proxy%vspace%get_last_dof_owned() ! total dimension
 
@@ -76,19 +78,26 @@ subroutine write_field_generic(field_name, field_proxy)
 
   hdim = undf/vdim
 
+  ! detect field with legacy checkpointing domain
+  legacy = (index(get_field_domain_ref(field_name), 'checkpoint_') == 1)
+
   ! sanity check
-  if (.not. (hdim*vdim == undf)) then
+  if (.not. legacy .and. .not. (hdim*vdim == undf)) then
     call log_event('assertion failed for field ' // field_name                &
       // ': hdim*vdim == undf', log_level_error)
   end if
 
   allocate(xios_data(undf))
 
-  call format_field(xios_data, field_name, field_proxy, vdim, hdim)
+  call format_field(xios_data, field_name, field_proxy, vdim, hdim, legacy)
 
-  call xios_send_field( field_name, reshape(xios_data, (/vdim, hdim/)) )
-  ! The shape is only necessary for the mock implementation, and
-  ! the only thing that matters is the product of the dimensions.
+  if (legacy) then
+    call xios_send_field( field_name, reshape(xios_data, (/ 1, undf /)) )
+  else
+    call xios_send_field( field_name, reshape(xios_data, (/vdim, hdim/)) )
+    ! The shape is only necessary for the mock implementation, and
+    ! the only thing that matters is the product of the dimensions.
+  end if
 
   deallocate(xios_data)
 

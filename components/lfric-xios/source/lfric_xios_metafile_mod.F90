@@ -46,6 +46,56 @@ public :: metafile_type, add_field
 
 contains
 
+  !> @brief Support for legacy checkpoints
+  !> @details This affects lbc and gungho prognostics, which have traditionally been
+  !> using the legacy checkpoint domains checkpoint_W3, checkpoint_W2 etc.
+  !> @param[in] field    XIOS field object
+  !> @param[in] field_id XIOS fielld id
+  subroutine handle_legacy_fields(field, field_id)
+    implicit none
+
+    type(xios_field), intent(in) :: field
+    character(*), intent(in) :: field_id
+
+    character(20), parameter :: Wtheta = 'checkpoint_Wtheta'
+    character(20), parameter :: W3 = 'checkpoint_W3'
+    character(20), parameter :: W2 = 'checkpoint_W2'
+
+    character(20), parameter :: wtheta_fields(7) = [character(20) :: &
+      'theta', 'm_v', 'm_cl', 'm_r', 'm_ci', 'm_s', 'm_g']
+    character(20), parameter :: w3_fields(3) =  [character(20) ::  &
+     'rho', 'exner', 'ageofair']
+    character(20), parameter :: w2_fields(1) = [character(20) :: &
+      'u']
+    character(20), parameter :: lbc_wtheta_fields(7) = [character(20) ::  &
+      'lbc_theta', 'lbc_m_v', 'lbc_m_cl', 'lbc_m_r', 'lbc_m_ci', 'lbc_m_s', 'lbc_m_g']
+    character(20), parameter :: lbc_w3_fields(2) = [character(20) :: &
+      'lbc_rho', 'lbc_exner']
+    character(20), parameter :: lbc_w2_fields(3) = [character(20) :: &
+      'lbc_u', 'boundary_u_diff', 'boundary_u_driving']
+
+    character(20) :: domain_id
+
+    if (any(wtheta_fields == field_id)) then
+      domain_id = Wtheta
+    else if (any(w3_fields == field_id)) then
+      domain_id = W3
+    else if (any(w2_fields == field_id)) then
+      domain_id = W2
+    else if (any(lbc_wtheta_fields == field_id)) then
+      domain_id = Wtheta
+    else if (any(lbc_w3_fields == field_id)) then
+      domain_id = W3
+    else if (any(lbc_w2_fields == field_id)) then
+      domain_id = W2
+    else
+      domain_id = ''
+      call log_event('unexpected legacy field: ' // trim(field_id), log_level_error)
+    end if
+
+    call xios_set_attr(field, domain_ref=domain_id)
+  end subroutine handle_legacy_fields
+
   !> @brief Get file handle from XIOS
   !> @param[inout] self  Metafile object
   !> @param[in] file_id  XIOS id of file
@@ -91,10 +141,12 @@ contains
     integer(i_def) :: prec
     logical(l_def) :: has_prec
 
-    call xios_is_defined_field_attr(field_id, prec=has_prec)
-    if (has_prec) then
-      call xios_get_field_attr(field_id, prec=prec)
-      return
+    if (field_is_valid(field_id)) then
+      call xios_is_defined_field_attr(field_id, prec=has_prec)
+      if (has_prec) then
+        call xios_get_field_attr(field_id, prec=prec)
+        return
+      end if
     end if
 
     if (present(group_id)) then
@@ -114,13 +166,15 @@ contains
   !> @param[in] prefix         ID prefix to be used, .e.g, "checkpoint_"
   !> @param[in] operation      XIOS field operation, e.g., "once"
   !> @param[in] id_as_name     Use dictionary field ID as field name?
-  subroutine add_field(metafile, dict_field_id, prefix, operation, id_as_name)
+  !> @param[in] legacy         Use legacy checkpointing domain?
+  subroutine add_field(metafile, dict_field_id, prefix, operation, id_as_name, legacy)
     implicit none
     type(metafile_type), intent(in) :: metafile
     character(*), intent(in) :: dict_field_id
     character(*), intent(in) :: prefix
     character(*), intent(in) :: operation
     logical(l_def), optional, intent(in) :: id_as_name
+    logical(l_def), optional, intent(in) :: legacy
 
     character(20), parameter :: lfric_dict = 'lfric_dictionary'
     integer(i_def), parameter :: dflt_prec = 8
@@ -134,6 +188,13 @@ contains
     character(str_def) :: axis_ref
     integer(i_def)     :: prec
     logical(l_def)     :: use_id_as_name
+    logical(l_def)     :: use_legacy
+
+    use_id_as_name = .false.
+    if (present(id_as_name)) use_id_as_name = id_as_name
+
+    use_legacy = .false.
+    if (present(legacy)) use_legacy = legacy
 
     call metafile%get_handle(file)
 
@@ -145,33 +206,36 @@ contains
     else
       ! new style - add field to checkpoint file
       call xios_add_child(file, field, field_id)
+      call log_event('adding checkpoint field ' // trim(field_id), log_level_info)
       if (.not. field_is_valid(field_id)) &
         call log_event('internal error: added field invalid', log_level_error)
 
       ! copy name and precision from dictionary field
-
-      use_id_as_name = .false.
-      if (present(id_as_name)) use_id_as_name = id_as_name
-      if (use_id_as_name) then
+       if (use_id_as_name) then
         field_name = dict_field_id ! correct for checkpointing
       else
         call xios_get_field_attr(dict_field_id, name=field_name)
         if (field_name /= dict_field_id) &
-          call log_event('AHS - mismatch: ' // trim(field_name) // ' vs ' // trim(dict_field_id), log_level_warning)
+          call log_event('internal error - mismatch: ' // trim(field_name) &
+            // ' vs ' // trim(dict_field_id), log_level_warning)
       end if
 
       prec = get_field_precision(dict_field_id, dflt_prec, lfric_dict)
 
       call xios_set_attr(field, name=field_name, prec=prec, operation=operation)
 
-      grid_ref = get_field_grid_ref(dict_field_id)
-      if (grid_ref /= '') then
-        call xios_set_attr(field, grid_ref=grid_ref)
+      if (use_legacy) then
+        call handle_legacy_fields(field, dict_field_id)
       else
-        domain_ref = get_field_domain_ref(dict_field_id)
-        axis_ref = get_field_axis_ref(dict_field_id)
-        if (domain_ref /= '') call xios_set_attr(field, domain_ref=domain_ref)
-        if (axis_ref /= '') call xios_set_attr(field, axis_ref=axis_ref)
+        grid_ref = get_field_grid_ref(dict_field_id)
+        if (grid_ref /= '') then
+          call xios_set_attr(field, grid_ref=grid_ref)
+        else
+          domain_ref = get_field_domain_ref(dict_field_id)
+          axis_ref = get_field_axis_ref(dict_field_id)
+          if (domain_ref /= '') call xios_set_attr(field, domain_ref=domain_ref)
+          if (axis_ref /= '') call xios_set_attr(field, axis_ref=axis_ref)
+        end if
       end if
     end if
 

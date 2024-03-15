@@ -10,8 +10,8 @@
 !>
 module gungho_init_fields_mod
 
-  use mr_indices_mod,                     only : nummr
-  use moist_dyn_mod,                      only : num_moist_factors
+  use mr_indices_mod,                     only : nummr, mr_names
+  use moist_dyn_mod,                      only : num_moist_factors, moist_dyn_names
   use field_array_mod,                    only : field_array_type
   use field_mod,                          only : field_type
   use field_parent_mod,                   only : write_interface
@@ -99,6 +99,7 @@ module gungho_init_fields_mod
   use geometric_constants_mod,            only : get_height
   use planet_config_mod,                  only : radius
   use field_to_scalar_alg_mod,            only : field_to_scalar_alg
+  use fs_continuity_mod,                  only : W1, W2
 
   implicit none
 
@@ -111,6 +112,144 @@ module gungho_init_fields_mod
          initialise_model_data, output_model_data
 
 contains
+  !> @brief Split single prognostic field into components
+  !> @param[in]    prognostics   Prognostic field collection
+  !> @param[in]    fs            Complex function space
+  !> @param[in]    name          Name of field to be split into components
+  !> @param[in]    h_name        Name of horizontal component
+  !> @param[in]    v_name        Name of vertical component
+  subroutine split_single_complex_field(prognostics, fs, name, h_name, v_name)
+
+    use split_w2_field_kernel_mod,        only: split_w2_field_kernel_type
+
+    implicit none
+
+    type(field_collection_type), intent(in) :: prognostics
+    integer(i_def),              intent(in) :: fs
+    character(*),                intent(in) :: name
+    character(*),                intent(in) :: h_name
+    character(*),                intent(in) :: v_name
+
+    character(26), parameter :: routine_name = 'split_single_complex_field'
+
+    type( field_type ), pointer :: field => null()
+    type( field_type ), pointer :: h_field => null()
+    type( field_type ), pointer :: v_field => null()
+
+    if (.not. prognostics%field_exists(h_name)) then
+      ! legacy checkpointing
+      return
+    end if
+
+    call prognostics%get_field(name, field)
+    call prognostics%get_field(h_name, h_field)
+    call prognostics%get_field(v_name, v_field)
+
+    select case (fs)
+    case (W1)
+      call log_event(                                                           &
+        'unsupported function space W1 in ' // routine_name, log_level_error)
+    case (W2)
+      call invoke( split_w2_field_kernel_type(h_field, v_field, field) )
+    case default
+      call log_event(                                                           &
+        'unexpected function space in ' // routine_name, log_level_error)
+    end select
+
+    nullify(field, h_field, v_field)
+  end subroutine split_single_complex_field
+
+  !> @brief Restore single prognostic field from components
+  !> @param[in]    prognostics   Prognostic field collection
+  !> @param[in]    fs            Complex function space
+  !> @param[in]    name          Name of field to be restored from components
+  !> @param[in]    h_name        Name of horizontal component
+  !> @param[in]    v_name        Name of vertical component
+  subroutine combine_single_complex_field(prognostics, fs, name, h_name, v_name)
+
+    use combine_w2_field_kernel_mod,        only: combine_w2_field_kernel_type
+
+    implicit none
+
+    type(field_collection_type), intent(in) :: prognostics
+    integer(i_def),              intent(in) :: fs
+    character(*),                intent(in) :: name
+    character(*),                intent(in) :: h_name
+    character(*),                intent(in) :: v_name
+
+    character(28), parameter :: routine_name = 'combine_single_complex_field'
+
+    type( field_type ), pointer :: field => null()
+    type( field_type ), pointer :: h_field => null()
+    type( field_type ), pointer :: v_field => null()
+
+    if (.not. prognostics%field_exists(h_name)) then
+      ! legacy checkpointing
+      return
+    end if
+
+    call prognostics%get_field(name, field)
+    call prognostics%get_field(h_name, h_field)
+    call prognostics%get_field(v_name, v_field)
+
+    select case (fs)
+    case (W1)
+      call log_event(                                                           &
+        'unsupported function space W1 in ' // routine_name, log_level_error)
+    case (W2)
+      call invoke( combine_w2_field_kernel_type(field, h_field, v_field) )
+    case default
+      call log_event(                                                           &
+        'unexpected function space in ' // routine_name, log_level_error)
+    end select
+
+    nullify(field, h_field, v_field)
+  end subroutine combine_single_complex_field
+
+  !> @brief Split prognostic W2 and W1 fields into components
+  !>         by using W2 = W2H + W2V and W1 = W1H + W1V
+  !> @param[in]    prognostic_fields   Prognostic field collection
+  subroutine split_complex_prognostics( prognostic_fields )
+
+    implicit none
+
+    type(field_collection_type), intent(in) :: prognostic_fields
+
+    call split_single_complex_field(prognostic_fields, W2,                      &
+      'u', 'h_u', 'v_u')
+
+    if (prognostic_fields%field_exists('lbc_u')) then
+      call split_single_complex_field(prognostic_fields, W2,                    &
+        'lbc_u', 'lbc_h_u', 'lbc_v_u')
+      call split_single_complex_field(prognostic_fields, W2,                    &
+        'boundary_u_diff', 'boundary_h_u_diff', 'boundary_v_u_diff')
+      call split_single_complex_field(prognostic_fields, W2,                    &
+        'boundary_u_driving', 'boundary_h_u_driving', 'boundary_v_u_driving')
+    end if
+
+  end subroutine split_complex_prognostics
+
+  !> @brief Restore W2 and W1 fields from components
+  !>        by using W2 = W2H + W2V and W1 = W1H + W1V
+  !> @param[in]    prognostic_fields   Prognostic field collection
+  subroutine combine_complex_prognostics( prognostic_fields )
+
+    implicit none
+
+    type(field_collection_type), intent(in) :: prognostic_fields
+
+    call combine_single_complex_field(prognostic_fields, W2,                    &
+      'u', 'h_u', 'v_u')
+
+    if (prognostic_fields%field_exists('lbc_u')) then
+      call combine_single_complex_field(prognostic_fields, W2,                  &
+        'lbc_u', 'lbc_h_u', 'lbc_v_u')
+      call combine_single_complex_field(prognostic_fields, W2,                  &
+        'boundary_u_diff', 'boundary_h_u_diff', 'boundary_v_u_diff')
+      call combine_single_complex_field(prognostic_fields, W2,                  &
+        'boundary_u_driving', 'boundary_h_u_driving', 'boundary_v_u_driving')
+    end if
+  end subroutine combine_complex_prognostics
 
   !> @brief Create the fields contained in model_data
   !> @param[inout] modeldb   The working data set for a model run
@@ -200,24 +339,40 @@ subroutine create_model_data( modeldb,      &
 
     diagnostic_fields => modeldb%fields%get_field_collection("diagnostic_fields")
 
-    ! Create gungho prognostics and auxilliary (diagnostic) fields
-    call create_gungho_prognostics( mesh,                                     &
-                                    depository,                               &
-                                    prognostic_fields,                        &
-                                    diagnostic_fields,                        &
-                                    modeldb%model_data%adv_tracer_all_outer,  &
-                                    modeldb%model_data%adv_tracer_last_outer, &
-                                    modeldb%model_data%con_tracer_all_outer,  &
-                                    modeldb%model_data%con_tracer_last_outer, &
-                                    mr_array%bundle,                          &
-                                    moist_dyn_array%bundle )
+    call field_mapper%init( depository,                               &
+                            moisture_fields,                          &
+                            prognostic_fields,                        &
+                            modeldb%model_data%adv_tracer_all_outer,  &
+                            modeldb%model_data%adv_tracer_last_outer, &
+                            modeldb%model_data%con_tracer_all_outer,  &
+                            modeldb%model_data%con_tracer_last_outer, &
+                            modeldb%model_data%derived_fields,        &
+                            modeldb%model_data%radiation_fields,      &
+                            modeldb%model_data%microphysics_fields,   &
+                            modeldb%model_data%electric_fields,       &
+                            modeldb%model_data%orography_fields,      &
+                            modeldb%model_data%turbulence_fields,     &
+                            modeldb%model_data%convection_fields,     &
+                            modeldb%model_data%cloud_fields,          &
+                            modeldb%model_data%surface_fields,        &
+                            modeldb%model_data%soil_fields,           &
+                            modeldb%model_data%snow_fields,           &
+                            modeldb%model_data%chemistry_fields,      &
+                            modeldb%model_data%aerosol_fields,        &
+                            modeldb%model_data%stph_fields,           &
+                            modeldb%model_data%lbc_fields,            &
+                            model_axes )
 
-    if (limited_area) call create_lbc_fields( &
-      mesh,                                   &
-      depository,                             &
-      prognostic_fields,                      &
-      modeldb%model_data%lbc_fields,          &
-      model_axes%lbc_times_list )
+    ! Create gungho prognostics and auxiliary (diagnostic) fields
+    call create_gungho_prognostics( mesh,                             &
+                                    twod_mesh,                        &
+                                    field_mapper,                     &
+                                    modeldb%clock )
+
+    if (limited_area) then
+      call create_lbc_fields( mesh, twod_mesh, field_mapper,          &
+        modeldb%clock )
+    end if
 
     if ( iau ) call create_iau_fields( mesh, twod_mesh,                      &
                                        depository,                           &
@@ -226,26 +381,6 @@ subroutine create_model_data( modeldb,      &
 
     ! Create prognostics used by physics
     if (use_physics) then
-      call field_mapper%init( depository,                               &
-                              prognostic_fields,                        &
-                              modeldb%model_data%adv_tracer_all_outer,  &
-                              modeldb%model_data%adv_tracer_last_outer, &
-                              modeldb%model_data%con_tracer_all_outer,  &
-                              modeldb%model_data%con_tracer_last_outer, &
-                              modeldb%model_data%derived_fields,        &
-                              modeldb%model_data%radiation_fields,      &
-                              modeldb%model_data%microphysics_fields,   &
-                              modeldb%model_data%electric_fields,       &
-                              modeldb%model_data%orography_fields,      &
-                              modeldb%model_data%turbulence_fields,     &
-                              modeldb%model_data%convection_fields,     &
-                              modeldb%model_data%cloud_fields,          &
-                              modeldb%model_data%surface_fields,        &
-                              modeldb%model_data%soil_fields,           &
-                              modeldb%model_data%snow_fields,           &
-                              modeldb%model_data%chemistry_fields,      &
-                              modeldb%model_data%aerosol_fields,        &
-                              modeldb%model_data%stph_fields )
       call create_physics_prognostics( mesh, twod_mesh, field_mapper, &
                                        modeldb%clock )
 
@@ -378,6 +513,7 @@ subroutine create_model_data( modeldb,      &
         call read_checkpoint( prognostic_fields,                    &
                               modeldb%clock%get_first_step() - 1,   &
                               checkpoint_stem_name )
+        call combine_complex_prognostics( prognostic_fields )
 
         ! Update factors for moist dynamics
         call moist_dyn_factors_alg( moist_dyn_array%bundle, &
@@ -620,6 +756,7 @@ subroutine create_model_data( modeldb,      &
 
     !=================== Write fields to checkpoint files ====================!
     if( checkpoint_write ) then
+       call split_complex_prognostics( prognostic_fields )
        call write_checkpoint( prognostic_fields, modeldb%clock, checkpoint_stem_name )
     end if
 

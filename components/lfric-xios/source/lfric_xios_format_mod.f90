@@ -8,7 +8,7 @@
 module lfric_xios_format_mod
 
   use, intrinsic :: iso_fortran_env,  only : real32, real64
-  use constants_mod,                  only: i_def, rmdi, LARGE_REAL_NEGATIVE
+  use constants_mod,                  only: i_def, l_def, rmdi, LARGE_REAL_NEGATIVE
   use lfric_xios_constants_mod,       only: dp_xios, xios_max_int
   use field_parent_mod,               only: field_parent_proxy_type
   use field_r32_mod,                  only: field_r32_proxy_type
@@ -47,8 +47,9 @@ contains
 !> @param[in]  fpxy              Field proxy of LFRic field to be formatted
 !> @param[in]  m                 Number of rows in input matrix
 !> @param[in]  n                 Number of columns in input matrix
+!> @param[in]  legacy            Use legacy checkpoint domains?
 !>
-subroutine format_field(xios_data, field_name, fpxy, m, n)
+subroutine format_field(xios_data, field_name, fpxy, m, n, legacy)
   implicit none
 
   real(dp_xios),                  intent(in out):: xios_data(:)
@@ -56,6 +57,7 @@ subroutine format_field(xios_data, field_name, fpxy, m, n)
   class(field_parent_proxy_type), intent(in)    :: fpxy
   integer(i_def),                 intent(in)    :: m
   integer(i_def),                 intent(in)    :: n
+  logical(l_def),                 intent(in)    :: legacy
 
   integer(i_def) :: mn
   integer(i_def) :: i
@@ -63,25 +65,37 @@ subroutine format_field(xios_data, field_name, fpxy, m, n)
   mn = m*n
 
   ! sanity check
-  if (mn /= size(xios_data)) then
+  if (.not. legacy .and. mn /= size(xios_data)) then
     call log_event('assertion failed for field ' // field_name                &
       // ': mn must equal size(xios_data)',  log_level_error)
   end if
 
   select type(fpxy)
     type is (field_r32_proxy_type)
+      if (legacy) then
+        xios_data = fpxy%data(1:size(xios_data))
+        return
+      end if
       ! this elegant call can be up to 4 times slower than the loop below:
       ! xios_data = reshape(transpose(reshape(fpxy%data(:), (/m, n/))), (/mn/))
       do i = 1, m
         xios_data(1+(i-1)*n:i*n) = fpxy%data(i:mn:m)
       end do
     type is (field_r64_proxy_type)
+      if (legacy) then
+        xios_data = fpxy%data(1:size(xios_data))
+        return
+      end if
       ! xios_data = reshape(transpose(reshape(fpxy%data(:), (/m, n/))), (/mn/))
       do i = 1, m
         xios_data(1+(i-1)*n:i*n) = fpxy%data(i:mn:m)
       end do
 
     type is (integer_field_proxy_type)
+      if (legacy) then
+        xios_data = fpxy%data(1:size(xios_data))
+        return
+      end if
       if ( any( abs(fpxy%data(1:mn)) > xios_max_int) ) then
         call log_event( 'data for integer field ' //                          &
           trim(adjustl(field_name)) //                                        &
@@ -104,8 +118,9 @@ end subroutine format_field
 !> @param[in]  fpxy              Field proxy of LFRic field to be read
 !> @param[in]  m                 Number of rows in field data matrix
 !> @param[in]  n                 Number of columns in field data matrix
+!> @param[in]  legacy            Use legacy checkpoint domains?
 !>
-subroutine inverse_format_field(xios_data, field_name, fpxy, m, n)
+subroutine inverse_format_field(xios_data, field_name, fpxy, m, n, legacy)
   implicit none
 
   real(dp_xios),                  intent(in)     :: xios_data(:)
@@ -113,6 +128,7 @@ subroutine inverse_format_field(xios_data, field_name, fpxy, m, n)
   class(field_parent_proxy_type), intent(in out) :: fpxy
   integer(i_def),                 intent(in)     :: m
   integer(i_def),                 intent(in)     :: n
+  logical(l_def),                 intent(in)     :: legacy
 
   integer(i_def) :: mn
   integer(i_def) :: i
@@ -120,7 +136,7 @@ subroutine inverse_format_field(xios_data, field_name, fpxy, m, n)
   mn = m*n
 
   ! sanity check
-  if (mn /= size(xios_data)) then
+  if (.not. legacy .and. mn /= size(xios_data)) then
     call log_event('assertion failed for field ' // field_name                &
       // ': mn must equal size(xios_data)',  log_level_error)
   end if
@@ -128,12 +144,20 @@ subroutine inverse_format_field(xios_data, field_name, fpxy, m, n)
   ! Reshape the data to what we require for the LFRic field.
   ! Note the conversion from dp_xios to real32, real64 or i_def.
   select type(fpxy)
-  type is (field_r32_proxy_type)
+    type is (field_r32_proxy_type)
+    if (legacy) then
+      fpxy%data(1:size(xios_data)) = real(xios_data, real32)
+      return
+    end if
     do i = 1, m
       fpxy%data(i:mn:m) = real(xios_data(1+(i-1)*n:i*n), real32)
     end do
 
   type is (field_r64_proxy_type)
+    if (legacy) then
+      fpxy%data(1:size(xios_data)) = real(xios_data, real64)
+      return
+    end if
     do i = 1, m
       fpxy%data(i:mn:m) = real(xios_data(1+(i-1)*n:i*n), real64)
     end do
@@ -145,6 +169,10 @@ subroutine inverse_format_field(xios_data, field_name, fpxy, m, n)
     end do
 
   type is (integer_field_proxy_type)
+    if (legacy) then
+      fpxy%data(1:size(xios_data)) = int(xios_data, i_def)
+      return
+    end if
     do i = 1, m
       fpxy%data(i:mn:m) = int(xios_data(1+(i-1)*n:i*n), i_def)
     end do

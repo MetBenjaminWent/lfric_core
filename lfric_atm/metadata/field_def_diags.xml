@@ -1,19 +1,23 @@
 <field_definition>
 <!-- Main diagnostic group -->
 <field_group id="diagnostic_fields" prec="8" operation="instant" enabled=".TRUE." >
-  <field id="theta" name="theta" long_name="air_potential_temperature" standard_name="air_potential_temperature" unit="K" grid_ref="full_level_face_grid" />
+  <!-- gungho prognostic fields, included via lfric_dictionary and available as diagnostics -->
+  <!-- field id="theta" name="theta" long_name="air_potential_temperature" standard_name="air_potential_temperature" unit="K" grid_ref="full_level_face_grid" /-->
+  <!-- field id="rho" name="rho" long_name="air_density" standard_name="air_density" unit="kg m-3" grid_ref="half_level_face_grid" /-->
+  <!-- field id="exner" name="exner" long_name="exner_pressure" unit="1" grid_ref="half_level_face_grid" /-->
+  <!-- field id="h_u" name="h_u" long_name="Horizontal flux" unit="m-1 s-1" grid_ref="half_level_edge_grid" /-->
+  <!-- field id="v_u" name="v_u" long_name="Vertical flux " unit="m-1 s-1" grid_ref="full_level_face_grid" /-->
+  <!-- field id="m_v" name="m_v" long_name="m_v" unit="kg kg-1" grid_ref="full_level_face_grid" /-->
+  <!-- field id="m_cl" name="m_cl" long_name="m_cl" unit="kg kg-1" grid_ref="full_level_face_grid" /-->
+  <!-- field id="m_r" name="m_r" long_name="m_r" unit="kg kg-1" grid_ref="full_level_face_grid" /-->
+  <!-- field id="m_ci" name="m_ci" long_name="m_ci" unit="kg kg-1" grid_ref="full_level_face_grid" /-->
+  <!-- field id="m_s" name="m_s" long_name="m_s" unit="kg kg-1" grid_ref="full_level_face_grid" /-->
+  <!-- field id="m_g" name="m_g" long_name="m_g" unit="kg kg-1" grid_ref="full_level_face_grid" /-->
+  <!-- field id="ageofair" name="ageofair" long_name="ageofair" unit="s" grid_ref="half_level_face_grid" /-->
   <field id="theta_in_w3" name="theta_in_w3" long_name="air_potential_temperature_at_cell_centres" unit="K" grid_ref="half_level_face_grid" />
-  <field id="m_v" name="m_v" long_name="vapour_mixing_ratio" unit="kg kg-1" grid_ref="full_level_face_grid" />
-  <field id="m_cl" name="m_cl" long_name="cloud_liquid_mixing_ratio" unit="kg kg-1" grid_ref="full_level_face_grid" />
-  <field id="m_r" name="m_r" long_name="rain_mixing_ratio" unit="kg kg-1" grid_ref="full_level_face_grid" />
-  <field id="m_ci" name="m_ci" long_name="cloud_ice_mixing_ratio" unit="kg kg-1" grid_ref="full_level_face_grid" />
-  <field id="m_s" name="m_s" long_name="snow_mixing_ratio"  unit="kg kg-1" grid_ref="full_level_face_grid" />
-  <field id="m_g" name="m_g" long_name="graupel_mixing_ratio"  unit="kg kg-1" grid_ref="full_level_face_grid" />
-  <field id="rho" name="rho" long_name="dry_air_density" standard_name="air_density" unit="kg m-3" grid_ref="half_level_face_grid" />
   <field id="rho_in_wth" name="rho_in_wth" long_name="dry_air_density_at_cell_interfaces" unit="kg m-3" grid_ref="full_level_face_grid" />
   <field id="wetrho_in_w3" name="wetrho_in_w3" long_name="wet_air_density_at_cell_centres" unit="kg m-3" grid_ref="half_level_face_grid" />
   <field id="wetrho_in_wth" name="wetrho_in_wth" long_name="wet_air_density_at_cell_interfaces" unit="kg m-3" grid_ref="full_level_face_grid" />
-  <field id="exner" name="exner" long_name="exner_pressure" unit="1" grid_ref="half_level_face_grid" />
   <field id="exner_in_wth" name="exner_in_wth" long_name="exner_pressure_at_cell_interfaces" unit="1" grid_ref="full_level_face_grid" />
   <field id="exner_wth_n" name="exner_wth_n" long_name="start_of_timestep_exner_pressure_at_cell_interfaces" unit="1" grid_ref="full_level_face_grid" />
   <field id="u_in_w2h" name="u_in_w2h" long_name="eastward_wind_at_cell_faces" unit="m s-1" grid_ref="half_level_edge_grid" />
@@ -40,7 +44,6 @@
   <field id="orography" name="orography" long_name="surface_altitude" standard_name="surface_altitude" unit="m" domain_ref="face" > zoomed__orography </field>
   <field id="temp_correction_field" name="temp_correction_field" long_name="temperature_rate_for_energy_correction" unit="K s-1" domain_ref="face" />
   <field id="accumulated_fluxes" name="accumulated_fluxes" long_name="accumulated_energy_fluxes" unit="W m-2" domain_ref="face" />
-  <field id="ageofair" name="ageofair" long_name="ageofair" unit="s" grid_ref="half_level_face_grid" />
   <field id="aam_in_w3" name="aam_in_w3" long_name="axial_angular_momentum_at_cell_centres" standard_name="axial_angular_momentum" unit="kg m2 s-1" grid_ref="half_level_face_grid" />
   <field id="ke_uv_in_w3" name="ke_uv_in_w3" long_name="horizontal_kinetic_energy_at_cell_centres" standard_name="horizontal_kinetic_energy" unit="J" grid_ref="half_level_face_grid" />
   <field id="ke_w_in_w3" name="ke_w_in_w3" long_name="vertical_kinetic_energy_at_cell_centres" standard_name="vertical_kinetic_energy" unit="J" grid_ref="half_level_face_grid" />
@@ -752,6 +755,9 @@
   <!-- Forcing diagnostics -->
   <field id="forcing__dtheta_force" name="dtheta_force" long_name="potential_temperature_increment_from_external_forcing" unit="K" grid_ref="full_level_face_grid" />
   <field id="forcing__dt_force" name="dt_force" long_name="temperature_increment_from_external_forcing" unit="K" grid_ref="full_level_face_grid">forcing__dtheta_force * exner_wth_n</field>
+  <field id="forcing__du_force" name="du_force" long_name="eastward_wind_increment_from_external_forcing" unit="m s-1" grid_ref="half_level_face_grid" />
+  <field id="forcing__dv_force" name="dv_force" long_name="northward_wind_increment_from_external_forcing" unit="m s-1" grid_ref="half_level_face_grid" />
+  <field id="forcing__dw_force" name="dw_force" long_name="vertical_air_velocity_increment_from_external_forcing" unit="m s-1" grid_ref="half_level_face_grid" />
   <!-- Processed diagnostics -->
   <field id="processed__dtheta_slow" name="dtheta_slow" long_name="potential_temperature_increment_from_slow_physics" unit="K" grid_ref="full_level_face_grid" />
   <field id="processed__dtheta_tot" name="dtheta_tot" long_name="total_potential_temperature_increment" unit="K" grid_ref="full_level_face_grid" />

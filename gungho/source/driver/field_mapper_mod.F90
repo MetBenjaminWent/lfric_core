@@ -4,7 +4,7 @@
 ! under which the code may be used.
 !-----------------------------------------------------------------------------
 !> @brief Auxiliary class for mapping field specifiers to
-!> prognostic field collections
+!> prognostic field collections and time axes
 !>
 module field_mapper_mod
 
@@ -14,16 +14,23 @@ module field_mapper_mod
                                                  log_scratch_space
   use field_mod,                          only : field_type
   use field_collection_mod,               only : field_collection_type
+  use field_array_mod,                    only : field_array_type
   use field_spec_mod,                     only : main_coll_dict, &
-                                                 adv_coll_dict
+                                                 adv_coll_dict, &
+                                                 moist_arr_dict, &
+                                                 time_axis_dict
   use fs_continuity_mod,                  only : W2, W3, Wtheta, W2H
   use finite_element_config_mod,          only : element_order
+  use boundaries_config_mod,              only : limited_area
+  use gungho_time_axes_mod,               only : gungho_time_axes_type
+  use lfric_xios_time_axis_mod,           only : time_axis_type
 
   implicit none
 
   private
 
-  !> @brief Object type providing access to field collections to a field maker
+  !> @brief Object type providing access to field collectios and
+  !> time axes to a field maker
   type :: field_mapper_type
 
   private
@@ -48,6 +55,10 @@ module field_mapper_mod
     type(field_collection_type), pointer :: chemistry
     type(field_collection_type), pointer :: aerosol
     type(field_collection_type), pointer :: stph
+    type(field_collection_type), pointer :: moisture
+    type(field_collection_type), pointer :: lbc
+
+    type(gungho_time_axes_type), pointer :: gungho_axes
 
   contains
     private
@@ -55,12 +66,15 @@ module field_mapper_mod
     ! accessors
     procedure, public :: get_depository
     procedure, public :: get_prognostic_fields
+    procedure, public :: get_gungho_axes
 
     ! main interface
     procedure, public :: init
     procedure, public :: sanity_check
     procedure, public :: get_adv_coll_ptr
     procedure, public :: get_main_coll_ptr
+    procedure, public :: get_moist_field_ptr
+    procedure, public :: get_time_axis_ptr
 
     ! destructor - here to avoid gnu compiler bug
     final :: field_mapper_destructor
@@ -92,30 +106,46 @@ contains
     collection => self%prognostic
   end function get_prognostic_fields
 
+  !> @brief Accessor for gungho axes registry
+  !> @param[in] self       Field mapper object
+  !> @return               Gungho axes object pointer returned
+  function get_gungho_axes(self) result(axes)
+    implicit none
+    class(field_mapper_type), intent(in) :: self
+
+    type(gungho_time_axes_type), pointer :: axes
+
+    axes => self%gungho_axes
+  end function get_gungho_axes
+
   !> @brief Initialise a field mapper object.
   !> @param[in,out] self Field mapper object
   !> @param[in,out] depository Main collection of all fields in memory
+  !> @param[in,out] moisture_fields Collection of moisture field arrays
   !> @param[in,out] prognostic_fields The prognostic variables in the model
-  !> @param[out]   adv_tracer_all_outer Collection of fields that need to be advected every outer iteration
-  !> @param[out]   adv_tracer_last_outer Collection of fields that need to be advected at final outer iteration
-  !> @param[out]   con_tracer_all_outer Second collection of fields that need to be advected every outer iteration
-  !> @param[out]   con_tracer_last_outer Second collection of fields that need to be advected at final outer iteration
-  !> @param[out]   derived_fields Collection of FD fields derived from FE fields
-  !> @param[out]   radition_fields Collection of fields for radiation scheme
-  !> @param[out]   microphysics_fields Collection of fields for microphys scheme
-  !> @param[out]   electric_fields Collection of fields for electric scheme
-  !> @param[out]   orography_fields Collection of fields for orogr drag scheme
-  !> @param[out]   turbulence_fields Collection of fields for turbulence scheme
-  !> @param[out]   convection_fields Collection of fields for convection scheme
-  !> @param[out]   cloud_fields Collection of fields for cloud scheme
-  !> @param[out]   surface_fields Collection of fields for surface scheme
-  !> @param[out]   soil_fields Collection of fields for soil hydrology scheme
-  !> @param[out]   snow_fields Collection of fields for snow scheme
-  !> @param[out]   aerosol_fields Collection of fields for aerosol scheme
-  !> @param[out]   chemistry_fields Collection of fields for chemistry scheme
-  !> @param[out]   stph_fields Collection of fields for stph scheme
+  !> @param[in,out] adv_tracer_all_outer Collection of fields that need to be advected every outer iteration
+  !> @param[in,out] adv_tracer_last_outer Collection of fields that need to be advected at final outer iteration
+  !> @param[in,out] con_tracer_all_outer Second collection of fields that need to be advected every outer iteration
+  !> @param[in,out] con_tracer_last_outer Second collection of fields that need to be advected at final outer iteration
+  !> @param[in,out] derived_fields Collection of FD fields derived from FE fields
+  !> @param[in,out] radition_fields Collection of fields for radiation scheme
+  !> @param[in,out] microphysics_fields Collection of fields for microphys scheme
+  !> @param[in,out] electric_fields Collection of fields for electric scheme
+  !> @param[in,out] orography_fields Collection of fields for orogr drag scheme
+  !> @param[in,out] turbulence_fields Collection of fields for turbulence scheme
+  !> @param[in,out] convection_fields Collection of fields for convection scheme
+  !> @param[in,out] cloud_fields Collection of fields for cloud scheme
+  !> @param[in,out] surface_fields Collection of fields for surface scheme
+  !> @param[in,out] soil_fields Collection of fields for soil hydrology scheme
+  !> @param[in,out] snow_fields Collection of fields for snow scheme
+  !> @param[in,out] aerosol_fields Collection of fields for aerosol scheme
+  !> @param[in,out] chemistry_fields Collection of fields for chemistry scheme
+  !> @param[in,out] stph_fields Collection of fields for stph scheme
+  !> @param[in,out] lbc_fields Collection of lbc fields
+  !> @param[in,out] gungho_axes Registry of time axes
   subroutine init(self,    &
     depository_fields,     &
+    moisture_fields,       &
     prognostic_fields,     &
     adv_tracer_all_outer,  &
     adv_tracer_last_outer, &
@@ -134,12 +164,15 @@ contains
     snow_fields,           &
     chemistry_fields,      &
     aerosol_fields,        &
-    stph_fields )
+    stph_fields,           &
+    lbc_fields,            &
+    gungho_axes)
 
     implicit none
 
     class(field_mapper_type), intent(inout) :: self
     type(field_collection_type), target, intent(inout) :: depository_fields
+    type(field_collection_type), target, intent(inout) :: moisture_fields
     type(field_collection_type), target, intent(inout) :: prognostic_fields
     type(field_collection_type), target, intent(inout) :: adv_tracer_all_outer
     type(field_collection_type), target, intent(inout) :: adv_tracer_last_outer
@@ -159,8 +192,12 @@ contains
     type(field_collection_type), target, intent(inout) :: chemistry_fields
     type(field_collection_type), target, intent(inout) :: aerosol_fields
     type(field_collection_type), target, intent(inout) :: stph_fields
+    type(field_collection_type), target, intent(inout) :: lbc_fields
+
+    type(gungho_time_axes_type), target, intent(inout) :: gungho_axes
 
     self%depository => depository_fields
+    self%moisture => moisture_fields
     self%prognostic => prognostic_fields
     self%adv_all_outer => adv_tracer_all_outer
     self%adv_last_outer => adv_tracer_last_outer
@@ -180,8 +217,17 @@ contains
     self%chemistry => chemistry_fields
     self%aerosol => aerosol_fields
     self%stph => stph_fields
+    self%lbc => lbc_fields
+
+    self%gungho_axes => gungho_axes
 
     call self%derived%initialise(name='derived_fields', table_len=100)
+
+    ! Create collection of fields to be advected
+    call self%adv_last_outer%initialise(name='adv_tracer_last_outer', table_len=100)
+    call self%adv_all_outer%initialise(name='adv_tracer_all_outer', table_len=100)
+    call self%con_last_outer%initialise(name='con_tracer_last_outer', table_len=100)
+    call self%con_all_outer%initialise(name='con_tracer_all_outer', table_len=100)
     call self%cloud%initialise(name='cloud_fields', table_len=100)
 #ifdef UM_PHYSICS
     call self%radiation%initialise(name='radiation_fields', table_len=100)
@@ -197,6 +243,10 @@ contains
     call self%aerosol%initialise(name='aerosol_fields', table_len=100)
     call self%stph%initialise(name='stph_fields', table_len=100)
 #endif
+   call gungho_axes%initialise()
+if (limited_area) then
+    call lbc_fields%initialise(name='lbc_fields', table_len=100)
+  end if
 end subroutine init
 
   !> @brief Post-initialisation sanity check
@@ -262,7 +312,6 @@ end subroutine init
 
     type(field_collection_type), pointer :: coll_ptr
 
-    coll_ptr => null()
     select case(main_coll)
     case (main_coll_dict%derived)
       coll_ptr => self%derived
@@ -292,11 +341,74 @@ end subroutine init
       coll_ptr => self%aerosol
     case (main_coll_dict%stph)
       coll_ptr => self%stph
+    case (main_coll_dict%lbc)
+      coll_ptr => self%lbc
+    case (main_coll_dict%none)
+      coll_ptr => null()
     case default
       coll_ptr => null()
       call log_event('unexpected main collection enumerator', log_level_error)
     end select
   end function get_main_coll_ptr
+
+  !> @brief Accessor for moisture fields
+  !> @param[in] self      Field mapper object
+  !> @param[in] moist_arr Moisture array enumerator
+  !> @param[in] moist_idx Moisture array index
+  !> @return              field returned, null if not a moisture field
+  function get_moist_field_ptr(self, moist_arr, moist_idx) result(field)
+    implicit none
+    class(field_mapper_type), intent(in) :: self
+
+    integer(i_def), intent(in) :: moist_arr
+    integer(i_def), intent(in) :: moist_idx
+
+    type(field_array_type), pointer :: arr
+    type(field_type), pointer :: field
+
+    select case(moist_arr)
+    case (moist_arr_dict%mr)
+      call self%moisture%get_field("mr", arr)
+    case (moist_arr_dict%moist_dyn)
+      call self%moisture%get_field("moist_dyn", arr)
+    case (moist_arr_dict%none)
+      arr => null()
+    case default
+      arr => null()
+      call log_event('unexpected moisture array enumerator', log_level_error)
+    end select
+
+    if (associated(arr)) then
+      field => arr%bundle(moist_idx)
+    else
+      field => null()
+    end if
+  end function get_moist_field_ptr
+
+  !> @brief Accessor for time axes
+  !> @param[in] self      Field mapper object
+  !> @param[in] time_axis Time axis enumerator
+  !> @return              Axis returned, null if field without time axis
+  function get_time_axis_ptr(self, time_axis) result(axis)
+    implicit none
+    class(field_mapper_type), intent(in) :: self
+
+    integer(i_def), intent(in) :: time_axis
+
+    type(time_axis_type), pointer :: axis
+
+    select case(time_axis)
+    case (time_axis_dict%lbc)
+      axis => self%gungho_axes%lbc_time_axis
+    case (time_axis_dict%ls)
+      axis => self%gungho_axes%lbc_time_axis
+    case (time_axis_dict%none)
+      axis => null()
+    case default
+      axis => null()
+      call log_event('unexpected time axis enumerator', log_level_error)
+    end select
+  end function get_time_axis_ptr
 
   !> @brief Destructor for field mapper objects
   !> @param[inout] self       Field mapper object

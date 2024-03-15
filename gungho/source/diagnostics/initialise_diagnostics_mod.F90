@@ -104,7 +104,9 @@ contains
     end if
 
     call init_field_from_metadata( &
-      field, unique_id, .not. active, force_mesh, force_rad_levels, status)
+      field, unique_id, empty=(.not. active), &
+      force_mesh=force_mesh, force_rad_levels=force_rad_levels, &
+      diag_status=status)
 
     if (active) then
       write_behaviour => write_field_generic

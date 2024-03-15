@@ -9,7 +9,7 @@
 module field_spec_mod
 
   use constants_mod, only : i_def, l_def, str_def, imdi
-  use log_mod,       only : log_event, log_scratch_space, log_level_error
+  use log_mod,       only : log_event, log_scratch_space, log_level_error, log_level_info
   use clock_mod,     only : clock_type
 
   implicit none
@@ -30,12 +30,16 @@ module field_spec_mod
     integer(i_def) :: chemistry
     integer(i_def) :: aerosol
     integer(i_def) :: stph
+    integer(i_def) :: lbc
+    integer(i_def) :: none ! for non-physics fields, e.g., gungho
+  contains
+    procedure :: check => main_coll_check
   end type main_coll_dict_type
 
   !> @brief Map main collection enumerators to collections.
   type(main_coll_dict_type), parameter :: main_coll_dict &
     = main_coll_dict_type( &
-    146, 176, 265, 342, 429, 466, 621, 677, 720, 804, 828, 966, 968, 999)
+    107,120,129,130,141,142,152,154,160,190,191,222,238,241,252,279)
 
   !> @brief Dictionary of advected field collections
   type :: adv_coll_dict_type
@@ -48,7 +52,29 @@ module field_spec_mod
 
   !> @brief Map advected field enumerators to collections.
   type(adv_coll_dict_type), parameter :: adv_coll_dict &
-    = adv_coll_dict_type(742, 775, 857, 343, 242)
+    = adv_coll_dict_type(387,391,395,399,412)
+
+  !> @brief Dictionary of moisture field arrays
+  type :: moist_arr_dict_type
+    integer(i_def) :: none          ! field not part of a moisture array
+    integer(i_def) :: mr            ! mr array
+    integer(i_def) :: moist_dyn     ! moist_dyn array
+  end type moist_arr_dict_type
+
+   !> @brief Map moisture array enumerators to moisture array.
+  type(moist_arr_dict_type), parameter :: moist_arr_dict &
+    = moist_arr_dict_type(445,450,454)
+
+  !> @brief Dictionary of time axes
+    type :: time_axis_dict_type
+    integer(i_def) :: none          ! field without time axis
+    integer(i_def) :: lbc           ! lbc time axis
+    integer(i_def) :: ls            ! ls time axis
+  end type time_axis_dict_type
+
+   !> @brief Map moisture array enumerators to moisture array.
+  type(time_axis_dict_type), parameter :: time_axis_dict &
+    = time_axis_dict_type(525,529,536)
 
   ! request function space discovery
   integer, parameter :: missing_fs = imdi
@@ -57,13 +83,18 @@ module field_spec_mod
   type :: field_spec_type
     character(str_def) :: name        ! Field name
     integer(i_def) :: main_coll       ! Enumerator of main field collection
-    integer(i_def) :: space           ! Function space
+    integer(i_def) :: space           ! Function space enumerator
+    integer(i_def) :: order           ! Function space order
     integer(i_def) :: adv_coll        ! Enumerator of advected field collection
+    integer(i_def) :: moist_arr       ! Enumerator of moisture array
+    integer(i_def) :: moist_idx       ! Index into moisture array
+    integer(i_def) :: time_axis       ! Enumerator of time axis
     character(str_def) :: mult        ! Name of multidata item, or blank string
     logical(l_def) :: ckp             ! Is it a checkpoint (prognostic) field?
     logical(l_def) :: twod            ! Is it two-dimensional?
     logical(l_def) :: empty           ! Is it empty (with an empty data array)?
     logical(l_def) :: is_int          ! Is it an integer field?
+    logical(l_def) :: legacy          ! Is it a field with legacy checkpointing?
   end type field_spec_type
 
   !> @brief Constructor interface
@@ -75,7 +106,9 @@ module field_spec_mod
   public :: field_spec_type, &
             main_coll_dict_type, main_coll_dict, &
             adv_coll_dict_type, adv_coll_dict, &
-            processor_type, make_spec, if_advected, missing_fs
+            moist_arr_dict, time_axis_dict, &
+            processor_type, make_spec, if_advected, missing_fs, &
+            space_has_xios_io
 
   !> @brief Base class for processor objects, operating on field specifiers
   type, abstract :: processor_type
@@ -103,6 +136,31 @@ module field_spec_mod
   end interface
 
 contains
+
+  !> @brief Generic error handler for enumerator check
+  !> @param[in] which              String identifying enumerator
+  !> @param[in] enum               Faulty enumerator value
+  subroutine enum_error(which, enum)
+    implicit none
+    character(*), intent(in) :: which
+    integer(i_def), intent(in) :: enum
+    write(log_scratch_space, &
+      '("unexpected ", A, " enumerator: ", I3)') trim(which), enum
+    call log_event(log_scratch_space, log_level_error)
+  end subroutine enum_error
+
+  !> @brief Check main collection enumerator
+  !> @param[in] s         Main collection dictionary
+  !> @param[in] enum      Enumerator value to be checked
+  function main_coll_check(s, enum) result(ok)
+    implicit none
+    class(main_coll_dict_type), intent(in) :: s ! short for "self"
+    integer(i_def), intent(in)             :: enum
+    logical(l_def) :: ok
+    ok = any ([s%derived, s%radiation, s%microphysics, s%electric, &
+      s%orography, s%turbulence, s%convection, s%cloud, s%surface, &
+      s%soil, s%snow, s%chemistry, s%aerosol, s%stph, s%lbc, s%none] == enum)
+  end function main_coll_check
 
   !> @brief Getter for clock
   !> @param[in] self       Processor object
@@ -133,50 +191,74 @@ contains
     type(field_spec_type) :: self
     self%name = ''
     self%main_coll = imdi
+    self%moist_arr = moist_arr_dict%none
+    self%moist_idx = 0
+    self%time_axis = time_axis_dict%none
     self%space = missing_fs
+    self%order = 0
     self%adv_coll = adv_coll_dict%none
     self%mult = ''
     self%ckp = .false.
     self%twod = .false.
     self%empty = .false.
     self%is_int = .false.
+    self%legacy = .false.
   end function field_spec_constructror
 
   !> @brief Convenience function for creating field specifiers
   !> @param[in] name               Field name
-  !> @param[in] main_coll          Enurmerator of main fields collection
-  !> @param[in] space              Function space
+  !> @param[in] main_coll          Enumerator of main fields collection
+  !> @param[in, optional] space    Function space enumerator
+  !> @param[in, optional] order    Function space order
   !> @param[in, optional] adv_coll Enumerator of advected fields collection
+  !> @param[in, optional] moist_arr  Moisture array enumerator
+  !> @param[in, optional] moist_idx  Index into moisture array
+  !> @param[in, optional] time_axis  Time axis enumerator
   !> @param[in, optional] mult     Name of multidata item, or blank string
   !> @param[in, optional] ckp      Is it a checkpoint (prognostic) field?
   !> @param[in, optional] twod     Is it two-dimensional?
   !> @param[in, optional] empty    Is it empty (with empty data array)?
-  !> @param[in, optional] int      Is it an integer field?
+  !> @param[in, optional] is_int   Is it an integer field?
+  !> @param[in, optional] legacy   Is it a field with legacy checkpointing?
   !> @return                       Specifier returned
-  function make_spec(name, main_coll, space, adv_coll, &
-    mult, ckp, twod, empty, is_int) result(field_spec)
+  function make_spec(name, main_coll, space, order, adv_coll, &
+    moist_arr, moist_idx, time_axis, &
+    mult, ckp, twod, empty, is_int, legacy) result(field_spec)
     implicit none
     character(*), intent(in) :: name
     integer(i_def), intent(in) :: main_coll
     integer(i_def), optional, intent(in) :: space
+    integer(i_def), optional, intent(in) :: order
     integer(i_def), optional, intent(in) :: adv_coll
+    integer(i_def), optional, intent(in) :: moist_arr
+    integer(i_def), optional, intent(in) :: moist_idx
+    integer(i_def), optional, intent(in) :: time_axis
     character(*), optional, intent(in) :: mult
     logical(l_def), optional, intent(in) :: ckp
     logical(l_def), optional, intent(in) :: twod
     logical(l_def), optional, intent(in) :: empty
     logical(l_def), optional, intent(in) :: is_int
+    logical(l_def), optional, intent(in) :: legacy
     type(field_spec_type) :: field_spec
 
     field_spec = field_spec_type()
     field_spec%name = name
     field_spec%main_coll = main_coll
     if (present(space)) field_spec%space=space
+    if (present(order)) field_spec%order=order
     if (present(adv_coll)) field_spec%adv_coll=adv_coll
+    if (present(moist_arr)) field_spec%moist_arr = moist_arr
+    if (present(moist_idx)) field_spec%moist_idx = moist_idx
+    if (present(time_axis)) field_spec%time_axis = time_axis
     if (present(mult)) field_spec%mult=mult
     if (present(ckp)) field_spec%ckp=ckp
     if (present(twod)) field_spec%twod=twod
     if (present(empty)) field_spec%empty=empty
     if (present(is_int)) field_spec%is_int=is_int
+    if (present(legacy)) field_spec%legacy=legacy
+
+    if (.not. main_coll_dict%check(main_coll)) &
+      call enum_error('main_coll', field_spec%main_coll)
   end function make_spec
 
   !> @brief If advected, return collection enumerator, otherwise NONE enumerator
@@ -194,5 +276,38 @@ contains
     adv_coll = coll
     if (.not. advected) adv_coll = adv_coll_dict%none
   end function if_advected
+
+  !> @brief Return true if and only if a space is supported by XIOS
+  !> @details In legacy mode, all the spaces are supported. In modern mode,
+  !> W2 fields (like u) cannot be written directly. These will be checkpointed
+  !> via the decomposition implemented by the routines split_complex_prognostics /
+  !> combine_complex_prognostics in gungho_init_fields_mod.X90.
+  !> @param[in] fs         Function space enumerator
+  !> @param[in] legacy     Are we using legacy checkpoint domains (checkpoint_W2, etc.)?
+  !> @return               True if and only if space is supported
+  function space_has_xios_io(fs, legacy) result(flag)
+    use fs_continuity_mod,              only : W1, W2
+    implicit none
+
+    integer(i_def), intent(in) :: fs ! function space enumerator
+    logical(l_def), optional, intent(in) :: legacy ! using legacy io?
+
+    logical(l_def) :: use_legacy
+    logical(l_def) :: flag
+
+    use_legacy = .false.
+    if (present(legacy)) use_legacy = legacy
+
+    select case (fs)
+    case (W1)
+      flag = .false. ! there is no legacy domain for W1
+    case (W2)
+      ! supported in legacy mode, otherwise not
+      flag = use_legacy
+    case default
+      flag = .true.
+  end select
+
+  end function space_has_xios_io
 
 end module field_spec_mod
