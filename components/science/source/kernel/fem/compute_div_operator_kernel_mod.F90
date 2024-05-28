@@ -15,10 +15,8 @@ module compute_div_operator_kernel_mod
   use constants_mod,             only: r_def, i_def
   use coordinate_jacobian_mod,   only: coordinate_jacobian
   use fs_continuity_mod,         only: W2, W3
+  use finite_element_config_mod, only: rehabilitate
   use kernel_mod,                only: kernel_type
-
-  use finite_element_config_mod, only: rehabilitate, coord_system
-  use planet_config_mod,         only: scaled_radius
 
   implicit none
 
@@ -140,10 +138,8 @@ subroutine compute_div_operator_code(cell, nlayers, ncell_3d,     &
       chi2_e(df) = chi2(map_chi(df) + k)
       chi3_e(df) = chi3(map_chi(df) + k)
     end do
-    call coordinate_jacobian( ndf_chi, nqp_h, nqp_v,               &
-                              chi1_e, chi2_e, chi3_e,              &
-                              coord_system, scaled_radius, ipanel, &
-                              basis_chi, diff_basis_chi, jac, dj )
+    call coordinate_jacobian(ndf_chi, nqp_h, nqp_v, chi1_e, chi2_e, chi3_e,  &
+                             ipanel, basis_chi, diff_basis_chi, jac, dj)
 
     do df2 = 1, ndf_w2
       do df3 = 1, ndf_w3

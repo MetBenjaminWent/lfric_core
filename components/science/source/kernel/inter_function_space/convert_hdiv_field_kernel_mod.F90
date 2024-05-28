@@ -22,9 +22,6 @@ use argument_mod,            only : arg_type, func_type,       &
                                     CELL_COLUMN, GH_EVALUATOR
 use constants_mod,           only : r_def, i_def
 
-use finite_element_config_mod, only: coord_system
-use planet_config_mod,         only: scaled_radius
-
 implicit none
 
 private
@@ -102,7 +99,6 @@ subroutine convert_hdiv_field_code(nlayers,                                  &
                                    ndf_pid, undf_pid, map_pid                &
                                    )
   use coordinate_jacobian_mod, only: coordinate_jacobian
-
   implicit none
 
   ! Arguments
@@ -145,10 +141,8 @@ subroutine convert_hdiv_field_code(nlayers,                                  &
       chi2_e(df) = chi2(map_chi(df) + k)
       chi3_e(df) = chi3(map_chi(df) + k)
     end do
-
-    call coordinate_jacobian( ndf_chi, ndf1, chi1_e, chi2_e, chi3_e, &
-                              coord_system, scaled_radius, ipanel,   &
-                              basis_chi, diff_basis_chi, jacobian, dj )
+    call coordinate_jacobian(ndf_chi, ndf1, chi1_e, chi2_e, chi3_e,    &
+                             ipanel, basis_chi, diff_basis_chi, jacobian, dj)
 
     do df = 1,ndf1
       vector_in(:) = 0.0_r_def

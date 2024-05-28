@@ -14,6 +14,8 @@ module gp_vector_rhs_kernel_mod
                                         ANY_DISCONTINUOUS_SPACE_3, &
                                         GH_BASIS, GH_DIFF_BASIS,   &
                                         CELL_COLUMN, GH_QUADRATURE_XYoZ
+  use base_mesh_config_mod,      only : geometry,                   &
+                                        geometry_spherical
   use chi_transform_mod,         only : chi2xyz
   use constants_mod,             only : r_def, i_def
   use coordinate_jacobian_mod,   only : coordinate_jacobian,        &
@@ -21,11 +23,6 @@ module gp_vector_rhs_kernel_mod
   use coord_transform_mod,       only : cart2sphere_vector
   use fs_continuity_mod,         only : W0, W2
   use kernel_mod,                only : kernel_type
-
-  use base_mesh_config_mod,      only: geometry, &
-                                       GEOMETRY_SPHERICAL
-  use finite_element_config_mod, only: coord_system
-  use planet_config_mod,         only: scaled_radius
 
   implicit none
 
@@ -180,8 +177,6 @@ subroutine gp_vector_rhs_code(nlayers,                           &
                              chi_1_cell,     &
                              chi_2_cell,     &
                              chi_3_cell,     &
-                             coord_system,   &
-                             scaled_radius,  &
                              ipanel,         &
                              chi_basis,      &
                              chi_diff_basis, &

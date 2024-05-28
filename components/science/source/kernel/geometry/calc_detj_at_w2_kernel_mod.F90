@@ -18,9 +18,6 @@ module calc_detj_at_w2_kernel_mod
   use fs_continuity_mod, only : W2
   use kernel_mod,        only : kernel_type
 
-  use finite_element_config_mod, only: coord_system
-  use planet_config_mod,         only: scaled_radius
-
   implicit none
 
   private
@@ -122,11 +119,10 @@ subroutine calc_detj_at_w2_code( nlayers,                                  &
     end do
 
     do df = 1,ndf_w2
-      call pointwise_coordinate_jacobian( ndf_chi, chi1_e, chi2_e, chi3_e, &
-                                          coord_system, scaled_radius,     &
-                                          ipanel, basis_chi(:,:,df),       &
-                                          diff_basis_chi(:,:,df),          &
-                                          jacobian, detj )
+      call pointwise_coordinate_jacobian(ndf_chi, chi1_e, chi2_e, chi3_e, &
+                                         ipanel, basis_chi(:,:,df),       &
+                                         diff_basis_chi(:,:,df),          &
+                                         jacobian, detj)
 
       detj_w2(map_w2(df)+k) = detj + detj_w2(map_w2(df)+k)
     end do

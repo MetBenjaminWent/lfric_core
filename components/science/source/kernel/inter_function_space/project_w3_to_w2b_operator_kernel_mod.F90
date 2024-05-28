@@ -22,9 +22,6 @@ use argument_mod,            only : arg_type, func_type,       &
 use constants_mod,           only : r_def, i_def
 use fs_continuity_mod,       only : W2broken, W3, Wchi
 
-use finite_element_config_mod, only: coord_system
-use planet_config_mod,         only: scaled_radius
-
 implicit none
 
 private
@@ -148,12 +145,10 @@ subroutine project_w3_to_w2b_operator_code( cell, nlayers,              &
     projection_operator(:,:,ik) = 0.0_r_def
     do qp_v = 1,nqp_v
       do qp_h = 1,nqp_h
-        call pointwise_coordinate_jacobian( ndf_wx, chi1_e, chi2_e, chi3_e, &
-                                            coord_system, scaled_radius,    &
-                                            ipanel,                         &
-                                            basis_wx(:,:,qp_h,qp_v),        &
-                                            diff_basis_wx(:,:,qp_h,qp_v),   &
-                                            jac, detj )
+        call pointwise_coordinate_jacobian(ndf_wx, chi1_e, chi2_e, chi3_e,  &
+                                           ipanel, basis_wx(:,:,qp_h,qp_v), &
+                                           diff_basis_wx(:,:,qp_h,qp_v),    &
+                                           jac, detj)
         a3d = 0.0_r_def
         do df_w3 = 1,ndf_w3
           a3d(direction) = basis_w3(1,df_w3,qp_h,qp_v)

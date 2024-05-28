@@ -195,7 +195,7 @@ contains
     use chi_transform_mod,         only : init_chi_transforms
     use finite_element_config_mod, only : cellshape_quadrilateral, &
                                           coord_system_alphabetaz, &
-                                          coord_system_lonlatz,    &
+                                          coord_system_lonlatz,   &
                                           coord_system_xyz
     use feign_config_mod,          only : feign_finite_element_config, &
                                           feign_planet_config
@@ -247,7 +247,8 @@ contains
   @Test
   subroutine test_all( this )
 
-    use chi_transform_mod, only: chi2abr, chi2llr, chi2xyz, chir2xyz
+    use chi_transform_mod,         only : chi2abr, chi2llr, chi2xyz, chir2xyz
+    use finite_element_config_mod, only : coord_system
 
     implicit none
 

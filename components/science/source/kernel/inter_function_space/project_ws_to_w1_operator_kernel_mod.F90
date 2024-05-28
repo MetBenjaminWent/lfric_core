@@ -26,13 +26,6 @@ use constants_mod,           only : r_def, i_def
 use fs_continuity_mod,       only : W1, Wchi
 use log_mod,                 only : log_event, LOG_LEVEL_ERROR
 
-
-use finite_element_config_mod, only: coord_system
-use planet_config_mod,         only: scaled_radius
-use base_mesh_config_mod,      only: geometry,           &
-                                     GEOMETRY_SPHERICAL, &
-                                     GEOMETRY_PLANAR
-
 implicit none
 
 private
@@ -113,6 +106,9 @@ subroutine project_ws_to_w1_operator_code( cell, nlayers,              &
                                      pointwise_coordinate_jacobian_inverse
   use chi_transform_mod,       only: chi2llr
   use coord_transform_mod,     only: sphere2cart_vector
+  use base_mesh_config_mod,    only: geometry,           &
+                                     geometry_spherical, &
+                                     geometry_planar
 
   implicit none
 
@@ -177,13 +173,10 @@ subroutine project_ws_to_w1_operator_code( cell, nlayers,              &
                        ipanel, llr(1), llr(2), llr(3))
         end if
 
-        call pointwise_coordinate_jacobian( ndf_wx, chi1_e, chi2_e, chi3_e, &
-                                            coord_system, scaled_radius,    &
-                                            ipanel,                         &
-                                            basis_wx(:,:,qp_h,qp_v),        &
-                                            diff_basis_wx(:,:,qp_h,qp_v),   &
-                                            jac, detj )
-
+        call pointwise_coordinate_jacobian(ndf_wx, chi1_e, chi2_e, chi3_e,  &
+                                           ipanel, basis_wx(:,:,qp_h,qp_v), &
+                                           diff_basis_wx(:,:,qp_h,qp_v),    &
+                                           jac, detj)
         jac_inv = pointwise_coordinate_jacobian_inverse(jac, detj)
 
         a3d_llr = 0.0_r_def

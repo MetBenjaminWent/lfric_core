@@ -22,9 +22,6 @@ module scale_by_detj_kernel_mod
   use constants_mod,     only : r_def, i_def
   use kernel_mod,        only : kernel_type
 
-  use finite_element_config_mod, only: coord_system
-  use planet_config_mod,         only: scaled_radius
-
   implicit none
 
   private
@@ -126,14 +123,11 @@ subroutine scale_by_detj_code(nlayers,                    &
     end do
 
     do df = 1,ndf_ws
-
       ! Compute detj at dof points
-      call pointwise_coordinate_jacobian( ndf_wx, chi1_e, chi2_e, chi3_e, &
-                                          coord_system, scaled_radius,    &
-                                          ipanel, basis_wx(:,:,df),       &
-                                          diff_basis_wx(:,:,df),          &
-                                          jac, detj )
-
+      call pointwise_coordinate_jacobian(ndf_wx, chi1_e, chi2_e, chi3_e, &
+                                         ipanel, basis_wx(:,:,df),       &
+                                         diff_basis_wx(:,:,df),          &
+                                         jac, detj)
       detj_av(k + df-1) = detj_av(k + df-1) + detj
       f_av(k + df-1)    = f_av(k + df-1) +  field(map_ws(df)+k)
     end do

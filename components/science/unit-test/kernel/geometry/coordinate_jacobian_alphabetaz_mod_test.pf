@@ -9,8 +9,6 @@ module coordinate_jacobian_alphabetaz_mod_test
 
   use pFUnit_Mod
   use constants_mod, only : r_def, i_def
-  use finite_element_config_mod, only : CELLSHAPE_QUADRILATERAL, &
-                                        COORD_SYSTEM_ALPHABETAZ
 
   implicit none
 
@@ -33,17 +31,19 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine setUp( this )
 
-    use feign_config_mod, only: feign_finite_element_config, &
-                                feign_planet_config
+    use finite_element_config_mod, only : cellshape_quadrilateral, &
+                                          coord_system_alphabetaz
+    use feign_config_mod,          only : feign_finite_element_config, &
+                                          feign_planet_config
 
     implicit none
 
     class(jacobian_alphabetaz_test_type), intent(inout) :: this
 
     call feign_finite_element_config(              &
-             cellshape=CELLSHAPE_QUADRILATERAL,    &
+             cellshape=cellshape_quadrilateral,    &
              coord_order=0_i_def,                  &
-             coord_system=COORD_SYSTEM_ALPHABETAZ, &
+             coord_system=coord_system_alphabetaz, &
              element_order=0_i_def,                &
              rehabilitate=.true. )
 
@@ -54,7 +54,7 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine tearDown( this )
 
-    use configuration_mod, only: final_configuration
+    use configuration_mod,        only: final_configuration
 
     implicit none
 
@@ -86,9 +86,6 @@ contains
     integer :: ipanel = 1
     integer :: df, i, j
 
-    integer(i_def)   :: coord_system
-    real(kind=r_def) :: scaled_radius
-
     real(kind=r_def) :: alpha(8), beta(8), height(8), diff_basis(3,8,1,1)
     real(kind=r_def) :: basis(1,8,1,1), jac(3,3,1,1), dj(1,1)
     real(kind=r_def) :: jac_inv(3,3,1,1), identity(3,3,1,1), err, answer(3,3)
@@ -97,9 +94,6 @@ contains
     real(kind=r_def), parameter :: a = 0.1_r_def
     real(kind=r_def), parameter :: b = 0.1_r_def
     real(kind=r_def), parameter :: h = 2.0_r_def
-
-    coord_system  = COORD_SYSTEM_ALPHABETAZ
-    scaled_radius = radius / scaling
 
     ! We choose a box centred on alpha = 0, beta = 0
     alpha(:) = (/ -a, a, a, -a, -a, a, a, -a /)
@@ -139,13 +133,11 @@ contains
 
     basis(:,:,:,:) = 0.125_r_def
 
-    call coordinate_jacobian( ndf, ngp, ngp, alpha, beta, height,  &
-                              coord_system, scaled_radius, ipanel, &
-                              basis, diff_basis, jac, dj )
-
+    call coordinate_jacobian(ndf, ngp, ngp, alpha, beta, height, ipanel,      &
+                             basis, diff_basis, jac, dj)
     call coordinate_jacobian_inverse(ngp,ngp, jac, dj, jac_inv)
 
-    err = maxval( abs( matmul( jac_inv(:,:,1,1), jac(:,:,1,1) ) &
+    err = maxval( abs( matmul( jac_inv(:,:,1,1), jac(:,:,1,1) )               &
                   - identity(:,:,1,1) ) )
     tst = abs( matmul( jac_inv(:,:,1,1), jac(:,:,1,1) ))
 
@@ -177,11 +169,9 @@ contains
     end do
 
     ! Test the pointwise computations
-    call pointwise_coordinate_jacobian( ndf, alpha, beta, height,            &
-                                        coord_system, scaled_radius, ipanel, &
-                                        basis(:,:,1,1), diff_basis(:,:,1,1), &
-                                        jac(:,:,1,1), dj(1,1) )
-
+    call pointwise_coordinate_jacobian(ndf, alpha, beta, height, ipanel,      &
+                                       basis(:,:,1,1), diff_basis(:,:,1,1),   &
+                                       jac(:,:,1,1), dj(1,1) )
     jac_inv(:,:,1,1) =  pointwise_coordinate_jacobian_inverse(jac(:,:,1,1),   &
                                                               dj(1,1))
     err = maxval( abs( matmul( jac_inv(:,:,1,1), jac(:,:,1,1) )               &

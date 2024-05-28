@@ -33,9 +33,6 @@ module proj_mr_to_sh_rho_rhs_op_kernel_mod
   use fs_continuity_mod, only : W3, Wtheta
   use kernel_mod,        only : kernel_type
 
-  use finite_element_config_mod, only: coord_system
-  use planet_config_mod,         only: scaled_radius
-
   implicit none
 
   private
@@ -187,17 +184,12 @@ subroutine proj_mr_to_sh_rho_rhs_op_code(                                      &
     end do
 
     ! Get detj for lower and upper half cells
-    call coordinate_jacobian( ndf_chi_dl, nqp_h, nqp_v,                    &
-                              lower_chi_1_e, lower_chi_2_e, lower_chi_3_e, &
-                              coord_system, scaled_radius, ipanel,         &
-                              chi_dl_basis, chi_dl_diff_basis,             &
-                              lower_jac, lower_dj )
-
-    call coordinate_jacobian( ndf_chi_dl, nqp_h, nqp_v,                    &
-                              upper_chi_1_e, upper_chi_2_e, upper_chi_3_e, &
-                              coord_system, scaled_radius, ipanel,         &
-                              chi_dl_basis, chi_dl_diff_basis,             &
-                              upper_jac, upper_dj )
+    call coordinate_jacobian(ndf_chi_dl, nqp_h, nqp_v, lower_chi_1_e, lower_chi_2_e, &
+                             lower_chi_3_e, ipanel, chi_dl_basis, chi_dl_diff_basis, &
+                             lower_jac, lower_dj)
+    call coordinate_jacobian(ndf_chi_dl, nqp_h, nqp_v, upper_chi_1_e, upper_chi_2_e, &
+                             upper_chi_3_e, ipanel, chi_dl_basis, chi_dl_diff_basis, &
+                             upper_jac, upper_dj)
 
     ! Initialise values to zero
     do df = 1, ndf_w3

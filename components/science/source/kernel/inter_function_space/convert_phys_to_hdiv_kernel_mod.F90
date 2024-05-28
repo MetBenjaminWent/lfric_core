@@ -21,10 +21,6 @@ module convert_phys_to_hdiv_kernel_mod
   use fs_continuity_mod,       only : W2
   use kernel_mod,              only : kernel_type
 
-  use base_mesh_config_mod,      only: GEOMETRY_SPHERICAL
-  use planet_config_mod,         only: scaled_radius
-  use finite_element_config_mod, only: coord_system
-
   implicit none
 
   private
@@ -110,7 +106,7 @@ subroutine convert_phys_to_hdiv_code( nlayers,        &
                                       undf_pid,       &
                                       map_pid )
 
-
+  use base_mesh_config_mod,       only : geometry_spherical
   use chi_transform_mod,          only : chi2llr
   use coordinate_jacobian_mod,    only : pointwise_coordinate_jacobian, &
                                          pointwise_coordinate_jacobian_inverse
@@ -167,12 +163,12 @@ subroutine convert_phys_to_hdiv_code( nlayers,        &
       end do
 
       ! Compute Jacobian at this W2 point
-      call pointwise_coordinate_jacobian( ndf_chi,                             &
-                                          chi_1_cell, chi_2_cell, chi_3_cell,  &
-                                          coord_system, scaled_radius, ipanel, &
-                                          basis_chi(:,:,df_w2),                &
-                                          diff_basis_chi(:,:,df_w2), jac, detj )
-
+      call pointwise_coordinate_jacobian(ndf_chi,                              &
+                                         chi_1_cell, chi_2_cell, chi_3_cell,   &
+                                         ipanel,                               &
+                                         basis_chi(:,:,df_w2),                 &
+                                         diff_basis_chi(:,:,df_w2),            &
+                                         jac, detj)
       ! Calculate inverse Jacobian
       jac_inv = pointwise_coordinate_jacobian_inverse(jac, detj)
 
@@ -180,7 +176,7 @@ subroutine convert_phys_to_hdiv_code( nlayers,        &
       ! Compute wind in Cartesian components
       ! ---------------------------------------------------------------------- !
 
-      if ( geometry == GEOMETRY_SPHERICAL ) then
+      if ( geometry == geometry_spherical ) then
         ! Need to convert from spherical-polar components to Cartesian
 
         ! First need coordinates of this DoF

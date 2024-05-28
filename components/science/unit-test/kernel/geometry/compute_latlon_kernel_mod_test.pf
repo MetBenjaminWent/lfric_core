@@ -47,6 +47,8 @@ contains
 
     class(compute_latlon_kernel_test_type), intent(inout) :: this
 
+    integer(kind=i_def) :: nlayers
+
     call feign_finite_element_config(      &
         cellshape=cellshape_quadrilateral, &
         coord_order=0_i_def,               &

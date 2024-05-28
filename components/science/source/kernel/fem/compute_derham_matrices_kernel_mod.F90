@@ -28,9 +28,6 @@ module compute_derham_matrices_kernel_mod
   use fs_continuity_mod,       only: W0, W1, W2, W2broken, W3, Wtheta
   use kernel_mod,              only: kernel_type
 
-  use finite_element_config_mod, only: coord_system
-  use planet_config_mod,         only: scaled_radius
-
   implicit none
 
   private
@@ -244,12 +241,10 @@ subroutine compute_derham_matrices_code(cell, nlayers,                      &
     do qp2 = 1, nqp_v
       do qp1 = 1, nqp_h
         ! Precompute some frequently used terms
-        call pointwise_coordinate_jacobian( ndf_chi, chi1_e, chi2_e, chi3_e, &
-                                            coord_system, scaled_radius,     &
-                                            ipanel,                          &
-                                            basis_chi(:,:,qp1,qp2),          &
-                                            diff_basis_chi(:,:,qp1,qp2),     &
-                                            jac, dj )
+        call pointwise_coordinate_jacobian(ndf_chi, chi1_e, chi2_e, chi3_e, &
+                                           ipanel, basis_chi(:,:,qp1,qp2),  &
+                                           diff_basis_chi(:,:,qp1,qp2),     &
+                                           jac, dj)
 
         jac_inv = pointwise_coordinate_jacobian_inverse(jac,dj)
         jac_t = transpose(jac_inv)

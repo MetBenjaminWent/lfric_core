@@ -27,9 +27,6 @@ module mg_derham_mat_kernel_mod
   use fs_continuity_mod,       only: W2, W3, wtheta
   use kernel_mod,              only: kernel_type
 
-  use finite_element_config_mod, only: coord_system
-  use planet_config_mod,         only: scaled_radius
-
   implicit none
 
   private
@@ -181,11 +178,10 @@ subroutine mg_derham_mat_code(cell, nlayers,                      &
      do qp2 = 1, nqp_v
         do qp1 = 1, nqp_h
            ! Precompute some frequently used terms
-           call pointwise_coordinate_jacobian( ndf_chi, chi1_e, chi2_e, chi3_e, &
-                                               coord_system, scaled_radius,     &
-                                               ipanel, basis_chi(:,:,qp1,qp2),  &
-                                               diff_basis_chi(:,:,qp1,qp2),     &
-                                               jac, dj )
+           call pointwise_coordinate_jacobian(ndf_chi, chi1_e, chi2_e, chi3_e, &
+                                              ipanel, basis_chi(:,:,qp1,qp2),  &
+                                              diff_basis_chi(:,:,qp1,qp2),     &
+                                              jac, dj)
            wt = wqp_h(qp1)*wqp_v(qp2)
 
            ! W2 mass matrix

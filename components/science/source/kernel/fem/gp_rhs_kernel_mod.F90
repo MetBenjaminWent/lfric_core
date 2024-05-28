@@ -17,9 +17,6 @@ use argument_mod,            only : arg_type, func_type,       &
                                     GH_BASIS, GH_DIFF_BASIS,   &
                                     CELL_COLUMN, GH_QUADRATURE_XYoZ
 
-use finite_element_config_mod, only: coord_system
-use planet_config_mod,         only: scaled_radius
-
 implicit none
 
 private
@@ -144,8 +141,6 @@ subroutine gp_rhs_code(nlayers,                       &
                              chi_1_cell,     &
                              chi_2_cell,     &
                              chi_3_cell,     &
-                             coord_system,   &
-                             scaled_radius,  &
                              ipanel,         &
                              chi_basis,      &
                              chi_diff_basis, &
