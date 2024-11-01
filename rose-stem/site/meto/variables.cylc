@@ -8,6 +8,7 @@
 {% do site_vars.update({"known_applications": ["coupling",
                                                "driver",
                                                "infrastructure",
+                                               "io_demo",
                                                "lfric_xios",
                                                "mesh",
                                                "science",

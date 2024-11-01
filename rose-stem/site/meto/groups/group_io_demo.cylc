@@ -1,0 +1,114 @@
+{# ########################################################################### #}
+{# (c) Crown copyright 2024 Met Office. All rights reserved. #}
+{# The file LICENCE, distributed with this code, contains details of the terms #}
+{# under which the code may be used. #}
+{# ########################################################################### #}
+{% do LOG.debug("Entered site/meto/groups/group_io_demo.cylc") %}
+
+{# SPICE Groups #}
+{% do site_groups.update({
+    "io_demo_spice_developer": [
+        "io_demo_spice_unit_tests",
+        "io_demo_spice_canned",
+        "io_demo_default-C24_spice_gnu_fast-debug-64bit",
+        "io_demo_default-C24_spice_gnu_fast-debug-32bit",
+        "io_demo_default-C24_spice_intel_fast-debug-64bit",
+        "io_demo_default-C24_spice_intel_fast-debug-32bit",
+        "io_demo_default-C24_spice_gnu_full-debug-64bit",
+        "io_demo_default-C24_spice_intel_full-debug-64bit",
+        "io_demo_multifile-C24_spice_gnu_fast-debug-64bit",
+        "io_demo_multifile-C24_spice_gnu_fast-debug-32bit",
+        "io_demo_multifile-C24_spice_intel_fast-debug-64bit",
+    ],
+    "io_demo_spice": [
+        "io_demo_spice_developer"
+    ],
+    "io_demo_spice_unit_tests": [
+        "io_demo_unit_tests_spice_intel_64bit",
+        "io_demo_unit_tests_spice_gnu_64bit"
+    ],
+    "io_demo_spice_canned": [
+        "io_demo_canned_spice_intel_fast-debug-64bit",
+        "io_demo_canned_spice_gnu_fast-debug-64bit",
+    ],
+    "io_demo_spice_build": [
+        "build_io_demo_spice_intel_fast-debug-64-bit",
+        "build_io_demo_spice_intel_fast-debug-32-bit",
+        "build_io_demo_spice_gnu_fast-debug-64-bit",
+        "build_io_demo_spice_gnu_fast-debug-32-bit",
+        "build_io_demo_spice_intel_full-debug-64-bit",
+        "build_io_demo_spice_gnu_full-debug-64-bit",
+    ]
+    }) %}
+
+
+{# XC40 Groups #}
+{% do site_groups.update({
+    "io_demo_xc40_developer": [
+        "io_demo_xc40_unit_tests",
+        "io_demo_xc40_canned",
+        "io_demo_default-C24_xc40_intel_fast-debug-64bit",
+        "io_demo_default-C24_xc40_intel_fast-debug-32bit",
+        "io_demo_default-C24_xc40_intel_full-debug-64bit",
+        "io_demo_multifile-C24_xc40_intel_fast-debug-64bit",
+        "io_demo_multifile-C24_xc40_intel_fast-debug-32bit",
+    ],
+    "io_demo_xc40": [
+        "io_demo_xc40_developer"
+    ],
+    "io_demo_xc40_unit_tests": [
+        "io_demo_unit_tests_xc40_intel_64bit",
+    ],
+    "io_demo_xc40_canned": [
+        "io_demo_canned_xc40_intel_fast-debug-64bit",
+    ],
+    "io_demo_xc40_build": [
+        "build_io_demo_xc40_intel_fast-debug-64-bit",
+        "build_io_demo_xc40_intel_fast-debug-32-bit",
+        "build_io_demo_xc40_intel_full-debug-64-bit",
+    ]
+    }) %}
+
+{# Platform Generic Groups #}
+{% do site_groups.update({
+    "io_demo_developer": [
+        "scripts",
+        "io_demo_spice_developer",
+        "io_demo_xc40_developer",
+    ],
+    "io_demo": [
+        "io_demo_developer",
+    ],
+    "io_demo_unit_tests": [
+        "io_demo_spice_unit_tests",
+        "io_demo_xc40_unit_tests",
+    ],
+    "io_demo_build": [
+        "io_demo_spice_build",
+        "io_demo_xc40_build",
+    ],
+    "io_demo_canned": [
+        "io_demo_spice_canned",
+        "io_demo_xc40_canned",
+    ],
+    }) %}
+
+{# Platform Generic Extends #}
+{% do site_groups.developer.extend(site_groups.io_demo_developer) %}
+{% do site_groups.all.extend(site_groups.io_demo) %}
+{% do site_groups.unit_tests.extend(site_groups.io_demo_unit_tests) %}
+{% do site_groups.build.extend(site_groups.io_demo_build) %}
+
+{# Spice Extends #}
+{% do site_groups.spice_developer.extend(site_groups.io_demo_spice_developer) %}
+{% do site_groups.spice.extend(site_groups.io_demo_spice) %}
+{% do site_groups.spice_unit_tests.extend(site_groups.io_demo_spice_unit_tests) %}
+{% do site_groups.spice_build.extend(site_groups.io_demo_spice_build) %}
+
+{# XC40 Extends #}
+{% do site_groups.xc40_developer.extend(site_groups.io_demo_xc40_developer) %}
+{% do site_groups.xc40.extend(site_groups.io_demo_xc40) %}
+{% do site_groups.xc40_unit_tests.extend(site_groups.io_demo_xc40_unit_tests) %}
+{% do site_groups.xc40_build.extend(site_groups.io_demo_xc40_build) %}
+
+{% do LOG.debug("Finished in site/meto/groups/group_io_demo.cylc") %}

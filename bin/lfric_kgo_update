@@ -27,20 +27,12 @@ LOCAL_PLATFORM='meto-spice'
 
 GROUP_NAME=developer
 
-PROJECT_NAMES=( lfric_atm \
-                lfric_coupled \
-                adjoint_test \
-                gungho_model \
-                linear_model \
-                skeleton \
-                jedi_lfric_tests \
-                diagnostics \
-                gravity_wave \
+PROJECT_NAMES=( skeleton \
                 simple_diffusion \
                 solver_miniapp \
                 shallow_water \
+                io_demo \
                 io_dev \
-                transport \
                 mesh_tools )
 
 #============================================================================
