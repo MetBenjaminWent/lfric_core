@@ -7,8 +7,63 @@
 # Process a log file containing compile metrics into a CVS file.
 #
 # Usage:
-#   process_compiler_metrics <logfile> <outfile>
+#   process_compiler_metrics [-s] <logfile> <outfile>
+#
+# Extracts time and memory usage for each compile process from a build
+# output file, outputting a comma-separated list for each file. The
+# build system uses the local '/usr/bin/time' function to obtain these
+# figures.
+#
+# By default, this script attempts to convert the output ( with
+# expected format of minutes and seconds: mm:ss.ss) into separate
+# columns for minutes and seconds, and a third column that containsa
+# arithmentic that computes total seconds once read into a spreadsheet
+# application. It also separates out the memory amount from the
+# units. These should mean the spreadsheet tools can be used to sort
+# the table either by file, by time or by memory.
+#
+# Should the 'usr/bin/time' output format be different such that the
+# output is parsed incorrectly, specify the -s output which will output
+# the raw time and memory data. Alternatively, edit the script to support
+# the change in format.
+#
+# Note, parallel compiles can cause results of files to be partially
+# over-written, resulting in spurious text in some lines.
 #
 ###############################################################################
 
-cat $1 | sed -n 's/Compiled \(.*\): Wallclock=\(.*\), Highwater=\(.*\)/\1, \2, \3/p' > $2
+USAGE="Usage: process_compiler_metrics [-sh] <logfile> <outfile>"
+OPTIONS="s[simple]\
+         h[help]"
+
+SIMPLE=0
+
+while getopts "$OPTIONS" opt ; do
+  case $opt in
+    s) SIMPLE=1;;
+    h) echo $USAGE; exit 0;;
+   \?) echo $USAGE; exit 1;;
+  esac
+done
+
+shift $(( $OPTIND - 1 ))
+
+if [ "$#" -ne 2 ] ; then
+ echo $USAGE
+ exit 1
+fi
+
+if ! [ -f "$1" ]; then
+ echo "Input log file $1 does not exist"
+ exit 1
+fi
+
+echo "Note: If input is the result of a parallel compiles, there may"
+echo "be mangling of some timer results resulting in some results being missed"
+
+if [ $SIMPLE -eq 1 ] ; then
+  cat $1 | sed -n 's/^Compiled \(.*\): Wallclock=\(.*\), Highwater=\(.*\)/\1, \2, \3/p' > $2
+else
+  echo "File, Minutes, Seconds, Memory Usage, Units" > $2
+  cat $1 | sed -n 's/^Compiled \(.*\): Wallclock=\(.*\):0*\(.*\), Highwater=\([0-9]*\)\([a-zA-Z]*\)/\1, \2, \3,=\2*60+\3, \4, \5/p' > $2
+fi
