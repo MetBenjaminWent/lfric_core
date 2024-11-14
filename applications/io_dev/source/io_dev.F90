@@ -60,7 +60,7 @@ program io_dev
   call init_logger( global_mpi%get_comm(), program_name )
   call init_timers( program_name )
   call init_collections()
-  call init_time( modeldb%clock, modeldb%calendar )
+  call init_time( modeldb )
   deallocate( filename )
 
   call log_event( 'Initialising '//program_name//' ...', log_level_trace )
@@ -75,7 +75,7 @@ program io_dev
   call log_event( 'Finalising '//program_name//' ...', log_level_trace )
   call finalise( modeldb )
 
-  call final_time( modeldb%clock, modeldb%calendar )
+  call final_time( modeldb )
   call final_collections()
   call final_timers( program_name )
   call final_logger( program_name )

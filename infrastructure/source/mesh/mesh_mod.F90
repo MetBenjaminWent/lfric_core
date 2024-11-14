@@ -206,7 +206,6 @@ module mesh_mod
 
     procedure, public :: get_reference_element
     procedure, public :: get_mesh_name
-    procedure, public :: get_partition
     procedure, public :: get_local_mesh
     procedure, public :: get_nlayers
     procedure, public :: get_ncells_2d
@@ -709,30 +708,6 @@ contains
     get_reference_element => self%reference_element
 
   end function get_reference_element
-
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !> DEPRECATED: This function used to return the partition object, but the
-  !> partition object has been removed from the mesh. It will be removed from
-  !> the API in a future update where all API changes will be consolidated
-  !> (incremental updates to the API annoy other users). If called, the function
-  !> will now produce a message in the log, along with a stack trace to show
-  !> where it was called from
-  !>
-  !> @return (null) Pointer to a partition object.
-  !>
-  function get_partition(self) result(partition)
-
-    implicit none
-    class(mesh_type),     target  :: self
-    type(partition_type), pointer :: partition
-
-    partition => null()
-    call log_event(                                                      &
-      "The function mesh%get_partition() is deprecated. Do not call it", &
-      LOG_LEVEL_ERROR                                                    &
-    )
-
-  end function get_partition
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> @brief Gets a pointer to the local_mesh object that was used to
