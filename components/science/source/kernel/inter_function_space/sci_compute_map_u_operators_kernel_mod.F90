@@ -139,9 +139,9 @@ subroutine compute_map_u_operators_code(cell, nlayers, ncell_3d_1, &
   real(kind=r_def), intent(in), dimension(1,ndf_chi_sph,nqp_h,nqp_v) :: chi_sph_basis
   real(kind=r_def), intent(in), dimension(3,ndf_chi_sph,nqp_h,nqp_v) :: chi_sph_diff_basis
 
-  real(kind=r_def), dimension(ndf_w2,ndf_w3,ncell_3d_1), intent(inout) :: u_lon_op
-  real(kind=r_def), dimension(ndf_w2,ndf_w3,ncell_3d_2), intent(inout) :: u_lat_op
-  real(kind=r_def), dimension(ndf_w2,ndf_wt,ncell_3d_3), intent(inout) :: u_up_op
+  real(kind=r_def), dimension(ncell_3d_1,ndf_w2,ndf_w3), intent(inout) :: u_lon_op
+  real(kind=r_def), dimension(ncell_3d_2,ndf_w2,ndf_w3), intent(inout) :: u_lat_op
+  real(kind=r_def), dimension(ncell_3d_3,ndf_w2,ndf_wt), intent(inout) :: u_up_op
   real(kind=r_def), dimension(undf_pid),     intent(in) :: panel_id
   real(kind=r_def), dimension(undf_chi_sph), intent(in) :: chi_sph_1, chi_sph_2, chi_sph_3
 
@@ -164,9 +164,9 @@ subroutine compute_map_u_operators_code(cell, nlayers, ncell_3d_1, &
 
   do k = 0, nlayers-1
     ik = k + 1 + (cell-1)*nlayers
-    u_lon_op(:,:,ik) = 0.0_r_def
-    u_lat_op(:,:,ik) = 0.0_r_def
-    u_up_op(:,:,ik) = 0.0_r_def
+    u_lon_op(ik,:,:) = 0.0_r_def
+    u_lat_op(ik,:,:) = 0.0_r_def
+    u_up_op(ik,:,:) = 0.0_r_def
     do df = 1, ndf_chi_sph
       chi_sph_1_cell(df) = chi_sph_1( map_chi_sph(df) + k )
       chi_sph_2_cell(df) = chi_sph_2( map_chi_sph(df) + k )
@@ -233,11 +233,11 @@ subroutine compute_map_u_operators_code(cell, nlayers, ncell_3d_1, &
 
               integrand = dot_product(matmul(jacobian(:,:,qp1,qp2),&
                                              basis_w2(:,df2,qp1,qp2)),u_lon_phys_basis)
-              u_lon_op(df2,df3,ik) = u_lon_op(df2,df3,ik) &
+              u_lon_op(ik,df2,df3) = u_lon_op(ik,df2,df3) &
                                     + wqp_h(qp1)*wqp_v(qp2)*integrand
               integrand = dot_product(matmul(jacobian(:,:,qp1,qp2),&
                                              basis_w2(:,df2,qp1,qp2)),u_lat_phys_basis)
-              u_lat_op(df2,df3,ik) = u_lat_op(df2,df3,ik)&
+              u_lat_op(ik,df2,df3) = u_lat_op(ik,df2,df3)&
                                     + wqp_h(qp1)*wqp_v(qp2)*integrand
            end do
          end do
@@ -264,7 +264,7 @@ subroutine compute_map_u_operators_code(cell, nlayers, ncell_3d_1, &
 
               integrand = dot_product(matmul(jacobian(:,:,qp1,qp2),&
                                              basis_w2(:,df2,qp1,qp2)),u_up_phys_basis)
-              u_up_op(df2,dft,ik) = u_up_op(df2,dft,ik) &
+              u_up_op(ik,df2,dft) = u_up_op(ik,df2,dft) &
                                     + wqp_h(qp1)*wqp_v(qp2)*integrand
           end do
         end do

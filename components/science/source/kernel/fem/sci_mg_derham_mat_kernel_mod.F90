@@ -128,10 +128,10 @@ subroutine mg_derham_mat_code(cell, nlayers,                      &
   integer(kind=i_def),   intent(in)     :: undf_pid
   integer(kind=i_def), dimension(ndf_chi), intent(in) :: map_chi
   integer(kind=i_def), dimension(ndf_pid), intent(in) :: map_pid
-  real(kind=r_def), intent(inout) :: mm2(ndf_w2,ndf_w2,ncell_3d2)
-  real(kind=r_def), intent(inout) :: mm3(ndf_w3,ndf_w3,ncell_3d3)
-  real(kind=r_def), intent(inout) :: mmt(ndf_wt,ndf_wt,ncell_3dt)
-  real(kind=r_def), intent(inout) :: div(ndf_w3,ndf_w2,ncell_3d6)
+  real(kind=r_def), intent(inout) :: mm2(ncell_3d2,ndf_w2,ndf_w2)
+  real(kind=r_def), intent(inout) :: mm3(ncell_3d3,ndf_w3,ndf_w3)
+  real(kind=r_def), intent(inout) :: mmt(ncell_3dt,ndf_wt,ndf_wt)
+  real(kind=r_def), intent(inout) :: div(ncell_3d6,ndf_w3,ndf_w2)
   real(kind=r_def), intent(in)  :: basis_chi(1,ndf_chi,nqp_h,nqp_v)
   real(kind=r_def), intent(in)  :: diff_basis_chi(3,ndf_chi,nqp_h,nqp_v)
   real(kind=r_def), intent(in)  :: basis_w2(3,ndf_w2,nqp_h,nqp_v)
@@ -170,10 +170,10 @@ subroutine mg_derham_mat_code(cell, nlayers,                      &
      end do
 
      ik = 1 + k + (cell-1)*nlayers
-     mm2(:,:,ik) = 0.0_r_def
-     mm3(:,:,ik) = 0.0_r_def
-     div(:,:,ik) = 0.0_r_def
-     mmt(:,:,ik) = 0.0_r_def
+     mm2(ik,:,:) = 0.0_r_def
+     mm3(ik,:,:) = 0.0_r_def
+     div(ik,:,:) = 0.0_r_def
+     mmt(ik,:,:) = 0.0_r_def
 
      do qp2 = 1, nqp_v
         do qp1 = 1, nqp_h
@@ -192,7 +192,7 @@ subroutine mg_derham_mat_code(cell, nlayers,                      &
                       dot_product(                                &
                       matmul(jac,basis_w2(:,df,qp1,qp2)),jac_v    &
                       )/dj
-                 mm2(df,df2,ik) = mm2(df,df2,ik) + integrand
+                 mm2(ik,df,df2) = mm2(ik,df,df2) + integrand
               end do
            end do
            ! W3 mass matrix
@@ -201,7 +201,7 @@ subroutine mg_derham_mat_code(cell, nlayers,                      &
                  integrand = wt                                    &
                       *basis_w3(1,df,qp1,qp2)                &
                       *basis_w3(1,df2,qp1,qp2)*dj
-                 mm3(df,df2,ik) = mm3(df,df2,ik) + integrand
+                 mm3(ik,df,df2) = mm3(ik,df,df2) + integrand
               end do
            end do
            ! Wtheta mass matrix
@@ -210,7 +210,7 @@ subroutine mg_derham_mat_code(cell, nlayers,                      &
                  integrand = wt                                    &
                       *basis_wt(1,df,qp1,qp2)                &
                       *basis_wt(1,df2,qp1,qp2)*dj
-                 mmt(df,df2,ik) = mmt(df,df2,ik) + integrand
+                 mmt(ik,df,df2) = mmt(ik,df,df2) + integrand
               end do
            end do
            ! Div matrix
@@ -219,7 +219,7 @@ subroutine mg_derham_mat_code(cell, nlayers,                      &
                  integrand = wt                                    &
                       *basis_w3(1,df,qp1,qp2)                &
                       *diff_basis_w2(1,df2,qp1,qp2)!*dj
-                 div(df,df2,ik) = div(df,df2,ik) + integrand
+                 div(ik,df,df2) = div(ik,df,df2) + integrand
               end do
            end do
         end do
@@ -227,17 +227,17 @@ subroutine mg_derham_mat_code(cell, nlayers,                      &
 
      do df2 = 1,ndf_w2
         do df = df2, 1, -1
-           mm2(df,df2,ik) = mm2(df2,df,ik)
+           mm2(ik,df,df2) = mm2(ik,df2,df)
         end do
      end do
      do df2 = 1,ndf_w3
         do df = df2, 1, -1
-           mm3(df,df2,ik) = mm3(df2,df,ik)
+           mm3(ik,df,df2) = mm3(ik,df2,df)
         end do
      end do
      do df2 = 1,ndf_wt
         do df = df2, 1, -1
-           mmt(df,df2,ik) = mmt(df2,df,ik)
+           mmt(ik,df,df2) = mmt(ik,df2,df)
         end do
      end do
   end do ! end of k loop

@@ -110,8 +110,8 @@ subroutine columnwise_op_asm_diag_hmht_kernel_code(cell,                 &
   integer(kind=i_def),                                        intent(in)  :: ndf_w3
   integer(kind=i_def),                                        intent(in)  :: ndf_w2h
   integer(kind=i_def), dimension(ndf_w3,nlayers),             intent(in)  :: column_banded_dofmap
-  real   (kind=r_solver), dimension(ndf_w3,ndf_w2h,ncell_3d), intent(in)  :: local_stencil_Dh
-  real   (kind=r_solver), dimension(ndf_w2h,ndf_w2h,ncell_3d),intent(in)  :: local_stencil_M2h
+  real   (kind=r_solver), dimension(ncell_3d,ndf_w3,ndf_w2h), intent(in)  :: local_stencil_Dh
+  real   (kind=r_solver), dimension(ncell_3d,ndf_w2h,ndf_w2h),intent(in)  :: local_stencil_M2h
   real   (kind=r_solver), dimension(bandwidth,nrow,ncell_2d), intent(inout) :: columnwise_matrix
 
 
@@ -137,9 +137,9 @@ subroutine columnwise_op_asm_diag_hmht_kernel_code(cell,                 &
         tmp = 0.0_r_solver
         do df3 = 1, ndf_w2h
           tmp = tmp                               &
-              + local_stencil_Dh ( df1 ,df3, ik ) &
-              * local_stencil_Dh ( df2 ,df3, ik ) &
-              / local_stencil_M2h( df3 ,df3, ik )
+              + local_stencil_Dh ( ik, df1, df3 ) &
+              * local_stencil_Dh ( ik, df2, df3 ) &
+              / local_stencil_M2h( ik, df3, df3 )
         end do
         j = column_banded_dofmap( df2, k )
         columnwise_matrix( j-j_minus+1, i, cell ) &

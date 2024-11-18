@@ -80,8 +80,8 @@ contains
                                   unused, unused,          &
                                   nlayers )
 
-    allocate(matrix_inv(ndf_w3,ndf_w3,ncells))
-    allocate(matrix(ndf_w3,ndf_w3,ncells))
+    allocate(matrix_inv(ncells,ndf_w3,ndf_w3))
+    allocate(matrix(ncells,ndf_w3,ndf_w3))
 
     cell = 1
     matrix(:,:,:) = 5.0_r_def

@@ -152,7 +152,7 @@ contains
     ! Test the operator kernel
     cell = 1
     ncell_3d = ncells * nlayers
-    allocate( local_stencil(ndf_w3, ndf_w2b, ncell_3d) )
+    allocate( local_stencil(ncell_3d, ndf_w3, ndf_w2b) )
     local_stencil(:,:,:) = 0.0_r_def
     call compute_broken_div_operator_code( cell,           &
                                            nlayers,        &
@@ -183,7 +183,7 @@ contains
     call broken_div_operator(answer)
     ! Locally, the broken divergence operator is identical to the conforming
     ! div
-    @assertEqual(answer, local_stencil(:, :, 1), tol)
+    @assertEqual(answer, local_stencil(1, :, :), tol)
 
     deallocate( local_stencil )
     deallocate( wh, wv )

@@ -71,8 +71,8 @@ contains
     ! Set ncell_3d to be 1*nlayers, as only a single column is required for the test.
     ncell_2d = 1
     ncell_3d = ncell_2d * nlayers
-    allocate(local_stencil_div(ndf_w3, ndf_w2h,ncell_3d))
-    allocate(local_stencil_M2h(ndf_w2h,ndf_w2h,ncell_3d))
+    allocate(local_stencil_div(ncell_3d,ndf_w3, ndf_w2h))
+    allocate(local_stencil_M2h(ncell_3d,ndf_w2h,ndf_w2h))
 
     call get_w3_w3_m3x3_cma_data(ndf_w3, ncell_2d, nlayers, map, alpha, beta, &
                                  g_m, g_p, bw, nrow, ncol, &
@@ -83,10 +83,10 @@ contains
     cell = 1
 
     do i=1, ncell_3d
-       local_stencil_div(:,:,i) = reshape( (/ rho(1), rho(2), rho(3), rho(4) /),&
+       local_stencil_div(i,:,:) = reshape( (/ rho(1), rho(2), rho(3), rho(4) /),&
                                              (/1, 4/) )
 
-       local_stencil_M2h(:,:,i) = reshape( (/ sigma(1),0.0_r_solver,0.0_r_solver,0.0_r_solver,   &
+       local_stencil_M2h(i,:,:) = reshape( (/ sigma(1),0.0_r_solver,0.0_r_solver,0.0_r_solver,   &
                                               0.0_r_solver,sigma(2),0.0_r_solver,0.0_r_solver,   &
                                               0.0_r_solver,0.0_r_solver,sigma(3),0.0_r_solver,   &
                                               0.0_r_solver,0.0_r_solver,0.0_r_solver,sigma(4) /),&

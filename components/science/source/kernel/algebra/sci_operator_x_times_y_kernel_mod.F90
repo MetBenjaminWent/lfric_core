@@ -72,16 +72,16 @@ subroutine operator_x_times_y_kernel_code_r_single(cell, nlayers,         &
   integer(kind=i_def), intent(in) :: ncell_3d_1, ncell_3d_2, ncell_3d_3
   integer(kind=i_def), intent(in) :: ndf1, ndf2, ndf3
 
-  real(kind=r_single), dimension(ndf1, ndf2, ncell_3d_1), intent(inout) :: x_times_y
-  real(kind=r_single), dimension(ndf1, ndf3, ncell_3d_2), intent(in)    :: x
-  real(kind=r_single), dimension(ndf3, ndf2, ncell_3d_3), intent(in)    :: y
+  real(kind=r_single), dimension(ncell_3d_1, ndf1, ndf2), intent(inout) :: x_times_y
+  real(kind=r_single), dimension(ncell_3d_2, ndf1, ndf3), intent(in)    :: x
+  real(kind=r_single), dimension(ncell_3d_3, ndf3, ndf2), intent(in)    :: y
 
   ! Internal variables
   integer(kind=i_def) :: k, ik
 
   do k = 0, nlayers - 1
     ik = k + 1 + (cell-1)*nlayers
-    x_times_y(:,:,ik) = matmul(x(:,:,ik), y(:,:,ik))
+    x_times_y(ik,:,:) = matmul(x(ik,:,:), y(ik,:,:))
   end do
 
 end subroutine operator_x_times_y_kernel_code_r_single
@@ -99,16 +99,16 @@ subroutine operator_x_times_y_kernel_code_r_double(cell, nlayers,         &
   integer(kind=i_def), intent(in) :: ncell_3d_1, ncell_3d_2, ncell_3d_3
   integer(kind=i_def), intent(in) :: ndf1, ndf2, ndf3
 
-  real(kind=r_double), dimension(ndf1, ndf2, ncell_3d_1), intent(inout) :: x_times_y
-  real(kind=r_double), dimension(ndf1, ndf3, ncell_3d_2), intent(in)    :: x
-  real(kind=r_double), dimension(ndf3, ndf2, ncell_3d_3), intent(in)    :: y
+  real(kind=r_double), dimension(ncell_3d_1, ndf1, ndf2), intent(inout) :: x_times_y
+  real(kind=r_double), dimension(ncell_3d_2, ndf1, ndf3), intent(in)    :: x
+  real(kind=r_double), dimension(ncell_3d_3, ndf3, ndf2), intent(in)    :: y
 
   ! Internal variables
   integer(kind=i_def) :: k, ik
 
   do k = 0, nlayers - 1
     ik = k + 1 + (cell-1)*nlayers
-    x_times_y(:,:,ik) = matmul(x(:,:,ik), y(:,:,ik))
+    x_times_y(ik,:,:) = matmul(x(ik,:,:), y(ik,:,:))
   end do
 
 end subroutine operator_x_times_y_kernel_code_r_double

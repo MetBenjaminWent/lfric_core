@@ -83,7 +83,7 @@ subroutine dg_matrix_vector_code_r_single(cell,              &
   integer(kind=i_def), dimension(ndf2),  intent(in) :: map2
   real(kind=r_single), dimension(undf2),              intent(in)    :: x
   real(kind=r_single), dimension(undf1),              intent(inout) :: lhs
-  real(kind=r_single), dimension(ndf1,ndf2,ncell_3d), intent(in)    :: matrix
+  real(kind=r_single), dimension(ncell_3d,ndf1,ndf2), intent(in)    :: matrix
 
   ! Internal variables
   integer(kind=i_def)                  :: df, k, ik
@@ -95,7 +95,7 @@ subroutine dg_matrix_vector_code_r_single(cell,              &
       x_e(df) = x(map2(df)+k)
     end do
     ik = (cell-1)*nlayers + k + 1
-    lhs_e = matmul(matrix(:,:,ik),x_e)
+    lhs_e = matmul(matrix(ik,:,:),x_e)
     do df = 1,ndf1
        lhs(map1(df)+k) = lhs_e(df)
     end do
@@ -123,7 +123,7 @@ subroutine dg_matrix_vector_code_r_double(cell,              &
   integer(kind=i_def), dimension(ndf2),  intent(in) :: map2
   real(kind=r_double), dimension(undf2),              intent(in)    :: x
   real(kind=r_double), dimension(undf1),              intent(inout) :: lhs
-  real(kind=r_double), dimension(ndf1,ndf2,ncell_3d), intent(in)    :: matrix
+  real(kind=r_double), dimension(ncell_3d,ndf1,ndf2), intent(in)    :: matrix
 
   ! Internal variables
   integer(kind=i_def)                  :: df, k, ik
@@ -135,7 +135,7 @@ subroutine dg_matrix_vector_code_r_double(cell,              &
       x_e(df) = x(map2(df)+k)
     end do
     ik = (cell-1)*nlayers + k + 1
-    lhs_e = matmul(matrix(:,:,ik),x_e)
+    lhs_e = matmul(matrix(ik,:,:),x_e)
     do df = 1,ndf1
        lhs(map1(df)+k) = lhs_e(df)
     end do

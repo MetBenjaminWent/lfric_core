@@ -136,7 +136,7 @@ contains
 
     ncell_3d = ncells*nlayers
 
-    allocate(local_stencil(ndf_w2broken, ndf_w2broken, ncell_3d))
+    allocate(local_stencil(ncell_3d, ndf_w2broken, ndf_w2broken))
     local_stencil(:,:,:) = 0.0_r_def
 
     cell = 1
@@ -167,11 +167,11 @@ contains
     call mass_matrix_w2b(answer)
     ! Normalise by 1/average edge length
     answer(:,:) = answer(:,:) * ( dx + dy + dz ) / 3.0_r_def
-    local_stencil(:, :, 1 ) = local_stencil(:, :, 1 ) &
+    local_stencil(1, :, :) = local_stencil(1, :, :) &
                                 * ( dx + dy + dz ) / 3.0_r_def
 
     ! Locally, the operator is identical to the conforming W2 mass
-    @assertEqual(answer, local_stencil(:, :, 1), tol)
+    @assertEqual(answer, local_stencil(1, :, :), tol)
 
     deallocate(map_w0)
     deallocate(map_w3)

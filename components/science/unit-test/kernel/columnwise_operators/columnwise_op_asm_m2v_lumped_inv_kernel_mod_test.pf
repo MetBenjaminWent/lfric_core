@@ -52,7 +52,7 @@ contains
     ! Set ncell_3d to be 1*nlayers, as only a single column is required for the test.
     ncell_2d = 1
     ncell_3d = ncell_2d * nlayers
-    allocate(local_stencil(ndf,ndf,ncell_3d))
+    allocate(local_stencil(ncell_3d,ndf,ndf))
 
     call get_w2v_w2v_m3x3_cma_data(ndf, ncell_2d, nlayers, map, alpha, beta, &
                                  g_m, g_p, bw, nrow, ncol, &
@@ -63,7 +63,7 @@ contains
     col_mat_mm = 0.0_r_solver
 
     do i=1, ncell_3d
-       local_stencil(:,:,i) = reshape( (/ 1.0_r_solver/3.0_r_solver, 1.0_r_solver/6.0_r_solver,    &
+       local_stencil(i,:,:) = reshape( (/ 1.0_r_solver/3.0_r_solver, 1.0_r_solver/6.0_r_solver,    &
                                           1.0_r_solver/6.0_r_solver, 1.0_r_solver/3.0_r_solver /), &
                                           (/2, 2/) )
     end do

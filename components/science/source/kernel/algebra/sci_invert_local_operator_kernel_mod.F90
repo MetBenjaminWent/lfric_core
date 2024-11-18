@@ -59,16 +59,19 @@ subroutine invert_local_operator_code(cell, nlayers, ncell3d_inv,  &
   integer(kind=i_def), intent(in) :: nlayers, ndf
   integer(kind=i_def), intent(in) :: ncell3d, ncell3d_inv
 
-  real(kind=r_def), dimension(ndf,ndf,ncell3d),     intent(in)     :: matrix
-  real(kind=r_def), dimension(ndf,ndf,ncell3d_inv), intent(inout)  :: matrix_inv
+  real(kind=r_def), dimension(ncell3d,ndf,ndf),     intent(in)     :: matrix
+  real(kind=r_def), dimension(ncell3d_inv,ndf,ndf), intent(inout)  :: matrix_inv
 
   ! Internal variables
   integer(kind=i_def) :: k, ik
+  real(kind=r_def), dimension(ndf,ndf) :: local_mat, local_mat_inv
 
   ! Loop over layers: Start from 1 as in this loop k is not an offset
   do k = 1, nlayers
     ik = k + (cell-1)*nlayers
-    call matrix_invert(matrix(:,:,ik),matrix_inv(:,:,ik),ndf)
+    local_mat(:,:) = matrix(ik,:,:)
+    call matrix_invert(local_mat, local_mat_inv, ndf)
+    matrix_inv(ik,:,:) = local_mat_inv(:,:)
   end do
 
 end subroutine invert_local_operator_code

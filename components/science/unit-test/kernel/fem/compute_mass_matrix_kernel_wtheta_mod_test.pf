@@ -90,7 +90,7 @@ contains
   subroutine test_r_single( this )
 
     use sci_compute_mass_matrix_kernel_w_scalar_mod, only : &
-                                                           compute_mass_matrix_w_scalar_code
+                                 compute_mass_matrix_w_scalar_code
 
     implicit none
 
@@ -195,7 +195,7 @@ contains
     ! Test Wtheta mass matrix kernel
     cell = 1
     ncell_3d = ncells*nlayers
-    allocate(local_stencil_r32(ndf_wtheta, ndf_wtheta, ncell_3d))
+    allocate(local_stencil_r32(ncell_3d, ndf_wtheta, ndf_wtheta))
     local_stencil_r32(:,:,:) = 0.0_r_single
 
     call compute_mass_matrix_w_scalar_code( &
@@ -225,14 +225,14 @@ contains
                                              )
 
     answer = (1.0_r_single/3.0_r_single)
-    @assertEqual(answer, local_stencil_r32(1, 1, 1 )/real((dx*dy*dz), r_single), tol)
+    @assertEqual(answer, local_stencil_r32(1, 1, 1)/real((dx*dy*dz), r_single), tol)
     answer = (1.0_r_single/6.0_r_single)
-    @assertEqual(answer, local_stencil_r32(1, 2, 1 )/real((dx*dy*dz), r_single), tol)
+    @assertEqual(answer, local_stencil_r32(1, 1, 2)/real((dx*dy*dz), r_single), tol)
 
     answer = (1.0_r_single/3.0_r_single)
-    @assertEqual(answer, local_stencil_r32(1, 1, 2 )/real((dx*dy*dz), r_single), tol)
+    @assertEqual(answer, local_stencil_r32(2, 1, 1)/real((dx*dy*dz), r_single), tol)
     answer = (1.0_r_single/6.0_r_single)
-    @assertEqual(answer, local_stencil_r32(1, 2, 2 )/real((dx*dy*dz), r_single), tol)
+    @assertEqual(answer, local_stencil_r32(2, 1, 2)/real((dx*dy*dz), r_single), tol)
 
     deallocate(map_w0)
     deallocate(diff_basis_w0, diff_basis_w0_r32)
@@ -255,7 +255,7 @@ contains
   subroutine test_mixed_precision( this )
 
     use sci_compute_mass_matrix_kernel_w_scalar_mod, only : &
-                                                           compute_mass_matrix_w_scalar_code
+                                compute_mass_matrix_w_scalar_code
 
     implicit none
 
@@ -360,7 +360,7 @@ contains
     ! Test Wtheta mass matrix kernel
     cell = 1
     ncell_3d = ncells*nlayers
-    allocate(local_stencil_r32(ndf_wtheta, ndf_wtheta, ncell_3d))
+    allocate(local_stencil_r32(ncell_3d, ndf_wtheta, ndf_wtheta))
     local_stencil_r32(:,:,:) = 0.0_r_single
 
     call compute_mass_matrix_w_scalar_code( &
@@ -390,14 +390,14 @@ contains
                                              )
 
     answer = (1.0_r_single/3.0_r_single)
-    @assertEqual(answer, local_stencil_r32(1, 1, 1 )/real((dx*dy*dz), r_single), tol)
+    @assertEqual(answer, local_stencil_r32(1, 1, 1)/real((dx*dy*dz), r_single), tol)
     answer = (1.0_r_single/6.0_r_single)
-    @assertEqual(answer, local_stencil_r32(1, 2, 1 )/real((dx*dy*dz), r_single), tol)
+    @assertEqual(answer, local_stencil_r32(1, 1, 2)/real((dx*dy*dz), r_single), tol)
 
     answer = (1.0_r_single/3.0_r_single)
-    @assertEqual(answer, local_stencil_r32(1, 1, 2 )/real((dx*dy*dz), r_single), tol)
+    @assertEqual(answer, local_stencil_r32(2, 1, 1)/real((dx*dy*dz), r_single), tol)
     answer = (1.0_r_single/6.0_r_single)
-    @assertEqual(answer, local_stencil_r32(1, 2, 2 )/real((dx*dy*dz), r_single), tol)
+    @assertEqual(answer, local_stencil_r32(2, 1, 2)/real((dx*dy*dz), r_single), tol)
 
     deallocate(map_w0)
     deallocate(diff_basis_w0, diff_basis_w0_r64)
@@ -420,7 +420,7 @@ contains
   subroutine test_r_double( this )
 
     use sci_compute_mass_matrix_kernel_w_scalar_mod, only : &
-                                                           compute_mass_matrix_w_scalar_code
+                                compute_mass_matrix_w_scalar_code
 
     implicit none
 
@@ -525,7 +525,7 @@ contains
     ! Test Wtheta mass matrix kernel
     cell = 1
     ncell_3d = ncells*nlayers
-    allocate(local_stencil_r64(ndf_wtheta, ndf_wtheta, ncell_3d))
+    allocate(local_stencil_r64(ncell_3d, ndf_wtheta, ndf_wtheta))
     local_stencil_r64(:,:,:) = 0.0_r_double
 
     call compute_mass_matrix_w_scalar_code( &
@@ -555,14 +555,14 @@ contains
                                              )
 
     answer = (1.0_r_double/3.0_r_double)
-    @assertEqual(answer, local_stencil_r64(1, 1, 1 )/real((dx*dy*dz), r_double), tol)
+    @assertEqual(answer, local_stencil_r64(1, 1, 1)/real((dx*dy*dz), r_double), tol)
     answer = (1.0_r_double/6.0_r_double)
-    @assertEqual(answer, local_stencil_r64(1, 2, 1 )/real((dx*dy*dz), r_double), tol)
+    @assertEqual(answer, local_stencil_r64(1, 1, 2)/real((dx*dy*dz), r_double), tol)
 
     answer = (1.0_r_double/3.0_r_double)
-    @assertEqual(answer, local_stencil_r64(1, 1, 2 )/real((dx*dy*dz), r_double), tol)
+    @assertEqual(answer, local_stencil_r64(2, 1, 1)/real((dx*dy*dz), r_double), tol)
     answer = (1.0_r_double/6.0_r_double)
-    @assertEqual(answer, local_stencil_r64(1, 2, 2 )/real((dx*dy*dz), r_double), tol)
+    @assertEqual(answer, local_stencil_r64(2, 1, 2)/real((dx*dy*dz), r_double), tol)
 
     deallocate(map_w0)
     deallocate(diff_basis_w0, diff_basis_w0_r64)

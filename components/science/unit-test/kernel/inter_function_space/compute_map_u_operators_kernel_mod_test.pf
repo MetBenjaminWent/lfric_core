@@ -204,9 +204,9 @@ contains
 
     cell = 1
     ncell_3d = ncells * nlayers
-    allocate( u_lon_map(ndf_w2, ndf_w3, ncell_3d) )
-    allocate( u_lat_map(ndf_w2, ndf_w3, ncell_3d) )
-    allocate( u_up_map(ndf_w2, ndf_wt, ncell_3d) )
+    allocate( u_lon_map(ncell_3d, ndf_w2, ndf_w3) )
+    allocate( u_lat_map(ncell_3d, ndf_w2, ndf_w3) )
+    allocate( u_up_map(ncell_3d, ndf_w2, ndf_wt) )
     u_lon_map(:,:,:) = 0.0_r_def
     u_lat_map(:,:,:) = 0.0_r_def
     u_up_map(:,:,:)  = 0.0_r_def

@@ -74,7 +74,7 @@ subroutine operator_tri_solve_code(cell, nlayers, &
 
   real(kind=r_def), dimension(undf),            intent(inout) :: y
   real(kind=r_def), dimension(undf),            intent(in)    :: x
-  real(kind=r_def), dimension(ndf, ndf, ncell), intent(in)    :: matrix
+  real(kind=r_def), dimension(ncell, ndf, ndf), intent(in)    :: matrix
 
   integer(kind=i_def)                    :: ik, k, ij
   real(kind=r_def), dimension(0:nlayers) :: tri_p, tri_0, tri_m, x_new, tri_p_new
@@ -85,10 +85,10 @@ subroutine operator_tri_solve_code(cell, nlayers, &
   tri_m(0) = 0.0_r_def
   do k = 0, nlayers - 1
     ik = 1 + k + (cell - 1) * nlayers
-    tri_0(k)   = matrix(1,1,ik) + tri_0(k)
-    tri_p(k)   = matrix(1,2,ik)
-    tri_m(k+1) = matrix(2,1,ik)
-    tri_0(k+1) = matrix(2,2,ik)
+    tri_0(k)   = matrix(ik,1,1) + tri_0(k)
+    tri_p(k)   = matrix(ik,1,2)
+    tri_m(k+1) = matrix(ik,2,1)
+    tri_0(k+1) = matrix(ik,2,2)
   end do
   tri_p(nlayers) = 0.0_r_def
 

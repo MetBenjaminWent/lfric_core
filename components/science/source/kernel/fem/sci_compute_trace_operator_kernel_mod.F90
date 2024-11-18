@@ -110,7 +110,7 @@ contains
     integer(kind=i_def),                                     intent(in) :: ndf_w2b, ndf_w2t
     integer(kind=i_def),                                     intent(in) :: nfaces_re, nqp
 
-    real(kind=r_def), dimension(ndf_w2t, ndf_w2b, ncell_3d), intent(inout) :: trace_op
+    real(kind=r_def), dimension(ncell_3d, ndf_w2t, ndf_w2b), intent(inout) :: trace_op
     real(kind=r_def), dimension(3, ndf_w2b, nqp, nfaces_re), intent(in)    :: w2b_basis
     real(kind=r_def), dimension(1, ndf_w2t, nqp, nfaces_re), intent(in)    :: w2t_basis
 
@@ -139,7 +139,7 @@ contains
             ! for the number of each face. The ordering of faces (in order from 1 to 6)
             ! is: W, S, E, N, B, and T.
             if ( face_entity_map(dft) - FACE_OFFSET == face ) then
-              trace_op(dft, dfb, ik) = 0.0_r_def
+              trace_op(ik, dft, dfb) = 0.0_r_def
               do qp = 1, nqp
                 ! NOTE: The surface integral of a Piola-mapped vector field (like
                 ! a W2 or W2broken field) over the boundary of a physical cell
@@ -148,7 +148,7 @@ contains
                 integrand = wqp(qp, face) * w2t_basis(1, dft, qp, face)  &
                           * dot_product(w2b_basis(:, dfb, qp, face),     &
                                         outward_normals_to_faces(:, face))
-                trace_op(dft, dfb, ik) = trace_op(dft, dfb, ik) + integrand
+                trace_op(ik, dft, dfb) = trace_op(ik, dft, dfb) + integrand
               end do
             end if ! End of trace dof / face check
           end do ! End of trace dof loop

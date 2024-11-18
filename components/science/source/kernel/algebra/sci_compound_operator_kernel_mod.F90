@@ -83,9 +83,9 @@ subroutine compound_operator_kernel_code(cell, nlayers, &
   integer(kind=i_def), dimension(ndf2),    intent(in) :: map2
 
 
-  real(kind=r_solver), dimension(ndf1,ndf2,ncell_3d_1), intent(inout) :: compound_operator
-  real(kind=r_solver), dimension(ndf1,ndf1,ncell_3d_2), intent(in)    :: mass_matrix
-  real(kind=r_solver), dimension(ndf1,ndf2,ncell_3d_3), intent(in)    :: differential_matrix
+  real(kind=r_solver), dimension(ncell_3d_1,ndf1,ndf2), intent(inout) :: compound_operator
+  real(kind=r_solver), dimension(ncell_3d_2,ndf1,ndf1), intent(in)    :: mass_matrix
+  real(kind=r_solver), dimension(ncell_3d_3,ndf1,ndf2), intent(in)    :: differential_matrix
   real(kind=r_solver), dimension(undf2),                intent(in)    :: field
   real(kind=r_solver),                                  intent(in)    :: tau
 
@@ -95,9 +95,9 @@ subroutine compound_operator_kernel_code(cell, nlayers, &
 
   do k = 0, nlayers - 1
     ik = k + 1 + (cell-1)*nlayers
-    d = matmul(mass_matrix(:,:,ik),differential_matrix(:,:,ik))
+    d = matmul(mass_matrix(ik,:,:),differential_matrix(ik,:,:))
     do df = 1,ndf2
-      compound_operator(:,df,ik) = tau*d(:,df)*field(map2(df)+k)
+      compound_operator(ik,:,df) = tau*d(:,df)*field(map2(df)+k)
     end do
   end do
 

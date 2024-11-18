@@ -103,7 +103,7 @@ subroutine compute_curl_operator_code(cell, nlayers, ncell_3d,          &
   real(kind=r_def), intent(in) :: basis_w2(3,ndf_w2, nqp_h,nqp_v)
   real(kind=r_def), intent(in) :: diff_basis_w1(3,ndf_w1, nqp_h,nqp_v)
 
-  real(kind=r_def), dimension(ndf_w2,ndf_w1,ncell_3d), intent(inout) :: curl
+  real(kind=r_def), dimension(ncell_3d,ndf_w2,ndf_w1), intent(inout) :: curl
   real(kind=r_def), dimension(undf_chi),               intent(in)    :: chi1
   real(kind=r_def), dimension(undf_chi),               intent(in)    :: chi2
   real(kind=r_def), dimension(undf_chi),               intent(in)    :: chi3
@@ -133,13 +133,13 @@ subroutine compute_curl_operator_code(cell, nlayers, ncell_3d,          &
                              ipanel, basis_chi, diff_basis_chi, jac, dj)
     do df1 = 1, ndf_w1
       do df2 = 1, ndf_w2
-        curl(df2,df1,ik) = 0.0_r_def
+        curl(ik,df2,df1) = 0.0_r_def
         do qp2 = 1, nqp_v
           do qp1 = 1, nqp_h
             v  = matmul(jac(:,:,qp1,qp2),basis_w2(:,df2,qp1,qp2))
             dc = matmul(jac(:,:,qp1,qp2),diff_basis_w1(:,df1,qp1,qp2))
             integrand = wqp_h(qp1)*wqp_v(qp2)*dot_product(v,dc)/dj(qp1,qp2)
-            curl(df2,df1,ik) = curl(df2,df1,ik) + integrand
+            curl(ik,df2,df1) = curl(ik,df2,df1) + integrand
           end do
         end do
       end do

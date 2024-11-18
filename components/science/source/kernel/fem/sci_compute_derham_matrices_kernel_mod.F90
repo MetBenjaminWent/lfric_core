@@ -171,16 +171,16 @@ subroutine compute_derham_matrices_code(cell, nlayers,                      &
   integer(kind=i_def), dimension(ndf_chi), intent(in) :: map_chi
   integer(kind=i_def), dimension(ndf_pid), intent(in) :: map_pid
 
-  real(kind=r_def), intent(inout) :: mm0(ndf_w0,ndf_w0,ncell_3d0)
-  real(kind=r_def), intent(inout) :: mm1(ndf_w1,ndf_w1,ncell_3d1)
-  real(kind=r_def), intent(inout) :: mm2(ndf_w2,ndf_w2,ncell_3d2)
-  real(kind=r_def), intent(inout) :: mm2b(ndf_w2b,ndf_w2b,ncell_3db)
-  real(kind=r_def), intent(inout) :: mm3(ndf_w3,ndf_w3,ncell_3d3)
-  real(kind=r_def), intent(inout) :: mmt(ndf_wt,ndf_wt,ncell_3dt)
-  real(kind=r_def), intent(inout) :: grad(ndf_w1,ndf_w0,ncell_3d4)
-  real(kind=r_def), intent(inout) :: curl(ndf_w2,ndf_w1,ncell_3d5)
-  real(kind=r_def), intent(inout) :: div(ndf_w3,ndf_w2,ncell_3d6)
-  real(kind=r_def), intent(inout) :: broken_div(ndf_w3,ndf_w2b,ncell_3d7)
+  real(kind=r_def), intent(inout) :: mm0(ncell_3d0,ndf_w0,ndf_w0)
+  real(kind=r_def), intent(inout) :: mm1(ncell_3d1,ndf_w1,ndf_w1)
+  real(kind=r_def), intent(inout) :: mm2(ncell_3d2,ndf_w2,ndf_w2)
+  real(kind=r_def), intent(inout) :: mm2b(ncell_3db,ndf_w2b,ndf_w2b)
+  real(kind=r_def), intent(inout) :: mm3(ncell_3d3,ndf_w3,ndf_w3)
+  real(kind=r_def), intent(inout) :: mmt(ncell_3dt,ndf_wt,ndf_wt)
+  real(kind=r_def), intent(inout) :: grad(ncell_3d4,ndf_w1,ndf_w0)
+  real(kind=r_def), intent(inout) :: curl(ncell_3d5,ndf_w2,ndf_w1)
+  real(kind=r_def), intent(inout) :: div(ncell_3d6,ndf_w3,ndf_w2)
+  real(kind=r_def), intent(inout) :: broken_div(ncell_3d7,ndf_w3,ndf_w2b)
 
   real(kind=r_def), intent(in)  :: basis_chi(1,ndf_chi,nqp_h,nqp_v)
   real(kind=r_def), intent(in)  :: diff_basis_chi(3,ndf_chi,nqp_h,nqp_v)
@@ -227,16 +227,16 @@ subroutine compute_derham_matrices_code(cell, nlayers,                      &
     end do
 
     ik = 1 + k + (cell-1)*nlayers
-    mm0(:,:,ik) = 0.0_r_def
-    mm1(:,:,ik) = 0.0_r_def
-    mm2(:,:,ik) = 0.0_r_def
-    mm2b(:,:,ik) = 0.0_r_def
-    mm3(:,:,ik) = 0.0_r_def
-    mmt(:,:,ik) = 0.0_r_def
-    grad(:,:,ik) = 0.0_r_def
-    curl(:,:,ik) = 0.0_r_def
-    div(:,:,ik) = 0.0_r_def
-    broken_div(:,:,ik) = 0.0_r_def
+    mm0(ik,:,:) = 0.0_r_def
+    mm1(ik,:,:) = 0.0_r_def
+    mm2(ik,:,:) = 0.0_r_def
+    mm2b(ik,:,:) = 0.0_r_def
+    mm3(ik,:,:) = 0.0_r_def
+    mmt(ik,:,:) = 0.0_r_def
+    grad(ik,:,:) = 0.0_r_def
+    curl(ik,:,:) = 0.0_r_def
+    div(ik,:,:) = 0.0_r_def
+    broken_div(ik,:,:) = 0.0_r_def
 
     do qp2 = 1, nqp_v
       do qp1 = 1, nqp_h
@@ -256,7 +256,7 @@ subroutine compute_derham_matrices_code(cell, nlayers,                      &
             integrand = wt  &
                        *basis_w0(1,df,qp1,qp2) &
                        *basis_w0(1,df2,qp1,qp2)*dj
-            mm0(df,df2,ik) = mm0(df,df2,ik) + integrand
+            mm0(ik,df,df2) = mm0(ik,df,df2) + integrand
           end do
         end do
         ! W1 mass matrix
@@ -267,7 +267,7 @@ subroutine compute_derham_matrices_code(cell, nlayers,                      &
                  dot_product(                                &
                  matmul(jac_t,basis_w1(:,df,qp1,qp2)),jac_v  &
                             )*dj
-            mm1(df,df2,ik) = mm1(df,df2,ik) + integrand
+            mm1(ik,df,df2) = mm1(ik,df,df2) + integrand
           end do
         end do
         ! W2 mass matrix
@@ -278,7 +278,7 @@ subroutine compute_derham_matrices_code(cell, nlayers,                      &
                  dot_product(                                &
                  matmul(jac,basis_w2(:,df,qp1,qp2)),jac_v    &
                             )/dj
-            mm2(df,df2,ik) = mm2(df,df2,ik) + integrand
+            mm2(ik,df,df2) = mm2(ik,df,df2) + integrand
           end do
         end do
         ! W2broken mass matrix
@@ -289,7 +289,7 @@ subroutine compute_derham_matrices_code(cell, nlayers,                      &
                  dot_product(                                 &
                  matmul(jac,basis_w2b(:,df,qp1,qp2)),jac_v    &
                             )/dj
-            mm2b(df,df2,ik) = mm2b(df,df2,ik) + integrand
+            mm2b(ik,df,df2) = mm2b(ik,df,df2) + integrand
           end do
         end do
         ! W3 mass matrix
@@ -298,7 +298,7 @@ subroutine compute_derham_matrices_code(cell, nlayers,                      &
             integrand = wt                                    &
                        *basis_w3(1,df,qp1,qp2)                &
                        *basis_w3(1,df2,qp1,qp2)*dj
-            mm3(df,df2,ik) = mm3(df,df2,ik) + integrand
+            mm3(ik,df,df2) = mm3(ik,df,df2) + integrand
           end do
         end do
         ! Wtheta mass matrix
@@ -307,7 +307,7 @@ subroutine compute_derham_matrices_code(cell, nlayers,                      &
             integrand = wt                                    &
                        *basis_wt(1,df,qp1,qp2)                &
                        *basis_wt(1,df2,qp1,qp2)*dj
-            mmt(df,df2,ik) = mmt(df,df2,ik) + integrand
+            mmt(ik,df,df2) = mmt(ik,df,df2) + integrand
           end do
         end do
         ! Grad matrix
@@ -318,7 +318,7 @@ subroutine compute_derham_matrices_code(cell, nlayers,                      &
                  dot_product(                                 &
                  matmul(jac_t,basis_w1(:,df,qp1,qp2)),jac_v   &
                             )*dj
-            grad(df,df2,ik) = grad(df,df2,ik) + integrand
+            grad(ik,df,df2) = grad(ik,df,df2) + integrand
           end do
         end do
         ! Curl matrix
@@ -329,7 +329,7 @@ subroutine compute_derham_matrices_code(cell, nlayers,                      &
                  dot_product(                                 &
                  matmul(jac,basis_w2(:,df,qp1,qp2)),jac_v     &
                             )/dj
-            curl(df,df2,ik) = curl(df,df2,ik) + integrand
+            curl(ik,df,df2) = curl(ik,df,df2) + integrand
           end do
         end do
         ! Div matrix
@@ -338,7 +338,7 @@ subroutine compute_derham_matrices_code(cell, nlayers,                      &
             integrand = wt                                    &
                        *basis_w3(1,df,qp1,qp2)                &
                        *diff_basis_w2(1,df2,qp1,qp2)!*dj
-            div(df,df2,ik) = div(df,df2,ik) + integrand
+            div(ik,df,df2) = div(ik,df,df2) + integrand
           end do
         end do
         ! Broken div matrix
@@ -347,7 +347,7 @@ subroutine compute_derham_matrices_code(cell, nlayers,                      &
             integrand = wt  &
                        *basis_w3(1,df,qp1,qp2) &
                        *diff_basis_w2b(1,df2,qp1,qp2)!*dj
-            broken_div(df,df2,ik) = broken_div(df,df2,ik) + integrand
+            broken_div(ik,df,df2) = broken_div(ik,df,df2) + integrand
           end do
         end do
       end do
@@ -355,32 +355,32 @@ subroutine compute_derham_matrices_code(cell, nlayers,                      &
     ! Apply symmetry of mass matrices
     do df2 = 1,ndf_w0
       do df = df2, 1, -1
-        mm0(df,df2,ik) = mm0(df2,df,ik)
+        mm0(ik,df,df2) = mm0(ik,df2,df)
       end do
     end do
     do df2 = 1,ndf_w1
       do df = df2, 1, -1
-        mm1(df,df2,ik) = mm1(df2,df,ik)
+        mm1(ik,df,df2) = mm1(ik,df2,df)
       end do
     end do
     do df2 = 1,ndf_w2
       do df = df2, 1, -1
-        mm2(df,df2,ik) = mm2(df2,df,ik)
+        mm2(ik,df,df2) = mm2(ik,df2,df)
       end do
     end do
     do df2 = 1,ndf_w2
       do df = df2, 1, -1
-        mm2b(df,df2,ik) = mm2b(df2,df,ik)
+        mm2b(ik,df,df2) = mm2b(ik,df2,df)
       end do
     end do
     do df2 = 1,ndf_w3
       do df = df2, 1, -1
-        mm3(df,df2,ik) = mm3(df2,df,ik)
+        mm3(ik,df,df2) = mm3(ik,df2,df)
       end do
     end do
     do df2 = 1,ndf_wt
       do df = df2, 1, -1
-        mmt(df,df2,ik) = mmt(df2,df,ik)
+        mmt(ik,df,df2) = mmt(ik,df2,df)
       end do
     end do
   end do ! end of k loop

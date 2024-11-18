@@ -152,7 +152,7 @@ contains
     ! Test the operator kernel
     cell = 1
     ncell_3d = ncells * nlayers
-    allocate( local_stencil(ndf_w3, ndf_w2, ncell_3d) )
+    allocate( local_stencil(ncell_3d, ndf_w3, ndf_w2) )
     local_stencil(:,:,:) = 0.0_r_def
     call compute_div_operator_code( cell,            &
                                     nlayers,         &
@@ -180,7 +180,7 @@ contains
                                     wv )
 
     call div_operator(answer)
-    @assertEqual(answer, local_stencil(:, :, 1 ), tol)
+    @assertEqual(answer, local_stencil(1, :, :), tol)
 
     deallocate( local_stencil )
     deallocate( chi3, chi2, chi1, panel_id )

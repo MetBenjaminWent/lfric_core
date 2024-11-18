@@ -101,7 +101,7 @@ subroutine columnwise_op_asm_m2v_lumped_inv_krnl_code(cell,                    &
   integer(kind=i_def),                                        intent(in)  :: gamma_m
   integer(kind=i_def),                                        intent(in)  :: gamma_p
   integer(kind=i_def),    dimension(ndf,nlayers),             intent(in)  :: column_banded_dofmap
-  real   (kind=r_solver), dimension(ndf,ndf,ncell_3d),        intent(in)  :: local_stencil
+  real   (kind=r_solver), dimension(ncell_3d,ndf,ndf),        intent(in)  :: local_stencil
   real   (kind=r_solver), dimension(bandwidth,nrow,ncell_2d), intent(inout) :: columnwise_matrix
 
   ! Internal parameters
@@ -120,7 +120,7 @@ subroutine columnwise_op_asm_m2v_lumped_inv_krnl_code(cell,                    &
     do df1 = 1, ndf
       i = column_banded_dofmap( df1, k )
       columnwise_matrix( 1, i, cell ) = columnwise_matrix( 1, i, cell ) &
-                                      + real(local_stencil( df1 ,df1, ik ), r_solver)
+                                      + real(local_stencil( ik, df1, df1 ), r_solver)
     end do
   end do
 

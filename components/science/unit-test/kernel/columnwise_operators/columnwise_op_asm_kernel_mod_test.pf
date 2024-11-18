@@ -43,7 +43,7 @@ contains
     integer(kind=i_def) :: ncol, nrow
 
     real(kind=r_solver), allocatable :: columnwise_mm(:,:,:)
-    real(kind=r_solver),    allocatable :: local_stencil(:,:,:)
+    real(kind=r_solver), allocatable :: local_stencil(:,:,:)
 
     ! Test mass matrix kernel
 
@@ -55,14 +55,14 @@ contains
                                   ncol, nrow, indirection_map, column_banded_map )
 
     ncell_3d = nlayers * ncells
-    allocate(local_stencil(ndf,ndf,ncell_3d))
+    allocate(local_stencil(ncell_3d,ndf,ndf))
     allocate(columnwise_mm(bw, nrow, ncells))
     columnwise_mm(:,:,:) = 0.0_r_solver
 
     cell = 1
 
     do i=1, ncell_3d
-       local_stencil(:,:,i) = reshape( (/ 1.0_r_solver/3.0_r_solver, 1.0_r_solver/6.0_r_solver, &
+       local_stencil(i,:,:) = reshape( (/ 1.0_r_solver/3.0_r_solver, 1.0_r_solver/6.0_r_solver, &
                                  1.0_r_solver/6.0_r_solver, 1.0_r_solver/3.0_r_solver /), (/2, 2/))
     end do
 

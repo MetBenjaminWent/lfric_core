@@ -175,8 +175,8 @@ contains
     call get_w0_3x3x3_field(chi1, chi2, chi3, dx, dy, dz, &
                             map_w0, nlayers)
 
-    allocate(projection_operator(ndf_w1, ndf_w3,ncells))
-    allocate(answer(ndf_w1, ndf_w3,3))
+    allocate(projection_operator(ncells, ndf_w1, ndf_w3))
+    allocate(answer(ndf_w1, ndf_w3, 3))
 
     ! Compute answer for each direction
     answer(:,:,:) = 0.0_r_def
@@ -220,7 +220,7 @@ contains
                                           wh, wv)
       ! P = J^{-T}*basis_w1 * basis_w3 * unit_vector(direction)*detJ
       ! where unit_vector is 1 for component direction and zero otherwise
-      @assertEqual(answer(:,:,direction), projection_operator(:,:,1), tol)
+      @assertEqual(answer(:,:,direction), projection_operator(1,:,:), tol)
     end do
 
   end subroutine test_all

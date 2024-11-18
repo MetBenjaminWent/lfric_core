@@ -120,8 +120,8 @@ contains
 
     allocate( T_ip1( undf_w3 ) )
     allocate( T_i( undf_w3 ) )
-    allocate( mm_w3( ndf_w3, ndf_w3, ncells_3d ) )
-    allocate( mm_w3_sh_inv( ndf_w3_sh, ndf_w3_sh, ncells_3d_sh ) )
+    allocate( mm_w3( ncells_3d, ndf_w3, ndf_w3 ) )
+    allocate( mm_w3_sh_inv( ncells_3d_sh, ndf_w3_sh, ndf_w3_sh ) )
     allocate( heights( nlayers+1 ) )
     allocate( heights_sh( nlayers_sh+1 ) )
     allocate( answer_ip1( undf_w3 ) )
@@ -147,7 +147,7 @@ contains
         dz = heights(k+1) - heights(k)
         dz_sh_ip1 = heights_sh(k+2) - heights_sh(k+1)
         dz_sh_i = heights_sh(k+1) - heights_sh(k)
-        mm_w3(1,1,ik) = dx*dy*dz  ! Value is the volume of the cell
+        mm_w3(ik,1,1) = dx*dy*dz  ! Value is the volume of the cell
         answer_i(map_w3(1,cell)+k-1) = 0.5_r_def * dz / dz_sh_i
         answer_ip1(map_w3(1,cell)+k-1) = 0.5_r_def * dz / dz_sh_ip1
       end do
@@ -155,7 +155,7 @@ contains
       do k = 1, nlayers_sh
         ik = (cell-1)*nlayers_sh + k
         dz = heights_sh(k+1) - heights_sh(k)
-        mm_w3_sh_inv(1,1,ik) = 1.0_r_def / (dx*dy*dz)  ! Value is the 1/volume of the cell
+        mm_w3_sh_inv(ik,1,1) = 1.0_r_def / (dx*dy*dz)  ! Value is the 1/volume of the cell
       end do
 
     end do

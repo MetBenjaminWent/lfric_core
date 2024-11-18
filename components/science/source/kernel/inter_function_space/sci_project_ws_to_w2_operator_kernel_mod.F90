@@ -115,7 +115,7 @@ subroutine project_ws_to_w2_operator_code( cell, nlayers,              &
   real(kind=r_def), dimension(1,ndf_wx,nqp_h,nqp_v), intent(in) :: basis_wx
   real(kind=r_def), dimension(3,ndf_wx,nqp_h,nqp_v), intent(in) :: diff_basis_wx
 
-  real(kind=r_def), dimension(ndf_w2, ndf_ws, ncell),  intent(inout) :: projection_operator
+  real(kind=r_def), dimension(ncell, ndf_w2, ndf_ws),  intent(inout) :: projection_operator
   real(kind=r_def), dimension(undf_wx),                intent(in)    :: chi1, chi2, chi3
   real(kind=r_def), dimension(undf_pid),               intent(in)    :: panel_id
 
@@ -143,7 +143,7 @@ subroutine project_ws_to_w2_operator_code( cell, nlayers,              &
     end do
 
     ik = 1 + k + (cell-1)*nlayers
-    projection_operator(:,:,ik) = 0.0_r_def
+    projection_operator(ik,:,:) = 0.0_r_def
     do qp_v = 1,nqp_v
       do qp_h = 1,nqp_h
         call pointwise_coordinate_jacobian(ndf_wx, chi1_e, chi2_e, chi3_e,  &
@@ -158,7 +158,7 @@ subroutine project_ws_to_w2_operator_code( cell, nlayers,              &
             ! Projection from ws*3 to w2 = jac*v . a3d
             v = matmul(jac,basis_w2(:,df_2,qp_h,qp_v))
 
-            projection_operator(df_2, df_s, ik) = projection_operator(df_2, df_s, ik) &
+            projection_operator(ik, df_2, df_s) = projection_operator(ik, df_2, df_s) &
                                                 + wqp_h(qp_h)*wqp_v(qp_v)*dot_product(v,a3d)
           end do
         end do

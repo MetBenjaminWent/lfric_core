@@ -198,9 +198,9 @@ contains
     allocate(u_lat_w3_data(undf_w3))
     allocate(u_up_wt_data(undf_wt))
     allocate(panel_id_data(undf_w3))
-    allocate(u_lon_op(ndf_w2b,ndf_w3,ncells_3d))
-    allocate(u_lat_op(ndf_w2b,ndf_w3,ncells_3d))
-    allocate(u_up_op(ndf_w2b,ndf_wt,ncells_3d))
+    allocate(u_lon_op(ncells_3d,ndf_w2b,ndf_w3))
+    allocate(u_lat_op(ncells_3d,ndf_w2b,ndf_w3))
+    allocate(u_up_op(ncells_3d,ndf_w2b,ndf_wt))
 
     ! ------------------------------------------------------------------------ !
     ! Set initial conditions for fields

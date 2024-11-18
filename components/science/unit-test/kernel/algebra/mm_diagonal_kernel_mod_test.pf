@@ -67,16 +67,16 @@ contains
     real(r_double), allocatable :: mm(:,:,:)
     real(r_double), allocatable :: mm_diag(:), answer(:)
 
-    allocate( mm(ndf,ndf,ncell) )
+    allocate( mm(ncell,ndf,ndf) )
     allocate( mm_diag(undf) )
     allocate( map(ndf,ncell) )
     allocate( answer(undf) )
 
     ! Fill with some data
     do cell = 1,2
-      mm(:,1,cell) = (/ 4.0_r_double, 2.0_r_double, 1.0_r_double /)
-      mm(:,2,cell) = (/ 1.0_r_double, 6.0_r_double, 1.0_r_double /)
-      mm(:,3,cell) = (/ 1.0_r_double, 2.0_r_double, 4.0_r_double /)
+      mm(cell,:,1) = (/ 4.0_r_double, 2.0_r_double, 1.0_r_double /)
+      mm(cell,:,2) = (/ 1.0_r_double, 6.0_r_double, 1.0_r_double /)
+      mm(cell,:,3) = (/ 1.0_r_double, 2.0_r_double, 4.0_r_double /)
     end do
     map(:,1) = (/ 1_i_def, 2_i_def, 3_i_def /)
     map(:,2) = (/ 3_i_def, 4_i_def, 5_i_def /)
@@ -122,16 +122,16 @@ contains
     real(r_single), allocatable :: mm(:,:,:)
     real(r_single), allocatable :: mm_diag(:), answer(:)
 
-    allocate( mm(ndf,ndf,ncell) )
+    allocate( mm(ncell,ndf,ndf) )
     allocate( mm_diag(undf) )
     allocate( map(ndf,ncell) )
     allocate( answer(undf) )
 
     ! Fill with some data
     do cell = 1,2
-      mm(:,1,cell) = (/ 4.0_r_single, 2.0_r_single, 1.0_r_single /)
-      mm(:,2,cell) = (/ 1.0_r_single, 6.0_r_single, 1.0_r_single /)
-      mm(:,3,cell) = (/ 1.0_r_single, 2.0_r_single, 4.0_r_single /)
+      mm(cell,:,1) = (/ 4.0_r_single, 2.0_r_single, 1.0_r_single /)
+      mm(cell,:,2) = (/ 1.0_r_single, 6.0_r_single, 1.0_r_single /)
+      mm(cell,:,3) = (/ 1.0_r_single, 2.0_r_single, 4.0_r_single /)
     end do
     map(:,1) = (/ 1_i_def, 2_i_def, 3_i_def /)
     map(:,2) = (/ 3_i_def, 4_i_def, 5_i_def /)

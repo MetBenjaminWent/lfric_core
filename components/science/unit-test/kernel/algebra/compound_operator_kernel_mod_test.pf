@@ -69,9 +69,9 @@ contains
 
     integer(i_def), dimension(ndf_w2) :: map_w2
 
-    real(r_solver), dimension(ndf_w3, ndf_w2, ncells) :: dstar
-    real(r_solver), dimension(ndf_w3, ndf_w3, ncells) :: m_w3_1
-    real(r_solver), dimension(ndf_w3, ndf_w2, ncells) :: div
+    real(r_solver), dimension(ncells, ndf_w3, ndf_w2) :: dstar
+    real(r_solver), dimension(ncells, ndf_w3, ndf_w3) :: m_w3_1
+    real(r_solver), dimension(ncells, ndf_w3, ndf_w2) :: div
 
     real(r_solver), dimension(undf_w2) :: rho
 
@@ -82,7 +82,7 @@ contains
     ! Test the operator kernel
     m_w3_1 = 2.0_r_solver
 
-    div(:,:,1) = reshape( [1.0_r_solver, 2.0_r_solver, 3.0_r_solver, &
+    div(1,:,:) = reshape( [1.0_r_solver, 2.0_r_solver, 3.0_r_solver, &
                            4.0_r_solver, 5.0_r_solver, 6.0_r_solver], [1,6] )
     rho(:) = 2.0_r_solver
 
@@ -112,7 +112,7 @@ contains
                        8.0_r_solver, 10.0_r_solver, 12.0_r_solver], &
                       [1, 6] )
 
-    @assertEqual( answer, dstar(:, :, 1 ), tol )
+    @assertEqual( answer, dstar(1, :, :), tol )
 
   end subroutine test_all
 

@@ -135,9 +135,9 @@ subroutine compute_sample_u_ops_code( col, nlayers,                   &
   real(kind=r_def), dimension(undf_chi), intent(in) :: chi1, chi2, chi3
 
   ! Operators
-  real(kind=r_def), dimension(ndf_w2b,ndf_w3,ncell_3d_1), intent(inout) :: u_lon_op
-  real(kind=r_def), dimension(ndf_w2b,ndf_w3,ncell_3d_2), intent(inout) :: u_lat_op
-  real(kind=r_def), dimension(ndf_w2b,ndf_wt,ncell_3d_3), intent(inout) :: u_rad_op
+  real(kind=r_def), dimension(ncell_3d_1,ndf_w2b,ndf_w3), intent(inout) :: u_lon_op
+  real(kind=r_def), dimension(ncell_3d_2,ndf_w2b,ndf_w3), intent(inout) :: u_lat_op
+  real(kind=r_def), dimension(ncell_3d_3,ndf_w2b,ndf_wt), intent(inout) :: u_rad_op
 
   ! Internal variables
   integer(kind=i_def) :: df_w2, df_wt, df_chi, k, ipanel, cell_3d
@@ -165,9 +165,9 @@ subroutine compute_sample_u_ops_code( col, nlayers,                   &
     do k = 0, nlayers-1
       ! Get index of this cell
       cell_3d = k + 1 + (col-1)*nlayers
-      u_lon_op(:,:,cell_3d) = 0.0_r_def
-      u_lat_op(:,:,cell_3d) = 0.0_r_def
-      u_rad_op(:,:,cell_3d) = 0.0_r_def
+      u_lon_op(cell_3d,:,:) = 0.0_r_def
+      u_lat_op(cell_3d,:,:) = 0.0_r_def
+      u_rad_op(cell_3d,:,:) = 0.0_r_def
 
       ! Compute Jacobian for this cell
       do df_chi = 1, ndf_chi
@@ -182,9 +182,9 @@ subroutine compute_sample_u_ops_code( col, nlayers,                   &
 
       ! X and Y components contribute equally to all W2 DoFs
       do df_w2 = 1, ndf_w2b
-        u_lon_op(df_w2,1,cell_3d) = dj(df_w2)* &
+        u_lon_op(cell_3d,df_w2,1) = dj(df_w2)* &
           dot_product(face_normals(:,df_w2), matmul(jac_inv(:,:,df_w2), X_vector(:)))
-        u_lat_op(df_w2,1,cell_3d) = dj(df_w2)* &
+        u_lat_op(cell_3d,df_w2,1) = dj(df_w2)* &
           dot_product(face_normals(:,df_w2), matmul(jac_inv(:,:,df_w2), Y_vector(:)))
       end do
 
@@ -193,14 +193,14 @@ subroutine compute_sample_u_ops_code( col, nlayers,                   &
       ! vertical W2 DoFs only contribute once
       do df_w2 = 1, 4
         do df_wt = 1, ndf_wt
-          u_rad_op(df_w2,df_wt,cell_3d) = 0.5_r_def*dj(df_w2)* &
+          u_rad_op(cell_3d,df_w2,df_wt) = 0.5_r_def*dj(df_w2)* &
             dot_product(face_normals(:,df_w2), matmul(jac_inv(:,:,df_w2), Z_vector(:)))
         end do
       end do
 
-      u_rad_op(B,1,cell_3d) = dj(B)* &
+      u_rad_op(cell_3d,B,1) = dj(B)* &
         dot_product(face_normals(:,B), matmul(jac_inv(:,:,B), Z_vector(:)))
-      u_rad_op(T,2,cell_3d) = dj(T)* &
+      u_rad_op(cell_3d,T,2) = dj(T)* &
         dot_product(face_normals(:,T), matmul(jac_inv(:,:,T), Z_vector(:)))
 
     end do
@@ -214,9 +214,9 @@ subroutine compute_sample_u_ops_code( col, nlayers,                   &
     do k = 0, nlayers-1
       ! Get index of this cell
       cell_3d = k + 1 + (col-1)*nlayers
-      u_lon_op(:,:,cell_3d) = 0.0_r_def
-      u_lat_op(:,:,cell_3d) = 0.0_r_def
-      u_rad_op(:,:,cell_3d) = 0.0_r_def
+      u_lon_op(cell_3d,:,:) = 0.0_r_def
+      u_lat_op(cell_3d,:,:) = 0.0_r_def
+      u_rad_op(cell_3d,:,:) = 0.0_r_def
 
       ! Compute Jacobian for this cell
       do df_chi = 1, ndf_chi
@@ -255,9 +255,9 @@ subroutine compute_sample_u_ops_code( col, nlayers,                   &
 
       ! Lon and lat components contribute equally to all W2 DoFs
       do df_w2 = 1, ndf_w2b
-        u_lon_op(df_w2,1,cell_3d) = dj(df_w2)* &
+        u_lon_op(cell_3d,df_w2,1) = dj(df_w2)* &
           dot_product(face_normals(:,df_w2), matmul(jac_inv(:,:,df_w2), lon_vector_xyz(df_w2,:)))
-        u_lat_op(df_w2,1,cell_3d) = dj(df_w2)* &
+        u_lat_op(cell_3d,df_w2,1) = dj(df_w2)* &
           dot_product(face_normals(:,df_w2), matmul(jac_inv(:,:,df_w2), lat_vector_xyz(df_w2,:)))
       end do
 
@@ -266,14 +266,14 @@ subroutine compute_sample_u_ops_code( col, nlayers,                   &
       ! vertical W2 DoFs only contribute once
       do df_w2 = 1, 4
         do df_wt = 1, ndf_wt
-          u_rad_op(df_w2,df_wt,cell_3d) = 0.5_r_def*dj(df_w2)* &
+          u_rad_op(cell_3d,df_w2,df_wt) = 0.5_r_def*dj(df_w2)* &
             dot_product(face_normals(:,df_w2), matmul(jac_inv(:,:,df_w2), rad_vector_xyz(df_w2,:)))
         end do
       end do
 
-      u_rad_op(B,1,cell_3d) = dj(B)* &
+      u_rad_op(cell_3d,B,1) = dj(B)* &
         dot_product(face_normals(:,B), matmul(jac_inv(:,:,B), rad_vector_xyz(B,:)))
-      u_rad_op(T,2,cell_3d) = dj(T)* &
+      u_rad_op(cell_3d,T,2) = dj(T)* &
         dot_product(face_normals(:,T), matmul(jac_inv(:,:,T), rad_vector_xyz(T,:)))
 
     end do
@@ -282,14 +282,14 @@ subroutine compute_sample_u_ops_code( col, nlayers,                   &
 
   ! Enforce boundary condition at bottom and top
   cell_3d = 1 + (col-1)*nlayers
-  u_lon_op(B,:,cell_3d) = 0.0_r_def
-  u_lat_op(B,:,cell_3d) = 0.0_r_def
-  u_rad_op(B,:,cell_3d) = 0.0_r_def
+  u_lon_op(cell_3d,B,:) = 0.0_r_def
+  u_lat_op(cell_3d,B,:) = 0.0_r_def
+  u_rad_op(cell_3d,B,:) = 0.0_r_def
 
   cell_3d = nlayers + (col-1)*nlayers
-  u_lon_op(T,:,cell_3d) = 0.0_r_def
-  u_lat_op(T,:,cell_3d) = 0.0_r_def
-  u_rad_op(T,:,cell_3d) = 0.0_r_def
+  u_lon_op(cell_3d,T,:) = 0.0_r_def
+  u_lat_op(cell_3d,T,:) = 0.0_r_def
+  u_rad_op(cell_3d,T,:) = 0.0_r_def
 
 end subroutine compute_sample_u_ops_code
 

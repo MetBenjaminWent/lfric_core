@@ -80,15 +80,15 @@ subroutine transpose_matrix_code_r_single(cell,        &
   integer(kind=i_def), intent(in)    :: ncell_3d_2
   integer(kind=i_def), intent(in)    :: ndf1
   integer(kind=i_def), intent(in)    :: ndf2
-  real(kind=r_single), dimension(ndf1,ndf2,ncell_3d), intent(in)      :: mat_in
-  real(kind=r_single), dimension(ndf2,ndf1,ncell_3d), intent(inout)   :: mat_out
+  real(kind=r_single), dimension(ncell_3d,ndf1,ndf2), intent(in)      :: mat_in
+  real(kind=r_single), dimension(ncell_3d,ndf2,ndf1), intent(inout)   :: mat_out
 
   ! Internal variables
   integer(kind=i_def) :: k, ik
 
   do k = 0, nlayers-1
     ik = (cell-1)*nlayers + k + 1
-    mat_out(:,:,ik) = transpose(mat_in(:,:,ik))
+    mat_out(ik,:,:) = transpose(mat_in(ik,:,:))
   end do
 
 end subroutine transpose_matrix_code_r_single
@@ -113,15 +113,15 @@ subroutine transpose_matrix_code_r_double(cell,        &
   integer(kind=i_def), intent(in)    :: ncell_3d_2
   integer(kind=i_def), intent(in)    :: ndf1
   integer(kind=i_def), intent(in)    :: ndf2
-  real(kind=r_double), dimension(ndf1,ndf2,ncell_3d), intent(in)      :: mat_in
-  real(kind=r_double), dimension(ndf2,ndf1,ncell_3d), intent(inout)   :: mat_out
+  real(kind=r_double), dimension(ncell_3d,ndf1,ndf2), intent(in)      :: mat_in
+  real(kind=r_double), dimension(ncell_3d,ndf2,ndf1), intent(inout)   :: mat_out
 
   ! Internal variables
   integer(kind=i_def) :: k, ik
 
   do k = 0, nlayers-1
     ik = (cell-1)*nlayers + k + 1
-    mat_out(:,:,ik) = transpose(mat_in(:,:,ik))
+    mat_out(ik,:,:) = transpose(mat_in(ik,:,:))
   end do
 
 end subroutine transpose_matrix_code_r_double

@@ -92,7 +92,7 @@ contains
     ! Arguments
     integer(kind=i_def), intent(in) :: ndf_to, ndf_from
     integer(kind=i_def), intent(in) :: cell,  nlayers, ncell_3d, ncell_2d
-    real(kind=r_solver), dimension(ndf_to,ndf_from,ncell_3d), intent(in) :: local_stencil
+    real(kind=r_solver), dimension(ncell_3d,ndf_to,ndf_from), intent(in) :: local_stencil
     integer(kind=i_def), intent(in) :: nrow, ncol, bandwidth
     real(kind=r_solver), dimension(bandwidth,nrow,ncell_2d), intent(inout) :: columnwise_matrix
     integer(kind=i_def), intent(in) :: alpha, beta, gamma_m, gamma_p
@@ -120,7 +120,7 @@ contains
              j = column_banded_dofmap_from( df2, k )
              columnwise_matrix( j-j_minus+1, i, cell )        &
                   = columnwise_matrix( j-j_minus+1, i, cell ) &
-                  + local_stencil( df1 ,df2, ik )
+                  + local_stencil( ik, df1, df2 )
          end do
        end do
     end do

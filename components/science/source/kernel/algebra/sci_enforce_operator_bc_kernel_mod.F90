@@ -72,7 +72,7 @@ subroutine enforce_operator_bc_code_r_single(cell, nlayers,                   &
   integer(kind=i_def), intent(in) :: ndf1, ndf2
   integer(kind=i_def), dimension(ndf1,2), intent(in) :: boundary_value
 
-  real(kind=r_single), dimension(ndf1,ndf2,ncell_3d), intent(inout) :: op
+  real(kind=r_single), dimension(ncell_3d,ndf1,ndf2), intent(inout) :: op
 
   ! Local variables
   integer(kind=i_def) :: df, k, ik
@@ -80,12 +80,12 @@ subroutine enforce_operator_bc_code_r_single(cell, nlayers,                   &
   k = 1
   ik = (cell-1)*nlayers + k
   do df = 1,ndf1
-    op(df,:,ik) = op(df,:,ik)*real(boundary_value(df,1), r_single)
+    op(ik,df,:) = op(ik,df,:)*real(boundary_value(df,1), r_single)
   end do
   k = nlayers
   ik = (cell-1)*nlayers + k
   do df = 1,ndf1
-    op(df,:,ik) = op(df,:,ik)*real(boundary_value(df,2), r_single)
+    op(ik,df,:) = op(ik,df,:)*real(boundary_value(df,2), r_single)
   end do
 
 end subroutine enforce_operator_bc_code_r_single
@@ -104,7 +104,7 @@ subroutine enforce_operator_bc_code_r_double(cell, nlayers,                   &
   integer(kind=i_def), intent(in) :: ndf1, ndf2
   integer(kind=i_def), dimension(ndf1,2), intent(in) :: boundary_value
 
-  real(kind=r_double), dimension(ndf1,ndf2,ncell_3d), intent(inout) :: op
+  real(kind=r_double), dimension(ncell_3d,ndf1,ndf2), intent(inout) :: op
 
   ! Local variables
   integer(kind=i_def) :: df, k, ik
@@ -112,12 +112,12 @@ subroutine enforce_operator_bc_code_r_double(cell, nlayers,                   &
   k = 1
   ik = (cell-1)*nlayers + k
   do df = 1,ndf1
-    op(df,:,ik) = op(df,:,ik)*real(boundary_value(df,1), r_double)
+    op(ik,df,:) = op(ik,df,:)*real(boundary_value(df,1), r_double)
   end do
   k = nlayers
   ik = (cell-1)*nlayers + k
   do df = 1,ndf1
-    op(df,:,ik) = op(df,:,ik)*real(boundary_value(df,2), r_double)
+    op(ik,df,:) = op(ik,df,:)*real(boundary_value(df,2), r_double)
   end do
 
 end subroutine enforce_operator_bc_code_r_double

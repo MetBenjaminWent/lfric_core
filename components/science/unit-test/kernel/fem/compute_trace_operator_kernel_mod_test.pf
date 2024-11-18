@@ -140,7 +140,7 @@ contains
 
     ncell_3d = ncells*nlayers
     ! Array for storing the computed operator
-    allocate(local_stencil(ndf_w2t, ndf_w2b, ncell_3d))
+    allocate(local_stencil(ncell_3d, ndf_w2t, ndf_w2b))
     local_stencil(:, :, :) = 0.0_r_def
 
     call compute_trace_operator_code( cell,                     &
@@ -158,7 +158,7 @@ contains
                                       outward_normals_to_faces )
 
     call trace_ans( answer )
-    @assertEqual(answer, local_stencil(:, :, 1), tol)
+    @assertEqual(answer, local_stencil(1, :, :), tol)
 
     deallocate(basis_w2trace_face)
     deallocate(basis_w2broken_face)

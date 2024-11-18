@@ -74,8 +74,8 @@ contains
     integer(kind=i_def), parameter :: ndf2 = 2
 
     ! Operators
-    real(kind=r_def), dimension(ndf1, ndf2, ncell) :: x_plus_ay
-    real(kind=r_def), dimension(ndf1, ndf2, ncell) :: x, y
+    real(kind=r_def), dimension(ncell, ndf1, ndf2) :: x_plus_ay
+    real(kind=r_def), dimension(ncell, ndf1, ndf2) :: x, y
 
     ! Reals
     real(kind=r_def), parameter :: a = 2.0_r_def
@@ -84,11 +84,11 @@ contains
     integer(kind=i_def) :: df
 
     ! Set up operators
-    x(:,1,1) = 0.1_r_def
-    x(:,2,1) = 0.2_r_def
+    x(1,:,1) = 0.1_r_def
+    x(1,:,2) = 0.2_r_def
 
-    y(:,1,1) = 1.1_r_def
-    y(:,2,1) = 2.1_r_def
+    y(1,:,1) = 1.1_r_def
+    y(1,:,2) = 2.1_r_def
 
     ! Compute x + a*y
     call operator_x_plus_ay_kernel_code(cell, nlayers,    &
@@ -104,9 +104,9 @@ contains
     endif
     do df = 1,ndf1
       answer = 2.3_r_def
-      @assertEqual(answer, x_plus_ay(df,1,1), use_tol)
+      @assertEqual(answer, x_plus_ay(1,df,1), use_tol)
       answer = 4.4_r_def
-      @assertEqual(answer, x_plus_ay(df,2,1), use_tol)
+      @assertEqual(answer, x_plus_ay(1,df,2), use_tol)
     end do
 
   end subroutine test_x_plus_ay
@@ -134,12 +134,12 @@ contains
     integer(kind=i_def), parameter :: ndf2 = 2
 
     ! Operators
-    real(kind=r_def), dimension(ndf1, ndf2, ncell) :: x
+    real(kind=r_def), dimension(ncell, ndf1, ndf2) :: x
 
     ! Reals
     real(kind=r_def), parameter :: a = 2.0_r_def
 
-    real(kind=r_def), dimension(ndf1, ndf2, ncell) :: answer
+    real(kind=r_def), dimension(ncell, ndf1, ndf2) :: answer
 
     ! Compute x = a
     call operator_setval_c_kernel_code(cell, nlayers, &
@@ -181,8 +181,8 @@ contains
     integer(kind=i_def), parameter :: ndf2 = 2
 
     ! Operators
-    real(kind=r_def), dimension(ndf1, ndf2, ncell) :: original
-    real(kind=r_def), dimension(ndf1, ndf2, ncell) :: copy
+    real(kind=r_def), dimension(ncell, ndf1, ndf2) :: original
+    real(kind=r_def), dimension(ncell, ndf1, ndf2) :: copy
 
     ! Reals
     real(kind=r_def), parameter :: a = 2.0_r_def
@@ -193,7 +193,7 @@ contains
     ! Set up operators
     original = 5.0_r_def
     original(1,1,1) = 1.1_r_def
-    original(2,1,1) = 2.1_r_def
+    original(1,2,1) = 2.1_r_def
 
     ! Compute a*x*y
     call operator_setval_x_kernel_code(cell, nlayers,   &

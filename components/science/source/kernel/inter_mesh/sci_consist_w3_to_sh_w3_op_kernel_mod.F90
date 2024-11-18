@@ -92,8 +92,8 @@ subroutine consist_w3_to_sh_w3_op_code( cell,           &
 
   real(kind=r_def),    dimension(undf_w3),    intent(inout) :: T_ip1, T_i
 
-  real(kind=r_def), dimension(ndf_w3_sh,ndf_w3_sh,ncells_sh), intent(in) :: mm_w3_sh_inv
-  real(kind=r_def), dimension(ndf_w3,ndf_w3,ncells),          intent(in) :: mm_w3
+  real(kind=r_def), dimension(ncells_sh,ndf_w3_sh,ndf_w3_sh), intent(in) :: mm_w3_sh_inv
+  real(kind=r_def), dimension(ncells,ndf_w3,ndf_w3),          intent(in) :: mm_w3
 
   ! Internal variables
   integer(kind=i_def) :: df, k, ik, ik_sh, nlayers_sh
@@ -111,10 +111,10 @@ subroutine consist_w3_to_sh_w3_op_code( cell,           &
     ! whose non-zero entries are 1/2
 
     ! T_i corresponds to the lower-half layers of the original mesh
-    T_i(map_w3(df)+k) = 0.5_r_def * mm_w3(df,df,ik) * mm_w3_sh_inv(df,df,ik_sh)
+    T_i(map_w3(df)+k) = 0.5_r_def * mm_w3(ik,df,df) * mm_w3_sh_inv(ik_sh,df,df)
 
     ! T_ip1 corresponds to the upper-half layers of the original mesh
-    T_ip1(map_w3(df)+k) = 0.5_r_def * mm_w3(df,df,ik) * mm_w3_sh_inv(df,df,ik_sh+1)
+    T_ip1(map_w3(df)+k) = 0.5_r_def * mm_w3(ik,df,df) * mm_w3_sh_inv(ik_sh+1,df,df)
 
   end do
 

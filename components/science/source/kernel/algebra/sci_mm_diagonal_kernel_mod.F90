@@ -79,7 +79,7 @@ contains
     integer(kind=i_def),                    intent(in)  :: undf, ncell_3d
     integer(kind=i_def), dimension(ndf),    intent(in)  :: map
     real(kind=r_single), dimension(undf), intent(inout) :: mm_diag
-    real(kind=r_single), dimension(ndf,ndf,ncell_3d), intent(in) :: mass_matrix
+    real(kind=r_single), dimension(ncell_3d,ndf,ndf), intent(in) :: mass_matrix
 
     ! Internal variables
     integer(kind=i_def) :: df, k, ik
@@ -87,7 +87,7 @@ contains
     do k = 0, nlayers-1
       ik = (cell-1)*nlayers + k + 1
       do df = 1,ndf
-        mm_diag(map(df)+k) = mm_diag(map(df)+k) + mass_matrix(df,df,ik)
+        mm_diag(map(df)+k) = mm_diag(map(df)+k) + mass_matrix(ik,df,df)
       end do
     end do
 
@@ -110,7 +110,7 @@ contains
    integer(kind=i_def),                    intent(in)  :: undf, ncell_3d
    integer(kind=i_def), dimension(ndf),    intent(in)  :: map
    real(kind=r_double), dimension(undf), intent(inout) :: mm_diag
-   real(kind=r_double), dimension(ndf,ndf,ncell_3d), intent(in) :: mass_matrix
+   real(kind=r_double), dimension(ncell_3d,ndf,ndf), intent(in) :: mass_matrix
 
    ! Internal variables
    integer(kind=i_def) :: df, k, ik
@@ -118,7 +118,7 @@ contains
    do k = 0, nlayers-1
      ik = (cell-1)*nlayers + k + 1
      do df = 1,ndf
-        mm_diag(map(df)+k) = mm_diag(map(df)+k) + mass_matrix(df,df,ik)
+        mm_diag(map(df)+k) = mm_diag(map(df)+k) + mass_matrix(ik,df,df)
      end do
    end do
 

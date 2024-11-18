@@ -97,8 +97,8 @@ subroutine matrix_vector_shifted_code(                     &
 
   real(kind=r_def), dimension(undf_orig),                 intent(in)  :: x
   real(kind=r_def), dimension(undf_sh),                 intent(inout) :: y_sh
-  real(kind=r_def), dimension(ndf_sh,ndf_orig,ncell_3d_L), intent(in) :: T_L
-  real(kind=r_def), dimension(ndf_sh,ndf_orig,ncell_3d_U), intent(in) :: T_U
+  real(kind=r_def), dimension(ncell_3d_L,ndf_sh,ndf_orig), intent(in) :: T_L
+  real(kind=r_def), dimension(ncell_3d_U,ndf_sh,ndf_orig), intent(in) :: T_U
 
   ! Internal variables
   integer(kind=i_def)                   :: df, k, ik
@@ -111,7 +111,7 @@ subroutine matrix_vector_shifted_code(                     &
   end do
 
   ik = (cell-1)*(nlayers_sh-1) + 1
-  y_sh_e = matmul(T_L(:,:,ik), x_e)
+  y_sh_e = matmul(T_L(ik,:,:), x_e)
 
   do df = 1, ndf_sh
     y_sh(map_sh(df)) = y_sh(map_sh(df)) + y_sh_e(df)
@@ -122,7 +122,7 @@ subroutine matrix_vector_shifted_code(                     &
 
     ! Since x_e is now correct for the upper level calculation,
     ! we reuse it from last iteration
-    y_sh_e = matmul(T_U(:,:,ik), x_e)
+    y_sh_e = matmul(T_U(ik,:,:), x_e)
 
     do df = 1, ndf_sh
       y_sh(map_sh(df)+k) = y_sh(map_sh(df)+k) + y_sh_e(df)
@@ -134,14 +134,14 @@ subroutine matrix_vector_shifted_code(                     &
     end do
 
     ik = (cell-1)*(nlayers_sh-1) + k + 1
-    y_sh_e = matmul(T_L(:,:,ik), x_e)
+    y_sh_e = matmul(T_L(ik,:,:), x_e)
     do df = 1, ndf_sh
        y_sh(map_sh(df)+k) = y_sh(map_sh(df)+k) + y_sh_e(df)
     end do
   end do
 
   ! Do top level, with only contribution from T_U. Use previous x_e again.
-  y_sh_e = matmul(T_U(:,:,ik), x_e)
+  y_sh_e = matmul(T_U(ik,:,:), x_e)
 
   do df = 1, ndf_sh
     y_sh(map_sh(df)+nlayers_sh-1) = y_sh(map_sh(df)+nlayers_sh-1) + y_sh_e(df)

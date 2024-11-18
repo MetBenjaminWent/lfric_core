@@ -87,7 +87,7 @@ subroutine mm_diagonal_assembled_kernel_code_r_single(cell,        &
   integer(kind=i_def),                              intent(in)    :: ncell_3d
   integer(kind=i_def),                              intent(in)    :: ndf, undf
   real   (kind=r_single), dimension(undf),             intent(in)    :: mm_diag
-  real   (kind=r_single), dimension(ndf,ndf,ncell_3d), intent(inout) :: mass_matrix
+  real   (kind=r_single), dimension(ncell_3d,ndf,ndf), intent(inout) :: mass_matrix
   integer(kind=i_def), dimension(ndf),              intent(in)    :: map
 
   ! Internal variables
@@ -95,10 +95,10 @@ subroutine mm_diagonal_assembled_kernel_code_r_single(cell,        &
 
   do k = 0, nlayers-1
     ik = (cell-1)*nlayers + k + 1
-    mass_matrix(:,:,ik) = 0.0_r_single
+    mass_matrix(ik,:,:) = 0.0_r_single
     do df = 1,ndf
       ! Set diagonal values of matrix
-      mass_matrix(df,df,ik) = mm_diag(map(df)+k)
+      mass_matrix(ik,df,df) = mm_diag(map(df)+k)
     end do
   end do
 
@@ -120,7 +120,7 @@ subroutine mm_diagonal_assembled_kernel_code_r_double(cell,        &
   integer(kind=i_def),                              intent(in)    :: ncell_3d
   integer(kind=i_def),                              intent(in)    :: ndf, undf
   real   (kind=r_double), dimension(undf),             intent(in)    :: mm_diag
-  real   (kind=r_double), dimension(ndf,ndf,ncell_3d), intent(inout) :: mass_matrix
+  real   (kind=r_double), dimension(ncell_3d,ndf,ndf), intent(inout) :: mass_matrix
   integer(kind=i_def), dimension(ndf),              intent(in)    :: map
 
   ! Internal variables
@@ -128,10 +128,10 @@ subroutine mm_diagonal_assembled_kernel_code_r_double(cell,        &
 
   do k = 0, nlayers-1
     ik = (cell-1)*nlayers + k + 1
-    mass_matrix(:,:,ik) = 0.0_r_double
+    mass_matrix(ik,:,:) = 0.0_r_double
     do df = 1,ndf
       ! Set diagonal values of matrix
-      mass_matrix(df,df,ik) = mm_diag(map(df)+k)
+      mass_matrix(ik,df,df) = mm_diag(map(df)+k)
     end do
   end do
 

@@ -151,7 +151,7 @@ contains
                             map_wchi, nlayers)
 
     ncell_3d = ncells*nlayers
-    allocate(local_stencil(ndf_w1, ndf_w0, ncell_3d))
+    allocate(local_stencil(ncell_3d, ndf_w1, ndf_w0))
     local_stencil(:,:,:) = 0.0_r_def
 
     ! Test the operator kernel
@@ -185,9 +185,9 @@ contains
     call grad_operator(answer)
     ! Normalise by average edge length
     answer(:,:) = answer(:,:) * 3.0_r_def / (dx + dy + dz )
-    local_stencil(:, :, 1 ) =  local_stencil(:, :, 1 ) &
+    local_stencil(1, :, :) =  local_stencil(1, :, :) &
                                   * 3.0_r_def / (dx + dy + dz )
-    @assertEqual(answer, local_stencil(:, :, 1 ), tol)
+    @assertEqual(answer, local_stencil(1, :, :), tol)
 
     deallocate(diff_basis_w0)
     deallocate(basis_wchi)

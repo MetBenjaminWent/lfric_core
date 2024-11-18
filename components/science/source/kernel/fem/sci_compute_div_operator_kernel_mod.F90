@@ -113,7 +113,7 @@ subroutine compute_div_operator_code(cell, nlayers, ncell_3d,     &
   real(kind=r_def), intent(in) :: basis_w3(1,ndf_w3,nqp_h,nqp_v)
   real(kind=r_def), intent(in) :: diff_basis_w2(1,ndf_w2,nqp_h,nqp_v)
 
-  real(kind=r_def), dimension(ndf_w3,ndf_w2,ncell_3d), intent(inout) :: div
+  real(kind=r_def), dimension(ncell_3d,ndf_w3,ndf_w2), intent(inout) :: div
   real(kind=r_def), dimension(undf_pid),               intent(in)    :: panel_id
   real(kind=r_def), dimension(undf_chi),               intent(in)    :: chi1
   real(kind=r_def), dimension(undf_chi),               intent(in)    :: chi2
@@ -143,7 +143,7 @@ subroutine compute_div_operator_code(cell, nlayers, ncell_3d,     &
 
     do df2 = 1, ndf_w2
       do df3 = 1, ndf_w3
-        div(df3,df2,ik) = 0.0_r_def
+        div(ik,df3,df2) = 0.0_r_def
         do qp2 = 1, nqp_v
           do qp1 = 1, nqp_h
             if ( rehabilitate ) then
@@ -158,7 +158,7 @@ subroutine compute_div_operator_code(cell, nlayers, ncell_3d,     &
                         *basis_w3(1,df3,qp1,qp2)*diff_basis_w2(1,df2,qp1,qp2) &
                         /dj(qp1,qp2)
             end if
-            div(df3,df2,ik) = div(df3,df2,ik) + integrand
+            div(ik,df3,df2) = div(ik,df3,df2) + integrand
           end do
         end do
       end do

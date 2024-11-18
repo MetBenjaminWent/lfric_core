@@ -116,7 +116,7 @@ contains
 
     logical(kind=l_def), intent(in) :: extended_mesh
 
-    real(kind=r_single), dimension(ndf_w_scalar,ndf_w_scalar,ncell_3d), &
+    real(kind=r_single), dimension(ncell_3d,ndf_w_scalar,ndf_w_scalar), &
                                           intent(inout) :: mm
 
     real(kind=r_single), dimension(1,ndf_chi,nqp_h,nqp_v), &
@@ -168,19 +168,19 @@ contains
 
       do df2 = 1, ndf_w_scalar
         do df = df2, ndf_w_scalar ! mass matrix is symmetric
-          mm(df,df2,ik) = 0.0_r_single
+          mm(ik,df,df2) = 0.0_r_single
           do qp2 = 1, nqp_v
             do qp1 = 1, nqp_h
               integrand = wqp_h(qp1) * wqp_v(qp2) * &
                    basis_w_scalar(1,df,qp1,qp2)   * &
                    basis_w_scalar(1,df2,qp1,qp2)  * &
                    dj(qp1,qp2)
-              mm(df,df2,ik) = mm(df,df2,ik) + integrand
+              mm(ik,df,df2) = mm(ik,df,df2) + integrand
             end do
           end do
         end do
         do df = df2, 1, -1
-          mm(df,df2,ik) = mm(df2,df,ik)
+          mm(ik,df,df2) = mm(ik,df2,df)
         end do
       end do
 
@@ -214,7 +214,7 @@ contains
 
     logical(kind=l_def), intent(in) :: extended_mesh
 
-    real(kind=r_single), dimension(ndf_w_scalar,ndf_w_scalar,ncell_3d), &
+    real(kind=r_single), dimension(ncell_3d,ndf_w_scalar,ndf_w_scalar), &
                                           intent(inout) :: mm
 
     real(kind=r_double), dimension(1,ndf_chi,nqp_h,nqp_v), &
@@ -264,19 +264,19 @@ contains
 
       do df2 = 1, ndf_w_scalar
         do df = df2, ndf_w_scalar ! mass matrix is symmetric
-          mm(df,df2,ik) = 0.0_r_single
+          mm(ik,df,df2) = 0.0_r_single
           do qp2 = 1, nqp_v
             do qp1 = 1, nqp_h
               integrand = wqp_h(qp1) * wqp_v(qp2) * &
                    basis_w_scalar(1,df,qp1,qp2)   * &
                    basis_w_scalar(1,df2,qp1,qp2)  * &
                    dj(qp1,qp2)
-              mm(df,df2,ik) = mm(df,df2,ik) + real(integrand, kind=r_single)
+              mm(ik,df,df2) = mm(ik,df,df2) + real(integrand, kind=r_single)
             end do
           end do
         end do
         do df = df2, 1, -1
-          mm(df,df2,ik) = mm(df2,df,ik)
+          mm(ik,df,df2) = mm(ik,df2,df)
         end do
       end do
 
@@ -311,7 +311,7 @@ contains
 
     logical(kind=l_def), intent(in) :: extended_mesh
 
-    real(kind=r_double), dimension(ndf_w_scalar,ndf_w_scalar,ncell_3d), &
+    real(kind=r_double), dimension(ncell_3d,ndf_w_scalar,ndf_w_scalar), &
                                           intent(inout) :: mm
 
     real(kind=r_double), dimension(1,ndf_chi,nqp_h,nqp_v), &
@@ -363,19 +363,19 @@ contains
 
       do df2 = 1, ndf_w_scalar
         do df = df2, ndf_w_scalar ! mass matrix is symmetric
-          mm(df,df2,ik) = 0.0_r_double
+          mm(ik,df,df2) = 0.0_r_double
           do qp2 = 1, nqp_v
             do qp1 = 1, nqp_h
               integrand = wqp_h(qp1) * wqp_v(qp2) * &
                    basis_w_scalar(1,df,qp1,qp2)   * &
                    basis_w_scalar(1,df2,qp1,qp2)  * &
                    dj(qp1,qp2)
-               mm(df,df2,ik) = mm(df,df2,ik) + integrand
+               mm(ik,df,df2) = mm(ik,df,df2) + integrand
             end do
           end do
         end do
         do df = df2, 1, -1
-          mm(df,df2,ik) = mm(df2,df,ik)
+          mm(ik,df,df2) = mm(ik,df2,df)
         end do
       end do
 

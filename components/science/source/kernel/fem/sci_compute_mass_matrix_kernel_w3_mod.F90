@@ -105,7 +105,7 @@ contains
     integer(kind=i_def), dimension(ndf_chi), intent(in) :: map_chi
     integer(kind=i_def), dimension(ndf_pid), intent(in) :: map_pid
 
-    real(kind=r_single), dimension(ndf_w3,ndf_w3,ncell_3d), intent(inout) :: mm
+    real(kind=r_single), dimension(ncell_3d,ndf_w3,ndf_w3), intent(inout) :: mm
 
     real(kind=r_single), dimension(1,ndf_chi,nqp_h,nqp_v), intent(in) :: basis_chi
     real(kind=r_single), dimension(3,ndf_chi,nqp_h,nqp_v), intent(in) :: diff_basis_chi
@@ -145,7 +145,7 @@ contains
 
       do df2 = 1, ndf_w3
         do df = df2, ndf_w3 ! mass matrix is symmetric
-          mm(df,df2,ik) = 0.0_r_single
+          mm(ik,df,df2) = 0.0_r_single
           do qp2 = 1, nqp_v
             do qp1 = 1, nqp_h
               if ( rehabilitate ) then
@@ -161,12 +161,12 @@ contains
                       basis_w3(1,df,qp1,qp2)*basis_w3(1,df2,qp1,qp2)  &
                       /dj(qp1,qp2)
               end if
-              mm(df,df2,ik) = mm(df,df2,ik) + integrand
+              mm(ik,df,df2) = mm(ik,df,df2) + integrand
             end do
           end do
         end do
         do df = df2, 1, -1
-          mm(df,df2,ik) = mm(df2,df,ik)
+          mm(ik,df,df2) = mm(ik,df2,df)
         end do
       end do
     end do ! end of k loop
@@ -196,7 +196,7 @@ contains
     integer(kind=i_def), dimension(ndf_chi), intent(in) :: map_chi
     integer(kind=i_def), dimension(ndf_pid), intent(in) :: map_pid
 
-    real(kind=r_single), dimension(ndf_w3,ndf_w3,ncell_3d), intent(inout) :: mm
+    real(kind=r_single), dimension(ncell_3d,ndf_w3,ndf_w3), intent(inout) :: mm
 
     real(kind=r_double), dimension(1,ndf_chi,nqp_h,nqp_v), intent(in) :: basis_chi
     real(kind=r_double), dimension(3,ndf_chi,nqp_h,nqp_v), intent(in) :: diff_basis_chi
@@ -236,7 +236,7 @@ contains
 
       do df2 = 1, ndf_w3
         do df = df2, ndf_w3 ! mass matrix is symmetric
-          mm(df,df2,ik) = 0.0_r_single
+          mm(ik,df,df2) = 0.0_r_single
           do qp2 = 1, nqp_v
             do qp1 = 1, nqp_h
               if ( rehabilitate ) then
@@ -252,12 +252,12 @@ contains
                       basis_w3(1,df,qp1,qp2)*basis_w3(1,df2,qp1,qp2)  &
                       /dj(qp1,qp2)
               end if
-              mm(df,df2,ik) = mm(df,df2,ik) + real(integrand, kind=r_single)
+              mm(ik,df,df2) = mm(ik,df,df2) + real(integrand, kind=r_single)
             end do
           end do
         end do
         do df = df2, 1, -1
-          mm(df,df2,ik) = mm(df2,df,ik)
+          mm(ik,df,df2) = mm(ik,df2,df)
         end do
       end do
     end do ! end of k loop
@@ -287,7 +287,7 @@ contains
     integer(kind=i_def), dimension(ndf_chi), intent(in) :: map_chi
     integer(kind=i_def), dimension(ndf_pid), intent(in) :: map_pid
 
-    real(kind=r_double), dimension(ndf_w3,ndf_w3,ncell_3d), intent(inout) :: mm
+    real(kind=r_double), dimension(ncell_3d,ndf_w3,ndf_w3), intent(inout) :: mm
 
     real(kind=r_double), dimension(1,ndf_chi,nqp_h,nqp_v), intent(in) :: basis_chi
     real(kind=r_double), dimension(3,ndf_chi,nqp_h,nqp_v), intent(in) :: diff_basis_chi
@@ -327,7 +327,7 @@ contains
 
       do df2 = 1, ndf_w3
         do df = df2, ndf_w3 ! mass matrix is symmetric
-          mm(df,df2,ik) = 0.0_r_double
+          mm(ik,df,df2) = 0.0_r_double
           do qp2 = 1, nqp_v
             do qp1 = 1, nqp_h
               if ( rehabilitate ) then
@@ -343,12 +343,12 @@ contains
                       basis_w3(1,df,qp1,qp2)*basis_w3(1,df2,qp1,qp2)  &
                       /dj(qp1,qp2)
               end if
-              mm(df,df2,ik) = mm(df,df2,ik) + integrand
+              mm(ik,df,df2) = mm(ik,df,df2) + integrand
             end do
           end do
         end do
         do df = df2, 1, -1
-          mm(df,df2,ik) = mm(df2,df,ik)
+          mm(ik,df,df2) = mm(ik,df2,df)
         end do
       end do
     end do ! end of k loop

@@ -108,7 +108,7 @@ subroutine compute_grad_operator_code(cell, nlayers, ncell_3d,    &
   real(kind=r_def), intent(in) :: basis_w1(3,ndf_w1,nqp_h,nqp_v)
   real(kind=r_def), intent(in) :: diff_basis_w0(3,ndf_w0,nqp_h,nqp_v)
 
-  real(kind=r_def), dimension(ndf_w1,ndf_w0,ncell_3d), intent(inout) :: grad
+  real(kind=r_def), dimension(ncell_3d,ndf_w1,ndf_w0), intent(inout) :: grad
   real(kind=r_def), dimension(undf_chi),               intent(in)    :: chi1
   real(kind=r_def), dimension(undf_chi),               intent(in)    :: chi2
   real(kind=r_def), dimension(undf_chi),               intent(in)    :: chi3
@@ -145,13 +145,13 @@ subroutine compute_grad_operator_code(cell, nlayers, ncell_3d,    &
 
     do df0 = 1, ndf_w0
       do df1 = 1, ndf_w1
-        grad(df1,df0,ik) = 0.0_r_def
+        grad(ik,df1,df0) = 0.0_r_def
         do qp2 = 1, nqp_v
           do qp1 = 1, nqp_h
             c      = matmul(jac_inv(:,:,qp1,qp2),     basis_w1(:,df1,qp1,qp2))
             dgamma = matmul(jac_inv(:,:,qp1,qp2),diff_basis_w0(:,df0,qp1,qp2))
             integrand = wqp_h(qp1)*wqp_v(qp2)*dot_product(c,dgamma)*dj(qp1,qp2)
-            grad(df1,df0,ik) = grad(df1,df0,ik) + integrand
+            grad(ik,df1,df0) = grad(ik,df1,df0) + integrand
           end do
         end do
       end do

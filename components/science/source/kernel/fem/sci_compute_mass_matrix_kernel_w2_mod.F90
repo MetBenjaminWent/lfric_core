@@ -105,7 +105,7 @@ subroutine compute_mass_matrix_w2_code(cell, nlayers, ncell_3d,     &
   integer(kind=i_def),   intent(in) :: map_chi(ndf_chi)
   integer(kind=i_def),   intent(in) :: map_pid(ndf_pid)
 
-  real(kind=r_def),   intent(inout) :: mm(ndf_w2,ndf_w2,ncell_3d)
+  real(kind=r_def),   intent(inout) :: mm(ncell_3d,ndf_w2,ndf_w2)
   real(kind=r_def),      intent(in) :: basis_w2(3,ndf_w2,nqp_h,nqp_v)
   real(kind=r_def),      intent(in) :: diff_basis_chi(3,ndf_chi,nqp_h,nqp_v)
   real(kind=r_def),      intent(in) :: basis_chi(1,ndf_chi,nqp_h,nqp_v)
@@ -143,7 +143,7 @@ subroutine compute_mass_matrix_w2_code(cell, nlayers, ncell_3d,     &
 
     do df2 = 1, ndf_w2
        do df = df2, ndf_w2 ! mass matrix is symmetric
-          mm(df,df2,ik) = 0.0_r_def
+          mm(ik,df,df2) = 0.0_r_def
           do qp2 = 1, nqp_v
              do qp1 = 1, nqp_h
                 integrand = wqp_h(qp1) * wqp_v(qp2) *                   &
@@ -151,12 +151,12 @@ subroutine compute_mass_matrix_w2_code(cell, nlayers, ncell_3d,     &
                      matmul(jac(:,:,qp1,qp2),basis_w2(:,df,qp1,qp2)),   &
                      matmul(jac(:,:,qp1,qp2),basis_w2(:,df2,qp1,qp2)) ) &
                      /dj(qp1,qp2)
-                mm(df,df2,ik) = mm(df,df2,ik) + integrand
+                mm(ik,df,df2) = mm(ik,df,df2) + integrand
              end do
           end do
        end do
        do df = df2, 1, -1
-          mm(df,df2,ik) = mm(df2,df,ik)
+          mm(ik,df,df2) = mm(ik,df2,df)
        end do
     end do
   end do ! end of k loop

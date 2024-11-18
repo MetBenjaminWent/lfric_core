@@ -90,7 +90,7 @@ contains
     integer(kind=i_def), parameter :: undf_wx = ndf_wx
     integer(kind=i_def), parameter :: undf_p  = ndf_p
     ! Operators to test
-    real(kind=r_def), dimension(ndf_w2b,ndf_w3,ncell) :: projection_operator
+    real(kind=r_def), dimension(ncell,ndf_w2b,ndf_w3) :: projection_operator
     ! Maps
     integer(kind=i_def), dimension(ndf_wx) :: map_wx
     integer(kind=i_def), dimension(ndf_p)  :: map_p
@@ -111,7 +111,7 @@ contains
     integer(kind=i_def) :: direction
     integer(kind=i_def) :: i
 
-    real(kind=r_def), dimension(ndf_w2b, ndf_w3, 3) :: answer
+    real(kind=r_def), dimension(3, ndf_w2b, ndf_w3) :: answer
 
     ! Set cell coordinates
     dx = 2.0_r_def
@@ -161,11 +161,11 @@ contains
     ! Compute answer for each direction
     answer = 0.0_r_def
     answer(1,1,1) = 0.5_r_def*dx
-    answer(2,1,1) = 0.5_r_def*dx
-    answer(3,1,2) = 0.5_r_def*dy
-    answer(4,1,2) = 0.5_r_def*dy
-    answer(5,1,3) = 0.5_r_def*dz
-    answer(6,1,3) = 0.5_r_def*dz
+    answer(1,2,1) = 0.5_r_def*dx
+    answer(2,3,1) = 0.5_r_def*dy
+    answer(2,4,1) = 0.5_r_def*dy
+    answer(3,5,1) = 0.5_r_def*dz
+    answer(3,6,1) = 0.5_r_def*dz
 
     do direction = 1, 3
       projection_operator = 0.0_r_def
@@ -187,7 +187,7 @@ contains
 
       ! P = J*basis_w2b * basis_w3 * unit_vector(direction)
       ! where unit_vector is 1 for component direction and zero otherwise
-      @assertEqual(answer(:,:,direction), projection_operator(:,:,1), tol)
+      @assertEqual(answer(direction,:,:), projection_operator(1,:,:), tol)
     end do
 
   end subroutine test_all

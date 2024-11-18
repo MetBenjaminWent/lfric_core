@@ -94,8 +94,8 @@ contains
 
     allocate(map_orig(ndf_orig, ncells))
     allocate(map_sh(ndf_orig, ncells))
-    allocate(T_U(ndf_sh, ndf_orig, ncell_3d_U))
-    allocate(T_L(ndf_sh, ndf_orig, ncell_3d_L))
+    allocate(T_U(ncell_3d_U, ndf_sh, ndf_orig))
+    allocate(T_L(ncell_3d_L, ndf_sh, ndf_orig))
     allocate(y_sh(undf_sh))
     allocate(answer(undf_sh))
     allocate(x(undf_orig))
@@ -108,10 +108,10 @@ contains
 
     ! Make up matrices
     T_U = reshape([ 1.0_r_def, 2.0_r_def, 3.0_r_def, 5.0_r_def], &
-                  [ndf_sh, ndf_orig, ncell_3d_U])
+                  [ncell_3d_U, ndf_sh, ndf_orig])
 
     T_L = reshape([ 7.0_r_def, 4.0_r_def, 5.0_r_def, 1.0_r_def], &
-                  [ndf_sh, ndf_orig, ncell_3d_L])
+                  [ncell_3d_L, ndf_sh, ndf_orig])
 
     ! rhs vector
     x(:) = (/ 0.25_r_def, 1.5_r_def, 1.0_r_def, 4.0_r_def /)

@@ -103,9 +103,9 @@ subroutine operator_x_plus_ay_kernel_code(cell, nlayers,         &
   integer(kind=i_def), intent(in) :: ncell_3d_1, ncell_3d_2, ncell_3d_3
   integer(kind=i_def), intent(in) :: ndf1, ndf2
 
-  real(kind=r_def), dimension(ndf1, ndf2, ncell_3d_1), intent(inout) :: x_plus_ay
-  real(kind=r_def), dimension(ndf1, ndf2, ncell_3d_2), intent(in)    :: x
-  real(kind=r_def), dimension(ndf1, ndf2, ncell_3d_3), intent(in)    :: y
+  real(kind=r_def), dimension(ncell_3d_1, ndf1, ndf2), intent(inout) :: x_plus_ay
+  real(kind=r_def), dimension(ncell_3d_2, ndf1, ndf2), intent(in)    :: x
+  real(kind=r_def), dimension(ncell_3d_3, ndf1, ndf2), intent(in)    :: y
   real(kind=r_def),                                    intent(in)    :: a
 
   ! Internal variables
@@ -113,7 +113,7 @@ subroutine operator_x_plus_ay_kernel_code(cell, nlayers,         &
 
   do k = 0, nlayers - 1
     ik = k + 1 + (cell-1)*nlayers
-    x_plus_ay(:,:,ik) = x(:,:,ik) + a*y(:,:,ik)
+    x_plus_ay(ik,:,:) = x(ik,:,:) + a*y(ik,:,:)
   end do
 
 end subroutine operator_x_plus_ay_kernel_code
@@ -138,7 +138,7 @@ subroutine operator_setval_c_kernel_code(cell, nlayers, &
   integer(kind=i_def), intent(in) :: ncell_3d
   integer(kind=i_def), intent(in) :: ndf1, ndf2
 
-  real(kind=r_def), dimension(ndf1, ndf2, ncell_3d), intent(inout) :: x
+  real(kind=r_def), dimension(ncell_3d, ndf1, ndf2), intent(inout) :: x
   real(kind=r_def),                                  intent(in)    :: a
 
   ! Internal variables
@@ -146,7 +146,7 @@ subroutine operator_setval_c_kernel_code(cell, nlayers, &
 
   do k = 0, nlayers - 1
     ik = k + 1 + (cell-1)*nlayers
-    x(:,:,ik) = a
+    x(ik,:,:) = a
   end do
 
 end subroutine operator_setval_c_kernel_code
@@ -175,15 +175,15 @@ subroutine operator_setval_x_kernel_code_r_single(cell, nlayers, &
   integer(kind=i_def), intent(in) :: ncell_3d_1, ncell_3d_2
   integer(kind=i_def), intent(in) :: ndf1, ndf2
 
-  real(kind=r_single), dimension(ndf1, ndf2, ncell_3d_1), intent(inout) :: x
-  real(kind=r_single), dimension(ndf1, ndf2, ncell_3d_2), intent(in)    :: y
+  real(kind=r_single), dimension(ncell_3d_1, ndf1, ndf2), intent(inout) :: x
+  real(kind=r_single), dimension(ncell_3d_2, ndf1, ndf2), intent(in)    :: y
 
   ! Internal variables
   integer(kind=i_def) :: k, ik
 
   do k = 0, nlayers - 1
     ik = k + 1 + (cell-1)*nlayers
-    x(:,:,ik) = y(:,:,ik)
+    x(ik,:,:) = y(ik,:,:)
   end do
 
 end subroutine operator_setval_x_kernel_code_r_single
@@ -202,15 +202,15 @@ subroutine operator_setval_x_kernel_code_r_double(cell, nlayers, &
   integer(kind=i_def), intent(in) :: ncell_3d_1, ncell_3d_2
   integer(kind=i_def), intent(in) :: ndf1, ndf2
 
-  real(kind=r_double), dimension(ndf1, ndf2, ncell_3d_1), intent(inout) :: x
-  real(kind=r_double), dimension(ndf1, ndf2, ncell_3d_2), intent(in)    :: y
+  real(kind=r_double), dimension(ncell_3d_1, ndf1, ndf2), intent(inout) :: x
+  real(kind=r_double), dimension(ncell_3d_2, ndf1, ndf2), intent(in)    :: y
 
   ! Internal variables
   integer(kind=i_def) :: k, ik
 
   do k = 0, nlayers - 1
     ik = k + 1 + (cell-1)*nlayers
-    x(:,:,ik) = y(:,:,ik)
+    x(ik,:,:) = y(ik,:,:)
   end do
 
 end subroutine operator_setval_x_kernel_code_r_double
@@ -229,15 +229,15 @@ subroutine operator_setval_x_kernel_code_r_single_to_r_double(cell, nlayers, &
   integer(kind=i_def), intent(in) :: ncell_3d_1, ncell_3d_2
   integer(kind=i_def), intent(in) :: ndf1, ndf2
 
-  real(kind=r_double), dimension(ndf1, ndf2, ncell_3d_1), intent(inout) :: x
-  real(kind=r_single), dimension(ndf1, ndf2, ncell_3d_2), intent(in)    :: y
+  real(kind=r_double), dimension(ncell_3d_1, ndf1, ndf2), intent(inout) :: x
+  real(kind=r_single), dimension(ncell_3d_2, ndf1, ndf2), intent(in)    :: y
 
   ! Internal variables
   integer(kind=i_def) :: k, ik
 
   do k = 0, nlayers - 1
     ik = k + 1 + (cell-1)*nlayers
-    x(:,:,ik) = real(y(:,:,ik), r_double)
+    x(ik,:,:) = real(y(ik,:,:), r_double)
   end do
 
 end subroutine operator_setval_x_kernel_code_r_single_to_r_double
@@ -256,15 +256,15 @@ subroutine operator_setval_x_kernel_code_r_double_to_r_single(cell, nlayers, &
   integer(kind=i_def), intent(in) :: ncell_3d_1, ncell_3d_2
   integer(kind=i_def), intent(in) :: ndf1, ndf2
 
-  real(kind=r_single), dimension(ndf1, ndf2, ncell_3d_1), intent(inout) :: x
-  real(kind=r_double), dimension(ndf1, ndf2, ncell_3d_2), intent(in)    :: y
+  real(kind=r_single), dimension(ncell_3d_1, ndf1, ndf2), intent(inout) :: x
+  real(kind=r_double), dimension(ncell_3d_2, ndf1, ndf2), intent(in)    :: y
 
   ! Internal variables
   integer(kind=i_def) :: k, ik
 
   do k = 0, nlayers - 1
     ik = k + 1 + (cell-1)*nlayers
-    x(:,:,ik) = real(y(:,:,ik), r_single)
+    x(ik,:,:) = real(y(ik,:,:), r_single)
   end do
 
 end subroutine operator_setval_x_kernel_code_r_double_to_r_single
