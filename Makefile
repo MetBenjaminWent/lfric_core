@@ -23,8 +23,7 @@ OPERATE_ON ?= infrastructure                \
               mesh_tools                    \
               applications/skeleton         \
               applications/simple_diffusion \
-              applications/io_demo          \
-              applications/io_dev
+              applications/io_demo
 
 export SUITE_GROUP ?= developer
 export SUITE_GROUP_NAME ?= $(notdir $(realpath $(shell pwd)))-.*

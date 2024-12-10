@@ -1,5 +1,0 @@
-Inner product checksum W0_field = 44824EB2C5130F2C
-Inner product checksum W2H_field = 4486E09D9E911418
-Inner product checksum W2V_field = 44824BE3250D1836
-Inner product checksum W3_field = 4476DEDBEDB63A87
-Inner product checksum W3_2D_field = 4424E9039211BFB4

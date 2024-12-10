@@ -32,7 +32,6 @@ PROJECT_NAMES=( skeleton \
                 solver_miniapp \
                 shallow_water \
                 io_demo \
-                io_dev \
                 mesh_tools )
 
 #============================================================================

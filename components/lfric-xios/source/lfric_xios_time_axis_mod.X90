@@ -29,7 +29,7 @@ module lfric_xios_time_axis_mod
   use lfric_ncdf_file_mod,  only: lfric_ncdf_file_type
   use lfric_xios_read_mod,  only: read_field_time_var
   use lfric_xios_utils_mod, only: parse_date_as_xios, seconds_from_date
-  use lfric_xios_diag_mod,  only: get_field_axis_ref, field_is_valid
+  use lfric_xios_diag_mod,  only: get_field_axis_ref
   use linked_list_data_mod, only: linked_list_data_type
   use log_mod,              only: log_event, log_scratch_space, &
                                   LOG_LEVEL_ERROR, LOG_LEVEL_INFO, LOG_LEVEL_TRACE
@@ -158,18 +158,14 @@ contains
     ! Create object field collection
     call self%fields%initialise(name=trim(name)//'_fields', table_len=1)
 
-    ! This is needed for the io_dev miniapp, as it appears every field
-    ! is invalid there, so we just follow the default behaviour
-    if (field_is_valid(name)) then
-      ! Setup yearly attribute depending on whether this is a climatology or not
-      ! Climatologies use the "monthly_climatology" axis, whereas time-series
-      ! use other axes
-      ! Allow over-writing of this via the optional input below
-      if (trim(get_field_axis_ref(name)) == "monthly_climatology") then
-        self%yearly = .true.
-      else
-        self%yearly = .false.
-      end if
+    ! Setup yearly attribute depending on whether this is a climatology or not
+    ! Climatologies use the "monthly_climatology" axis, whereas time-series
+    ! use other axes
+    ! Allow over-writing of this via the optional input below
+    if (trim(get_field_axis_ref(name)) == "monthly_climatology") then
+      self%yearly = .true.
+    else
+      self%yearly = .false.
     end if
 
     ! Set optional attributes

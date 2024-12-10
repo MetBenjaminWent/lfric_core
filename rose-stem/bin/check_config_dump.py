@@ -16,7 +16,6 @@ import argparse
 
 APPLICATIONS = [
     "applications/io_demo",
-    "applications/io_dev",
     "applications/simple_diffusion",
     "applications/skeleton",
     "mesh_tools",

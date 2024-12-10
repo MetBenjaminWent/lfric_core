@@ -25,7 +25,6 @@ live in separate parallel directory paths.
 
 {{{
 Area                                First Contact       Second Contact                 Team
-applications/io_dev                 andrewcoughtrie     stevemullerworth               core_capability_development
 applications/simple_diffusion       andrewcoughtrie     stevemullerworth               core_capability_development
 applications/skeleton               mikehobson          stevemullerworth               core_capability_development
 components/driver                   mikehobson          stevemullerworth               core_capability_development

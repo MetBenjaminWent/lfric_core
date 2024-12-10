@@ -55,8 +55,7 @@ if __name__ == "__main__":
                   "components/lfric-xios",
                   "applications/skeleton",
                   "applications/simple_diffusion",
-                  "applications/io_demo",
-                  "applications/io_dev"]
+                  "applications/io_demo"]
     for app in candidates:
         print(f"Running on {app}\n")
         app_path = os.path.join(args.source, app)
