@@ -76,7 +76,6 @@ class FortranProcessor():
         #
         for unit, unit_path, unit_type, prereq, prereq_path, prereq_type in \
                 self.__database.get_compile_dependencies():
-            print(unit, unit_path, prereq, prereq_path)
             unit_object_path = self.__object_directory \
                 / unit_path.with_suffix('.o')
 
@@ -132,7 +131,6 @@ class FortranProcessor():
             objects: Set[Path] = set()
             for unit, unit_file, prereq, prereq_file \
                     in self.__database.get_link_dependencies(root):
-                print(unit, unit_file, prereq, prereq_file)
                 if unit == root:
                     root_object_file = self.__object_directory \
                                        / unit_file.with_suffix('.o')
