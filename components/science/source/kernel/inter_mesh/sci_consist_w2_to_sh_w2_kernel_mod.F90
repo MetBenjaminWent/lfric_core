@@ -121,16 +121,19 @@ subroutine consist_w2_to_sh_w2_code_single(  nlayers_sh,       &
     if (j == 3 .and. face_selector_ns(map_w3_2d(1)) == 2                       &
                .and. face_selector_ew(map_w3_2d(1)) == 1) df = N
 
-    ! Loop over layers of original mesh
-    do k = 0, nlayers_sh - 2
+    ! Bottom boundary value
+    field_w2_sh(map_w2_sh(df)) = 0.5_r_single * field_w2(map_w2(df))
 
-      field_w2_sh(map_w2_sh(df)+k) = field_w2_sh(map_w2_sh(df)+k)              &
-                                   + 0.5_r_single * field_w2(map_w2(df)+k)
-
-      field_w2_sh(map_w2_sh(df)+k+1) = field_w2_sh(map_w2_sh(df)+k+1)          &
-                                     + 0.5_r_single * field_w2(map_w2(df)+k)
-
+    ! Loop over all interior layers of shifted mesh
+    do k = 1, nlayers_sh - 2
+      field_w2_sh(map_w2_sh(df)+k) =                                           &
+          0.5_r_single * field_w2(map_w2(df)+k-1)                              &
+          + 0.5_r_single * field_w2(map_w2(df)+k)
     end do
+
+    ! Top boundary value
+    k = nlayers_sh - 1
+    field_w2_sh(map_w2_sh(df)+k) = 0.5_r_single * field_w2(map_w2(df)+k-1)
   end do
 
   do k = 1, nlayers_sh - 1
@@ -191,16 +194,19 @@ subroutine consist_w2_to_sh_w2_code_double(  nlayers_sh,       &
     if (j == 3 .and. face_selector_ns(map_w3_2d(1)) == 2                       &
                .and. face_selector_ew(map_w3_2d(1)) == 1) df = N
 
-    ! Loop over layers of original mesh
-    do k = 0, nlayers_sh - 2
+    ! Bottom boundary value
+    field_w2_sh(map_w2_sh(df)) = 0.5_r_double * field_w2(map_w2(df))
 
-      field_w2_sh(map_w2_sh(df)+k) = field_w2_sh(map_w2_sh(df)+k)              &
-                                   + 0.5_r_double * field_w2(map_w2(df)+k)
-
-      field_w2_sh(map_w2_sh(df)+k+1) = field_w2_sh(map_w2_sh(df)+k+1)          &
-                                     + 0.5_r_double * field_w2(map_w2(df)+k)
-
+    ! Loop over all interior layers of shifted mesh
+    do k = 1, nlayers_sh - 2
+      field_w2_sh(map_w2_sh(df)+k) =                                           &
+          0.5_r_double * field_w2(map_w2(df)+k-1)                              &
+          + 0.5_r_double * field_w2(map_w2(df)+k)
     end do
+
+    ! Top boundary value
+    k = nlayers_sh - 1
+    field_w2_sh(map_w2_sh(df)+k) = 0.5_r_double * field_w2(map_w2(df)+k-1)
   end do
 
   do k = 1, nlayers_sh - 1
