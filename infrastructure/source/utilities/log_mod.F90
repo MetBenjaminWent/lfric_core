@@ -9,6 +9,10 @@
 !> to the terminal. For parallel execution, the logging information will
 !> be sent to files - one for each MPI task.
 !>
+!> Optionally, the initialise can be called with a logical flag to limit
+!> parallel logging to only write to one rank (rank 0 by default, configurable)
+!> which is useful for performance runs at large rank counts.
+!>
 !> @todo  At some point the serial version of a model should also log to a file,
 !>        but for now it is easier for developers if the code logs to stdout.
 !>
@@ -73,6 +77,8 @@ module log_mod
   integer(i_def),      private, allocatable :: mpi_communicator
   character(len=:),    private, allocatable :: petno
   integer(i_timestep), private, allocatable :: timestep
+  !> Control optional log suppression by rank, all ranks log by default.
+  logical, private :: emit_log_message
 
 contains
 
@@ -81,18 +87,23 @@ contains
   !> @param[in] communicator MPI communicator to operate in.
   !> @param[in] file_name Appears in output filename.
   !> @param[in] trace_on_warnings Output a backtrace on warnings.
+  !> @param[in] log_file_one_rank_only Rank number of single MPI rank to log.
   !>
   subroutine initialise_logging( communicator, &
                                  file_name,    &
-                                 trace_on_warnings )
+                                 trace_on_warnings, &
+                                 sole_log_file_rank_number)
     implicit none
 
-    integer(i_def),    intent(in) :: communicator
-    character(*),      intent(in) :: file_name
-    logical, optional, intent(in) :: trace_on_warnings
+    integer(i_def),           intent(in) :: communicator
+    character(*),             intent(in) :: file_name
+    logical, optional,        intent(in) :: trace_on_warnings
+    integer(i_def), optional, intent(in) :: sole_log_file_rank_number
 
 #ifdef NO_MPI
     ! The logging is running with no MPI communications
+    ! If no MPI then default behaviour is the only behaviour: do emit log
+    emit_log_message = .true.
 #else
     integer(i_def) :: status
     integer(i_def) :: ilen
@@ -101,11 +112,25 @@ contains
     integer(i_def)                :: this_rank
     integer(i_def)                :: total_ranks
 
+    ! default behaviour: log to all ranks
+    emit_log_message = .true.
+
     call mpi_comm_size( communicator, total_ranks, ierror=status )
     if (status /= 0) then
       write( error_unit, &
              "('Cannot determine communicator size. (',i0,')')" ) status
       call abort_model()
+    end if
+    ! Check that a selected sole_log_ranks exists in the rank pool.
+    if (present(sole_log_file_rank_number)) then
+      if (sole_log_file_rank_number < 0 .or. &
+          sole_log_file_rank_number > total_ranks) then
+        write( error_unit, &
+               "('Cannot only log to rank (',i0,')')" ) sole_log_file_rank_number
+        write( error_unit, &
+               "('Total ranks: (',i0,')')" ) total_ranks
+        call abort_model()
+      end if
     end if
 
     if (total_ranks /= 1) then
@@ -117,24 +142,35 @@ contains
         call abort_model()
       end if
 
-      ilen = int( log10( real( total_ranks - 1 ) ) ) + 1
-      write( fmt, '("(i",i0,".",i0,")")' ) ilen, ilen
-      allocate( character(len=ilen) :: petno )
-      write( petno, fmt ) this_rank
+      if (allocated(mpi_communicator)) then
+        if (present(sole_log_file_rank_number)) then
+          if (this_rank /= sole_log_file_rank_number) then
+            ! Sole rank identified for logging, do not log this rank.
+            emit_log_message = .false.
+          end if
+        endif
+      endif
+      ! Only initialise log file if emit_log_message.
+      if (emit_log_message) then
+        ilen = int( log10( real( total_ranks - 1 ) ) ) + 1
+        write( fmt, '("(i",i0,".",i0,")")' ) ilen, ilen
+        allocate( character(len=ilen) :: petno )
+        write( petno, fmt ) this_rank
 
-      allocate( character(ilen + len_trim(file_name) + 8) :: logfilename )
-      write( logfilename, '("PET", a, ".", a, ".Log")' ) petno, trim(file_name)
-      open( unit=log_unit_number, file=logfilename, &
-            action="write", status='unknown', iostat=status )
-      if ( status /= 0 ) then
-        write( error_unit, &
-               '("Cannot open logging file. iostat = ", i0)' ) status
-        call abort_model()
-      end if
+        allocate( character(ilen + len_trim(file_name) + 8) :: logfilename )
+        write( logfilename, '("PET", a, ".", a, ".Log")' ) petno, trim(file_name)
+        open( unit=log_unit_number, file=logfilename, &
+              action="write", status='unknown', iostat=status )
+        if ( status /= 0 ) then
+          write( error_unit, &
+                 '("Cannot open logging file. iostat = ", i0)' ) status
+          call abort_model()
+        end if
+      endif
     end if
 #endif
 
-    call base_initialise( trace_on_warnings )
+    call base_initialise( trace_on_warnings)
 
   end subroutine initialise_logging
 
@@ -168,14 +204,18 @@ contains
 
     integer :: ios
 
+    ! Only finalise log file if MPI communicator and emit_log_message
     if (allocated(mpi_communicator)) then
-      close( unit=log_unit_number, iostat=ios )
-      if ( ios /= 0 )then
-        write( error_unit, "('Cannot close logging file. iostat = ', i0)" ) ios
-        call abort_model()
-      end if
-      call log_forget_timestep()
-      deallocate( petno )
+      if (emit_log_message) then
+        close( unit=log_unit_number, iostat=ios )
+        if ( ios /= 0 )then
+          write( error_unit, "('Cannot close logging file. iostat = ', i0)" ) ios
+          call abort_model()
+        end if
+        call log_forget_timestep()
+        deallocate( petno )
+      endif
+
 #ifdef NO_MPI
       ! No barriers required in non-mpi build
 #else
@@ -349,28 +389,32 @@ contains
           tag  = 'INFO'
       end select
 
-      if (allocated(petno)) unit = log_unit_number
+      if (emit_log_message) then
 
-      call date_and_time( date=date_string, time=time_string, zone=zone_string)
-      write( unit, '(A, A, A)', &
-             advance='no' ) date_string, time_string, zone_string
+        if (allocated(petno)) unit = log_unit_number
 
-      if (allocated(petno)) then
-        write( unit, '(":P", A)', advance='no' ) petno
-      end if
+        call date_and_time( date=date_string, time=time_string, zone=zone_string)
+        write( unit, '(A, A, A)', &
+               advance='no' ) date_string, time_string, zone_string
 
-      if (allocated(timestep)) then
-        write( unit, '(":S", I0)', advance='no' ) timestep
-      end if
+        if (allocated(petno)) then
+          write( unit, '(":P", A)', advance='no' ) petno
+        end if
 
-      write ( unit, '(":",A,": ",A)') tag, trim( message )
+        if (allocated(timestep)) then
+          write( unit, '(":S", I0)', advance='no' ) timestep
+        end if
+
+        write ( unit, '(":",A,": ",A)') tag, trim( message )
+
+        if (logging_level <= LOG_LEVEL_DEBUG) then
+          flush(unit)
+        end if
+
+      endif
 
       if (trace) then
         call traceback()
-      end if
-
-      if (logging_level <= LOG_LEVEL_DEBUG) then
-        flush(unit)
       end if
 
       ! If the severity level of the event is serious enough, stop the code.
