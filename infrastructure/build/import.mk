@@ -4,7 +4,7 @@
 # under which the code may be used.
 ##############################################################################
 export IGNORE_DEPENDENCIES += netcdf MPI yaxt mod_oasis
-export EXTERNAL_DYNAMIC_LIBRARIES += yaxt yaxt_c netcdff netcdf hdf5
+export EXTERNAL_DYNAMIC_LIBRARIES += yaxt yaxt_c netcdff netcdf
 
 TEMPLATE_TOOL = $(LFRIC_BUILD)/tools/Templaterator
 TYPE_TABLE_real32 = real
