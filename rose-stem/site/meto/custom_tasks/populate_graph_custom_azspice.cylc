@@ -3,9 +3,8 @@
 {# The file LICENCE, distributed with this code, contains details of the terms #}
 {# under which the code may be used. #}
 {# ########################################################################### #}
-{% do LOG.debug("Entered site/meto/variables_spice.cylc") %}
+{% do LOG.debug("Entered site/meto/custom_tasks/populate_graph_custom_azspice.cylc") %}
 
-{% do kgo_vars.update({
-    }) %}
 
-{% do LOG.debug("Finised in site/meto/variables_spice.cylc") %}
+
+{% do LOG.debug("Finished in site/meto/custom_tasks/populate_graph_custom_azspice.cylc") %}

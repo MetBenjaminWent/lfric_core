@@ -5,23 +5,10 @@
 {# ########################################################################### #}
 {% do LOG.debug("Entered site/meto/groups/group_coupling.cylc") %}
 
-{# SPICE Groups #}
-{% do site_groups.update({
-    "coupling_spice_developer": [
-        "coupling_spice_unit_tests",
-    ],
-    "coupling_spice": [
-        "coupling_spice_developer"
-    ],
-    "coupling_spice_unit_tests": [
-        "coupling_unit_tests_spice_gnu_32bit",
-        "coupling_unit_tests_spice_gnu_64bit"
-    ]
-    }) %}
-
 {# Azspice Groups #}
 {% do site_groups.update({
     "coupling_azspice_developer": [
+        "coupling_azspice_unit_tests"
     ],
     "coupling_azspice": [
         "coupling_azspice_developer"
@@ -32,71 +19,51 @@
     ]
     }) %}
 
-{# XC40 Groups #}
+{# EX1A Groups #}
 {% do site_groups.update({
-    "coupling_xc40_developer": [
-        "coupling_xc40_unit_tests",
+    "coupling_ex1a_developer": [
+        "coupling_ex1a_unit_tests"
     ],
-    "coupling_xc40": [
-        "coupling_xc40_developer"
+    "coupling_ex1a": [
+        "coupling_ex1a_developer"
     ],
-    "coupling_xc40_unit_tests": [
+    "coupling_ex1a_unit_tests": [
+        "coupling_unit_tests_ex1a_gnu_32bit",
+        "coupling_unit_tests_ex1a_gnu_64bit"
     ]
     }) %}
 
 {# Platform Generic Groups #}
-{% if site_vars.launch_platform == "spice" %}
-    {% do site_groups.update({
-        "coupling_developer": [
-            "scripts",
-            "coupling_spice_developer",
-            "coupling_xc40_developer",
-            "coupling_unit_tests"
-        ],
-        "coupling": [
-            "coupling_developer",
-            "coupling_spice",
-            "coupling_xc40"
-        ],
-        "coupling_unit_tests": [
-            "coupling_spice_unit_tests",
-            "coupling_xc40_unit_tests"
-        ]
-        }) %}
-{% else %}
-    {% do site_groups.update({
-        "coupling_developer": [
-            "scripts",
-            "coupling_azspice_developer",
-        ],
-        "coupling": [
-            "coupling_developer",
-            "coupling_azspice",
-        ],
-        "coupling_unit_tests": [
-            "coupling_azspice_unit_tests",
-        ]
-        }) %}
-{% endif %}
+{% do site_groups.update({
+    "coupling_developer": [
+        "scripts",
+        "coupling_azspice_developer",
+        "coupling_ex1a_developer",
+    ],
+    "coupling": [
+        "coupling_developer",
+        "coupling_azspice",
+        "coupling_ex1a",
+    ],
+    "coupling_unit_tests": [
+        "coupling_azspice_unit_tests",
+    ]
+    }) %}
 
 {# Platform Generic Extends #}
 {% do site_groups.developer.extend(site_groups.coupling_developer) %}
 {% do site_groups.all.extend(site_groups.coupling) %}
 {% do site_groups.unit_tests.extend(site_groups.coupling_unit_tests) %}
 
-{# Spice Extends #}
-{% do site_groups.spice_developer.extend(site_groups.coupling_spice_developer) %}
-{% do site_groups.spice.extend(site_groups.coupling_spice) %}
-{% do site_groups.spice_unit_tests.extend(site_groups.coupling_spice_unit_tests) %}
-
 {# Azspice Extends #}
 {% do site_groups.azspice_developer.extend(site_groups.coupling_azspice_developer) %}
 {% do site_groups.azspice.extend(site_groups.coupling_azspice) %}
 {% do site_groups.azspice_unit_tests.extend(site_groups.coupling_azspice_unit_tests) %}
 
-{# XC40 Extends #}
-{% do site_groups.xc40_developer.extend(site_groups.coupling_xc40_developer) %}
-{% do site_groups.xc40.extend(site_groups.coupling_xc40) %}
-{% do site_groups.xc40_unit_tests.extend(site_groups.coupling_xc40_unit_tests) %}
+{# EX1A Extends #}
+{% do site_groups.ex1a_developer.extend(site_groups.coupling_ex1a_developer) %}
+{% do site_groups.ex1a.extend(site_groups.coupling_ex1a) %}
+{% do site_groups.ex1a_unit_tests.extend(site_groups.coupling_ex1a_unit_tests) %}
+
 
 {% do LOG.debug("Finished in site/meto/groups/group_coupling.cylc") %}

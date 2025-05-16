@@ -28,8 +28,8 @@
 #               same name. (this is also the default action)
 #               Set to zero to not clean out existing rose suite.
 # TEST_SUITE_TARGETS: Space separated list of target identifiers to be used
-#                     when launching the test suite. Default is "meto-spice
-#                     meto-xc40"
+#                     when launching the test suite. Default is "meto-azspice
+#                     meto-ex1a"
 # SUITE_GROUP_ABRV: Set to a non-zero value to cause the names of the rose
 #                   stem groups to always be abbreviated in the suite name.
 #                   Set to zero to cause the names to always be unabbreviated.
@@ -63,7 +63,7 @@ endif
 export WORKING_DIR ?= working
 export PWD ?= $(shell pwd)
 
-TEST_SUITE_TARGETS ?= meto-spice meto-xc40
+TEST_SUITE_TARGETS ?= meto-azspice meto-ex1a
 
 # Make the build system available...
 #

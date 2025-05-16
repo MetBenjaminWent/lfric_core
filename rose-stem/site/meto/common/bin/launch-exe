@@ -28,17 +28,7 @@ fi
 # Construct launcher options
 #===========================================
 LAUNCHER_OPTS=""
-if [ "${RUN_METHOD}" = "aprun" ] ; then
-  if [ "${TARGET_PLATFORM}" = "meto-spice" ] ; then
-    echo Launcher \"aprun\" is specific to Cray platforms.
-    exit 1
-  else
-    CORES_PER_NUMA_REGION="$(( CORES_PER_NODE / NUMA_REGIONS_PER_NODE ))"
-    POTENTIAL_MPI_TASKS_PER_NUMA_REGION="$(( ( CORES_PER_NUMA_REGION * HYPERTHREADS ) / OMP_NUM_THREADS ))"
-    MPI_TASKS_PER_NUMA_REGION="$(( POTENTIAL_MPI_TASKS_PER_NUMA_REGION > TOTAL_RANKS?TOTAL_RANKS:POTENTIAL_MPI_TASKS_PER_NUMA_REGION ))"
-    LAUNCHER_OPTS="-cc depth -n ${TOTAL_RANKS} -S ${MPI_TASKS_PER_NUMA_REGION} -d ${OMP_NUM_THREADS} -j ${HYPERTHREADS}"
-  fi
-elif [ "${RUN_METHOD}" = "mpiexec" ] ; then
+if [ "${RUN_METHOD}" = "mpiexec" ] ; then
   if [ "${SITE_MPI_LAUNCHER_OPTS}" != "" ] ; then
     LAUNCHER_OPTS=${SITE_MPI_LAUNCHER_OPTS}
   else
@@ -53,22 +43,9 @@ fi
 # Construct XIOS server options
 #===========================================
 if [[ ! -z "${XIOS_SERVER_MODE}" && "${XIOS_SERVER_MODE}" = "True" ]] ; then
-  if [ "${RUN_METHOD}" = "srun" ] ; then
-    echo "0-$((TOTAL_RANKS-XIOS_SERVER_RANKS-1)) ${EXEC_PATH} ${NAMELIST_FILE}" > ${SLURM_MPMD_FILE}
-    echo "$((TOTAL_RANKS-XIOS_SERVER_RANKS))-$((TOTAL_RANKS-1)) ${XIOS_SERVER_EXEC_PATH}" >> ${SLURM_MPMD_FILE}
-    LAUNCHER_OPTS="--multi-prog ${SLURM_MPMD_FILE}"
-    EXEC_PATH=""
-    NAMELIST_FILE=""
-    XIOS_EXEC=""
-  else
-    if [ "${TARGET_PLATFORM}" = "meto-spice" ] ; then
-      XIOS_EXEC=" : -n ${XIOS_SERVER_RANKS} ${XIOS_SERVER_EXEC_PATH}"
-    else
-      XIOS_CORES_PER_NODE="$(( (mpi_parts_xios+xios_nodes-1) / xios_nodes ))"
-      XIOS_CORES_PER_NUMA="$(( (XIOS_CORES_PER_NODE+NUMA_REGIONS_PER_NODE-1) / NUMA_REGIONS_PER_NODE ))"
-      XIOS_EXEC=" : -n ${XIOS_SERVER_RANKS} -S ${XIOS_CORES_PER_NUMA} ${XIOS_SERVER_EXEC_PATH}"
-    fi
-  fi
+  XIOS_CORES_PER_NODE="$(( (mpi_parts_xios+xios_nodes-1) / xios_nodes ))"
+  XIOS_CORES_PER_NUMA="$(( (XIOS_CORES_PER_NODE+NUMA_REGIONS_PER_NODE-1) / NUMA_REGIONS_PER_NODE ))"
+  XIOS_EXEC=" : -n ${XIOS_SERVER_RANKS} -S ${XIOS_CORES_PER_NUMA} ${XIOS_SERVER_EXEC_PATH}"
 else
   XIOS_EXEC=""
 fi

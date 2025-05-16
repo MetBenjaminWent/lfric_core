@@ -1,1 +1,0 @@
-Inner product checksum diffusion_field =         4F532729

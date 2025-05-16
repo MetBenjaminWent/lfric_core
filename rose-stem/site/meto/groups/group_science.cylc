@@ -5,23 +5,10 @@
 {# ########################################################################### #}
 {% do LOG.debug("Entered site/meto/groups/group_science.cylc") %}
 
-{# SPICE Groups #}
-{% do site_groups.update({
-    "science_spice_developer": [
-        "science_spice_unit_tests"
-    ],
-    "science_spice": [
-        "science_spice_developer"
-    ],
-    "science_spice_unit_tests": [
-        "science_unit_tests_spice_gnu_32bit",
-        "science_unit_tests_spice_gnu_64bit"
-    ]
-    }) %}
-
 {# Azspice Groups #}
 {% do site_groups.update({
     "science_azspice_developer": [
+        "science_azspice_unit_tests",
     ],
     "science_azspice": [
         "science_azspice_developer"
@@ -32,88 +19,47 @@
     ]
     }) %}
 
-{# XC40 Groups #}
-{% do site_groups.update({
-    "science_xc40_developer": [
-        "science_xc40_unit_tests"
-    ],
-    "science_xc40": [
-        "science_xc40_developer"
-    ],
-    "science_xc40_unit_tests": [
-    ]
-    }) %}
-
 {# EX1A Groups #}
 {% do site_groups.update({
     "science_ex1a_developer": [
-
+        "science_ex1a_unit_tests",
     ],
     "science_ex1a": [
         "science_ex1a_developer"
     ],
     "science_ex1a_unit_tests": [
-
+        "science_unit_tests_ex1a_gnu_32bit",
+        "science_unit_tests_ex1a_gnu_64bit",
     ]
     }) %}
 
 {# Platform Generic Groups #}
-{% if site_vars.launch_platform == "spice" %}
-    {% do site_groups.update({
-        "science_developer": [
-            "scripts",
-            "science_spice_developer",
-            "science_xc40_developer",
-            "science_unit_tests"
-        ],
-        "science": [
-            "science_developer",
-            "science_spice",
-            "science_xc40"
-        ],
-        "science_unit_tests": [
-            "science_spice_unit_tests",
-            "science_xc40_unit_tests"
-        ]
-        }) %}
-{% else %}
-    {% do site_groups.update({
-        "science_developer": [
-            "scripts",
-            "science_azspice_developer",
-            "science_ex1a_developer",
-        ],
-        "science": [
-            "science_developer",
-            "science_azspice",
-            "science_ex1a"
-        ],
-        "science_unit_tests": [
-            "science_azspice_unit_tests",
-            "science_ex1a_unit_tests"
-        ]
-        }) %}
-{% endif %}
+{% do site_groups.update({
+    "science_developer": [
+        "scripts",
+        "science_azspice_developer",
+        "science_ex1a_developer",
+    ],
+    "science": [
+        "science_developer",
+        "science_azspice",
+        "science_ex1a"
+    ],
+    "science_unit_tests": [
+        "science_azspice_unit_tests",
+        "science_ex1a_unit_tests"
+    ]
+    }) %}
 
 {# Platform Generic Extends #}
 {% do site_groups.developer.extend(site_groups.science_developer) %}
 {% do site_groups.all.extend(site_groups.science) %}
 {% do site_groups.unit_tests.extend(site_groups.science_unit_tests) %}
 
-{# Spice Extends #}
-{% do site_groups.spice_developer.extend(site_groups.science_spice_developer) %}
-{% do site_groups.spice.extend(site_groups.science_spice) %}
-{% do site_groups.spice_unit_tests.extend(site_groups.science_spice_unit_tests) %}
-
 {# Azspice Extends #}
 {% do site_groups.azspice_developer.extend(site_groups.science_azspice_developer) %}
 {% do site_groups.azspice.extend(site_groups.science_azspice) %}
 {% do site_groups.azspice_unit_tests.extend(site_groups.science_azspice_unit_tests) %}
-
-{# XC40 Extends #}
-{% do site_groups.xc40_developer.extend(site_groups.science_xc40_developer) %}
-{% do site_groups.xc40.extend(site_groups.science_xc40) %}
-{% do site_groups.xc40_unit_tests.extend(site_groups.science_xc40_unit_tests) %}
 
 {# EX1A Extends #}
 {% do site_groups.ex1a_developer.extend(site_groups.science_ex1a_developer) %}

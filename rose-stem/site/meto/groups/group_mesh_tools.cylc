@@ -5,187 +5,7 @@
 {# ########################################################################### #}
 {% do LOG.debug("Entered site/meto/groups/group_mesh_tools.cylc") %}
 
-{# SPICE Groups #}
-{% do site_groups.update({
-    "mesh_tools_spice": [
-        "mesh_tools_spice_developer",
-    ],
-    "mesh_tools_spice_developer": [
-        "mesh_tools_spice_unit_tests",
-        "mesh_tools_spice_canned",
-        "mesh_tools_spice_cubedsphere",
-        "mesh_tools_spice_planar",
-    ],
-   "mesh_tools_spice_unit_tests": [
-        "mesh_tools_unit_tests_spice_gnu_64bit"
-    ],
-    "mesh_tools_spice_canned": [
-        "mesh_tools_canned_planar_spice_intel_fast-debug-64bit",
-        "mesh_tools_canned_planar_spice_gnu_fast-debug-64bit",
-        "mesh_tools_canned_cubedsphere_spice_intel_fast-debug-64bit",
-        "mesh_tools_canned_cubedsphere_spice_gnu_fast-debug-64bit",
-    ],
-    "mesh_tools_spice_build": [
-        "build_mesh_tools_spice_intel_fast-debug-64bit",
-        "build_mesh_tools_spice_gnu_fast-debug-64bit",
-        "build_mesh_tools_spice_intel_full-debug-64bit",
-        "build_mesh_tools_spice_gnu_full-debug-64bit",
-    ],
-
-    "mesh_tools_spice_cubedsphere": [
-       "mesh_tools_spice_cubedsphere_intel",
-       "mesh_tools_spice_cubedsphere_gnu",
-    ],
-    "mesh_tools_spice_cubedsphere_intel": [
-       "mesh_tools_spice_cubedsphere_intel_fast-debug",
-       "mesh_tools_spice_cubedsphere_intel_full-debug",
-    ],
-    "mesh_tools_spice_cubedsphere_gnu": [
-       "mesh_tools_spice_cubedsphere_gnu_fast-debug",
-       "mesh_tools_spice_cubedsphere_gnu_full-debug",
-    ],
-
-
-    "mesh_tools_spice_planar": [
-       "mesh_tools_spice_planar_intel",
-       "mesh_tools_spice_planar_gnu",
-    ],
-    "mesh_tools_spice_planar_intel": [
-       "mesh_tools_spice_planar_intel_fast-debug",
-       "mesh_tools_spice_planar_intel_full-debug",
-    ],
-    "mesh_tools_spice_planar_gnu": [
-       "mesh_tools_spice_planar_gnu_fast-debug",
-       "mesh_tools_spice_planar_gnu_full-debug",
-    ],
-
-
-    "mesh_tools_spice_cubedsphere_intel_fast-debug": [
-        "mesh_tools_cubedsphere-c1_spice_intel_fast-debug-64bit",
-        "mesh_tools_cubedsphere-c2_spice_intel_fast-debug-64bit",
-        "mesh_tools_cubedsphere-c3_spice_intel_fast-debug-64bit",
-        "mesh_tools_cubedsphere-op_spice_intel_fast-debug-64bit",
-        "mesh_tools_cubedsphere-rotated_spice_intel_fast-debug-64bit",
-        "mesh_tools_cubedsphere-maps_spice_intel_fast-debug-64bit",
-        "mesh_tools_cubedsphere_spice_intel_fast-debug-64bit",
-    ],
-    "mesh_tools_spice_cubedsphere_intel_full-debug": [
-        "mesh_tools_cubedsphere-c1_spice_intel_full-debug-64bit",
-        "mesh_tools_cubedsphere-c2_spice_intel_full-debug-64bit",
-        "mesh_tools_cubedsphere-c3_spice_intel_full-debug-64bit",
-        "mesh_tools_cubedsphere-op_spice_intel_full-debug-64bit",
-        "mesh_tools_cubedsphere-rotated_spice_intel_full-debug-64bit",
-        "mesh_tools_cubedsphere-maps_spice_intel_full-debug-64bit",
-        "mesh_tools_cubedsphere_spice_intel_full-debug-64bit",
-    ],
-    "mesh_tools_spice_cubedsphere_gnu_fast-debug": [
-        "mesh_tools_cubedsphere-c1_spice_gnu_fast-debug-64bit",
-        "mesh_tools_cubedsphere-c2_spice_gnu_fast-debug-64bit",
-        "mesh_tools_cubedsphere-c3_spice_gnu_fast-debug-64bit",
-        "mesh_tools_cubedsphere-op_spice_gnu_fast-debug-64bit",
-        "mesh_tools_cubedsphere-rotated_spice_gnu_fast-debug-64bit",
-        "mesh_tools_cubedsphere-maps_spice_gnu_fast-debug-64bit",
-        "mesh_tools_cubedsphere_spice_gnu_fast-debug-64bit",
-    ],
-    "mesh_tools_spice_cubedsphere_gnu_full-debug": [
-        "mesh_tools_cubedsphere-c1_spice_gnu_full-debug-64bit",
-        "mesh_tools_cubedsphere-c2_spice_gnu_full-debug-64bit",
-        "mesh_tools_cubedsphere-c3_spice_gnu_full-debug-64bit",
-        "mesh_tools_cubedsphere-op_spice_gnu_full-debug-64bit",
-        "mesh_tools_cubedsphere-rotated_spice_gnu_full-debug-64bit",
-        "mesh_tools_cubedsphere-maps_spice_gnu_full-debug-64bit",
-        "mesh_tools_cubedsphere_spice_gnu_full-debug-64bit",
-    ],
-
-
-    "mesh_tools_spice_planar_intel_fast-debug": [
-        "mesh_tools_planar-op-lam_spice_intel_fast-debug-64bit",
-        "mesh_tools_equator_spice_intel_fast-debug-64bit",
-        "mesh_tools_equator-band_spice_intel_fast-debug-64bit",
-        "mesh_tools_lam_spice_intel_fast-debug-64bit",
-        "mesh_tools_polar_spice_intel_fast-debug-64bit",
-        "mesh_tools_uk_spice_intel_fast-debug-64bit",
-        "mesh_tools_london-model_spice_intel_fast-debug-64bit",
-        "mesh_tools_nzlam4_spice_intel_fast-debug-64bit",
-        "mesh_tools_falklands_spice_intel_fast-debug-64bit",
-        "mesh_tools_var-seuk_spice_intel_fast-debug-64bit",
-        "mesh_tools_planar-lbc_spice_intel_fast-debug-64bit",
-        "mesh_tools_planar-maps_spice_intel_fast-debug-64bit",
-        "mesh_tools_planar-stretch-centres_spice_intel_fast-debug-64bit",
-        "mesh_tools_planar-stretch-nodes_spice_intel_fast-debug-64bit",
-        "mesh_tools_planar-stretch-points_spice_intel_fast-debug-64bit",
-        "mesh_tools_planar-trench-x_spice_intel_fast-debug-64bit",
-        "mesh_tools_planar-trench-y_spice_intel_fast-debug-64bit",
-        "mesh_tools_planar-bi-periodic_spice_intel_fast-debug-64bit",
-        "mesh_tools_planar-non-periodic_spice_intel_fast-debug-64bit",
-    ],
-    "mesh_tools_spice_planar_intel_full-debug": [
-        "mesh_tools_planar-op-lam_spice_intel_full-debug-64bit",
-        "mesh_tools_equator_spice_intel_full-debug-64bit",
-        "mesh_tools_equator-band_spice_intel_full-debug-64bit",
-        "mesh_tools_lam_spice_intel_full-debug-64bit",
-        "mesh_tools_polar_spice_intel_full-debug-64bit",
-        "mesh_tools_uk_spice_intel_full-debug-64bit",
-        "mesh_tools_london-model_spice_intel_full-debug-64bit",
-        "mesh_tools_nzlam4_spice_intel_full-debug-64bit",
-        "mesh_tools_falklands_spice_intel_full-debug-64bit",
-        "mesh_tools_var-seuk_spice_intel_full-debug-64bit",
-        "mesh_tools_planar-lbc_spice_intel_full-debug-64bit",
-        "mesh_tools_planar-maps_spice_intel_full-debug-64bit",
-        "mesh_tools_planar-stretch-centres_spice_intel_full-debug-64bit",
-        "mesh_tools_planar-stretch-nodes_spice_intel_full-debug-64bit",
-        "mesh_tools_planar-stretch-points_spice_intel_full-debug-64bit",
-        "mesh_tools_planar-trench-x_spice_intel_full-debug-64bit",
-        "mesh_tools_planar-trench-y_spice_intel_full-debug-64bit",
-        "mesh_tools_planar-bi-periodic_spice_intel_full-debug-64bit",
-        "mesh_tools_planar-non-periodic_spice_intel_full-debug-64bit",
-    ],
-    "mesh_tools_spice_planar_gnu_fast-debug": [
-        "mesh_tools_planar-op-lam_spice_gnu_fast-debug-64bit",
-        "mesh_tools_equator_spice_gnu_fast-debug-64bit",
-        "mesh_tools_equator-band_spice_gnu_fast-debug-64bit",
-        "mesh_tools_lam_spice_gnu_fast-debug-64bit",
-        "mesh_tools_polar_spice_gnu_fast-debug-64bit",
-        "mesh_tools_uk_spice_gnu_fast-debug-64bit",
-        "mesh_tools_london-model_spice_gnu_fast-debug-64bit",
-        "mesh_tools_nzlam4_spice_gnu_fast-debug-64bit",
-        "mesh_tools_falklands_spice_gnu_fast-debug-64bit",
-        "mesh_tools_var-seuk_spice_gnu_fast-debug-64bit",
-        "mesh_tools_planar-lbc_spice_gnu_fast-debug-64bit",
-        "mesh_tools_planar-maps_spice_gnu_fast-debug-64bit",
-        "mesh_tools_planar-stretch-centres_spice_gnu_fast-debug-64bit",
-        "mesh_tools_planar-stretch-nodes_spice_gnu_fast-debug-64bit",
-        "mesh_tools_planar-stretch-points_spice_gnu_fast-debug-64bit",
-        "mesh_tools_planar-trench-x_spice_gnu_fast-debug-64bit",
-        "mesh_tools_planar-trench-y_spice_gnu_fast-debug-64bit",
-        "mesh_tools_planar-bi-periodic_spice_gnu_fast-debug-64bit",
-        "mesh_tools_planar-non-periodic_spice_gnu_fast-debug-64bit",
-    ],
-    "mesh_tools_spice_planar_gnu_full-debug": [
-        "mesh_tools_planar-op-lam_spice_gnu_full-debug-64bit",
-        "mesh_tools_equator_spice_gnu_full-debug-64bit",
-        "mesh_tools_equator-band_spice_gnu_full-debug-64bit",
-        "mesh_tools_lam_spice_gnu_full-debug-64bit",
-        "mesh_tools_polar_spice_gnu_full-debug-64bit",
-        "mesh_tools_uk_spice_gnu_full-debug-64bit",
-        "mesh_tools_london-model_spice_gnu_full-debug-64bit",
-        "mesh_tools_nzlam4_spice_gnu_full-debug-64bit",
-        "mesh_tools_falklands_spice_gnu_full-debug-64bit",
-        "mesh_tools_var-seuk_spice_gnu_full-debug-64bit",
-        "mesh_tools_planar-lbc_spice_gnu_full-debug-64bit",
-        "mesh_tools_planar-maps_spice_gnu_full-debug-64bit",
-        "mesh_tools_planar-stretch-centres_spice_gnu_full-debug-64bit",
-        "mesh_tools_planar-stretch-nodes_spice_gnu_full-debug-64bit",
-        "mesh_tools_planar-stretch-points_spice_gnu_full-debug-64bit",
-        "mesh_tools_planar-trench-x_spice_gnu_full-debug-64bit",
-        "mesh_tools_planar-trench-y_spice_gnu_full-debug-64bit",
-        "mesh_tools_planar-bi-periodic_spice_gnu_full-debug-64bit",
-        "mesh_tools_planar-non-periodic_spice_gnu_full-debug-64bit"
-    ],
-
-    }) %}
-
-{# SPICE Groups #}
+{# AZSPICE Groups #}
 {% do site_groups.update({
     "mesh_tools_azspice": [
         "mesh_tools_azspice_developer",
@@ -194,6 +14,7 @@
         "mesh_tools_azspice_canned",
         "mesh_tools_azspice_cubedsphere",
         "mesh_tools_azspice_planar",
+        "mesh_tools_azspice_unit_tests",
     ],
    "mesh_tools_azspice_unit_tests": [
         "mesh_tools_unit_tests_azspice_gnu_64bit"
@@ -286,54 +107,6 @@
     ],
     }) %}
 
-{# XC40 Groups #}
-{% do site_groups.update({
-    "mesh_tools_xc40": [
-        "mesh_tools_xc40_developer"
-    ],
-    "mesh_tools_xc40_developer": [
-        "mesh_tools_xc40_unit_tests",
-        "mesh_tools_xc40_planar",
-        "mesh_tools_xc40_cubedsphere",
-    ],
-    "mesh_tools_xc40_unit_tests": [
-    ],
-    "mesh_tools_xc40_cubedsphere": [
-        "mesh_tools_cubedsphere-c1_xc40_intel_fast-debug-64bit",
-        "mesh_tools_cubedsphere-c2_xc40_intel_fast-debug-64bit",
-        "mesh_tools_cubedsphere-c3_xc40_intel_fast-debug-64bit",
-        "mesh_tools_cubedsphere-op_xc40_intel_fast-debug-64bit",
-        "mesh_tools_cubedsphere-rotated_xc40_intel_fast-debug-64bit",
-        "mesh_tools_cubedsphere-maps_xc40_intel_fast-debug-64bit",
-        "mesh_tools_cubedsphere_xc40_intel_fast-debug-64bit",
-    ],
-    "mesh_tools_xc40_planar": [
-        "mesh_tools_planar-op-lam_xc40_intel_fast-debug-64bit",
-        "mesh_tools_equator_xc40_intel_fast-debug-64bit",
-        "mesh_tools_equator-band_xc40_intel_fast-debug-64bit",
-        "mesh_tools_lam_xc40_intel_fast-debug-64bit",
-        "mesh_tools_polar_xc40_intel_fast-debug-64bit",
-        "mesh_tools_uk_xc40_intel_fast-debug-64bit",
-        "mesh_tools_london-model_xc40_intel_fast-debug-64bit",
-        "mesh_tools_nzlam4_xc40_intel_fast-debug-64bit",
-        "mesh_tools_falklands_xc40_intel_fast-debug-64bit",
-        "mesh_tools_var-seuk_xc40_intel_fast-debug-64bit",
-        "mesh_tools_planar-lbc_xc40_intel_fast-debug-64bit",
-        "mesh_tools_planar-maps_xc40_intel_fast-debug-64bit",
-        "mesh_tools_planar-stretch-centres_xc40_intel_fast-debug-64bit",
-        "mesh_tools_planar-stretch-nodes_xc40_intel_fast-debug-64bit",
-        "mesh_tools_planar-stretch-points_xc40_intel_fast-debug-64bit",
-        "mesh_tools_planar-trench-x_xc40_intel_fast-debug-64bit",
-        "mesh_tools_planar-trench-y_xc40_intel_fast-debug-64bit",
-        "mesh_tools_planar-bi-periodic_xc40_intel_fast-debug-64bit",
-        "mesh_tools_planar-non-periodic_xc40_intel_fast-debug-64bit",
-    ],
-    "mesh_tools_xc40_build": [
-        "build_mesh_tools_xc40_intel_fast-debug-64bit",
-        "build_mesh_tools_xc40_intel_full-debug-64bit",
-    ]
-    }) %}
-
 {# EX1A Groups #}
 {% do site_groups.update({
     "mesh_tools_ex1a": [
@@ -342,9 +115,10 @@
     "mesh_tools_ex1a_developer": [
         "mesh_tools_ex1a_planar",
         "mesh_tools_ex1a_cubedsphere",
+        "mesh_tools_ex1a_unit_tests"
     ],
     "mesh_tools_ex1a_unit_tests": [
-        "mesh_tools_unit_tests_ex1a_cce_64bit",
+        "mesh_tools_unit_tests_ex1a_gnu_64bit",
     ],
     "mesh_tools_ex1a_cubedsphere": [
         "mesh_tools_cubedsphere-c1_ex1a_gnu_fast-debug-64bit",
@@ -384,58 +158,30 @@
     }) %}
 
 {# Platform Generic Groups #}
-{% if site_vars.launch_platform == "spice" %}
-    {% do site_groups.update({
-        "mesh_tools_developer": [
-            "scripts",
-            "mesh_tools_spice_developer",
-            "mesh_tools_xc40_developer",
-            "mesh_tools_unit_tests",
-        ],
-        "mesh_tools": [
-            "mesh_tools_developer",
-            "mesh_tools_spice",
-            "mesh_tools_xc40",
-        ],
-        "mesh_tools_unit_tests": [
-            "mesh_tools_spice_unit_tests",
-            "mesh_tools_xc40_unit_tests",
-        ],
-        "mesh_tools_build": [
-            "mesh_tools_spice_build",
-            "mesh_tools_xc40_build",
-        ],
-        "mesh_tools_canned": [
-            "mesh_tools_spice_canned",
-            "mesh_tools_xc40_canned",
-        ],
-        }) %}
-{% else %}
-    {% do site_groups.update({
-        "mesh_tools_developer": [
-            "scripts",
-            "mesh_tools_azspice_developer",
-            "mesh_tools_ex1a_developer",
-        ],
-        "mesh_tools": [
-            "mesh_tools_developer",
-            "mesh_tools_azspice",
-            "mesh_tools_ex1a",
-        ],
-        "mesh_tools_unit_tests": [
-            "mesh_tools_azspice_unit_tests",
-            "mesh_tools_ex1a_unit_tests",
-        ],
-        "mesh_tools_build": [
-            "mesh_tools_azspice_build",
-            "mesh_tools_ex1a_build",
-        ],
-        "mesh_tools_canned": [
-            "mesh_tools_azspice_canned",
-            "mesh_tools_ex1a_canned",
-        ],
-        }) %}
-{% endif %}
+{% do site_groups.update({
+    "mesh_tools_developer": [
+        "scripts",
+        "mesh_tools_azspice_developer",
+        "mesh_tools_ex1a_developer",
+    ],
+    "mesh_tools": [
+        "mesh_tools_developer",
+        "mesh_tools_azspice",
+        "mesh_tools_ex1a",
+    ],
+    "mesh_tools_unit_tests": [
+        "mesh_tools_azspice_unit_tests",
+        "mesh_tools_ex1a_unit_tests",
+    ],
+    "mesh_tools_build": [
+        "mesh_tools_azspice_build",
+        "mesh_tools_ex1a_build",
+    ],
+    "mesh_tools_canned": [
+        "mesh_tools_azspice_canned",
+        "mesh_tools_ex1a_canned",
+    ],
+    }) %}
 
 {# Platform Generic Extends #}
 {% do site_groups.developer.extend(site_groups.mesh_tools_developer) %}
@@ -443,23 +189,11 @@
 {% do site_groups.unit_tests.extend(site_groups.mesh_tools_unit_tests) %}
 {% do site_groups.build.extend(site_groups.mesh_tools_build) %}
 
-{# Spice Extends #}
-{% do site_groups.spice_developer.extend(site_groups.mesh_tools_spice_developer) %}
-{% do site_groups.spice.extend(site_groups.mesh_tools_spice) %}
-{% do site_groups.spice_unit_tests.extend(site_groups.mesh_tools_spice_unit_tests) %}
-{% do site_groups.spice_build.extend(site_groups.mesh_tools_spice_build) %}
-
 {# Azspice Extends #}
 {% do site_groups.azspice_developer.extend(site_groups.mesh_tools_azspice_developer) %}
 {% do site_groups.azspice.extend(site_groups.mesh_tools_azspice) %}
 {% do site_groups.azspice_unit_tests.extend(site_groups.mesh_tools_azspice_unit_tests) %}
 {% do site_groups.azspice_build.extend(site_groups.mesh_tools_azspice_build) %}
-
-{# XC40 Extends #}
-{% do site_groups.xc40_developer.extend(site_groups.mesh_tools_xc40_developer) %}
-{% do site_groups.xc40.extend(site_groups.mesh_tools_xc40) %}
-{% do site_groups.xc40_unit_tests.extend(site_groups.mesh_tools_xc40_unit_tests) %}
-{% do site_groups.xc40_build.extend(site_groups.mesh_tools_xc40_build) %}
 
 {# EX1A Extends #}
 {% do site_groups.ex1a_developer.extend(site_groups.mesh_tools_ex1a_developer) %}

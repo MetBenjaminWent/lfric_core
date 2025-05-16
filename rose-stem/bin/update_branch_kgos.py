@@ -15,9 +15,7 @@ import argparse
 
 PLATFORMS = {
     "meto": {
-        "spice": {"copy_command": "cp "},
         "azspice": {"copy_command": "cp "},
-        "xc40": {"copy_command": "scp xcel00:"},
         "ex1a": {"copy_command": "scp login.exa.sc:"},
     }
 }

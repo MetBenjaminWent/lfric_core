@@ -148,11 +148,4 @@
     {{ set_memory(task_values["memory"]) }}
 {% endif %}
 
-{% if task_ns.application == "mesh_tools" and
-      task_values["app_name"] != "canned_test" and
-      task_ns.platform == "xc40" %}
-    -l select=1:ncpus=1:mem=6GB:tmpsize=6GB
-    -q=shared
-{% endif %}
-
 {% do LOG.debug("Finished in templates/runtime/generate_runtime_application.cylc") %}

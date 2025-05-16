@@ -1,1 +1,0 @@
-Inner product checksum skeleton_field_1 =                0
