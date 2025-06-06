@@ -10,6 +10,11 @@ abstract class extrusion_mod::extrusion_type {
   +get_id(): integer
 }
 
+class extrusion_mod::user_extrusion_type {
+  +<<create>>user_extrusion_constructor( ... )
+  +extrude( <<out>>chi:real[] )
+}
+
 class extrusion_mod::uniform_extrusion_type {
   +<<create>>uniform_extrusion_constructor( ... )
   +extrude( <<out>>chi:real[] )
@@ -30,6 +35,7 @@ class extrusion_mod::dcmip_extrusion_type {
   +extrude( <<out>>chi:real[] )
 }
 
+extrusion_mod::extrusion_type <|-- extrusion_mod::user_extrusion_type
 extrusion_mod::extrusion_type <|-- extrusion_mod::uniform_extrusion_type
 extrusion_mod::extrusion_type <|-- extrusion_mod::quadratic_extrusion_type
 extrusion_mod::extrusion_type <|-- extrusion_mod::geometric_extrusion_type

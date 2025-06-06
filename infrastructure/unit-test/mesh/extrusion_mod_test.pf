@@ -3,8 +3,7 @@
 ! The file LICENCE, distributed with this code, contains details of the terms
 ! under which the code may be used.
 !-----------------------------------------------------------------------------
-
-! Holds unit tests of extrusion_type.
+! Tests extrusion descriptions.
 !
 module extrusion_mod_test
 
@@ -14,40 +13,176 @@ module extrusion_mod_test
   implicit none
 
   private
-  public :: test_uniform, test_shifted_uniform, test_quadratic, test_shifted_quadratic,   &
-            test_geometric, test_shifted_geometric
-
-  ! Tests the base extrusion_type and derived extrusion methods.
-  !
-  @TestCase
-  type, public, extends(TestCase) :: extrusion_test_type
-
-    private
-
-  contains
-
-    private
-
-    procedure, public :: test_uniform
-    procedure, public :: test_shifted_uniform
-    procedure, public :: test_quadratic
-    procedure, public :: test_shifted_quadratic
-    procedure, public :: test_geometric
-    procedure, public :: test_shifted_geometric
-
-  end type extrusion_test_type
+  public :: test_user_complete, test_user_missing_bottom,              &
+            test_user_missing_top, test_user_missing_both,             &
+            test_uniform, test_shifted_uniform, test_quadratic,        &
+            test_shifted_quadratic, test_geometric, test_shifted_geometric
 
 contains
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Checks an extrusion is produced from a complete description.
+  !
+  ! A complete description goes from 0.0 to 1.0.
+  !
+  @test
+  subroutine test_user_complete()
+
+    use extrusion_mod, only : user_extrusion_type, PRIME_EXTRUSION
+
+    implicit none
+
+    integer,     parameter :: layers = 6
+    real(r_def), parameter :: boundaries(*) =                              &
+                              [0.0_r_def, 0.1_r_def, 0.3_r_def, 0.7_r_def, &
+                               0.8_r_def, 1.0_r_def]
+    real(r_def), parameter :: bottom = 12.55_r_def
+    real(r_def), parameter :: top = 27.2_r_def
+    real(r_def), parameter :: expected(*) =                             &
+                              [0.0_r_def, 0.1_r_def, 0.3_r_def, 0.7_r_def, &
+                               0.8_r_def, 1.0_r_def]
+    real(r_def), parameter :: tolerance = 0.0001_r_def
+
+    type(user_extrusion_type) :: test_unit
+    real(r_def)               :: eta(0:layers-1)
+
+    test_unit  = user_extrusion_type( bottom, top, boundaries, &
+                                      PRIME_EXTRUSION )
+
+    @assertEqual( bottom, test_unit%get_atmosphere_bottom() )
+    @assertEqual( top,    test_unit%get_atmosphere_top() )
+    @assertEqual( layers, test_unit%get_number_of_layers() )
+    @assertEqual( PRIME_EXTRUSION, test_unit%get_id() )
+
+    call test_unit%extrude( eta )
+    @assertEqual( expected, eta, tolerance )
+
+  end subroutine test_user_complete
+
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Checks an extrusion is produced from a description missing 0.0 from the
+  ! botom.
+  !
+  @test
+  subroutine test_user_missing_bottom()
+
+    use extrusion_mod, only : user_extrusion_type, PRIME_EXTRUSION
+
+    implicit none
+
+    integer,     parameter :: layers = 6
+    real(r_def), parameter :: boundaries(*) =                   &
+                              [0.1_r_def, 0.3_r_def, 0.7_r_def, &
+                               0.8_r_def, 1.0_r_def]
+    real(r_def), parameter :: bottom = 12.55_r_def
+    real(r_def), parameter :: top = 27.2_r_def
+    real(r_def), parameter :: expected(*) =                             &
+                              [0.0_r_def, 0.1_r_def, 0.3_r_def, 0.7_r_def, &
+                               0.8_r_def, 1.0_r_def]
+    real(r_def), parameter :: tolerance = 0.0001_r_def
+
+    type(user_extrusion_type) :: test_unit
+    real(r_def)               :: eta(0:layers-1)
+
+    test_unit  = user_extrusion_type( bottom, top, boundaries, &
+                                      PRIME_EXTRUSION )
+
+    @assertEqual( bottom, test_unit%get_atmosphere_bottom() )
+    @assertEqual( top,    test_unit%get_atmosphere_top() )
+    @assertEqual( layers, test_unit%get_number_of_layers() )
+    @assertEqual( PRIME_EXTRUSION, test_unit%get_id() )
+
+    call test_unit%extrude( eta )
+    @assertEqual( expected, eta, tolerance )
+
+  end subroutine test_user_missing_bottom
+
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Checks an extrusion is produced from a description mising 1.0 from the top.
+  !
+  @test
+  subroutine test_user_missing_top()
+
+    use extrusion_mod, only : user_extrusion_type, PRIME_EXTRUSION
+
+    implicit none
+
+    integer,     parameter :: layers = 6
+    real(r_def), parameter :: boundaries(*) =                              &
+                              [0.0_r_def, 0.1_r_def, 0.3_r_def, 0.7_r_def, &
+                               0.8_r_def]
+    real(r_def), parameter :: bottom = 12.55_r_def
+    real(r_def), parameter :: top = 27.2_r_def
+    real(r_def), parameter :: expected(*) =                             &
+                              [0.0_r_def, 0.1_r_def, 0.3_r_def, 0.7_r_def, &
+                               0.8_r_def, 1.0_r_def]
+    real(r_def), parameter :: tolerance = 0.0001_r_def
+
+    type(user_extrusion_type) :: test_unit
+    real(r_def)               :: eta(0:layers-1)
+
+    test_unit  = user_extrusion_type( bottom, top, boundaries, &
+                                      PRIME_EXTRUSION )
+
+    @assertEqual( bottom, test_unit%get_atmosphere_bottom() )
+    @assertEqual( top,    test_unit%get_atmosphere_top() )
+    @assertEqual( layers, test_unit%get_number_of_layers() )
+    @assertEqual( PRIME_EXTRUSION, test_unit%get_id() )
+
+    call test_unit%extrude( eta )
+    @assertEqual( expected, eta, tolerance )
+
+  end subroutine test_user_missing_top
+
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Checks an extrusion is produced from a description missing both 0.0 and 1.0
+  ! from top and bottom.
+  !
+  @test
+  subroutine test_user_missing_both()
+
+    use extrusion_mod, only : user_extrusion_type, PRIME_EXTRUSION
+
+    implicit none
+
+    integer,     parameter :: layers = 6
+    real(r_def), parameter :: boundaries(*) =                              &
+                              [0.1_r_def, 0.3_r_def, 0.7_r_def, &
+                               0.8_r_def]
+    real(r_def), parameter :: bottom = 12.55_r_def
+    real(r_def), parameter :: top = 27.2_r_def
+    real(r_def), parameter :: expected(*) =                             &
+                              [0.0_r_def, 0.1_r_def, 0.3_r_def, 0.7_r_def, &
+                               0.8_r_def, 1.0_r_def]
+    real(r_def), parameter :: tolerance = 0.0001_r_def
+
+    type(user_extrusion_type) :: test_unit
+    real(r_def)               :: eta(0:layers-1)
+
+    test_unit  = user_extrusion_type( bottom, top, boundaries, &
+                                      PRIME_EXTRUSION )
+
+    @assertEqual( bottom, test_unit%get_atmosphere_bottom() )
+    @assertEqual( top,    test_unit%get_atmosphere_top() )
+    @assertEqual( layers, test_unit%get_number_of_layers() )
+    @assertEqual( PRIME_EXTRUSION, test_unit%get_id() )
+
+    call test_unit%extrude( eta )
+    @assertEqual( expected, eta, tolerance )
+
+  end subroutine test_user_missing_both
+
+
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   @test
-  subroutine test_uniform( this )
+  subroutine test_uniform()
 
     use extrusion_mod, only : uniform_extrusion_type, PRIME_EXTRUSION
 
     implicit none
-
-    class(extrusion_test_type), intent(inout) :: this
 
     integer(i_def), parameter :: layers = 5
     real(r_def),    parameter :: expected(0:layers) &
@@ -61,7 +196,7 @@ contains
     unit_under_test = uniform_extrusion_type( 1.0_r_def, 2.0_r_def, layers, &
                                               PRIME_EXTRUSION )
 
-    ! Test the constructor. This need be done in only one of the child tests.
+    ! Test the constructor.
     !
     @assertEqual( 1.0_r_def, unit_under_test%get_atmosphere_bottom() )
     @assertEqual( 2.0_r_def, unit_under_test%get_atmosphere_top() )
@@ -77,15 +212,13 @@ contains
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   @test
-  subroutine test_shifted_uniform( this )
+  subroutine test_shifted_uniform()
 
     use extrusion_mod, only : uniform_extrusion_type, &
                               shifted_extrusion_type, &
                               PRIME_EXTRUSION, SHIFTED
 
     implicit none
-
-    class(extrusion_test_type), intent(inout) :: this
 
     integer(i_def), parameter :: layers = 5
     real(r_def),    parameter :: expected(0:layers+1) &
@@ -114,13 +247,11 @@ contains
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   @test
-  subroutine test_quadratic( this )
+  subroutine test_quadratic()
 
     use extrusion_mod, only : quadratic_extrusion_type, PRIME_EXTRUSION
 
     implicit none
-
-    class(extrusion_test_type), intent(inout) :: this
 
     integer(i_def), parameter :: layers = 5
     real(r_def),    parameter :: expected(0:layers) &
@@ -142,15 +273,13 @@ contains
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   @test
-  subroutine test_shifted_quadratic( this )
+  subroutine test_shifted_quadratic()
 
     use extrusion_mod, only : quadratic_extrusion_type, &
                               shifted_extrusion_type,   &
                               PRIME_EXTRUSION
 
     implicit none
-
-    class(extrusion_test_type), intent(inout) :: this
 
     integer(i_def), parameter :: layers = 5
     real(r_def),    parameter :: expected(0:layers+1) &
@@ -174,14 +303,12 @@ contains
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   @test
-  subroutine test_geometric( this )
+  subroutine test_geometric()
 
     use extrusion_mod, only : geometric_extrusion_type, &
                               PRIME_EXTRUSION
 
     implicit none
-
-    class(extrusion_test_type), intent(inout) :: this
 
     integer(i_def), parameter :: layers = 5
     real(r_def),    parameter :: expected(0:layers) &
@@ -202,15 +329,13 @@ contains
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   @test
-  subroutine test_shifted_geometric( this )
+  subroutine test_shifted_geometric()
 
     use extrusion_mod, only : geometric_extrusion_type, &
                               shifted_extrusion_type,   &
                               PRIME_EXTRUSION
 
     implicit none
-
-    class(extrusion_test_type), intent(inout) :: this
 
     integer(i_def), parameter :: layers = 5
     real(r_def),    parameter :: expected(0:layers+1) &
