@@ -1,0 +1,11 @@
+The following Python packages are needed by the build system
+
+Run-time dependencies
+~~~~~~~~~~~~~~~~~~~~~
+
+Development dependencies
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+* pytest
+* mypy
+* flake8
