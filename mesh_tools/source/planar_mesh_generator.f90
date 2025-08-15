@@ -103,6 +103,7 @@ program planar_mesh_generator
   procedure(partitioner_interface), pointer :: partitioner_ptr => null()
   integer(i_def) :: start_partition
   integer(i_def) :: end_partition
+  integer(i_def) :: partition_id
 
   ! Switches.
   logical(l_def) :: l_found = .false.
@@ -820,32 +821,46 @@ program planar_mesh_generator
     !---------------------------------------------------------------
     call set_partition_parameters( xproc, yproc, partitioner_ptr )
 
+
+
+
     !---------------------------------------------------------------
     ! 7.3 Create local meshes for partitions.
     !---------------------------------------------------------------
     allocate( local_mesh_collection, source=local_mesh_collection_type() )
 
-    if ( create_lbc_mesh ) then
-      call generate_op_local_objects( local_mesh_collection,                    &
-                                      mesh_names, global_mesh_collection,       &
-                                      n_partitions, partition_range,            &
-                                      max_stencil_depth, generate_inner_halos, &
-                                      xproc, yproc,     &
-                                      partitioner_ptr, lbc_parent_mesh )
-    else
-      call generate_op_local_objects( local_mesh_collection,                    &
-                                      mesh_names, global_mesh_collection,       &
-                                      n_partitions, partition_range,            &
-                                      max_stencil_depth, generate_inner_halos, &
-                                      xproc, yproc, partitioner_ptr )
-    end if
+    start_partition = partition_range(1)
+    end_partition   = partition_range(2)
 
-    !---------------------------------------------------------------
-    ! 7.4 Output local meshes to UGRID file
-    !---------------------------------------------------------------
-    call write_local_meshes( global_mesh_collection, &
-                             local_mesh_collection,  &
-                             output_basename )
+    do partition_id=start_partition, end_partition
+
+      if ( create_lbc_mesh ) then
+        call generate_op_local_objects(                &
+                      local_mesh_collection,           &
+                      global_mesh_collection,          &
+                      mesh_names, partition_id,        &
+                      n_partitions, max_stencil_depth, &
+                      generate_inner_halos,           &
+                      xproc, yproc, partitioner_ptr,   &
+                      lbc_parent_mesh )
+      else
+        call generate_op_local_objects(                &
+                      local_mesh_collection,           &
+                      global_mesh_collection,          &
+                      mesh_names, partition_id,        &
+                      n_partitions, max_stencil_depth, &
+                      generate_inner_halos,           &
+                      xproc, yproc, partitioner_ptr )
+      end if
+
+      !---------------------------------------------------------------
+      ! 7.4 Output local meshes to UGRID file
+      !---------------------------------------------------------------
+      call write_local_meshes( partition_id,           &
+                               global_mesh_collection, &
+                               local_mesh_collection,  &
+                               output_basename )
+    end do ! partition_id
 
   else
 

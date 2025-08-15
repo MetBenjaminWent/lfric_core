@@ -31,7 +31,7 @@
   n_meshes       = 2
   mesh_names     = 'mesh_A','mesh_B'
   mesh_maps      = 'mesh_A:mesh_B'
-  partition_mesh = .false.
+  partition_mesh = .true.
   coord_sys      = 'll'
   rotate_mesh    = .true.
 /
