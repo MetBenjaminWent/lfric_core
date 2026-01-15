@@ -70,7 +70,7 @@ contains
         write(log_scratch_space, '(A)') 'Timing Mod: Vernier is turned on'
         call log_event(log_scratch_space, LOG_LEVEL_DEBUG)
 
-        call vernier_init( communicator%get_comm_mpi_val() )
+        call vernier_init( communicator%get_comm_mpi_val(), tag='hobbits' )
 
         write(log_scratch_space, '(A)') 'Timing Mod: Vernier initialised'
         call log_event(log_scratch_space, LOG_LEVEL_DEBUG)
