@@ -90,7 +90,7 @@ contains
 #elif defined( VERNIER )
     name = 'Vernier'
     if ( LPROF ) then
-      call vernier_init( communicator%get_comm_mpi_val() )
+      call vernier_init( communicator%get_comm_mpi_val(), tag='lfric' )
       if ( LPROF ) call vernier_start( global_timing_handle, '__' // &
                                        application_name // '__' )
 
