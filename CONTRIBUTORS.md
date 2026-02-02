@@ -14,4 +14,4 @@
 | harry-shepherd   | Harry Shepherd    | Met Office  | 2026-01-08 |
 | EdHone           | Ed Hone           | Met Office  | 2026-01-09 |
 | tom-j-h          | Tom Hill          | Met Office  | 2026-01-19 |
-| MetBenjaminWent | Benjamin Went     | Met Office  | 2026-01-30 |
+| MetBenjaminWent  | Benjamin Went     | Met Office  | 2026-01-30 |
