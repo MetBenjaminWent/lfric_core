@@ -13,7 +13,7 @@ DSL = psykal
 #
 
 # Set default psyclone command additional options
-PSYCLONE_PSYKAL_EXTRAS := -l all
+PSYCLONE_PSYKAL_EXTRAS ?= -l all
 #
 
 ALGORITHM_F_FILES := $(patsubst $(SOURCE_DIR)/%.X90, \
