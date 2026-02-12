@@ -57,8 +57,8 @@ $(WORKING_DIR)/%.x90 $$(OPTIMISATION_PATH)/$(DSL)/$$*.py | $$(dir $$@)
 	           -okern $(WORKING_DIR)/kernel \
 	           -oalg $(WORKING_DIR)/$*.f90 \
 	           -opsy $(WORKING_DIR)/$*_psy.f90 \
-			   $(PSYCLONE_PSYKAL_EXTRAS) \
-			   $<
+	           $(PSYCLONE_PSYKAL_EXTRAS) \
+	           $<
 
 # Where a global optimisation script exists, use it.
 #
@@ -72,8 +72,8 @@ $(WORKING_DIR)/%.x90 $(OPTIMISATION_PATH)/$(DSL)/global.py | $$(dir $$@)
 	           -okern $(WORKING_DIR)/kernel \
 	           -oalg  $(WORKING_DIR)/$*.f90 \
 	           -opsy $(WORKING_DIR)/$*_psy.f90 \
-			   $(PSYCLONE_PSYKAL_EXTRAS) \
-			   $<
+	           $(PSYCLONE_PSYKAL_EXTRAS) \
+	           $<
 
 # Where no optimisation script exists, don't use it.
 #
@@ -86,8 +86,8 @@ $(WORKING_DIR)/%.x90 | $$(dir $$@)
 	           -okern $(WORKING_DIR)/kernel \
 	           -oalg  $(WORKING_DIR)/$*.f90 \
 	           -opsy $(WORKING_DIR)/$*_psy.f90 \
-			   $(PSYCLONE_PSYKAL_EXTRAS) \
-			   $<
+	           $(PSYCLONE_PSYKAL_EXTRAS) \
+	           $<
 
 .PRECIOUS: $(WORKING_DIR)/%.x90
 # Perform preprocessing for big X90 files.
