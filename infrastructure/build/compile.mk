@@ -136,7 +136,7 @@ endif
 $(BIN_DIR)/%: %.o $$(LIB_DIR)/lib$$(*F).a
 	$(call MESSAGE,Linking,$*)
 	$(Q)mkdir -p $(@D)
-	$(Q)$(LINKER) $(LDFLAGS) $(LDFLAGS_BASE) $(LDFLAGS_COMPILER) -o $@ $^ \
+	$(LINKER) $(LDFLAGS) $(LDFLAGS_BASE) $(LDFLAGS_COMPILER) -o $@ $^ \
 	            $(patsubst %,-l%,$(EXTERNAL_STATIC_LIBRARIES)) \
 	            $(patsubst %,-l%,$(EXTERNAL_DYNAMIC_LIBRARIES))
 
@@ -148,7 +148,7 @@ $(LIB_DIR)/lib%.a: $$($$(shell basename $$* | tr a-z A-Z)_OBJS) | $(LIB_DIR)
 .PRECIOUS: %.o
 %.o: %.f90 | $(MOD_DIR)
 	$(call MESSAGE,Compile,$<)
-	$(Q)$(TIME_TOOL) $(FC) $(FFLAGS_BASE) $(FFLAGS_EXTRA)\
+	$(TIME_TOOL) $(FC) $(FFLAGS_BASE) $(FFLAGS_EXTRA)\
 	          $(MODULE_DESTINATION_ARGUMENT) \
 	          $(MODULE_SOURCE_ARGUMENT) \
 	          $(INCLUDE_ARGS) -c -o $(basename $@).o $<
@@ -156,7 +156,7 @@ $(LIB_DIR)/lib%.a: $$($$(shell basename $$* | tr a-z A-Z)_OBJS) | $(LIB_DIR)
 
 %.o: %.F90 | $(MOD_DIR)
 	$(call MESSAGE,Pre-process and compile,$<)
-	$(Q)$(TIME_TOOL) $(FC) $(FFLAGS_BASE) $(FFLAGS_EXTRA) \
+	$(TIME_TOOL) $(FC) $(FFLAGS_BASE) $(FFLAGS_EXTRA) \
 	          $(MODULE_DESTINATION_ARGUMENT) \
 	          $(MODULE_SOURCE_ARGUMENT) \
 	          $(INCLUDE_ARGS) $(MACRO_ARGS) -c -o $(basename $@).o $<
