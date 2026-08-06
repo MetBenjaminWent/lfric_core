@@ -152,6 +152,7 @@ $(LIB_DIR)/lib%.a: $$($$(shell basename $$* | tr a-z A-Z)_OBJS) | $(LIB_DIR)
 	          $(MODULE_DESTINATION_ARGUMENT) \
 	          $(MODULE_SOURCE_ARGUMENT) \
 	          $(INCLUDE_ARGS) -c -o $(basename $@).o $<
+	$(call MESSAGE, $(TIME_TOOL) $(FC) $(FFLAGS_BASE) $(FFLAGS_EXTRA) $(MODULE_DESTINATION_ARGUMENT) $(MODULE_SOURCE_ARGUMENT) $(INCLUDE_ARGS) -c -o $(basename $@).o $<)
 	$(call MESSAGE,Compiled,$<)
 
 %.o: %.F90 | $(MOD_DIR)
@@ -160,6 +161,7 @@ $(LIB_DIR)/lib%.a: $$($$(shell basename $$* | tr a-z A-Z)_OBJS) | $(LIB_DIR)
 	          $(MODULE_DESTINATION_ARGUMENT) \
 	          $(MODULE_SOURCE_ARGUMENT) \
 	          $(INCLUDE_ARGS) $(MACRO_ARGS) -c -o $(basename $@).o $<
+	$(call MESSAGE, $(TIME_TOOL) $(FC) $(FFLAGS_BASE) $(FFLAGS_EXTRA) $(MODULE_DESTINATION_ARGUMENT) $(MODULE_SOURCE_ARGUMENT) $(INCLUDE_ARGS) $(MACRO_ARGS) -c -o $(basename $@).o $<)
 	$(call MESSAGE,Compiled,$<)
 
 
