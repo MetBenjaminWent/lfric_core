@@ -79,6 +79,7 @@ $(WORKING_DIR)/%.x90 $$(OPTIMISATION_PATH)/$(DSL)/$$*.py | $$(dir $$@)
 	$QPYTHONPATH=$(LFRIC_BUILD)/psyclone:$$PYTHONPATH $(PSYCLONE) -api lfric \
 	           -d $(WORKING_DIR) \
 	           --config $(PSYCLONE_CONFIG_FILE) \
+			   --profile kernels \
 	           -s $(OPTIMISATION_PATH)/$(DSL)/$*.py \
 	           -okern $(WORKING_DIR)/kernel \
 	           -oalg $(WORKING_DIR)/$*.f90 \
@@ -94,6 +95,7 @@ $(WORKING_DIR)/%.x90 $(OPTIMISATION_PATH)/$(DSL)/global.py | $$(dir $$@)
 	$QPYTHONPATH=$(LFRIC_BUILD)/psyclone:$$PYTHONPATH $(PSYCLONE) -api lfric \
 	           -d $(WORKING_DIR) \
 	           --config $(PSYCLONE_CONFIG_FILE) \
+			   --profile kernels \
 	           -s $(OPTIMISATION_PATH)/$(DSL)/global.py \
 	           -okern $(WORKING_DIR)/kernel \
 	           -oalg  $(WORKING_DIR)/$*.f90 \
@@ -109,6 +111,7 @@ $(WORKING_DIR)/%.x90 | $$(dir $$@)
 	$QPYTHONPATH=$(LFRIC_BUILD)/psyclone:$$PYTHONPATH $(PSYCLONE) -api lfric \
 	           -l all -d $(WORKING_DIR) \
 	           --config $(PSYCLONE_CONFIG_FILE) \
+			   --profile kernels \
 	           -okern $(WORKING_DIR)/kernel \
 	           -oalg  $(WORKING_DIR)/$*.f90 \
 	           -opsy $(WORKING_DIR)/$*_psy.f90 \
