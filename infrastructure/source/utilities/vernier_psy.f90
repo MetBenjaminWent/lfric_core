@@ -86,11 +86,15 @@ contains
                       num_post_vars)
 
     use vernier_mod, only : vernier_start
+    use omp_lib, only : omp_in_parallel
     implicit none
 
     class(profile_PSyDataType), intent(inout), target :: this
     character(len=*), intent(in) :: module_name, region_name
     integer, intent(in) :: num_pre_vars, num_post_vars
+
+    ! Vernier is not thread-safe, so skip profiling inside parallel regions
+    if (omp_in_parallel()) return
 
     if (.not. this%initialised) then
       ! Venier only supports a single name, so we store the concatenated
@@ -110,10 +114,14 @@ contains
   subroutine PostEnd(this)
 
     use vernier_mod, only : vernier_stop
+    use omp_lib, only : omp_in_parallel
 
     implicit none
 
     class(profile_PSyDataType), intent(inout), target :: this
+
+    ! Vernier is not thread-safe, so skip profiling inside parallel regions
+    if (omp_in_parallel()) return
 
     call vernier_stop(this%vernier_handle)
 
