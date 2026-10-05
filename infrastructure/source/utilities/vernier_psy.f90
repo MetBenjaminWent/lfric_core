@@ -122,24 +122,24 @@ contains
   ! ---------------------------------------------------------------------------
   !> Called at the end of the execution of a program, usually to generate
   !! all output for the profiling library.
-  subroutine profile_PSyDataShutdown()
-    use vernier_mod, only : vernier_finalize, vernier_write
+  ! subroutine profile_PSyDataShutdown()
+  !   use vernier_mod, only : vernier_finalize, vernier_write
 
-    implicit none
-    call vernier_write()
-    call vernier_finalize()
-  end subroutine profile_PSyDataShutdown
+  !   implicit none
+  !   call vernier_write()
+  !   call vernier_finalize()
+  ! end subroutine profile_PSyDataShutdown
 
-  ! ---------------------------------------------------------------------------
-  !> Enable Vernier.
-  subroutine profile_PSyDataStart()
-    implicit none
-  end subroutine profile_PSyDataStart
+  ! ! ---------------------------------------------------------------------------
+  ! !> Enable Vernier.
+  ! subroutine profile_PSyDataStart()
+  !   implicit none
+  ! end subroutine profile_PSyDataStart
 
-  ! ---------------------------------------------------------------------------
-  !> Disable Vernier.
-  subroutine profile_PSyDataStop()
-    implicit none
-  end subroutine profile_PSyDataStop
+  ! ! ---------------------------------------------------------------------------
+  ! !> Disable Vernier.
+  ! subroutine profile_PSyDataStop()
+  !   implicit none
+  ! end subroutine profile_PSyDataStop
 
 end module profile_psy_data_mod
